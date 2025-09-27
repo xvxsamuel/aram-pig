@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+
+@theme {
+    --color-accent-light: oklch(0.6537 0.118 223.64);
+    --color-accent-dark: oklch(0.3699 0.0866 245.06);
+    --color-accent-r-light: oklch(0.4522 0.0979 239.18);
+    --color-accent-r-dark: oklch(0.3728 0.0874 244.31);
+    --color-accent-darker: oklch(0.2088 0.051 245.06);
+    --color-gold-light: oklch(0.7975 0.0627 90.79);
+    --color-gold-dark: oklch(0.4713 0.0697 81.41);
+    --color-subtitle: oklch(0.7412 0 0);
+    --font-sans: var(--font-sans);
+}
