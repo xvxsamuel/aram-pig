@@ -1,5 +1,13 @@
 @import 'tailwindcss';
 
+@font-face {
+    font-family: 'Amiamie';
+    src: url('/fonts/amiamie-black.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+    font-display: block;
+}
+
 @theme {
     --color-accent-light: oklch(0.6537 0.118 223.64);
     --color-accent-dark: oklch(0.3699 0.0866 245.06);
@@ -9,5 +17,41 @@
     --color-gold-light: oklch(0.7975 0.0627 90.79);
     --color-gold-dark: oklch(0.4713 0.0697 81.41);
     --color-subtitle: oklch(0.7412 0 0);
-    --font-sans: var(--font-sans);
+    --font-family-light: var(--font-light);
+    --font-family-title: var(--font-regular);
+    --font-family-amiamie: 'Amiamie', sans-serif;
+}
+
+
+body {
+    font-family: var(--font-family-light);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-title);
+}
+
+/* Search input placeholder style */
+input::placeholder {
+    font-family: var(--font-light);
+    font-weight: 300;
+}
+
+/* Custom scrollbar for region dropdown */
+.region-dropdown-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.region-dropdown-scroll::-webkit-scrollbar-track {
+    background: var(--color-accent-dark);
+    border-radius: 10px;
+}
+
+.region-dropdown-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-gold-dark);
+    border-radius: 10px;
+}
+
+.region-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gold-light);
 }

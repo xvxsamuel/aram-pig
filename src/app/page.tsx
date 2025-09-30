@@ -12,7 +12,7 @@ export default function HomePage() {
       <div className="relative z-10 w-full flex flex-col items-center gap-8">
         <h1 className="sr-only">ARAM Pig</h1>
         <img src="/title.svg" alt="ARAM Pig" className="h-[12vw] w-auto select-none" draggable="false" />
-        <SearchBar className="h-16 min-w-2xl"/>
+        <SearchBar className="h-14 min-w-2xl"/>
       </div>
     </main>
   )

@@ -1,16 +1,19 @@
-'use client'
+"use client"
+import { clsx } from "clsx"
 
 type Props = {
-  value?: string          // Display text, e.g. "EUW"
+  value?: string
   className?: string
-  onClick?: () => void    // Open menu or cycle regions
+  onClick?: () => void
   title?: string
+  isOpen?: boolean
 }
 
 export default function RegionSelector({
-  value = 'EUW',
-  className = '',
+  value = "EUW",
+  className = "",
   onClick,
+  isOpen = false,
 }: Props) {
   return (
     <button
@@ -18,13 +21,12 @@ export default function RegionSelector({
       onClick={onClick}
       aria-label={`Region: ${value}. Change region`}
       aria-haspopup="menu"
-      className={`inline-flex items-center justify-center h-9 px-4 rounded-xl
-                  bg-gradient-to-t from-accent-r-dark to-accent-r-light
-                  text-white cursor-pointer font-bold tracking-wide 
-                  outline-none focus-visible:ring-2 focus-visible:ring-white/30
-                  ${className}`}
+      aria-expanded={isOpen}
+      className={clsx("flex items-center justify-center h-[65%] aspect-[15/7] rounded-xl bg-gradient-to-t from-accent-r-dark to-accent-r-light text-white cursor-pointer tracking-wide outline-none focus-visible:ring-2 focus-visible:ring-white/30", className)}
     >
-      {value.toUpperCase()}
+      <span style={{ fontFamily: 'Amiamie, sans-serif', display: 'block', transform: 'translateY(12.5%)', lineHeight: 1 }}>
+        {value.toUpperCase()}
+      </span>
     </button>
   )
 }

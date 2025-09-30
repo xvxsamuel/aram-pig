@@ -2,10 +2,18 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { League_Spartan } from 'next/font/google'
 
-const leagueSpartan = League_Spartan({
+const leagueSpartanLight = League_Spartan({
   subsets: ['latin'],
+  weight: '300',
   display: 'swap',
-  variable: '--font-sans',
+  variable: '--font-light',
+})
+
+const leagueSpartanRegular = League_Spartan({
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
+  variable: '--font-regular',
 })
 
 export const metadata: Metadata = {
@@ -24,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">
+    <html lang="en" className={`${leagueSpartanLight.variable} ${leagueSpartanRegular.variable}`}>
+      <body className="min-h-screen antialiased font-light">
         {children}
       </body>
     </html>
