@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import ProfileHeader from "./ProfileHeader"
 import PigScoreCard from "./PigScoreCard"
+import AramStatsCard from "./AramStatsCard"
 import MatchHistoryList from "./MatchHistoryList"
-import LoadingState from "./LoadingState"
+import FetchMessage from "./FetchMessage"
 import type { MatchData } from "../lib/riot-api"
 
 interface Props {
@@ -17,8 +18,15 @@ interface Props {
   totalDeaths: number
   totalAssists: number
   mostPlayedChampion: string
+  longestWinStreak: number
+  damagePerSecond: string
   region: string
   name: string
+  hasIncompleteData: boolean
+  championImageUrl?: string
+  profileIconUrl: string
+  ddragonVersion: string
+  lastUpdated: string | null
 }
 
 export default function SummonerContent({
@@ -31,8 +39,15 @@ export default function SummonerContent({
   totalDeaths,
   totalAssists,
   mostPlayedChampion,
+  longestWinStreak,
+  damagePerSecond,
   region,
-  name
+  name,
+  hasIncompleteData,
+  championImageUrl,
+  profileIconUrl,
+  ddragonVersion,
+  lastUpdated
 }: Props) {
   const [loading, setLoading] = useState<{ total: number; eta: number } | null>(null)
   const [isFirstLoad, setIsFirstLoad] = useState(matches.length === 0)
@@ -49,9 +64,7 @@ export default function SummonerContent({
   }, [matches.length, isFirstLoad, hasTriedUpdate])
 
   const handleUpdateStart = (totalMatches: number, eta: number, showFullScreen: boolean) => {
-    if (showFullScreen) {
-      setLoading({ total: totalMatches, eta })
-    }
+    setLoading({ total: totalMatches, eta })
   }
 
   const handleUpdateComplete = () => {
@@ -67,34 +80,46 @@ export default function SummonerContent({
         tagLine={summonerData.account.tagLine}
         summonerLevel={summonerData.summoner.summonerLevel}
         mostPlayedChampion={mostPlayedChampion}
+        championImageUrl={championImageUrl}
+        profileIconUrl={profileIconUrl}
         region={region}
         name={name}
         puuid={summonerData.account.puuid}
         onUpdateStart={handleUpdateStart}
         onUpdateComplete={handleUpdateComplete}
         hasMatches={matches.length > 0}
+        lastUpdated={lastUpdated}
       />
 
-      {loading ? (
-        <LoadingState totalMatches={loading.total} estimatedSeconds={loading.eta} />
-      ) : (
-        <div className="flex gap-6">
-          <PigScoreCard
-            totalGames={matches.length}
-            wins={wins}
-            winRate={winRate}
-            avgKDA={avgKDA}
-            totalKills={totalKills}
-            totalDeaths={totalDeaths}
-            totalAssists={totalAssists}
-          />
-
-          <MatchHistoryList
-            matches={matches}
-            puuid={summonerData.account.puuid}
-          />
+      <div className="bg-accent-darkest py-8 rounded-3xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          {loading && (
+            <FetchMessage totalMatches={loading.total} estimatedSeconds={loading.eta} />
+          )}
+          <div className="flex flex-col sm:flex-row gap-6">
+            <div className="flex flex-col gap-6 sm:w-80 w-full">
+              <PigScoreCard />
+              <AramStatsCard
+                totalGames={matches.length}
+                wins={wins}
+                winRate={winRate}
+                avgKDA={avgKDA}
+                totalKills={totalKills}
+                totalDeaths={totalDeaths}
+                totalAssists={totalAssists}
+                longestWinStreak={longestWinStreak}
+                damagePerSecond={damagePerSecond}
+              />
+            </div>
+            <MatchHistoryList
+              matches={matches}
+              puuid={summonerData.account.puuid}
+              region={region}
+              ddragonVersion={ddragonVersion}
+            />
+          </div>
         </div>
-      )}
+      </div>
     </>
   )
 }

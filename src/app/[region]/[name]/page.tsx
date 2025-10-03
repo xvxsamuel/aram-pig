@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL, getDefaultTag } from "../../../lib/regions"
 import Navbar from "../../../components/Navbar"
 import SummonerContent from "../../../components/SummonerContent"
-import { getSummonerByRiotId, type MatchData } from "../../../lib/riot-api"
+import { getSummonerByRiotId, type MatchData, getChampionCenteredUrl, getProfileIconUrl, getLatestVersion } from "../../../lib/riot-api"
 import { supabase } from "../../../lib/supabase"
 
 interface Params {
@@ -20,7 +20,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     notFound()
   }
 
-  // url fix
+  // url
   const decodedName = decodeURIComponent(name)
   const summonerName = decodedName.replace("-", "#")
 
@@ -31,6 +31,8 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   let summonerData = null
   let matches: MatchData[] = []
   let error = null
+  let hasIncompleteData = false
+  let lastUpdated: string | null = null
 
   try {
     summonerData = await getSummonerByRiotId(gameName, tagLine, platformCode)
@@ -39,9 +41,23 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
       error = "Summoner not found"
     } else {
       const puuid = summonerData.account.puuid
+      let hasIncompleteData = false
 
       if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
         try {
+          // check
+          const { data: summonerRecord } = await supabase
+            .from('summoners')
+            .select('last_updated, game_name')
+            .eq('puuid', puuid)
+            .single()
+
+          // store timestamp
+          lastUpdated = summonerRecord?.last_updated || null
+
+          // incomplete
+          hasIncompleteData = !summonerRecord?.game_name || !summonerRecord?.last_updated
+
           const { data: dbMatches, error: dbError } = await supabase
             .from('summoner_matches')
             .select(`
@@ -70,25 +86,40 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     error = "Failed to fetch summoner data"
   }
 
-  // stats from matches
+  // stats
   let wins = 0
   let totalKills = 0
   let totalDeaths = 0
   let totalAssists = 0
   let mostPlayedChampion = ''
+  let longestWinStreak = 0
+  let totalDamage = 0
+  let totalGameDuration = 0
 
   if (summonerData && matches.length > 0) {
     const championCounts: { [key: string]: number } = {}
+    let currentWinStreak = 0
     
     matches.forEach(match => {
       const participant = match.info.participants.find(p => p.puuid === summonerData.account.puuid)
       if (participant) {
-        if (participant.win) wins++
+        if (participant.win) {
+          wins++
+          currentWinStreak++
+          if (currentWinStreak > longestWinStreak) {
+            longestWinStreak = currentWinStreak
+          }
+        } else {
+          currentWinStreak = 0
+        }
+        
         totalKills += participant.kills
         totalDeaths += participant.deaths
         totalAssists += participant.assists
+        totalDamage += participant.totalDamageDealtToChampions
+        totalGameDuration += match.info.gameDuration
         
-        // champ plays count
+        // champ
         championCounts[participant.championName] = (championCounts[participant.championName] || 0) + 1
       }
     })
@@ -106,6 +137,12 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   const avgKDA = matches.length > 0 && totalDeaths > 0 
     ? ((totalKills + totalAssists) / totalDeaths).toFixed(2)
     : totalDeaths === 0 && matches.length > 0 ? 'Perfect' : '0'
+  const damagePerSecond = totalGameDuration > 0 ? (totalDamage / totalGameDuration).toFixed(0) : '0'
+
+  // ddragon
+  const ddragonVersion = await getLatestVersion()
+  const profileIconUrl = summonerData ? await getProfileIconUrl(summonerData.summoner.profileIconId) : ''
+  const championImageUrl = mostPlayedChampion ? await getChampionCenteredUrl(mostPlayedChampion) : undefined
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
@@ -131,8 +168,15 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             totalDeaths={totalDeaths}
             totalAssists={totalAssists}
             mostPlayedChampion={mostPlayedChampion}
+            longestWinStreak={longestWinStreak}
+            damagePerSecond={damagePerSecond}
             region={region}
             name={name}
+            hasIncompleteData={hasIncompleteData}
+            championImageUrl={championImageUrl}
+            profileIconUrl={profileIconUrl}
+            ddragonVersion={ddragonVersion}
+            lastUpdated={lastUpdated}
           />
         )}
       </div>

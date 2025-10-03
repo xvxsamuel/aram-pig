@@ -29,8 +29,8 @@ export default function LoadingState({ totalMatches, estimatedSeconds }: Props) 
         <div className="absolute inset-0 border-4 border-gold-light rounded-full animate-spin border-t-transparent"></div>
       </div>
       
-      <h2 className="text-2xl font-bold mb-2">Pigs are digging through your match history...</h2>
-      <p className="text-subtitle text-12 mb-4">Loading {totalMatches} matches...</p>
+      <h2 className="text-2xl font-bold mb-2">Our pigs are digging through your match history</h2>
+      <p className="text-white text-12 mb-4">Digging up {totalMatches} matches...</p>
       
       <div className="flex items-center gap-2 text-sm">
         <svg className="w-4 h-4 text-accent-r-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">

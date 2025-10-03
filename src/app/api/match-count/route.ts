@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     let start = 0;
     const batchSize = 100;
 
-    // Fetch matches in batches until we get all of them
+    // batches
     while (true) {
       const matchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchSize);
       

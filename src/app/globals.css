@@ -32,6 +32,20 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-family-title);
 }
 
+h2 {
+    background: linear-gradient(to top, var(--color-gold-dark), var(--color-gold-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.nav-link:hover h6 {
+    background: var(--color-subtitle) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}
+
 input::placeholder {
     font-family: var(--font-light);
     font-weight: 300;

@@ -46,13 +46,13 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
-    // Use the library functions instead of custom fetch
+    // riot
     const accountData = await getAccountByRiotId(gameName, tagLine, region as any);
     if (!accountData) {
       return NextResponse.json({ error: 'Account not found' }, { status: 404 });
     }
 
-    // Map region to platform for summoner lookup
+    // platform
     const platformMap: Record<string, PlatformCode> = {
       americas: 'na1',
       europe: 'euw1',
@@ -160,8 +160,15 @@ export async function POST(request: Request) {
         fetchedMatches++;
       } catch (err) {
         console.error(`Failed to fetch/store match ${matchId}:`, err);
+        // continue with next match
       }
     }
+
+    // update last_updated timestamp
+    await supabase
+      .from('summoners')
+      .update({ last_updated: new Date().toISOString() })
+      .eq('puuid', accountData.puuid);
 
     return NextResponse.json({
       message: 'Profile updated successfully',

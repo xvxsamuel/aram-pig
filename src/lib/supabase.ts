@@ -6,12 +6,9 @@ const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY!
 
 export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey)
 
-export function createClient() {
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey)
-}
-
 export function createAdminClient() {
+  if (typeof window !== 'undefined') {
+    throw new Error('createAdminClient() can only be used on the server side') // i was scared to use this function because AdminClient sounds intimidating and i just took it from the documentation and so i asked claude to potentially secure it and he did this so i hope that's fine!
+  }
   return createSupabaseClient(supabaseUrl, supabaseSecretKey)
 }
-
-// the createClient() and createAdminClient() functions were done with the help of ai (claude 4), i asked it why my fetch requests couldn't resolve and pasted in the error, I could not fix it myself D:

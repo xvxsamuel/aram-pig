@@ -1,16 +1,25 @@
-import { RiotAPI, RiotAPITypes, PlatformId } from "@fightmegg/riot-api"
+import { RiotAPI, RiotAPITypes, PlatformId, DDragon } from "@fightmegg/riot-api"
 import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "./regions"
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY
 
 if (!RIOT_API_KEY) {
-  console.error("RIOT_API_KEY is not set in environment variables")
+  console.error("RIOT_API_KEY is not set in environment variables") // dev logging
 }
 
-// Initialize Riot API client with automatic rate limiting
 const rAPI = new RiotAPI(RIOT_API_KEY!)
+const ddragon = new DDragon()
 
-// Map our regional clusters to library's PlatformId
+// version
+let latestVersion: string | null = null
+
+async function getLatestVersion(): Promise<string> {
+  if (!latestVersion) {
+    latestVersion = await rAPI.ddragon.versions.latest()
+  }
+  return latestVersion
+}
+
 const REGIONAL_TO_PLATFORM_ID: Record<RegionalCluster, PlatformId> = {
   americas: PlatformId.AMERICAS,
   europe: PlatformId.EUROPE,
@@ -96,7 +105,7 @@ export async function getMatchById(matchId: string, region: RegionalCluster) {
 export interface MatchData {
   metadata: {
     matchId: string
-    participants: string[] // Array of PUUIDs
+    participants: string[] // array of PUUIDs not summoner names
   }
   info: {
     gameCreation: number
@@ -159,3 +168,56 @@ export async function getSummonerByRiotId(
     regional,
   }
 }
+
+// ddragon
+export async function getChampionImageUrl(championName: string): Promise<string> {
+  const version = await getLatestVersion()
+  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${championName}.png`
+}
+
+export async function getChampionCenteredUrl(championName: string, skinNum: number = 0): Promise<string> {
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${championName}_${skinNum}.jpg`
+}
+
+export async function getProfileIconUrl(iconId: number): Promise<string> {
+  const version = await getLatestVersion()
+  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${iconId}.png`
+}
+
+export async function getSummonerSpellUrl(spellId: number): Promise<string> {
+  const version = await getLatestVersion()
+  const spellName = getSpellName(spellId)
+  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell/Summoner${spellName}.png`
+}
+
+export async function getItemImageUrl(itemId: number): Promise<string> {
+  const version = await getLatestVersion()
+    return `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png`
+}
+
+// spells
+const SUMMONER_SPELL_MAP: Record<number, string> = {
+}
+
+// summoner spells
+function getSpellName(spellId: number): string {
+  const spellMap: Record<number, string> = {
+    1: 'Boost',    // cleanse
+    3: 'Exhaust',
+    4: 'Flash',
+    6: 'Haste',    // ghost
+    7: 'Heal',
+    11: 'Smite',
+    12: 'Teleport',
+    13: 'Clarity',
+    14: 'Ignite',
+    21: 'Barrier',
+    30: 'PoroRecall',
+    31: 'PoroThrow',
+    32: 'Mark',    // snowball
+    39: 'Mark',    
+  }
+  return spellMap[spellId] || 'Flash'
+}
+
+export { ddragon, getLatestVersion }

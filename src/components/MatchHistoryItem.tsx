@@ -1,12 +1,16 @@
 import Image from "next/image"
+import Link from "next/link"
 import type { MatchData } from "../lib/riot-api"
+import { getChampionImageUrl, getSummonerSpellUrl, getItemImageUrl } from "../lib/ddragon-client"
 
 interface Props {
   match: MatchData
   puuid: string
+  region: string
+  ddragonVersion: string
 }
 
-export default function MatchHistoryItem({ match, puuid }: Props) {
+export default function MatchHistoryItem({ match, puuid, region, ddragonVersion }: Props) {
   const participant = match.info.participants.find(p => p.puuid === puuid)
   if (!participant) return null
 
@@ -31,43 +35,56 @@ export default function MatchHistoryItem({ match, puuid }: Props) {
           : 'bg-[#59343B] border-[#E84057]'
       }`}
     >
-      <div className="flex items-center gap-4 px-4 py-3 min-h-[80px]">
-        {/* Champion Section */}
+      <div className="flex items-center px-4 py-3 min-h-[80px] gap-0.5">
+        {/* win/loss */}
+        <div className="flex flex-col justify-center flex-shrink-0 min-w-[90px]">
+          <div className={`text-sm font-bold ${isWin ? 'text-[#5383E8]' : 'text-[#E84057]'}`}>
+            {isWin ? 'WIN' : 'LOSE'}
+          </div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, '0')}
+          </div>
+          <div className="text-xs text-gray-400">
+            {timeAgo}
+          </div>
+        </div>
+
+        {/* champion */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="relative">
-            <div className="w-12 h-12 rounded-xl overflow-hidden bg-accent-dark border-2 border-gray-600">
+            <div className="w-16 h-16 rounded-xl overflow-hidden bg-accent-dark border-2 border-gray-600">
               <Image
-                src={`https://ddragon.leagueoflegends.com/cdn/14.21.1/img/champion/${participant.championName}.png`}
+                src={getChampionImageUrl(participant.championName, ddragonVersion)}
                 alt={participant.championName}
-                width={48}
-                height={48}
+                width={64}
+                height={64}
                 className="w-full h-full scale-110 object-cover"
                 unoptimized
               />
             </div>
-            <div className="absolute -bottom-1 -right-1 bg-gray-800 border border-gray-600 rounded px-1 py-0.5 text-xs font-bold">
+            <div className="absolute -bottom-1 -right-1 bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 text-xs font-bold">
               {participant.champLevel}
             </div>
           </div>
 
-          {/* Summoner Spells */}
-          <div className="flex flex-col gap-0.5">
-            <div className="w-5 h-5 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+          {/* spells */}
+          <div className="flex flex-col gap-1">
+            <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
               <Image
-                src={`https://ddragon.leagueoflegends.com/cdn/14.21.1/img/spell/Summoner${getSpellName(participant.summoner1Id)}.png`}
+                src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
                 alt="Spell 1"
-                width={20}
-                height={20}
+                width={28}
+                height={28}
                 className="w-full h-full object-cover"
                 unoptimized
               />
             </div>
-            <div className="w-5 h-5 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+            <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
               <Image
-                src={`https://ddragon.leagueoflegends.com/cdn/14.21.1/img/spell/Summoner${getSpellName(participant.summoner2Id)}.png`}
+                src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
                 alt="Spell 2"
-                width={20}
-                height={20}
+                width={28}
+                height={28}
                 className="w-full h-full object-cover"
                 unoptimized
               />
@@ -75,14 +92,38 @@ export default function MatchHistoryItem({ match, puuid }: Props) {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="flex flex-col justify-center flex-shrink-0 min-w-[110px]">
-          <div className={`text-sm font-bold mb-1 ${isWin ? 'text-[#5383E8]' : 'text-[#E84057]'}`}>
-            {isWin ? 'WIN' : 'LOSE'}
-            <span className="text-gray-400 font-normal ml-2 text-xs">
-              {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, '0')}
-            </span>
+        {/* items */}
+        <div className="flex gap-1 flex-shrink-0">
+          <div className="grid grid-cols-3 grid-rows-2 gap-1">
+            {[
+              participant.item0,
+              participant.item1,
+              participant.item2,
+              participant.item3,
+              participant.item4,
+              participant.item5,
+            ].map((itemId, idx) => (
+              <div
+                key={idx}
+                className="w-8 h-8 rounded bg-gray-800 border border-gray-700 overflow-hidden"
+              >
+                {itemId > 0 && (
+                  <Image
+                    src={getItemImageUrl(itemId, ddragonVersion)}
+                    alt={`Item ${itemId}`}
+                    width={32}
+                    height={32}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
+                )}
+              </div>
+            ))}
           </div>
+        </div>
+
+        {/* stats */}
+        <div className="flex flex-col justify-center flex-shrink-0 min-w-[140px] ml-2">
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-bold text-white">
               {participant.kills}
@@ -96,106 +137,99 @@ export default function MatchHistoryItem({ match, puuid }: Props) {
               {participant.assists}
             </span>
           </div>
-          <div className="text-xs text-gray-400 mt-0.5">
-            {kda} KDA • {timeAgo}
-          </div>
-        </div>
-
-        {/* Items */}
-        <div className="flex gap-1 flex-shrink-0 ml-2">
-          <div className="grid grid-cols-3 grid-rows-2 gap-0.5">
-            {[
-              participant.item0,
-              participant.item1,
-              participant.item2,
-              participant.item3,
-              participant.item4,
-              participant.item5,
-            ].map((itemId, idx) => (
-              <div
-                key={idx}
-                className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden"
-              >
-                {itemId > 0 && (
-                  <Image
-                    src={`https://ddragon.leagueoflegends.com/cdn/14.21.1/img/item/${itemId}.png`}
-                    alt={`Item ${itemId}`}
-                    width={24}
-                    height={24}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* CS */}
-        <div className="flex flex-col items-center flex-shrink-0 min-w-[55px] ml-2">
-          <div className="text-sm font-semibold text-white">
-            {participant.totalMinionsKilled + participant.neutralMinionsKilled} CS
+          <div className="text-xs text-gray-400 mb-1">
+            ({kda} KDA)
           </div>
           <div className="text-xs text-gray-400">
-            ({((participant.totalMinionsKilled + participant.neutralMinionsKilled) / gameDurationMinutes).toFixed(1)})
+            {participant.totalMinionsKilled + participant.neutralMinionsKilled} CS ({((participant.totalMinionsKilled + participant.neutralMinionsKilled) / gameDurationMinutes).toFixed(1)}/min)
+          </div>
+          <div className="text-xs text-gray-400">
+            {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DMG/min
           </div>
         </div>
 
-        {/* All Players */}
-        <div className="flex gap-3 ml-auto flex-shrink-0">
+        {/* teams */}
+        <div className="hidden sm:flex gap-3 ml-auto flex-shrink-0">
           {/* Team 1 */}
-          <div className="flex flex-col gap-0.5 w-24">
-            {team1.map((p, idx) => (
-              <div key={idx} className="flex items-center gap-1">
-                <div
-                  className={`w-4 h-4 rounded overflow-hidden flex-shrink-0 ${
-                    p.puuid === puuid ? 'ring-2 ring-yellow-400' : ''
-                  }`}
-                >
-                  <Image
-                    src={`https://ddragon.leagueoflegends.com/cdn/14.21.1/img/champion/${p.championName}.png`}
-                    alt={p.championName}
-                    width={16}
-                    height={16}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
+          <div className="flex flex-col gap-0.5 w-32">
+            {team1.map((p, idx) => {
+              const playerName = p.riotIdGameName || p.summonerName
+              const playerTag = p.riotIdTagline || 'EUW'
+              const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
+              const isCurrentUser = p.puuid === puuid
+              
+              return (
+                <div key={idx} className="flex items-center gap-1">
+                  <div
+                    className={`w-4 h-4 rounded overflow-hidden flex-shrink-0 ${
+                      isCurrentUser ? 'ring-2 ring-gold-light' : ''
+                    }`}
+                  >
+                    <Image
+                      src={getChampionImageUrl(p.championName, ddragonVersion)}
+                      alt={p.championName}
+                      width={16}
+                      height={16}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <Link 
+                    href={profileUrl}
+                    className={`text-xs hover:text-gold-light truncate flex-1 transition-colors ${
+                      isCurrentUser ? 'text-white' : 'text-subtitle'
+                    }`}
+                  >
+                    {playerName}
+                  </Link>
                 </div>
-                <span className="text-xs text-gray-300 truncate max-w-[80px]">
-                  {p.riotIdGameName || p.summonerName}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
-          {/* Team 2 */}
-          <div className="flex flex-col gap-0.5">
-            {team2.map((p, idx) => (
-              <div key={idx} className="flex items-center gap-1">
-                <div
-                  className={`w-4 h-4 rounded overflow-hidden flex-shrink-0 ${
-                    p.puuid === puuid ? 'ring-2 ring-yellow-400' : ''
-                  }`}
-                >
-                  <Image
-                    src={`https://ddragon.leagueoflegends.com/cdn/14.21.1/img/champion/${p.championName}.png`}
-                    alt={p.championName}
-                    width={16}
-                    height={16}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
+          {/* team 2 */}
+          <div className="flex flex-col gap-0.5 w-32">
+            {team2.map((p, idx) => {
+              const playerName = p.riotIdGameName || p.summonerName
+              const playerTag = p.riotIdTagline || 'EUW'
+              const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
+              const isCurrentUser = p.puuid === puuid
+              
+              return (
+                <div key={idx} className="flex items-center gap-1">
+                  <div
+                    className={`w-4 h-4 rounded overflow-hidden flex-shrink-0 ${
+                      isCurrentUser ? 'ring-2 ring-yellow-400' : ''
+                    }`}
+                  >
+                    <Image
+                      src={getChampionImageUrl(p.championName, ddragonVersion)}
+                      alt={p.championName}
+                      width={16}
+                      height={16}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <Link 
+                    href={profileUrl}
+                    className={`text-xs hover:text-gold-light truncate flex-1 transition-colors ${
+                      isCurrentUser ? 'text-white' : 'text-subtitle'
+                    }`}
+                  >
+                    {playerName}
+                  </Link>
                 </div>
-                <span className="text-xs text-gray-300 truncate max-w-[80px]">
-                  {p.riotIdGameName || p.summonerName}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
-        {/* Dropdown Arrow */}
-        <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors flex-shrink-0">
+        {/* separator */}
+        <div className="hidden sm:block w-px h-12 bg-gold-dark/50 mx-2 flex-shrink-0" />
+
+        {/* dropdown */}
+        <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors flex-shrink-0 ml-auto">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 11L3 6h10l-5 5z" />
           </svg>
@@ -203,25 +237,6 @@ export default function MatchHistoryItem({ match, puuid }: Props) {
       </div>
     </div>
   )
-}
-
-function getSpellName(spellId: number): string {
-  const spellMap: { [key: number]: string } = {
-    1: 'Boost',
-    3: 'Exhaust',
-    4: 'Flash',
-    6: 'Haste',
-    7: 'Heal',
-    11: 'Smite',
-    12: 'Teleport',
-    13: 'Mana',
-    14: 'Dot',
-    21: 'Barrier',
-    30: 'PoroRecall',
-    31: 'PoroThrow',
-    32: 'Snowball',
-  }
-  return spellMap[spellId] || 'Flash'
 }
 
 function getTimeAgo(date: Date): string {

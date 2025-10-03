@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { getDefaultTag } from "../lib/regions"
 
 interface Props {
@@ -16,23 +16,40 @@ interface Props {
 export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpdateComplete, hasMatches }: Props) {
   const router = useRouter()
   const [isUpdating, setIsUpdating] = useState(false)
-  const [message, setMessage] = useState('')
+  const [cooldown, setCooldown] = useState(0)
+  const [showCooldownMessage, setShowCooldownMessage] = useState(false)
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [cooldown])
+
+  useEffect(() => {
+    if (showCooldownMessage) {
+      const timer = setTimeout(() => setShowCooldownMessage(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [showCooldownMessage])
 
   const calculateETA = (totalMatches: number) => {
-    // Calculate ETA based on total API calls needed
-    // The library handles rate limiting internally, so we provide a conservative estimate
     const apiCallsNeeded = totalMatches + Math.ceil(totalMatches / 100)
-    
-    // Riot API limits: 20 requests per second, 100 requests per 2 minutes
-    // Using conservative estimate of ~15 requests/second to account for library overhead
     const estimatedSeconds = Math.ceil(apiCallsNeeded / 15)
     
     return estimatedSeconds
   }
 
   const handleUpdate = async () => {
+    if (cooldown > 0) {
+      setShowCooldownMessage(true)
+      return
+    }
+    
+    if (isUpdating) return
+    
     setIsUpdating(true)
-    setMessage('Getting match count...')
+    setCooldown(30) // 30 second cooldown
     
     try {
       const decodedName = decodeURIComponent(name)
@@ -68,8 +85,6 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
         onUpdateStart(totalMatches, eta, showFullScreen)
       }
 
-      setMessage(showFullScreen ? `Fetching ${totalMatches} matches...` : `Updating...`)
-
       const response = await fetch('/api/update-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,12 +93,28 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
           gameName,
           tagLine,
         }),
+      }).catch(error => {
+        // network errors
+        console.log('Network error during update:', error)
+        return null
       })
 
-      const data = await response.json()
+      if (!response) {
+        // network timeout/error
+        if (onUpdateComplete) {
+          onUpdateComplete()
+        }
+        // still refresh
+        setTimeout(() => {
+          router.refresh()
+          window.location.reload()
+        }, 500)
+        return
+      }
+
+      const data = await response.json().catch(() => ({}))
 
       if (response.ok) {
-        setMessage(`✓ Fetched ${data.newMatches} new matches`)
         if (onUpdateComplete) {
           onUpdateComplete()
         }
@@ -92,37 +123,35 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
           window.location.reload()
         }, 500)
       } else {
-        setMessage(`✗ ${data.error}`)
         if (onUpdateComplete) {
           onUpdateComplete()
         }
       }
     } catch (error) {
       console.error('Update error:', error)
-      setMessage('✗ Failed to update profile')
       if (onUpdateComplete) {
         onUpdateComplete()
       }
     } finally {
       setIsUpdating(false)
-      setTimeout(() => setMessage(''), 3000)
     }
   }
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="relative">
       <button 
         onClick={handleUpdate}
         disabled={isUpdating}
-        className="px-6 py-2 bg-gradient-to-t from-accent-r-dark to-accent-r-light hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
+        className="w-32 px-6 py-2 bg-gradient-to-t from-accent-r-dark to-accent-r-light hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
         data-update-button
       >
         {isUpdating ? 'Updating...' : 'Update'}
       </button>
-      {message && (
-        <p className={`text-sm ${message.startsWith('✓') ? 'text-green-400' : message.startsWith('✗') ? 'text-red-400' : 'text-blue-400'}`}>
-          {message}
-        </p>
+      
+      {showCooldownMessage && (
+        <div className="absolute top-full mt-2 left-0 bg-accent-r-dark border border-accent-r-light/30 rounded-lg px-4 py-2 text-sm text-white whitespace-nowrap z-10 animate-fade-in">
+          Please wait, you're updating too often
+        </div>
       )}
     </div>
   )
