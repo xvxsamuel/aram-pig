@@ -14,6 +14,7 @@
     --color-accent-r-light: oklch(0.4522 0.0979 239.18);
     --color-accent-r-dark: oklch(0.3728 0.0874 244.31);
     --color-accent-darker: oklch(0.2088 0.051 245.06);
+    --color-accent-darkest: oklch(0.1653 0.0352 240.46);
     --color-gold-light: oklch(0.7975 0.0627 90.79);
     --color-gold-dark: oklch(0.4713 0.0697 81.41);
     --color-subtitle: oklch(0.7412 0 0);
@@ -31,27 +32,7 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-family-title);
 }
 
-/* Search input placeholder style */
 input::placeholder {
     font-family: var(--font-light);
     font-weight: 300;
-}
-
-/* Custom scrollbar for region dropdown */
-.region-dropdown-scroll::-webkit-scrollbar {
-    width: 8px;
-}
-
-.region-dropdown-scroll::-webkit-scrollbar-track {
-    background: var(--color-accent-dark);
-    border-radius: 10px;
-}
-
-.region-dropdown-scroll::-webkit-scrollbar-thumb {
-    background: var(--color-gold-dark);
-    border-radius: 10px;
-}
-
-.region-dropdown-scroll::-webkit-scrollbar-thumb:hover {
-    background: var(--color-gold-light);
 }

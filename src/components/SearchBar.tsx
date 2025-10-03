@@ -15,7 +15,6 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const regionContainerRef = useRef<HTMLDivElement>(null)
 
-  // Closing
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (regionContainerRef.current && !regionContainerRef.current.contains(event.target as Node)) {
@@ -34,7 +33,6 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
     const trimmed = name.trim()
     if (!trimmed) return
     
-    // URL Cleanup - only replace # with -, keep spaces for tags like "d yum"
     const urlFriendlyName = trimmed.replace("#", "-")
     router.push(`/${region}/${encodeURIComponent(urlFriendlyName)}`)
   }

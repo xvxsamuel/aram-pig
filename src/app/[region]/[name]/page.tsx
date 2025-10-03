@@ -1,38 +1,35 @@
 import { notFound } from "next/navigation"
 import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL, getDefaultTag } from "../../../lib/regions"
-import SearchBar from "../../../components/SearchBar"
-import { getSummonerByRiotId, getMatchIdsByPuuid } from "../../../lib/riot-api"
+import Navbar from "../../../components/Navbar"
+import SummonerContent from "../../../components/SummonerContent"
+import { getSummonerByRiotId, type MatchData } from "../../../lib/riot-api"
+import { supabase } from "../../../lib/supabase"
 
 interface Params {
   region: string
   name: string
 }
 
-export default async function SummonerPage({ params }: { params: Params }) {
-  const { region, name } = params
+export default async function SummonerPage({ params }: { params: Promise<Params> }) {
+  const { region, name } = await params
 
-  // Check if region is a valid label (e.g., "EUW", "NA")
   const regionLabel = region.toUpperCase()
   const platformCode = LABEL_TO_PLATFORM[regionLabel]
   
-  // If not a valid label, try to convert it
   if (!platformCode) {
     notFound()
   }
 
-  // URL Fix - convert "Name-TAG" back to "Name#TAG"
+  // url fix
   const decodedName = decodeURIComponent(name)
   const summonerName = decodedName.replace("-", "#")
 
-  // Parse Riot ID (gameName#tagLine)
-  // If no tag provided, use default tag for the region
   const [gameName, tagLine] = summonerName.includes("#") 
     ? summonerName.split("#") 
     : [summonerName, getDefaultTag(regionLabel)]
 
-  // Fetch summoner data from Riot API
   let summonerData = null
-  let matchIds: string[] = []
+  let matches: MatchData[] = []
   let error = null
 
   try {
@@ -41,28 +38,79 @@ export default async function SummonerPage({ params }: { params: Params }) {
     if (!summonerData) {
       error = "Summoner not found"
     } else {
-      // Fetch ARAM match history
-      const regional = PLATFORM_TO_REGIONAL[platformCode]
-      matchIds = await getMatchIdsByPuuid(summonerData.account.puuid, regional, 450, 20)
+      const puuid = summonerData.account.puuid
+
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        try {
+          const { data: dbMatches, error: dbError } = await supabase
+            .from('summoner_matches')
+            .select(`
+              match_id,
+              matches (
+                match_data
+              )
+            `)
+            .eq('puuid', puuid)
+            .order('match_id', { ascending: false })
+
+          if (!dbError && dbMatches && dbMatches.length > 0) {
+            matches = dbMatches
+              .map((record: any) => record.matches?.match_data)
+              .filter((m: any) => m !== null) as MatchData[]
+            
+            console.log(`Loaded ${matches.length} matches from database`)
+          }
+        } catch (dbError) {
+          console.log('Database error:', dbError)
+        }
+      }
     }
   } catch (err) {
     console.error("Error fetching summoner data:", err)
     error = "Failed to fetch summoner data"
   }
 
+  // stats from matches
+  let wins = 0
+  let totalKills = 0
+  let totalDeaths = 0
+  let totalAssists = 0
+  let mostPlayedChampion = ''
+
+  if (summonerData && matches.length > 0) {
+    const championCounts: { [key: string]: number } = {}
+    
+    matches.forEach(match => {
+      const participant = match.info.participants.find(p => p.puuid === summonerData.account.puuid)
+      if (participant) {
+        if (participant.win) wins++
+        totalKills += participant.kills
+        totalDeaths += participant.deaths
+        totalAssists += participant.assists
+        
+        // champ plays count
+        championCounts[participant.championName] = (championCounts[participant.championName] || 0) + 1
+      }
+    })
+  
+    let maxPlays = 0
+    for (const [champion, count] of Object.entries(championCounts)) {
+      if (count > maxPlays) {
+        maxPlays = count
+        mostPlayedChampion = champion
+      }
+    }
+  }
+
+  const winRate = matches.length > 0 ? ((wins / matches.length) * 100).toFixed(1) : '0'
+  const avgKDA = matches.length > 0 && totalDeaths > 0 
+    ? ((totalKills + totalAssists) / totalDeaths).toFixed(2)
+    : totalDeaths === 0 && matches.length > 0 ? 'Perfect' : '0'
+
   return (
     <main className="min-h-screen bg-accent-darker text-white">
-      <header className="sticky top-0 z-40 bg-black/40 border-b border-gold-light/20">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-6">
-            <a href="/" className="flex items-center hover:opacity-80 transition-opacity">
-              <img src="/title-bar.svg" alt="ARAM Pig" className="h-12 w-auto" />
-            </a>
-            <SearchBar className="flex-1 max-w-2xl h-12" />
-          </div>
-        </div>
-      </header> 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <Navbar />
+      <div className={`max-w-7xl mx-auto px-4 ${error ? 'py-4' : ''}`}>
         {error && (
           <div className="bg-red-900/20 border border-red-500/50 rounded-2xl p-6 mb-6">
             <p className="text-red-400 text-lg">{error}</p>
@@ -73,59 +121,19 @@ export default async function SummonerPage({ params }: { params: Params }) {
         )}
 
         {summonerData && (
-          <>
-            {/* Summoner info section */}
-            <section className="bg-accent-darker/60 rounded-2xl p-6 border border-gold-dark/20 mb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-xl bg-accent-dark border-2 border-gold-dark/40 flex items-center justify-center overflow-hidden">
-                  <img 
-                    src={`https://ddragon.leagueoflegends.com/cdn/14.21.1/img/profileicon/${summonerData.summoner.profileIconId}.png`}
-                    alt="Profile Icon"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">
-                    {summonerData.account.gameName}
-                    <span className="text-subtitle"> #{summonerData.account.tagLine}</span>
-                  </h1>
-                  <p className="text-subtitle text-lg">
-                    Region: <span className="text-gold-light font-semibold">{regionLabel}</span>
-                  </p>
-                  <p className="text-subtitle">
-                    Level {summonerData.summoner.summonerLevel}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* ARAM Stats section */}
-            <section className="bg-accent-darker/60 rounded-2xl p-6 border border-gold-dark/20 mb-6">
-              <h2 className="text-2xl font-bold mb-4 text-gold-light">ARAM Statistics</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-accent-dark/50 rounded-xl p-4 border border-gold-dark/10">
-                  <p className="text-subtitle text-sm mb-1">ARAM Games Found</p>
-                  <p className="text-3xl font-bold">{matchIds.length}</p>
-                </div>
-                <div className="bg-accent-dark/50 rounded-xl p-4 border border-gold-dark/10">
-                  <p className="text-subtitle text-sm mb-1">Win Rate</p>
-                  <p className="text-3xl font-bold">Coming Soon</p>
-                </div>
-                <div className="bg-accent-dark/50 rounded-xl p-4 border border-gold-dark/10">
-                  <p className="text-subtitle text-sm mb-1">KDA</p>
-                  <p className="text-3xl font-bold">Coming Soon</p>
-                </div>
-              </div>
-            </section>
-
-            {/* Champion stats section */}
-            <section className="bg-accent-darker/60 rounded-2xl p-6 border border-gold-dark/20">
-              <h2 className="text-2xl font-bold mb-4 text-gold-light">Top ARAM Champions</h2>
-              <p className="text-subtitle">
-                Found {matchIds.length} ARAM matches. Detailed statistics coming soon...
-              </p>
-            </section>
-          </>
+          <SummonerContent
+            summonerData={summonerData}
+            matches={matches}
+            wins={wins}
+            winRate={winRate}
+            avgKDA={avgKDA}
+            totalKills={totalKills}
+            totalDeaths={totalDeaths}
+            totalAssists={totalAssists}
+            mostPlayedChampion={mostPlayedChampion}
+            region={region}
+            name={name}
+          />
         )}
       </div>
     </main>
