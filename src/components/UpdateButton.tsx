@@ -18,39 +18,16 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
   const [isUpdating, setIsUpdating] = useState(false)
   const [message, setMessage] = useState('')
 
-  const calculateETA = async (totalMatches: number) => {
-    try {
-      // Get current rate limit status from server
-      const statusResponse = await fetch('/api/rate-limit-status')
-      if (!statusResponse.ok) {
-        // Fallback to basic calculation if status endpoint fails
-        return calculateBasicETA(totalMatches)
-      }
-
-      const status = await statusResponse.json()
-      const apiCallsNeeded = totalMatches + Math.ceil(totalMatches / 100)
-      
-      // Use the effective rate per second from the server
-      const effectiveRate = status.effectiveRatePerSecond
-      
-      // Calculate time with current server load
-      // Add 20% buffer for safety
-      const estimatedSeconds = Math.ceil((apiCallsNeeded / effectiveRate) * 1.2)
-      
-      return estimatedSeconds
-    } catch (error) {
-      console.error('Error calculating ETA:', error)
-      return calculateBasicETA(totalMatches)
-    }
-  }
-
-  const calculateBasicETA = (totalMatches: number) => {
-    // Fallback calculation assuming full rate limit availability
+  const calculateETA = (totalMatches: number) => {
+    // Calculate ETA based on total API calls needed
+    // The library handles rate limiting internally, so we provide a conservative estimate
     const apiCallsNeeded = totalMatches + Math.ceil(totalMatches / 100)
-    const shortTermLimit = 20
-    const batchesNeeded = Math.ceil(apiCallsNeeded / shortTermLimit)
-    const estimatedSeconds = batchesNeeded * 1.5
-    return Math.ceil(estimatedSeconds)
+    
+    // Riot API limits: 20 requests per second, 100 requests per 2 minutes
+    // Using conservative estimate of ~15 requests/second to account for library overhead
+    const estimatedSeconds = Math.ceil(apiCallsNeeded / 15)
+    
+    return estimatedSeconds
   }
 
   const handleUpdate = async () => {
@@ -83,7 +60,7 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
       }
 
       const { totalMatches } = await countResponse.json()
-      const eta = await calculateETA(totalMatches)
+      const eta = calculateETA(totalMatches)
       
       const showFullScreen = !hasMatches
       

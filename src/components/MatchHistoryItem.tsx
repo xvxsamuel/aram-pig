@@ -96,7 +96,9 @@ export default function MatchHistoryItem({ match, puuid }: Props) {
               {participant.assists}
             </span>
           </div>
-          <div className="text-xs text-gray-400 mt-0.5">{kda} KDA</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {kda} KDA • {timeAgo}
+          </div>
         </div>
 
         {/* Items */}

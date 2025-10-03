@@ -1,79 +1,70 @@
-import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "./regions"
-import { rateLimiter } from "./rate-limiter"
+import { RiotAPI, RiotAPITypes, PlatformId } from "@fightmegg/riot-api"
+import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "./regions"
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY
 
 if (!RIOT_API_KEY) {
-  console.error("❌ RIOT_API_KEY is not set in environment variables!")
-  console.error("Create a .env.local file with: RIOT_API_KEY=your_key_here")
+  console.error("RIOT_API_KEY is not set in environment variables")
 }
 
-const REGIONAL_ENDPOINTS: Record<RegionalCluster, string> = {
-  americas: "americas.api.riotgames.com",
-  europe: "europe.api.riotgames.com",
-  asia: "asia.api.riotgames.com",
-  sea: "sea.api.riotgames.com",
+// Initialize Riot API client with automatic rate limiting
+const rAPI = new RiotAPI(RIOT_API_KEY!)
+
+// Map our regional clusters to library's PlatformId
+const REGIONAL_TO_PLATFORM_ID: Record<RegionalCluster, PlatformId> = {
+  americas: PlatformId.AMERICAS,
+  europe: PlatformId.EUROPE,
+  asia: PlatformId.ASIA,
+  sea: PlatformId.SEA,
 }
 
-function getPlatformEndpoint(platform: PlatformCode): string {
-  return `${platform}.api.riotgames.com`
+const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, PlatformId> = {
+  na1: PlatformId.NA1,
+  euw1: PlatformId.EUW1,
+  eun1: PlatformId.EUNE1,
+  kr: PlatformId.KR,
+  br1: PlatformId.BR1,
+  la1: PlatformId.LA1,
+  la2: PlatformId.LA2,
+  oc1: PlatformId.OC1,
+  ru: PlatformId.RU,
+  tr1: PlatformId.TR1,
+  jp1: PlatformId.JP1,
+  sg2: PlatformId.SG2,
+  tw2: PlatformId.TW2,
+  vn2: PlatformId.VN2,
+  me1: PlatformId.ME1,
 }
 
 export async function getAccountByRiotId(gameName: string, tagLine: string, region: RegionalCluster) {
-  await rateLimiter.waitForSlot();
-  
-  const endpoint = REGIONAL_ENDPOINTS[region]
-  const url = `https://${endpoint}/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`
-  
-  const response = await fetch(url, {
-    headers: {
-      "X-Riot-Token": RIOT_API_KEY!,
-    },
-    next: { revalidate: 3600 }, // Cache for 1 hour
-  })
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      return null // Account not found
+  try {
+    const account = await rAPI.account.getByRiotId({
+      region: REGIONAL_TO_PLATFORM_ID[region] as any,
+      gameName,
+      tagLine,
+    })
+    return account
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      return null
     }
-    throw new Error(`Riot API error: ${response.status} ${response.statusText}`)
+    throw error
   }
-
-  return response.json() as Promise<{
-    puuid: string
-    gameName: string
-    tagLine: string
-  }>
 }
 
 export async function getSummonerByPuuid(puuid: string, platform: PlatformCode) {
-  await rateLimiter.waitForSlot();
-  
-  const endpoint = getPlatformEndpoint(platform)
-  const url = `https://${endpoint}/lol/summoner/v4/summoners/by-puuid/${puuid}`
-  
-  const response = await fetch(url, {
-    headers: {
-      "X-Riot-Token": RIOT_API_KEY!,
-    },
-    next: { revalidate: 3600 },
-  })
-
-  if (!response.ok) {
-    if (response.status === 404) {
+  try {
+    const summoner = await rAPI.summoner.getByPUUID({
+      region: PLATFORM_CODE_TO_PLATFORM_ID[platform] as any,
+      puuid,
+    })
+    return summoner
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
       return null
     }
-    throw new Error(`Riot API error: ${response.status} ${response.statusText}`)
+    throw error
   }
-
-  return response.json() as Promise<{
-    id: string
-    accountId: string
-    puuid: string
-    profileIconId: number
-    revisionDate: number
-    summonerLevel: number
-  }>
 }
 
 export async function getMatchIdsByPuuid(
@@ -82,44 +73,24 @@ export async function getMatchIdsByPuuid(
   queue: number = 450,
   count: number = 20
 ) {
-  await rateLimiter.waitForSlot();
-  
   const limitedCount = Math.min(count, 100)
-  const endpoint = REGIONAL_ENDPOINTS[region]
-  const url = `https://${endpoint}/lol/match/v5/matches/by-puuid/${puuid}/ids?queue=${queue}&count=${limitedCount}`
-  
-  const response = await fetch(url, {
-    headers: {
-      "X-Riot-Token": RIOT_API_KEY!,
+  const matchIds = await rAPI.matchV5.getIdsByPuuid({
+    cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
+    puuid,
+    params: {
+      queue,
+      count: limitedCount,
     },
-    next: { revalidate: 300 },
   })
-
-  if (!response.ok) {
-    throw new Error(`Riot API error: ${response.status} ${response.statusText}`)
-  }
-
-  return response.json() as Promise<string[]>
+  return matchIds
 }
 
 export async function getMatchById(matchId: string, region: RegionalCluster) {
-  await rateLimiter.waitForSlot();
-  
-  const endpoint = REGIONAL_ENDPOINTS[region]
-  const url = `https://${endpoint}/lol/match/v5/matches/${matchId}`
-  
-  const response = await fetch(url, {
-    headers: {
-      "X-Riot-Token": RIOT_API_KEY!,
-    },
-    next: { revalidate: 3600 },
+  const match = await rAPI.matchV5.getMatchById({
+    cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
+    matchId,
   })
-
-  if (!response.ok) {
-    throw new Error(`Riot API error: ${response.status} ${response.statusText}`)
-  }
-
-  return response.json() as Promise<MatchData>
+  return match as unknown as MatchData
 }
 
 export interface MatchData {

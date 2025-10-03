@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rateLimiter } from '../../../lib/rate-limiter';
+import { getMatchIdsByPuuid } from '../../../lib/riot-api';
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
@@ -19,22 +19,9 @@ export async function POST(request: Request) {
     let start = 0;
     const batchSize = 100;
 
+    // Fetch matches in batches until we get all of them
     while (true) {
-      await rateLimiter.waitForSlot();
-      
-      const matchIdsUrl = `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?queue=450&start=${start}&count=${batchSize}`;
-      const response = await fetch(matchIdsUrl, {
-        headers: { 'X-Riot-Token': RIOT_API_KEY! },
-      });
-
-      if (!response.ok) {
-        if (totalMatches === 0) {
-          throw new Error('Failed to fetch match count');
-        }
-        break;
-      }
-
-      const matchIds: string[] = await response.json();
+      const matchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchSize);
       
       if (matchIds.length === 0) break;
       

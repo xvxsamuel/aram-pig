@@ -1,37 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '../../../lib/supabase';
-import { rateLimiter } from '../../../lib/rate-limiter';
+import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById } from '../../../lib/riot-api';
+import { PLATFORM_TO_REGIONAL, type PlatformCode } from '../../../lib/regions';
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
-
-async function fetchAccount(region: string, gameName: string, tagLine: string) {
-  await rateLimiter.waitForSlot();
-  
-  const accountUrl = `https://${region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
-  const accountRes = await fetch(accountUrl, {
-    headers: { 'X-Riot-Token': RIOT_API_KEY! },
-  });
-  if (!accountRes.ok) throw new Error('Account not found');
-  return accountRes.json();
-}
-
-async function fetchSummoner(region: string, puuid: string) {
-  await rateLimiter.waitForSlot();
-  
-  const platformMap: Record<string, string> = {
-    americas: 'na1',
-    europe: 'euw1',
-    asia: 'kr',
-    sea: 'oc1',
-  };
-  const platform = platformMap[region] || 'na1';
-  const summonerUrl = `https://${platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
-  const summonerRes = await fetch(summonerUrl, {
-    headers: { 'X-Riot-Token': RIOT_API_KEY! },
-  });
-  if (!summonerRes.ok) throw new Error('Summoner not found');
-  return summonerRes.json();
-}
 
 async function fetchMatchIds(region: string, puuid: string, count?: number) {
   const allMatchIds: string[] = [];
@@ -41,18 +13,9 @@ async function fetchMatchIds(region: string, puuid: string, count?: number) {
   while (true) {
     if (count && allMatchIds.length >= count) break;
     
-    await rateLimiter.waitForSlot();
-    
     const batchCount = count ? Math.min(maxPerRequest, count - allMatchIds.length) : maxPerRequest;
-    const matchIdsUrl = `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?type=normal&queue=450&start=${start}&count=${batchCount}`;
     
-    const matchIdsRes = await fetch(matchIdsUrl, {
-      headers: { 'X-Riot-Token': RIOT_API_KEY! },
-    });
-    
-    if (!matchIdsRes.ok) break;
-    
-    const batchIds = await matchIdsRes.json();
+    const batchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchCount);
     
     if (batchIds.length === 0) break;
     
@@ -67,14 +30,7 @@ async function fetchMatchIds(region: string, puuid: string, count?: number) {
 }
 
 async function fetchMatch(region: string, matchId: string) {
-  await rateLimiter.waitForSlot();
-  
-  const matchUrl = `https://${region}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
-  const matchRes = await fetch(matchUrl, {
-    headers: { 'X-Riot-Token': RIOT_API_KEY! },
-  });
-  if (!matchRes.ok) throw new Error(`Failed to fetch match ${matchId}`);
-  return matchRes.json();
+  return await getMatchById(matchId, region as any);
 }
 
 export async function POST(request: Request) {
@@ -90,8 +46,24 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
-    const accountData = await fetchAccount(region, gameName, tagLine);
-    const summonerData = await fetchSummoner(region, accountData.puuid);
+    // Use the library functions instead of custom fetch
+    const accountData = await getAccountByRiotId(gameName, tagLine, region as any);
+    if (!accountData) {
+      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+    }
+
+    // Map region to platform for summoner lookup
+    const platformMap: Record<string, PlatformCode> = {
+      americas: 'na1',
+      europe: 'euw1',
+      asia: 'kr',
+      sea: 'oc1',
+    };
+    const platform = platformMap[region] || 'na1';
+    const summonerData = await getSummonerByPuuid(accountData.puuid, platform as PlatformCode);
+    if (!summonerData) {
+      return NextResponse.json({ error: 'Summoner not found' }, { status: 404 });
+    }
 
     const { error: summonerError } = await supabase
       .from('summoners')
