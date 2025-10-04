@@ -15,7 +15,7 @@ async function fetchMatchIds(region: string, puuid: string, count?: number) {
     
     const batchCount = count ? Math.min(maxPerRequest, count - allMatchIds.length) : maxPerRequest;
     
-    const batchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchCount);
+    const batchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchCount, start);
     
     if (batchIds.length === 0) break;
     

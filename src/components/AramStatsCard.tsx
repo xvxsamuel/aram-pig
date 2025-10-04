@@ -1,26 +1,31 @@
 interface Props {
   totalGames: number
   wins: number
-  winRate: string
-  avgKDA: string
   totalKills: number
   totalDeaths: number
   totalAssists: number
   longestWinStreak: number
-  damagePerSecond: string
+  totalDamage: number
+  totalGameDuration: number
 }
 
 export default function AramStatsCard({ 
   totalGames, 
   wins, 
-  winRate, 
-  avgKDA,
   totalKills,
   totalDeaths,
   totalAssists,
   longestWinStreak,
-  damagePerSecond
+  totalDamage,
+  totalGameDuration
 }: Props) {
+  // calculations
+  const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : '0'
+  const avgKDA = totalGames > 0 && totalDeaths > 0 
+    ? ((totalKills + totalAssists) / totalDeaths).toFixed(2)
+    : totalDeaths === 0 && totalGames > 0 ? 'Perfect' : '0'
+  const damagePerMinute = totalGameDuration > 0 ? (totalDamage / (totalGameDuration / 60)).toFixed(0) : '0'
+
   return (
     <div className="w-full">
       <section className="bg-accent-darker/60 rounded-xl border border-gold-dark/20 overflow-hidden">
@@ -39,6 +44,11 @@ export default function AramStatsCard({
               <span className="text-xl font-bold">{totalGames} ({wins}W {totalGames - wins}L)</span>
             </div>
 
+            <div className="flex justify-between items-center">
+              <span className="text-subtitle text-sm">Longest Win Streak</span>
+              <span className="text-xl font-bold">{longestWinStreak}</span>
+            </div>
+
             <div className="h-px bg-gradient-to-r from-transparent via-gold-dark/20 to-transparent my-4" />
 
             <div className="flex justify-between items-center">
@@ -53,16 +63,9 @@ export default function AramStatsCard({
               </span>
             </div>
 
-            <div className="h-px bg-gradient-to-r from-transparent via-gold-dark/20 to-transparent my-4" />
-
             <div className="flex justify-between items-center">
-              <span className="text-subtitle text-sm">Longest Win Streak</span>
-              <span className="text-xl font-bold">{longestWinStreak}</span>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="text-subtitle text-sm">Damage per Second</span>
-              <span className="text-xl font-bold">{damagePerSecond}</span>
+              <span className="text-subtitle text-sm">DPM</span>
+              <span className="text-xl font-bold">{damagePerMinute}</span>
             </div>
           </div>
         </div>

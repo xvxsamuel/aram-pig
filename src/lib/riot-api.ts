@@ -4,7 +4,7 @@ import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from ".
 const RIOT_API_KEY = process.env.RIOT_API_KEY
 
 if (!RIOT_API_KEY) {
-  console.error("RIOT_API_KEY is not set in environment variables") // dev logging
+  console.error("RIOT_API_KEY is not set in environment variables") // in case my key expires
 }
 
 const rAPI = new RiotAPI(RIOT_API_KEY!)
@@ -80,7 +80,8 @@ export async function getMatchIdsByPuuid(
   puuid: string,
   region: RegionalCluster,
   queue: number = 450,
-  count: number = 20
+  count: number = 20,
+  start: number = 0
 ) {
   const limitedCount = Math.min(count, 100)
   const matchIds = await rAPI.matchV5.getIdsByPuuid({
@@ -89,6 +90,7 @@ export async function getMatchIdsByPuuid(
     params: {
       queue,
       count: limitedCount,
+      start,
     },
   })
   return matchIds

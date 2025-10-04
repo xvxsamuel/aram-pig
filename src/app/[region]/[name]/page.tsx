@@ -20,7 +20,6 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     notFound()
   }
 
-  // url
   const decodedName = decodeURIComponent(name)
   const summonerName = decodedName.replace("-", "#")
 
@@ -45,17 +44,14 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
       if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
         try {
-          // check
           const { data: summonerRecord } = await supabase
             .from('summoners')
             .select('last_updated, game_name')
             .eq('puuid', puuid)
             .single()
 
-          // store timestamp
           lastUpdated = summonerRecord?.last_updated || null
 
-          // incomplete
           hasIncompleteData = !summonerRecord?.game_name || !summonerRecord?.last_updated
 
           const { data: dbMatches, error: dbError } = await supabase
@@ -74,10 +70,10 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
               .map((record: any) => record.matches?.match_data)
               .filter((m: any) => m !== null) as MatchData[]
             
-            console.log(`Loaded ${matches.length} matches from database`)
+            console.log(`loaded ${matches.length} matches`)
           }
         } catch (dbError) {
-          console.log('Database error:', dbError)
+          console.log('db error:', dbError)
         }
       }
     }
@@ -86,7 +82,6 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     error = "Failed to fetch summoner data"
   }
 
-  // stats
   let wins = 0
   let totalKills = 0
   let totalDeaths = 0
@@ -119,7 +114,6 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
         totalDamage += participant.totalDamageDealtToChampions
         totalGameDuration += match.info.gameDuration
         
-        // champ
         championCounts[participant.championName] = (championCounts[participant.championName] || 0) + 1
       }
     })
@@ -133,13 +127,6 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     }
   }
 
-  const winRate = matches.length > 0 ? ((wins / matches.length) * 100).toFixed(1) : '0'
-  const avgKDA = matches.length > 0 && totalDeaths > 0 
-    ? ((totalKills + totalAssists) / totalDeaths).toFixed(2)
-    : totalDeaths === 0 && matches.length > 0 ? 'Perfect' : '0'
-  const damagePerSecond = totalGameDuration > 0 ? (totalDamage / totalGameDuration).toFixed(0) : '0'
-
-  // ddragon
   const ddragonVersion = await getLatestVersion()
   const profileIconUrl = summonerData ? await getProfileIconUrl(summonerData.summoner.profileIconId) : ''
   const championImageUrl = mostPlayedChampion ? await getChampionCenteredUrl(mostPlayedChampion) : undefined
@@ -162,14 +149,13 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             summonerData={summonerData}
             matches={matches}
             wins={wins}
-            winRate={winRate}
-            avgKDA={avgKDA}
             totalKills={totalKills}
             totalDeaths={totalDeaths}
             totalAssists={totalAssists}
             mostPlayedChampion={mostPlayedChampion}
             longestWinStreak={longestWinStreak}
-            damagePerSecond={damagePerSecond}
+            totalDamage={totalDamage}
+            totalGameDuration={totalGameDuration}
             region={region}
             name={name}
             hasIncompleteData={hasIncompleteData}

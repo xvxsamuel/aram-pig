@@ -72,7 +72,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Search summoner name"
-              className="w-full h-full px-4 sm:px-6 leading-none text-white placeholder:text-subtitle placeholder:text-xs sm:placeholder:text-sm bg-transparent outline-none relative z-10"
+              className="w-full h-full px-4 sm:px-6 leading-none text-white placeholder:text-subtitle placeholder:text-xs sm:placeholder:text-sm placeholder:hidden sm:placeholder:inline bg-transparent outline-none relative z-10"
               style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}
             />
           </div>            <div className="flex items-center gap-3 pr-4 h-full">

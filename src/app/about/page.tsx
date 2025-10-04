@@ -6,12 +6,11 @@ export default function AboutPage() {
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 py-12">
         <section className="bg-accent-darker/60 rounded-xl p-8 border border-gold-dark/20">
-          <h1 className="text-4xl font-bold mb-6 text-gold-light">About ARAM Pig</h1>
+          <h2 className="text-4xl font-bold mb-6 text-gold-light">About ARAM Pig</h2>
           
           <div className="space-y-6 text-gray-300">
             <p className="text-lg leading-relaxed">
-              ARAM Pig is your ultimate companion for tracking ARAM (All Random All Mid) match history 
-              in League of Legends. We help you analyze your performance, review past games, and see 
+              ARAM Pig is the ultimate companion for tracking your ARAM games and helping you improve. We analyze your performance, review past games, and see 
               your progress over time.
             </p>
 
@@ -22,17 +21,9 @@ export default function AboutPage() {
                 <li>View KDA, win rate, and champion performance</li>
                 <li>See your most played champions</li>
                 <li>Analyze team compositions and match outcomes</li>
-                <li>Fast and responsive design</li>
+                <li>Highlight sub-optimal item choices (Coming soon)</li>
+                <li>Get a personal rating number indicative of your itemization and tendencies (Coming soon)</li>
               </ul>
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-semibold mb-3 text-white">How It Works</h2>
-              <p className="leading-relaxed">
-                Simply search for any summoner by their Riot ID (Game Name + Tag) and region. 
-                We'll fetch all available ARAM matches and display comprehensive statistics. 
-                Click the Update button to refresh your match history with the latest games.
-              </p>
             </div>
 
             <div>

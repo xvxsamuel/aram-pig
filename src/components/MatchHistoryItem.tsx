@@ -36,7 +36,6 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
       }`}
     >
       <div className="flex items-center px-4 py-3 min-h-[80px] gap-0.5">
-        {/* win/loss */}
         <div className="flex flex-col justify-center flex-shrink-0 min-w-[90px]">
           <div className={`text-sm font-bold ${isWin ? 'text-[#5383E8]' : 'text-[#E84057]'}`}>
             {isWin ? 'WIN' : 'LOSE'}
@@ -49,8 +48,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           </div>
         </div>
 
-        {/* champion */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-shrink-0 ml-2">
           <div className="relative">
             <div className="w-16 h-16 rounded-xl overflow-hidden bg-accent-dark border-2 border-gray-600">
               <Image
@@ -67,7 +65,6 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             </div>
           </div>
 
-          {/* spells */}
           <div className="flex flex-col gap-1">
             <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
               <Image
@@ -92,8 +89,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           </div>
         </div>
 
-        {/* items */}
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex gap-1 flex-shrink-0 ml-4">
           <div className="grid grid-cols-3 grid-rows-2 gap-1">
             {[
               participant.item0,
@@ -123,8 +119,8 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
         </div>
 
         {/* stats */}
-        <div className="flex flex-col justify-center flex-shrink-0 min-w-[140px] ml-2">
-          <div className="flex items-baseline gap-1">
+        <div className="flex flex-col justify-center flex-shrink-0 min-w-[140px] ml-2 text-center">
+          <div className="flex items-baseline gap-1 justify-center">
             <span className="text-lg font-bold text-white">
               {participant.kills}
             </span>
@@ -137,20 +133,18 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
               {participant.assists}
             </span>
           </div>
-          <div className="text-xs text-gray-400 mb-1">
+          <div className="text-xs text-gray-400 mb-1r">
             ({kda} KDA)
           </div>
           <div className="text-xs text-gray-400">
-            {participant.totalMinionsKilled + participant.neutralMinionsKilled} CS ({((participant.totalMinionsKilled + participant.neutralMinionsKilled) / gameDurationMinutes).toFixed(1)}/min)
+            {participant.totalMinionsKilled + participant.neutralMinionsKilled} CS ({((participant.totalMinionsKilled + participant.neutralMinionsKilled) / gameDurationMinutes).toFixed(1)})
           </div>
           <div className="text-xs text-gray-400">
-            {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DMG/min
+            {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
           </div>
         </div>
 
-        {/* teams */}
         <div className="hidden sm:flex gap-3 ml-auto flex-shrink-0">
-          {/* Team 1 */}
           <div className="flex flex-col gap-0.5 w-32">
             {team1.map((p, idx) => {
               const playerName = p.riotIdGameName || p.summonerName
@@ -187,7 +181,6 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             })}
           </div>
 
-          {/* team 2 */}
           <div className="flex flex-col gap-0.5 w-32">
             {team2.map((p, idx) => {
               const playerName = p.riotIdGameName || p.summonerName
@@ -199,7 +192,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                 <div key={idx} className="flex items-center gap-1">
                   <div
                     className={`w-4 h-4 rounded overflow-hidden flex-shrink-0 ${
-                      isCurrentUser ? 'ring-2 ring-yellow-400' : ''
+                      isCurrentUser ? 'ring-2 ring-gold-light' : ''
                     }`}
                   >
                     <Image
@@ -224,16 +217,6 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             })}
           </div>
         </div>
-
-        {/* separator */}
-        <div className="hidden sm:block w-px h-12 bg-gold-dark/50 mx-2 flex-shrink-0" />
-
-        {/* dropdown */}
-        <button className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition-colors flex-shrink-0 ml-auto">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 11L3 6h10l-5 5z" />
-          </svg>
-        </button>
       </div>
     </div>
   )

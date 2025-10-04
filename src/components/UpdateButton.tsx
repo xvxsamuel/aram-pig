@@ -18,6 +18,7 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
   const [isUpdating, setIsUpdating] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const [showCooldownMessage, setShowCooldownMessage] = useState(false)
+  const [showUpToDateMessage, setShowUpToDateMessage] = useState(false)
 
   useEffect(() => {
     if (cooldown > 0) {
@@ -32,6 +33,13 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
       return () => clearTimeout(timer)
     }
   }, [showCooldownMessage])
+
+  useEffect(() => {
+    if (showUpToDateMessage) {
+      const timer = setTimeout(() => setShowUpToDateMessage(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [showUpToDateMessage])
 
   const calculateETA = (totalMatches: number) => {
     const apiCallsNeeded = totalMatches + Math.ceil(totalMatches / 100)
@@ -49,7 +57,7 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
     if (isUpdating) return
     
     setIsUpdating(true)
-    setCooldown(30) // 30 second cooldown
+    setCooldown(30) // 30 sec cd between client refreshes
     
     try {
       const decodedName = decodeURIComponent(name)
@@ -77,6 +85,17 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
       }
 
       const { totalMatches } = await countResponse.json()
+      
+      // if no matches then insta refresh
+      if (totalMatches === 0) {
+        console.log('Profile is already up to date!')
+        setShowUpToDateMessage(true)
+        setTimeout(() => {
+          router.refresh()
+        }, 500)
+        return
+      }
+
       const eta = calculateETA(totalMatches)
       
       const showFullScreen = !hasMatches
@@ -107,7 +126,6 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
         // still refresh
         setTimeout(() => {
           router.refresh()
-          window.location.reload()
         }, 500)
         return
       }
@@ -120,7 +138,6 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
         }
         setTimeout(() => {
           router.refresh()
-          window.location.reload()
         }, 500)
       } else {
         if (onUpdateComplete) {
@@ -149,8 +166,14 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
       </button>
       
       {showCooldownMessage && (
-        <div className="absolute top-full mt-2 left-0 bg-accent-r-dark border border-accent-r-light/30 rounded-lg px-4 py-2 text-sm text-white whitespace-nowrap z-10 animate-fade-in">
-          Please wait, you're updating too often
+        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-accent-r-dark border border-accent-r-light/30 rounded-lg px-4 py-2 text-sm text-white whitespace-nowrap z-10 animate-fade-in">
+          Please wait before you update again
+        </div>
+      )}
+      
+      {showUpToDateMessage && (
+        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-green-900/80 border border-green-500/30 rounded-lg px-4 py-2 text-sm text-white whitespace-nowrap z-10 animate-fade-in">
+          Profile is up to date!
         </div>
       )}
     </div>
