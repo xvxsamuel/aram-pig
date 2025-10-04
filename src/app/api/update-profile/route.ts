@@ -35,9 +35,9 @@ async function fetchMatch(region: string, matchId: string) {
 
 export async function POST(request: Request) {
   try {
-    const { region, gameName, tagLine } = await request.json();
+    const { region, gameName, tagLine, platform } = await request.json();
     
-    if (!region || !gameName || !tagLine) {
+    if (!region || !gameName || !tagLine || !platform) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -52,14 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Account not found' }, { status: 404 });
     }
 
-    // platform
-    const platformMap: Record<string, PlatformCode> = {
-      americas: 'na1',
-      europe: 'euw1',
-      asia: 'kr',
-      sea: 'oc1',
-    };
-    const platform = platformMap[region] || 'na1';
+    // use platform from request instead of hardcoded map
     const summonerData = await getSummonerByPuuid(accountData.puuid, platform as PlatformCode);
     if (!summonerData) {
       return NextResponse.json({ error: 'Summoner not found' }, { status: 404 });

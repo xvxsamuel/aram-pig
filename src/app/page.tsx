@@ -16,7 +16,7 @@ export default function HomePage() {
       
       <div className="relative z-10 w-full flex flex-col items-center gap-8">
         <h1 className="sr-only">ARAM Pig</h1>
-        <div className="relative w-full max-w-2xl h-[12vw] min-h-[80px] max-h-[150px]">
+        <div className="relative w-full max-w-2xl h-[12vw] min-h-[80px] max-h-[200px]">
           <Image
             src="/title.svg"
             alt="ARAM Pig"

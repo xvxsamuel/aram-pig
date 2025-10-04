@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { getDefaultTag } from "../lib/regions"
+import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
 
 interface Props {
   region: string
@@ -66,13 +66,9 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
         ? summonerName.split("#") 
         : [summonerName, getDefaultTag(region.toUpperCase())]
 
-      const regionMap: Record<string, string> = {
-        'euw': 'europe',
-        'na': 'americas',
-        'kr': 'asia',
-        'oce': 'sea',
-      }
-      const regionalCode = regionMap[region.toLowerCase()] || 'americas'
+      // convert region label to platform code, then to regional cluster
+      const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
+      const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : 'americas'
 
       const countResponse = await fetch('/api/match-count', {
         method: 'POST',
@@ -111,6 +107,7 @@ export default function UpdateButton({ region, name, puuid, onUpdateStart, onUpd
           region: regionalCode,
           gameName,
           tagLine,
+          platform: platformCode,
         }),
       }).catch(error => {
         // network errors

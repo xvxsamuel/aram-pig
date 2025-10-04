@@ -17,6 +17,14 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
   const regionContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // load saved region from localStorage after mount
+  useEffect(() => {
+    const savedRegion = localStorage.getItem('selected-region')
+    if (savedRegion) {
+      setRegion(savedRegion)
+    }
+  }, [])
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (regionContainerRef.current && !regionContainerRef.current.contains(event.target as Node)) {
@@ -49,16 +57,18 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
   function handleRegionSelect(regionLabel: string) {
     setRegion(regionLabel)
     setIsDropdownOpen(false)
+    // save to localStorage
+    localStorage.setItem('selected-region', regionLabel)
   }
 
   return (
-    <div className={clsx("relative", className)}>
+    <div className={clsx("relative px-4", className)}>
       <div className="relative h-full rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
       <div className="relative z-10 h-full w-full rounded-[inherit] bg-accent-darker flex items-center cursor-text">
         <form onSubmit={onSubmit} className="flex items-center gap-3 w-full h-full">
           <div className="relative flex-1 h-full flex items-center">
             <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 flex gap-1 pointer-events-none">
-              <span className="text-white opacity-0" style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}>
+              <span className="text-white opacity-0 whitespace-pre" style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}>
                 {name}
               </span>
               {showDefaultTag && (
@@ -72,7 +82,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Search summoner name"
-              className="w-full h-full px-4 sm:px-6 leading-none text-white placeholder:text-subtitle placeholder:text-xs sm:placeholder:text-sm placeholder:hidden sm:placeholder:inline bg-transparent outline-none relative z-10"
+              className="w-full h-full px-4 sm:px-6 leading-none text-white placeholder:text-transparent md:placeholder:text-subtitle placeholder:text-xs md:placeholder:text-sm bg-transparent outline-none relative z-10"
               style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}
             />
           </div>            <div className="flex items-center gap-3 pr-4 h-full">

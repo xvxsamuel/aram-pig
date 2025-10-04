@@ -5,7 +5,7 @@ export default function AboutPage() {
     <main className="min-h-screen bg-accent-darker text-white">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 py-12">
-        <section className="bg-accent-darker/60 rounded-xl p-8 border border-gold-dark/20">
+        <section className="bg-accent-darkest rounded-xl p-8 border border-gold-dark/20">
           <h2 className="text-4xl font-bold mb-6 text-gold-light">About ARAM Pig</h2>
           
           <div className="space-y-6 text-gray-300">

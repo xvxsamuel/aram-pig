@@ -56,9 +56,9 @@ export default function AramStatsCard({
               <span className="text-xl font-bold">{avgKDA}</span>
             </div>
             
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-subtitle">Per Game</span>
-              <span className="text-subtitle">
+            <div className="flex justify-between items-center">
+              <span className="text-subtitle text-sm">Per Game</span>
+              <span className="text-xl font-bold">
                 {(totalKills/totalGames).toFixed(1)} / {(totalDeaths/totalGames).toFixed(1)} / {(totalAssists/totalGames).toFixed(1)}
               </span>
             </div>

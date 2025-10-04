@@ -4,10 +4,44 @@ import Navbar from "../../../components/Navbar"
 import SummonerContent from "../../../components/SummonerContent"
 import { getSummonerByRiotId, type MatchData, getChampionCenteredUrl, getProfileIconUrl, getLatestVersion } from "../../../lib/riot-api"
 import { supabase } from "../../../lib/supabase"
+import type { Metadata } from 'next'
 
 interface Params {
   region: string
   name: string
+}
+
+export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
+  const { region, name } = await params
+  const decodedName = decodeURIComponent(name)
+  const displayName = decodedName.replace("-", "#")
+  
+  return {
+    title: `${displayName} - ${region.toUpperCase()} | ARAM Pig`,
+    description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance on ${region.toUpperCase()} server.`,
+    openGraph: {
+      title: `${displayName} - ${region.toUpperCase()} | ARAM Pig`,
+      description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance.`,
+      url: `https://arampig.lol/${region}/${name}`,
+      siteName: 'ARAM Pig',
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: `${displayName} ARAM Stats`,
+        },
+      ],
+      locale: 'en_US',
+      type: 'profile',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${displayName} - ${region.toUpperCase()} | ARAM Pig`,
+      description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance.`,
+      images: ['/og-image.png'],
+    },
+  }
 }
 
 export default async function SummonerPage({ params }: { params: Promise<Params> }) {

@@ -18,12 +18,41 @@ const leagueSpartanRegular = League_Spartan({
 
 export const metadata: Metadata = {
   title: 'ARAM Pig',
-  description: 'ARAM lookup tool',
+  description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
+  keywords: ['ARAM', 'League of Legends', 'LoL', 'Stats', 'Match History', 'ARAM Stats', 'League Stats'],
+  authors: [{ name: 'ARAM Pig' }],
+  themeColor: '#189FC5',
+  openGraph: {
+    title: 'ARAM Pig - League of Legends ARAM Stats',
+    description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
+    url: 'https://arampig.lol',
+    siteName: 'ARAM Pig',
+    images: [
+      {
+        url: '/og-image.png', // We'll need to create this
+        width: 1200,
+        height: 630,
+        alt: 'ARAM Pig - League of Legends ARAM Stats',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ARAM Pig - League of Legends ARAM Stats',
+    description: 'Track your ARAM stats, analyze your performance, and see detailed match history.',
+    images: ['/og-image.png'],
+  },
   appleWebApp: {
     title: 'ARAM Pig',
     capable: true,
     statusBarStyle: 'default'
-  }
+  },
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-icon.png',
+  },
 }
 
 export default function RootLayout({
@@ -33,7 +62,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${leagueSpartanLight.variable} ${leagueSpartanRegular.variable}`}>
-      <body className="min-h-screen antialiased font-light">
+      <body className='min-h-screen antialiased font-light'>
         {children}
       </body>
     </html>

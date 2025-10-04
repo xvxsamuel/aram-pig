@@ -14,10 +14,10 @@ export default function RegionDropdown({ isOpen, onSelect, className = "" }: Pro
   return (
     <div className={clsx("absolute top-full left-1/2 -translate-x-1/2 mt-2 w-20 bg-accent-darker rounded-xl border border-gold-dark/30 shadow-xl z-50 overflow-hidden", className)}>
       <div className="max-h-64 overflow-y-auto" style={{ 
-        scrollbarWidth: 'thin',
-        scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',
-        WebkitOverflowScrolling: 'touch',
-        willChange: 'scroll-position'
+        scrollbarWidth: "thin",
+        scrollbarColor: "var(--color-gold-dark) var(--color-accent-dark)",
+        WebkitOverflowScrolling: "touch",
+        willChange: "scroll-position"
       }}>
         {REGIONS.map((region: typeof REGIONS[number]) => (
           <button

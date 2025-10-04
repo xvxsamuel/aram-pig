@@ -94,8 +94,8 @@ export default function SummonerContent({
     // 15 min polling reset just in case
     const elapsedSeconds = Math.floor((Date.now() - loading.startTime) / 1000)
     if (elapsedSeconds > 900) {
-      console.log('Loading timeout exceeded, clearing state')
-      localStorage.removeItem('loading-state')
+      console.log("Loading timeout exceeded, clearing state")
+      localStorage.removeItem("loading-state")
       setLoading(null)
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current)
@@ -106,8 +106,8 @@ export default function SummonerContent({
 
     // check for new matches
     if (matches.length > loading.initialMatchCount) {
-      console.log('Loading complete! New matches detected')
-      localStorage.removeItem('loading-state')
+      console.log("Loading complete! New matches detected")
+      localStorage.removeItem("loading-state")
       setLoading(null)
       setIsFirstLoad(false)
       if (pollIntervalRef.current) {
@@ -118,7 +118,7 @@ export default function SummonerContent({
     }
 
     pollIntervalRef.current = setInterval(() => {
-      console.log('Polling for updates...')
+      console.log("Polling for updates...")
       router.refresh()
     }, 5000)
 
@@ -132,7 +132,7 @@ export default function SummonerContent({
 
   useEffect(() => {
     if (matches.length === 0 && isFirstLoad && !hasTriedUpdate) {
-      const updateBtn = document.querySelector('[data-update-button]') as HTMLButtonElement
+      const updateBtn = document.querySelector("[data-update-button]") as HTMLButtonElement
       if (updateBtn) {
         setHasTriedUpdate(true)
         setTimeout(() => updateBtn.click(), 500)
@@ -150,7 +150,7 @@ export default function SummonerContent({
     }
     setLoading(loadingState)
     // keep in localstorage
-    localStorage.setItem('loading-state', JSON.stringify(loadingState))
+    localStorage.setItem("loading-state", JSON.stringify(loadingState))
   }
 
   const handleUpdateComplete = () => {

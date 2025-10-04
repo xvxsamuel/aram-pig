@@ -20,29 +20,29 @@ async function getLatestVersion(): Promise<string> {
   return latestVersion
 }
 
-const REGIONAL_TO_PLATFORM_ID: Record<RegionalCluster, PlatformId> = {
-  americas: PlatformId.AMERICAS,
-  europe: PlatformId.EUROPE,
-  asia: PlatformId.ASIA,
-  sea: PlatformId.SEA,
+const REGIONAL_TO_PLATFORM_ID: Record<RegionalCluster, string> = {
+  americas: 'americas',
+  europe: 'europe',
+  asia: 'asia',
+  sea: 'sea',
 }
 
-const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, PlatformId> = {
-  na1: PlatformId.NA1,
-  euw1: PlatformId.EUW1,
-  eun1: PlatformId.EUNE1,
-  kr: PlatformId.KR,
-  br1: PlatformId.BR1,
-  la1: PlatformId.LA1,
-  la2: PlatformId.LA2,
-  oc1: PlatformId.OC1,
-  ru: PlatformId.RU,
-  tr1: PlatformId.TR1,
-  jp1: PlatformId.JP1,
-  sg2: PlatformId.SG2,
-  tw2: PlatformId.TW2,
-  vn2: PlatformId.VN2,
-  me1: PlatformId.ME1,
+const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, string> = {
+  na1: 'na1',
+  euw1: 'euw1',
+  eun1: 'eun1',
+  kr: 'kr',
+  br1: 'br1',
+  la1: 'la1',
+  la2: 'la2',
+  oc1: 'oc1',
+  ru: 'ru',
+  tr1: 'tr1',
+  jp1: 'jp1',
+  sg2: 'sg2',
+  tw2: 'tw2',
+  vn2: 'vn2',
+  me1: 'me1',
 }
 
 export async function getAccountByRiotId(gameName: string, tagLine: string, region: RegionalCluster) {
