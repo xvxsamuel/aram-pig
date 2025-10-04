@@ -1,16 +1,13 @@
-import Navbar from "../../components/Navbar"
-
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-accent-darker text-white">
-      <Navbar />
       <div className="max-w-4xl mx-auto px-4 py-12">
         <section className="bg-accent-darkest rounded-xl p-8 border border-gold-dark/20">
-          <h2 className="text-4xl font-bold mb-6 text-gold-light">About ARAM Pig</h2>
+          <h2 className="text-4xl font-bold mb-6 text-gold-light">About ARAM PIG</h2>
           
           <div className="space-y-6 text-gray-300">
             <p className="text-lg leading-relaxed">
-              ARAM Pig is the ultimate companion for tracking your ARAM games and helping you improve. We analyze your performance, review past games, and see 
+              ARAM PIG is the ultimate companion for tracking your ARAM games and helping you improve. We analyze your performance, review past games, and see 
               your progress over time.
             </p>
 
@@ -36,7 +33,7 @@ export default function AboutPage() {
 
             <div className="pt-6 border-t border-gold-dark/20">
               <p className="text-sm text-gray-400">
-                ARAM Pig isn't endorsed by Riot Games and doesn't reflect the views or opinions 
+                ARAM PIG isn't endorsed by Riot Games and doesn't reflect the views or opinions 
                 of Riot Games or anyone officially involved in producing or managing Riot Games 
                 properties. Riot Games, and all associated properties are trademarks or registered 
                 trademarks of Riot Games, Inc.

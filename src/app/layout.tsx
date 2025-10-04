@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { League_Spartan } from 'next/font/google'
+import Navbar from '../components/Navbar'
 
 const leagueSpartanLight = League_Spartan({
   subsets: ['latin'],
@@ -17,22 +18,22 @@ const leagueSpartanRegular = League_Spartan({
 })
 
 export const metadata: Metadata = {
-  title: 'ARAM Pig',
+  title: 'ARAM PIG',
   description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
   keywords: ['ARAM', 'League of Legends', 'LoL', 'Stats', 'Match History', 'ARAM Stats', 'League Stats'],
-  authors: [{ name: 'ARAM Pig' }],
+  authors: [{ name: 'ARAM PIG' }],
   themeColor: '#189FC5',
   openGraph: {
-    title: 'ARAM Pig - League of Legends ARAM Stats',
+    title: 'ARAM PIG - League of Legends ARAM Stats',
     description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
     url: 'https://arampig.lol',
-    siteName: 'ARAM Pig',
+    siteName: 'ARAM PIG',
     images: [
       {
         url: '/og-image.png', // We'll need to create this
         width: 1200,
         height: 630,
-        alt: 'ARAM Pig - League of Legends ARAM Stats',
+        alt: 'ARAM PIG - League of Legends ARAM Stats',
       },
     ],
     locale: 'en_US',
@@ -40,12 +41,12 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ARAM Pig - League of Legends ARAM Stats',
+    title: 'ARAM PIG - League of Legends ARAM Stats',
     description: 'Track your ARAM stats, analyze your performance, and see detailed match history.',
     images: ['/og-image.png'],
   },
   appleWebApp: {
-    title: 'ARAM Pig',
+    title: 'ARAM PIG',
     capable: true,
     statusBarStyle: 'default'
   },
@@ -63,6 +64,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${leagueSpartanLight.variable} ${leagueSpartanRegular.variable}`}>
       <body className='min-h-screen antialiased font-light'>
+        <Navbar />
         {children}
       </body>
     </html>

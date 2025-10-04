@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation"
 import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL, getDefaultTag } from "../../../lib/regions"
-import Navbar from "../../../components/Navbar"
 import SummonerContent from "../../../components/SummonerContent"
 import { getSummonerByRiotId, type MatchData, getChampionCenteredUrl, getProfileIconUrl, getLatestVersion } from "../../../lib/riot-api"
 import { supabase } from "../../../lib/supabase"
@@ -17,13 +16,13 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const displayName = decodedName.replace("-", "#")
   
   return {
-    title: `${displayName} - ${region.toUpperCase()} | ARAM Pig`,
+    title: `${displayName} - ${region.toUpperCase()} | ARAM PIG`,
     description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance on ${region.toUpperCase()} server.`,
     openGraph: {
-      title: `${displayName} - ${region.toUpperCase()} | ARAM Pig`,
+      title: `${displayName} - ${region.toUpperCase()} | ARAM PIG`,
       description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance.`,
       url: `https://arampig.lol/${region}/${name}`,
-      siteName: 'ARAM Pig',
+      siteName: 'ARAM PIG',
       images: [
         {
           url: '/og-image.png',
@@ -37,7 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${displayName} - ${region.toUpperCase()} | ARAM Pig`,
+      title: `${displayName} - ${region.toUpperCase()} | ARAM PIG`,
       description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance.`,
       images: ['/og-image.png'],
     },
@@ -167,7 +166,6 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
-      <Navbar />
       <div className={`max-w-7xl mx-auto px-4 ${error ? 'py-4' : ''}`}>
         {error && (
           <div className="bg-red-900/20 border border-red-500/50 rounded-2xl p-6 mb-6">

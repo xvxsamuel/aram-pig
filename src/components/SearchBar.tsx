@@ -13,6 +13,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
   const router = useRouter()
   const [name, setName] = useState("")
   const [region, setRegion] = useState("EUW")
+  const [isHydrated, setIsHydrated] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const regionContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -23,6 +24,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
     if (savedRegion) {
       setRegion(savedRegion)
     }
+    setIsHydrated(true)
   }, [])
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed) return
+    if (!trimmed || !isHydrated) return // don't submit until hydrated
     
     // tag
     const nameWithTag = trimmed.includes("#") 
@@ -52,7 +54,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
     router.push(`/${region}/${encodeURIComponent(urlFriendlyName)}`)
   }
 
-  const showDefaultTag = name && !name.includes("#")
+  const showDefaultTag = name && !name.includes("#") && isHydrated
 
   function handleRegionSelect(regionLabel: string) {
     setRegion(regionLabel)
@@ -87,15 +89,20 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
             />
           </div>            <div className="flex items-center gap-3 pr-4 h-full">
               <div className="relative h-full flex items-center" ref={regionContainerRef}>
-                <RegionSelector
-                  value={region}
-                  isOpen={isDropdownOpen}
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                />
-                <RegionDropdown
-                  isOpen={isDropdownOpen}
-                  onSelect={handleRegionSelect}
-                />
+                {/* Only render RegionSelector after hydration to prevent EUW flicker */}
+                {isHydrated && (
+                  <>
+                    <RegionSelector
+                      value={region}
+                      isOpen={isDropdownOpen}
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    />
+                    <RegionDropdown
+                      isOpen={isDropdownOpen}
+                      onSelect={handleRegionSelect}
+                    />
+                  </>
+                )}
               </div>
               <button
                 type="submit"
