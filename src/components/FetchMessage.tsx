@@ -22,7 +22,7 @@ export default function FetchMessage({ job }: Props) {
 
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold text-white mb-1">
-              Our pigs are digging through match history...
+              Our pigs are digging through your match history...
             </h3>
             {hasStartedFetching && (
               <p className="text-sm text-subtitle mb-1">

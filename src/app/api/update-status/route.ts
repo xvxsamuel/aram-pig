@@ -5,7 +5,9 @@ import type { UpdateJobProgress } from "../../../types/update-jobs"
 // cleanup stale jobs
 async function cleanupStaleJobs(supabase: any) {
   const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
   
+  // cleanup jobs older than 15 minutes
   await supabase
     .from("update_jobs")
     .update({
@@ -15,6 +17,17 @@ async function cleanupStaleJobs(supabase: any) {
     })
     .in("status", ["pending", "processing"])
     .lt("started_at", fifteenMinutesAgo)
+  
+  // also cleanup processing jobs with no recent progress (likely orphaned by server restart)
+  await supabase
+    .from("update_jobs")
+    .update({
+      status: "failed",
+      error_message: "job stalled - no progress in 5 minutes",
+      completed_at: new Date().toISOString()
+    })
+    .eq("status", "processing")
+    .lt("updated_at", fiveMinutesAgo)
 }
 
 export async function POST(request: Request) {

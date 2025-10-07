@@ -59,11 +59,13 @@ export default function SummonerContent({
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false)
   const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string>("Your profile is up to date!")
+  const [toastType, setToastType] = useState<"success" | "error">("success")
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // debug logging for jobProgress state
   useEffect(() => {
-    console.log('🔍 jobProgress state:', jobProgress)
+    console.log("jobProgress state:", jobProgress)
   }, [jobProgress])
 
   // check for active job and auto-trigger on mount
@@ -71,9 +73,9 @@ export default function SummonerContent({
     const checkAndTrigger = async () => {
       try {
         // check for existing active job
-        const statusResponse = await fetch('/api/update-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const statusResponse = await fetch("/api/update-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ puuid: summonerData.account.puuid })
         })
 
@@ -98,12 +100,12 @@ export default function SummonerContent({
             : [summonerName, getDefaultTag(region.toUpperCase())]
 
           const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
-          const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : 'americas'
+          const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : "europe"
 
           // set placeholder job to show ui immediately
           setJobProgress({
-            jobId: 'pending',
-            status: 'pending',
+            jobId: "pending",
+            status: "pending",
             totalMatches: 0,
             fetchedMatches: 0,
             progressPercentage: 0,
@@ -111,9 +113,9 @@ export default function SummonerContent({
             startedAt: new Date().toISOString()
           })
 
-          const updateResponse = await fetch('/api/update-profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const updateResponse = await fetch("/api/update-profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               region: regionalCode,
               gameName,
@@ -131,7 +133,7 @@ export default function SummonerContent({
           }
         }
       } catch (error) {
-        console.error('failed to check/trigger update:', error)
+        console.error("Failed to check/trigger update:", error)
       }
     }
 
@@ -141,27 +143,27 @@ export default function SummonerContent({
   // poll for job status
   const pollJobStatus = useCallback(async () => {
     try {
-      console.log('polling job status for puuid:', summonerData.account.puuid)
+      console.log("Polling job status for puuid:", summonerData.account.puuid)
       
-      const response = await fetch('/api/update-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/update-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ puuid: summonerData.account.puuid })
       })
 
       if (!response.ok) {
-        console.error('polling failed:', response.status)
+        console.error("Polling failed:", response.status)
         return
       }
 
       const data = await response.json()
-      console.log('poll response:', data)
+      console.log("Poll response:", data)
 
       if (data.hasActiveJob && data.job) {
         setJobProgress(data.job)
       } else {
         // job completed or failed
-        console.log('job completed, refreshing page')
+        console.log("Job completed, refreshing page")
         setJobProgress(null)
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current)
@@ -178,10 +180,10 @@ export default function SummonerContent({
       }
     } catch (error: any) {
       // ignore abort errors (happens when page refreshes during fetch)
-      if (error.name === 'AbortError' || error.message?.includes('fetch')) {
+      if (error.name === "AbortError" || error.message?.includes("fetch")) {
         return
       }
-      console.error('failed to poll job status:', error)
+      console.error("Failed to poll job status:", error)
     }
   }, [summonerData.account.puuid, router])
 
@@ -208,8 +210,8 @@ export default function SummonerContent({
   const handleManualUpdate = async () => {
     // set placeholder job to show ui immediately
     setJobProgress({
-      jobId: 'pending',
-      status: 'pending',
+      jobId: "pending",
+      status: "pending",
       totalMatches: 0,
       fetchedMatches: 0,
       progressPercentage: 0,
@@ -225,12 +227,12 @@ export default function SummonerContent({
       : [summonerName, getDefaultTag(region.toUpperCase())]
 
     const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
-    const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : 'americas'
+    const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : "americas"
 
     try {
-      const updateResponse = await fetch('/api/update-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const updateResponse = await fetch("/api/update-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           region: regionalCode,
           gameName,
@@ -242,9 +244,20 @@ export default function SummonerContent({
       if (updateResponse.ok) {
         const result = await updateResponse.json()
         
-        // check if profile was recently updated or already up to date
-        if (result.recentlyUpdated || result.newMatches === 0) {
+        // check if profile was recently updated (5 min cd from server)
+        if (result.recentlyUpdated) {
           setJobProgress(null)
+          setToastMessage("Profile updated recently. Please try again later.")
+          setToastType("error")
+          setShowToast(true)
+          return
+        }
+        
+        // check if already up to date (no new matches found)
+        if (result.newMatches === 0) {
+          setJobProgress(null)
+          setToastMessage("Your profile is up to date!")
+          setToastType("success")
           setShowToast(true)
           return
         }
@@ -256,7 +269,7 @@ export default function SummonerContent({
         setJobProgress(null)
       }
     } catch (error) {
-      console.error('Update failed:', error)
+      console.error("Update failed:", error)
       setJobProgress(null)
     }
   }
@@ -265,8 +278,8 @@ export default function SummonerContent({
     <>
       {showToast && (
         <Toast
-          message="Your profile is up to date!"
-          type="success"
+          message={toastMessage}
+          type={toastType}
           onClose={() => setShowToast(false)}
         />
       )}

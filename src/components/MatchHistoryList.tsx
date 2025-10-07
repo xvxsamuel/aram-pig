@@ -13,9 +13,11 @@ interface Props {
   championNames: Record<string, string>
 }
 
-export default function MatchHistoryList({ matches, puuid, region, ddragonVersion, championNames }: Props) {
-  const [displayCount, setDisplayCount] = useState(20)
+export default function MatchHistoryList({ matches: initialMatches, puuid, region, ddragonVersion, championNames }: Props) {
+  const [matches, setMatches] = useState(initialMatches)
   const [championFilter, setChampionFilter] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(initialMatches.length >= 20)
   
   const filteredMatches = championFilter
     ? matches.filter(match => {
@@ -23,26 +25,45 @@ export default function MatchHistoryList({ matches, puuid, region, ddragonVersio
         return participant?.championName === championFilter
       })
     : matches
-  
-  const displayMatches = filteredMatches.slice(0, displayCount)
-  const hasMore = displayCount < filteredMatches.length
 
-  const showMore = () => {
-    setDisplayCount(prev => Math.min(prev + 20, filteredMatches.length))
+  const loadMore = async () => {
+    if (loading) return
+    
+    setLoading(true)
+    try {
+      const response = await fetch("/api/load-more-matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          puuid,
+          offset: matches.length,
+          limit: 20
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("failed to load more matches")
+      }
+
+      const data = await response.json()
+      setMatches(prev => [...prev, ...data.matches])
+      setHasMore(data.hasMore)
+    } catch (error) {
+      console.error("Error loading more matches:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="flex-1 min-w-0">
+    <div className="w-full sm:flex-1 sm:min-w-0">
       <section className="bg-accent-darker rounded-xl border border-gold-dark/20 overflow-hidden">
         <div className="p-6">
           <div className="flex items-center justify-between gap-4 mb-4">
             <h2 className="text-xl font-bold flex-shrink-0">Recent Matches</h2>
             <ChampionFilter
               value={championFilter}
-              onChange={(champ) => {
-                setChampionFilter(champ)
-                setDisplayCount(20)
-              }}
+              onChange={setChampionFilter}
               championNames={championNames}
               ddragonVersion={ddragonVersion}
             />
@@ -56,7 +77,7 @@ export default function MatchHistoryList({ matches, puuid, region, ddragonVersio
         ) : (
           <>
             <div className="space-y-2">
-              {displayMatches.map((match) => (
+              {filteredMatches.map((match) => (
                 <MatchHistoryItem 
                   key={match.metadata.matchId} 
                   match={match} 
@@ -67,12 +88,25 @@ export default function MatchHistoryList({ matches, puuid, region, ddragonVersio
               ))}
             </div>
             
-            {hasMore && (
+            {!championFilter && hasMore && (
               <button
-                onClick={showMore}
-                className="w-full mt-4 px-4 py-3 bg-accent-dark hover:bg-accent-dark/80 rounded-lg font-semibold transition-colors border border-gold-dark/20"
+                onClick={loadMore}
+                disabled={loading}
+                className="w-full mt-4 px-4 py-3 bg-accent-dark hover:bg-accent-dark/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors border border-gold-dark/20 flex items-center justify-center gap-2"
               >
-                Show More
+                {loading ? (
+                  <div className="relative w-5 h-5 flex-shrink-0">
+                    <div className="absolute inset-0 border-2 border-gray-700 rounded-full"></div>
+                    <div className="absolute inset-0 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
+                  </div>
+                ) : (
+                  <>
+                    <span>Show More</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                )}
               </button>
             )}
           </>

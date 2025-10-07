@@ -45,13 +45,41 @@ const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, string> = {
   me1: 'me1',
 }
 
+// helper to retry api calls if job id conflicts
+async function retryWithDelay<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  delayMs = 1000
+): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      const isJobConflict = error?.message?.includes('A job with the same id already exists')
+      const isLastAttempt = attempt === maxRetries - 1
+      
+      if (isJobConflict && !isLastAttempt) {
+        // wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)))
+        continue
+      }
+      
+      throw error
+    }
+  }
+  
+  throw new Error('max retries reached')
+}
+
 export async function getAccountByRiotId(gameName: string, tagLine: string, region: RegionalCluster) {
   try {
-    const account = await rAPI.account.getByRiotId({
-      region: REGIONAL_TO_PLATFORM_ID[region] as any,
-      gameName,
-      tagLine,
-    })
+    const account = await retryWithDelay(() => 
+      rAPI.account.getByRiotId({
+        region: REGIONAL_TO_PLATFORM_ID[region] as any,
+        gameName,
+        tagLine,
+      })
+    )
     return account
   } catch (error: any) {
     if (error?.response?.status === 404) {
@@ -63,10 +91,12 @@ export async function getAccountByRiotId(gameName: string, tagLine: string, regi
 
 export async function getSummonerByPuuid(puuid: string, platform: PlatformCode) {
   try {
-    const summoner = await rAPI.summoner.getByPUUID({
-      region: PLATFORM_CODE_TO_PLATFORM_ID[platform] as any,
-      puuid,
-    })
+    const summoner = await retryWithDelay(() =>
+      rAPI.summoner.getByPUUID({
+        region: PLATFORM_CODE_TO_PLATFORM_ID[platform] as any,
+        puuid,
+      })
+    )
     return summoner
   } catch (error: any) {
     if (error?.response?.status === 404) {
@@ -84,23 +114,27 @@ export async function getMatchIdsByPuuid(
   start: number = 0
 ) {
   const limitedCount = Math.min(count, 100)
-  const matchIds = await rAPI.matchV5.getIdsByPuuid({
-    cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
-    puuid,
-    params: {
-      queue,
-      count: limitedCount,
-      start,
-    },
-  })
+  const matchIds = await retryWithDelay(() =>
+    rAPI.matchV5.getIdsByPuuid({
+      cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
+      puuid,
+      params: {
+        queue,
+        count: limitedCount,
+        start,
+      },
+    })
+  )
   return matchIds
 }
 
 export async function getMatchById(matchId: string, region: RegionalCluster) {
-  const match = await rAPI.matchV5.getMatchById({
-    cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
-    matchId,
-  })
+  const match = await retryWithDelay(() =>
+    rAPI.matchV5.getMatchById({
+      cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
+      matchId,
+    })
+  )
   return match as unknown as MatchData
 }
 
