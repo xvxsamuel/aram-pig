@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { League_Spartan } from 'next/font/google'
 import Navbar from '../components/Navbar'
@@ -17,12 +17,16 @@ const leagueSpartanRegular = League_Spartan({
   variable: '--font-regular',
 })
 
+export const viewport: Viewport = {
+  themeColor: '#189FC5',
+}
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://arampig.lol'),
   title: 'ARAM PIG',
   description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
   keywords: ['ARAM', 'League of Legends', 'LoL', 'Stats', 'Match History', 'ARAM Stats', 'League Stats'],
   authors: [{ name: 'ARAM PIG' }],
-  themeColor: '#189FC5',
   openGraph: {
     title: 'ARAM PIG - League of Legends ARAM Stats',
     description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
@@ -30,7 +34,7 @@ export const metadata: Metadata = {
     siteName: 'ARAM PIG',
     images: [
       {
-        url: '/og-image.png', // We'll need to create this
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'ARAM PIG - League of Legends ARAM Stats',

@@ -4,19 +4,22 @@ import { useState, useRef, useEffect } from "react"
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import Image from "next/image"
 import { getChampionImageUrl } from "../lib/ddragon-client"
+import { getChampionDisplayName, getSortedChampionNames } from "../lib/champion-names"
 
 interface Props {
   value: string
   onChange: (champion: string) => void
-  champions: string[]
+  championNames: Record<string, string>
   ddragonVersion: string
 }
 
-export default function ChampionFilter({ value, onChange, champions, ddragonVersion }: Props) {
+export default function ChampionFilter({ value, onChange, championNames, ddragonVersion }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchInput, setSearchInput] = useState("")
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const allChampions = getSortedChampionNames(championNames)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -32,10 +35,11 @@ export default function ChampionFilter({ value, onChange, champions, ddragonVers
     }
   }, [isOpen])
 
-  const displayValue = value || "All Champions"
-  const filteredChampions = champions
-    .filter(champ => champ.toLowerCase().includes(searchInput.toLowerCase()))
-    .sort()
+  const displayValue = value ? getChampionDisplayName(value, championNames) : "All Champions"
+  const filteredChampions = allChampions.filter(champ => {
+    const displayName = getChampionDisplayName(champ, championNames)
+    return displayName.toLowerCase().includes(searchInput.toLowerCase())
+  })
 
   const handleInputClick = () => {
     setIsOpen(true)
@@ -74,7 +78,11 @@ export default function ChampionFilter({ value, onChange, champions, ddragonVers
       </div>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 w-full bg-accent-darker rounded-xl border border-gold-dark/30 shadow-xl z-50 overflow-hidden">
+        <div className="fixed bg-accent-darker rounded-xl border border-gold-dark/30 shadow-xl z-[100] overflow-hidden" style={{
+          top: dropdownRef.current ? `${dropdownRef.current.getBoundingClientRect().bottom + 8}px` : '0',
+          left: dropdownRef.current ? `${dropdownRef.current.getBoundingClientRect().left}px` : '0',
+          width: dropdownRef.current ? `${dropdownRef.current.offsetWidth}px` : 'auto'
+        }}>
           <div className="max-h-64 overflow-y-auto" style={{
             scrollbarWidth: 'thin',
             scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',
@@ -88,27 +96,30 @@ export default function ChampionFilter({ value, onChange, champions, ddragonVers
               All Champions
             </button>
             <div className="h-px bg-gold-dark/20" />
-            {filteredChampions.map((champion) => (
-              <button
-                key={champion}
-                onClick={() => handleSelect(champion)}
-                className={`w-full px-4 py-2 text-left text-sm hover:bg-accent-light/20 flex items-center gap-2 ${
-                  value === champion ? 'text-gold-light bg-accent-light/10' : 'text-white'
-                }`}
-              >
-                <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 border border-gold-dark/30">
-                  <Image
-                    src={getChampionImageUrl(champion, ddragonVersion)}
-                    alt={champion}
-                    width={24}
-                    height={24}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
-                </div>
-                <span>{champion}</span>
-              </button>
-            ))}
+            {filteredChampions.map((champion) => {
+              const displayName = getChampionDisplayName(champion, championNames)
+              return (
+                <button
+                  key={champion}
+                  onClick={() => handleSelect(champion)}
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-accent-light/20 flex items-center gap-2 ${
+                    value === champion ? 'text-gold-light bg-accent-light/10' : 'text-white'
+                  }`}
+                >
+                  <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 border border-gold-dark/30">
+                    <Image
+                      src={getChampionImageUrl(champion, ddragonVersion)}
+                      alt={displayName}
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <span>{displayName}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

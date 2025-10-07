@@ -32,7 +32,7 @@ function getSpellName(spellId: number): string {
     11: 'Smite',
     12: 'Teleport',
     13: 'Clarity',
-    14: 'Ignite',
+    14: 'Dot',       // ignite
     21: 'Barrier',
     30: 'PoroRecall',
     31: 'PoroThrow',

@@ -3,6 +3,7 @@ import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL, getDefaultTag } from "../../..
 import SummonerContent from "../../../components/SummonerContent"
 import { getSummonerByRiotId, type MatchData, getChampionCenteredUrl, getProfileIconUrl, getLatestVersion } from "../../../lib/riot-api"
 import { supabase } from "../../../lib/supabase"
+import { fetchChampionNames } from "../../../lib/champion-names"
 import type { Metadata } from 'next'
 
 interface Params {
@@ -43,6 +44,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   }
 }
 
+// disable caching to always fetch fresh data
+export const revalidate = 0
+
 export default async function SummonerPage({ params }: { params: Promise<Params> }) {
   const { region, name } = await params
 
@@ -65,56 +69,6 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   let error = null
   let hasIncompleteData = false
   let lastUpdated: string | null = null
-
-  try {
-    summonerData = await getSummonerByRiotId(gameName, tagLine, platformCode)
-    
-    if (!summonerData) {
-      error = "Summoner not found"
-    } else {
-      const puuid = summonerData.account.puuid
-      let hasIncompleteData = false
-
-      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        try {
-          const { data: summonerRecord } = await supabase
-            .from('summoners')
-            .select('last_updated, game_name')
-            .eq('puuid', puuid)
-            .single()
-
-          lastUpdated = summonerRecord?.last_updated || null
-
-          hasIncompleteData = !summonerRecord?.game_name || !summonerRecord?.last_updated
-
-          const { data: dbMatches, error: dbError } = await supabase
-            .from('summoner_matches')
-            .select(`
-              match_id,
-              matches (
-                match_data
-              )
-            `)
-            .eq('puuid', puuid)
-            .order('match_id', { ascending: false })
-
-          if (!dbError && dbMatches && dbMatches.length > 0) {
-            matches = dbMatches
-              .map((record: any) => record.matches?.match_data)
-              .filter((m: any) => m !== null) as MatchData[]
-            
-            console.log(`loaded ${matches.length} matches`)
-          }
-        } catch (dbError) {
-          console.log('db error:', dbError)
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Error fetching summoner data:", err)
-    error = "Failed to fetch summoner data"
-  }
-
   let wins = 0
   let totalKills = 0
   let totalDeaths = 0
@@ -123,44 +77,164 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   let longestWinStreak = 0
   let totalDamage = 0
   let totalGameDuration = 0
+  let totalGames = 0
 
-  if (summonerData && matches.length > 0) {
-    const championCounts: { [key: string]: number } = {}
-    let currentWinStreak = 0
+  try {
+    // try to load from database first to avoid riot api calls
+    let loadedFromCache = false
     
-    matches.forEach(match => {
-      const participant = match.info.participants.find(p => p.puuid === summonerData.account.puuid)
-      if (participant) {
-        if (participant.win) {
-          wins++
-          currentWinStreak++
-          if (currentWinStreak > longestWinStreak) {
-            longestWinStreak = currentWinStreak
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      const { data: cachedSummoner } = await supabase
+        .from("summoners")
+        .select("puuid, game_name, tag_line, summoner_level, profile_icon_id")
+        .ilike("game_name", gameName)
+        .ilike("tag_line", tagLine)
+        .single()
+      
+      if (cachedSummoner?.puuid) {
+        console.log("Loaded summoner from database cache")
+        // construct summoner data from cache
+        summonerData = {
+          account: {
+            puuid: cachedSummoner.puuid,
+            gameName: cachedSummoner.game_name,
+            tagLine: cachedSummoner.tag_line
+          },
+          summoner: {
+            puuid: cachedSummoner.puuid,
+            summonerLevel: cachedSummoner.summoner_level,
+            profileIconId: cachedSummoner.profile_icon_id
           }
-        } else {
-          currentWinStreak = 0
+        } as any
+        loadedFromCache = true
+      }
+    }
+    
+    // only call riot api if not found in cache
+    if (!loadedFromCache) {
+      console.log("Fetching summoner from Riot API")
+      summonerData = await getSummonerByRiotId(gameName, tagLine, platformCode)
+    }
+    
+    if (!summonerData) {
+      error = "Summoner not found"
+    } else {
+      const puuid = summonerData.account.puuid
+
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        try {
+          const { data: summonerRecord } = await supabase
+            .from("summoners")
+            .select("last_updated, game_name")
+            .eq("puuid", puuid)
+            .single()
+
+          lastUpdated = summonerRecord?.last_updated || null
+
+          hasIncompleteData = !summonerRecord?.game_name || !summonerRecord?.last_updated
+
+          console.log(`Fetching matches for puuid: ${puuid}`)
+          
+          // get lightweight match stats from summoner_matches (all matches, for stats calculation)
+          const { data: allMatchStats, error: statsError } = await supabase
+            .from("summoner_matches")
+            .select("match_id, champion_name, kills, deaths, assists, win")
+            .eq("puuid", puuid)
+            .order("match_id", { ascending: false })
+
+          let matchIds: string[] = []
+          if (!statsError && allMatchStats) {
+            console.log(`Found ${allMatchStats.length} total matches for stats`)
+            matchIds = allMatchStats.map(m => m.match_id)
+            totalGames = allMatchStats.length
+            
+            // calculate basic stats from lightweight data
+            wins = allMatchStats.filter(m => m.win).length
+            totalKills = allMatchStats.reduce((sum, m) => sum + m.kills, 0)
+            totalDeaths = allMatchStats.reduce((sum, m) => sum + m.deaths, 0)
+            totalAssists = allMatchStats.reduce((sum, m) => sum + m.assists, 0)
+
+            // find most played champion
+            const championCounts: { [key: string]: number } = {}
+            allMatchStats.forEach(m => {
+              championCounts[m.champion_name] = (championCounts[m.champion_name] || 0) + 1
+            })
+            mostPlayedChampion = Object.entries(championCounts)
+              .sort(([, a], [, b]) => b - a)[0]?.[0] || ''
+
+            // calculate longest win streak
+            let currentWinStreak = 0
+            allMatchStats.forEach(m => {
+              if (m.win) {
+                currentWinStreak++
+                if (currentWinStreak > longestWinStreak) {
+                  longestWinStreak = currentWinStreak
+                }
+              } else {
+                currentWinStreak = 0
+              }
+            })
+          }
+          
+          // fetch damage and duration from ALL matches
+          if (matchIds.length > 0) {
+            const { data: allMatchesData, error: allMatchesError } = await supabase
+              .from("matches")
+              .select("match_id, game_duration, match_data")
+              .in("match_id", matchIds)
+
+            if (!allMatchesError && allMatchesData) {
+              console.log(`Fetching damage/duration from ${allMatchesData.length} matches`)
+              allMatchesData.forEach(matchRecord => {
+                const match = matchRecord.match_data
+                if (match && match.info && match.info.participants) {
+                  const participant = match.info.participants.find((p: any) => p.puuid === puuid)
+                  if (participant) {
+                    totalDamage += participant.totalDamageDealtToChampions || 0
+                  }
+                }
+                totalGameDuration += matchRecord.game_duration || 0
+              })
+              console.log(`Total damage: ${totalDamage}, Total duration: ${totalGameDuration}`)
+            }
+
+            // only fetch full match data for first 20 (for display)
+            const displayMatchIds = matchIds.slice(0, 20)
+            const { data: displayMatches, error: displayError } = await supabase
+              .from("matches")
+              .select("match_data")
+              .in("match_id", displayMatchIds)
+
+            if (!displayError && displayMatches) {
+              // sort to match the order of displayMatchIds
+              const matchMap = new Map(displayMatches.map((m: any) => [m.match_data.metadata.matchId, m.match_data]))
+              matches = displayMatchIds
+                .map(id => matchMap.get(id))
+                .filter((m: any) => m !== null) as MatchData[]
+              
+              console.log(`Loaded ${matches.length} matches for display`)
+            }
+          } else {
+            console.log("No match IDs found")
+          }
+        } catch (dbError) {
+          console.log("Database error:", dbError)
         }
-        
-        totalKills += participant.kills
-        totalDeaths += participant.deaths
-        totalAssists += participant.assists
-        totalDamage += participant.totalDamageDealtToChampions
-        totalGameDuration += match.info.gameDuration
-        
-        championCounts[participant.championName] = (championCounts[participant.championName] || 0) + 1
       }
-    })
-  
-    let maxPlays = 0
-    for (const [champion, count] of Object.entries(championCounts)) {
-      if (count > maxPlays) {
-        maxPlays = count
-        mostPlayedChampion = champion
-      }
+    }
+  } catch (err: any) {
+    console.error("Error fetching summoner data:", err)
+    
+    // handle rate limit errors specially
+    if (err?.status === 429) {
+      error = "Rate limit reached - please wait a moment and refresh"
+    } else {
+      error = "Failed to fetch summoner data"
     }
   }
 
   const ddragonVersion = await getLatestVersion()
+  const championNames = await fetchChampionNames(ddragonVersion)
   const profileIconUrl = summonerData ? await getProfileIconUrl(summonerData.summoner.profileIconId) : ''
   const championImageUrl = mostPlayedChampion ? await getChampionCenteredUrl(mostPlayedChampion) : undefined
 
@@ -170,9 +244,15 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
         {error && (
           <div className="bg-red-900/20 border border-red-500/50 rounded-2xl p-6 mb-6">
             <p className="text-red-400 text-lg">{error}</p>
-            <p className="text-subtitle text-sm mt-2">
-              Make sure the summoner name and tag are correct (e.g., hide on bush #KR1)
-            </p>
+            {error.includes("Rate limit") ? (
+              <p className="text-subtitle text-sm mt-2">
+                we're currently fetching your match history in the background. please wait a few moments without refreshing.
+              </p>
+            ) : (
+              <p className="text-subtitle text-sm mt-2">
+                Make sure the summoner name and tag are correct (e.g., hide on bush #KR1)
+              </p>
+            )}
           </div>
         )}
 
@@ -181,6 +261,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             summonerData={summonerData}
             matches={matches}
             wins={wins}
+            totalGames={totalGames}
             totalKills={totalKills}
             totalDeaths={totalDeaths}
             totalAssists={totalAssists}
@@ -194,6 +275,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             championImageUrl={championImageUrl}
             profileIconUrl={profileIconUrl}
             ddragonVersion={ddragonVersion}
+            championNames={championNames}
             lastUpdated={lastUpdated}
           />
         )}

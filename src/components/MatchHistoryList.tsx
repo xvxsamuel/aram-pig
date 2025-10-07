@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import type { MatchData } from "../lib/riot-api"
 import MatchHistoryItem from "./MatchHistoryItem"
 import ChampionFilter from "./ChampionFilter"
@@ -10,23 +10,12 @@ interface Props {
   puuid: string
   region: string
   ddragonVersion: string
+  championNames: Record<string, string>
 }
 
-export default function MatchHistoryList({ matches, puuid, region, ddragonVersion }: Props) {
+export default function MatchHistoryList({ matches, puuid, region, ddragonVersion, championNames }: Props) {
   const [displayCount, setDisplayCount] = useState(20)
   const [championFilter, setChampionFilter] = useState("")
-  
-  // get unique champions
-  const uniqueChampions = useMemo(() => {
-    const champSet = new Set<string>()
-    matches.forEach(match => {
-      const participant = match.info.participants.find(p => p.puuid === puuid)
-      if (participant) {
-        champSet.add(participant.championName)
-      }
-    })
-    return Array.from(champSet)
-  }, [matches, puuid])
   
   const filteredMatches = championFilter
     ? matches.filter(match => {
@@ -44,7 +33,7 @@ export default function MatchHistoryList({ matches, puuid, region, ddragonVersio
 
   return (
     <div className="flex-1 min-w-0">
-      <section className="bg-accent-darker/60 rounded-xl border border-gold-dark/20 overflow-hidden">
+      <section className="bg-accent-darker rounded-xl border border-gold-dark/20 overflow-hidden">
         <div className="p-6">
           <div className="flex items-center justify-between gap-4 mb-4">
             <h2 className="text-xl font-bold flex-shrink-0">Recent Matches</h2>
@@ -54,7 +43,7 @@ export default function MatchHistoryList({ matches, puuid, region, ddragonVersio
                 setChampionFilter(champ)
                 setDisplayCount(20)
               }}
-              champions={uniqueChampions}
+              championNames={championNames}
               ddragonVersion={ddragonVersion}
             />
           </div>

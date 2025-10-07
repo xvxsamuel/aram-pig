@@ -1,18 +1,22 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import ProfileHeader from "./ProfileHeader"
 import PigScoreCard from "./PigScoreCard"
 import AramStatsCard from "./AramStatsCard"
 import MatchHistoryList from "./MatchHistoryList"
 import FetchMessage from "./FetchMessage"
+import Toast from "./Toast"
 import type { MatchData } from "../lib/riot-api"
+import type { UpdateJobProgress } from "../types/update-jobs"
+import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
 
 interface Props {
   summonerData: any
   matches: MatchData[]
   wins: number
+  totalGames: number
   totalKills: number
   totalDeaths: number
   totalAssists: number
@@ -26,21 +30,15 @@ interface Props {
   championImageUrl?: string
   profileIconUrl: string
   ddragonVersion: string
+  championNames: Record<string, string>
   lastUpdated: string | null
-}
-
-interface LoadingState {
-  total: number
-  eta: number
-  startTime: number
-  puuid: string
-  initialMatchCount: number
 }
 
 export default function SummonerContent({
   summonerData,
   matches,
   wins,
+  totalGames,
   totalKills,
   totalDeaths,
   totalAssists,
@@ -54,36 +52,142 @@ export default function SummonerContent({
   championImageUrl,
   profileIconUrl,
   ddragonVersion,
+  championNames,
   lastUpdated
 }: Props) {
   const router = useRouter()
-  const [loading, setLoading] = useState<LoadingState | null>(null)
-  const [isFirstLoad, setIsFirstLoad] = useState(matches.length === 0)
-  const [hasTriedUpdate, setHasTriedUpdate] = useState(false)
+  const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
+  const [hasAutoTriggered, setHasAutoTriggered] = useState(false)
+  const [showToast, setShowToast] = useState(false)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // restore loading from localStorage on mount (i hope you can do it like this and it has no downsides)
+  // debug logging for jobProgress state
   useEffect(() => {
-    const stored = localStorage.getItem('loading-state')
-    if (stored) {
+    console.log('🔍 jobProgress state:', jobProgress)
+  }, [jobProgress])
+
+  // check for active job and auto-trigger on mount
+  useEffect(() => {
+    const checkAndTrigger = async () => {
       try {
-        const loadingState: LoadingState = JSON.parse(stored)
-        // only restore if it's for the same summoner
-        if (loadingState.puuid === summonerData.account.puuid) {
-          setLoading(loadingState)
-        } else {
-          // different summoner, clear old state
-          localStorage.removeItem('loading-state')
+        // check for existing active job
+        const statusResponse = await fetch('/api/update-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ puuid: summonerData.account.puuid })
+        })
+
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json()
+          
+          if (statusData.hasActiveJob && statusData.job) {
+            // active job found, start polling
+            setJobProgress(statusData.job)
+            return
+          }
         }
-      } catch (e) {
-        localStorage.removeItem('loading-state')
+
+        // no active job - auto-trigger if incomplete data
+        if (hasIncompleteData && !hasAutoTriggered) {
+          setHasAutoTriggered(true)
+          
+          const decodedName = decodeURIComponent(name)
+          const summonerName = decodedName.replace("-", "#")
+          const [gameName, tagLine] = summonerName.includes("#") 
+            ? summonerName.split("#") 
+            : [summonerName, getDefaultTag(region.toUpperCase())]
+
+          const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
+          const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : 'americas'
+
+          // set placeholder job to show ui immediately
+          setJobProgress({
+            jobId: 'pending',
+            status: 'pending',
+            totalMatches: 0,
+            fetchedMatches: 0,
+            progressPercentage: 0,
+            etaSeconds: 0,
+            startedAt: new Date().toISOString()
+          })
+
+          const updateResponse = await fetch('/api/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              region: regionalCode,
+              gameName,
+              tagLine,
+              platform: platformCode,
+            })
+          })
+
+          if (updateResponse.ok) {
+            // poll immediately to get real job data
+            setTimeout(() => pollJobStatus(), 500)
+          } else {
+            // clear placeholder if failed
+            setJobProgress(null)
+          }
+        }
+      } catch (error) {
+        console.error('failed to check/trigger update:', error)
       }
     }
-  }, [summonerData.account.puuid])
 
-  // poll for new matches while loading
+    checkAndTrigger()
+  }, [summonerData.account.puuid, hasIncompleteData, hasAutoTriggered])
+
+  // poll for job status
+  const pollJobStatus = useCallback(async () => {
+    try {
+      console.log('polling job status for puuid:', summonerData.account.puuid)
+      
+      const response = await fetch('/api/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ puuid: summonerData.account.puuid })
+      })
+
+      if (!response.ok) {
+        console.error('polling failed:', response.status)
+        return
+      }
+
+      const data = await response.json()
+      console.log('poll response:', data)
+
+      if (data.hasActiveJob && data.job) {
+        setJobProgress(data.job)
+      } else {
+        // job completed or failed
+        console.log('job completed, refreshing page')
+        setJobProgress(null)
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current)
+          pollIntervalRef.current = null
+        }
+        
+        // show toast before refresh
+        setShowToast(true)
+        
+        // delay refresh to show toast
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      }
+    } catch (error: any) {
+      // ignore abort errors (happens when page refreshes during fetch)
+      if (error.name === 'AbortError' || error.message?.includes('fetch')) {
+        return
+      }
+      console.error('failed to poll job status:', error)
+    }
+  }, [summonerData.account.puuid, router])
+
+  // polling interval
   useEffect(() => {
-    if (!loading) {
+    if (!jobProgress) {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current)
         pollIntervalRef.current = null
@@ -91,36 +195,7 @@ export default function SummonerContent({
       return
     }
 
-    // 15 min polling reset just in case
-    const elapsedSeconds = Math.floor((Date.now() - loading.startTime) / 1000)
-    if (elapsedSeconds > 900) {
-      console.log("Loading timeout exceeded, clearing state")
-      localStorage.removeItem("loading-state")
-      setLoading(null)
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current)
-        pollIntervalRef.current = null
-      }
-      return
-    }
-
-    // check for new matches
-    if (matches.length > loading.initialMatchCount) {
-      console.log("Loading complete! New matches detected")
-      localStorage.removeItem("loading-state")
-      setLoading(null)
-      setIsFirstLoad(false)
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current)
-        pollIntervalRef.current = null
-      }
-      return
-    }
-
-    pollIntervalRef.current = setInterval(() => {
-      console.log("Polling for updates...")
-      router.refresh()
-    }, 5000)
+    pollIntervalRef.current = setInterval(pollJobStatus, 5000)
 
     return () => {
       if (pollIntervalRef.current) {
@@ -128,37 +203,74 @@ export default function SummonerContent({
         pollIntervalRef.current = null
       }
     }
-  }, [loading, matches.length, router])
+  }, [jobProgress, pollJobStatus])
 
-  useEffect(() => {
-    if (matches.length === 0 && isFirstLoad && !hasTriedUpdate) {
-      const updateBtn = document.querySelector("[data-update-button]") as HTMLButtonElement
-      if (updateBtn) {
-        setHasTriedUpdate(true)
-        setTimeout(() => updateBtn.click(), 500)
+  const handleManualUpdate = async () => {
+    // set placeholder job to show ui immediately
+    setJobProgress({
+      jobId: 'pending',
+      status: 'pending',
+      totalMatches: 0,
+      fetchedMatches: 0,
+      progressPercentage: 0,
+      etaSeconds: 0,
+      startedAt: new Date().toISOString()
+    })
+    
+    // call the update api
+    const decodedName = decodeURIComponent(name)
+    const summonerName = decodedName.replace("-", "#")
+    const [gameName, tagLine] = summonerName.includes("#") 
+      ? summonerName.split("#") 
+      : [summonerName, getDefaultTag(region.toUpperCase())]
+
+    const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
+    const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : 'americas'
+
+    try {
+      const updateResponse = await fetch('/api/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          region: regionalCode,
+          gameName,
+          tagLine,
+          platform: platformCode,
+        })
+      })
+
+      if (updateResponse.ok) {
+        const result = await updateResponse.json()
+        
+        // check if profile was recently updated or already up to date
+        if (result.recentlyUpdated || result.newMatches === 0) {
+          setJobProgress(null)
+          setShowToast(true)
+          return
+        }
+        
+        // poll for real job data
+        setTimeout(() => pollJobStatus(), 500)
+      } else {
+        // clear placeholder if failed
+        setJobProgress(null)
       }
+    } catch (error) {
+      console.error('Update failed:', error)
+      setJobProgress(null)
     }
-  }, [matches.length, isFirstLoad, hasTriedUpdate])
-
-  const handleUpdateStart = (totalMatches: number, eta: number, showFullScreen: boolean) => {
-    const loadingState: LoadingState = {
-      total: totalMatches,
-      eta,
-      startTime: Date.now(),
-      puuid: summonerData.account.puuid,
-      initialMatchCount: matches.length
-    }
-    setLoading(loadingState)
-    // keep in localstorage
-    localStorage.setItem("loading-state", JSON.stringify(loadingState))
-  }
-
-  const handleUpdateComplete = () => {
-    // persist loading between refreshes
   }
 
   return (
     <>
+      {showToast && (
+        <Toast
+          message="Your profile is up to date!"
+          type="success"
+          onClose={() => setShowToast(false)}
+        />
+      )}
+      
       <ProfileHeader
         profileIconId={summonerData.summoner.profileIconId}
         gameName={summonerData.account.gameName}
@@ -170,26 +282,22 @@ export default function SummonerContent({
         region={region}
         name={name}
         puuid={summonerData.account.puuid}
-        onUpdateStart={handleUpdateStart}
-        onUpdateComplete={handleUpdateComplete}
-        hasMatches={matches.length > 0}
+        hasActiveJob={!!jobProgress}
+        onUpdateStarted={handleManualUpdate}
         lastUpdated={lastUpdated}
       />
 
       <div className="bg-accent-darkest py-8 rounded-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
-          {loading && (
-            <FetchMessage 
-              totalMatches={loading.total} 
-              estimatedSeconds={loading.eta}
-              startTime={loading.startTime}
-            />
+          {jobProgress && (
+            <FetchMessage job={jobProgress} />
           )}
+
           <div className="flex flex-col sm:flex-row gap-6">
             <div className="flex flex-col gap-6 sm:w-80 w-full">
               <PigScoreCard />
               <AramStatsCard
-                totalGames={matches.length}
+                totalGames={totalGames}
                 wins={wins}
                 totalKills={totalKills}
                 totalDeaths={totalDeaths}
@@ -204,6 +312,7 @@ export default function SummonerContent({
               puuid={summonerData.account.puuid}
               region={region}
               ddragonVersion={ddragonVersion}
+              championNames={championNames}
             />
           </div>
         </div>

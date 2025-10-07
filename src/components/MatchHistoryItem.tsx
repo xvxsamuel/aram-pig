@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
+import clsx from "clsx"
 import type { MatchData } from "../lib/riot-api"
 import { getChampionImageUrl, getSummonerSpellUrl, getItemImageUrl } from "../lib/ddragon-client"
 
@@ -16,7 +17,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
 
   const isWin = participant.win
   const kda = participant.deaths === 0 
-    ? 'Perfect'
+    ? "Perfect"
     : ((participant.kills + participant.assists) / participant.deaths).toFixed(2)
   
   const gameDurationMinutes = Math.floor(match.info.gameDuration / 60)
@@ -29,19 +30,20 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
 
   return (
     <div
-      className={`rounded-lg border-l-[6px] overflow-hidden ${
+      className={clsx(
+        "rounded-lg border-l-[6px] overflow-hidden",
         isWin 
-          ? 'bg-[#28344E] border-[#5383E8]' 
-          : 'bg-[#59343B] border-[#E84057]'
-      }`}
+          ? "bg-[#28344E] border-[#5383E8]" 
+          : "bg-[#59343B] border-[#E84057]"
+      )}
     >
       <div className="flex items-center px-4 py-3 min-h-[80px] gap-0.5">
         <div className="flex flex-col justify-center flex-shrink-0 min-w-[90px]">
-          <div className={`text-sm font-bold ${isWin ? 'text-[#5383E8]' : 'text-[#E84057]'}`}>
-            {isWin ? 'WIN' : 'LOSE'}
+          <div className={clsx("text-sm font-bold", isWin ? "text-[#5383E8]" : "text-[#E84057]")}>
+            {isWin ? "WIN" : "LOSE"}
           </div>
           <div className="text-xs text-gray-400 mt-0.5">
-            {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, '0')}
+            {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, "0")}
           </div>
           <div className="text-xs text-gray-400">
             {timeAgo}
@@ -148,16 +150,17 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           <div className="flex flex-col gap-0.5 w-32">
             {team1.map((p, idx) => {
               const playerName = p.riotIdGameName || p.summonerName
-              const playerTag = p.riotIdTagline || 'EUW'
+              const playerTag = p.riotIdTagline || "EUW"
               const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
               const isCurrentUser = p.puuid === puuid
               
               return (
                 <div key={idx} className="flex items-center gap-1">
                   <div
-                    className={`w-4 h-4 rounded overflow-hidden flex-shrink-0 ${
-                      isCurrentUser ? 'ring-2 ring-gold-light' : ''
-                    }`}
+                    className={clsx(
+                      "w-4 h-4 rounded overflow-hidden flex-shrink-0",
+                      isCurrentUser && "ring-2 ring-gold-light"
+                    )}
                   >
                     <Image
                       src={getChampionImageUrl(p.championName, ddragonVersion)}
@@ -170,9 +173,10 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                   </div>
                   <Link 
                     href={profileUrl}
-                    className={`text-xs hover:text-gold-light truncate flex-1 transition-colors ${
-                      isCurrentUser ? 'text-white' : 'text-subtitle'
-                    }`}
+                    className={clsx(
+                      "text-xs hover:text-gold-light truncate flex-1",
+                      isCurrentUser ? "text-white" : "text-subtitle"
+                    )}
                   >
                     {playerName}
                   </Link>
@@ -184,16 +188,17 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           <div className="flex flex-col gap-0.5 w-32">
             {team2.map((p, idx) => {
               const playerName = p.riotIdGameName || p.summonerName
-              const playerTag = p.riotIdTagline || 'EUW'
+              const playerTag = p.riotIdTagline || "EUW"
               const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
               const isCurrentUser = p.puuid === puuid
               
               return (
                 <div key={idx} className="flex items-center gap-1">
                   <div
-                    className={`w-4 h-4 rounded overflow-hidden flex-shrink-0 ${
-                      isCurrentUser ? 'ring-2 ring-gold-light' : ''
-                    }`}
+                    className={clsx(
+                      "w-4 h-4 rounded overflow-hidden flex-shrink-0",
+                      isCurrentUser && "ring-2 ring-gold-light"
+                    )}
                   >
                     <Image
                       src={getChampionImageUrl(p.championName, ddragonVersion)}
@@ -206,9 +211,10 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                   </div>
                   <Link 
                     href={profileUrl}
-                    className={`text-xs hover:text-gold-light truncate flex-1 transition-colors ${
-                      isCurrentUser ? 'text-white' : 'text-subtitle'
-                    }`}
+                    className={clsx(
+                      "text-xs hover:text-gold-light truncate flex-1 transition-colors",
+                      isCurrentUser ? "text-white" : "text-subtitle"
+                    )}
                   >
                     {playerName}
                   </Link>
@@ -232,5 +238,5 @@ function getTimeAgo(date: Date): string {
   if (diffDays > 0) return `${diffDays}d ago`
   if (diffHours > 0) return `${diffHours}h ago`
   if (diffMins > 0) return `${diffMins}m ago`
-  return 'Just now'
+  return "Just now"
 }

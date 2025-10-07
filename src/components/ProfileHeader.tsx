@@ -14,7 +14,7 @@ function getTimeAgo(timestamp: string | null): string {
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
   
-  if (diffMins < 1) return 'just now'
+  if (diffMins < 1) return "just now"
   if (diffMins < 60) return `${diffMins}m ago`
   if (diffHours < 24) return `${diffHours}h ago`
   return `${diffDays}d ago`
@@ -31,9 +31,8 @@ interface Props {
   region: string
   name: string
   puuid: string
-  onUpdateStart?: (totalMatches: number, eta: number, showFullScreen: boolean) => void
-  onUpdateComplete?: () => void
-  hasMatches: boolean
+  hasActiveJob: boolean
+  onUpdateStarted: () => void
   lastUpdated: string | null
 }
 
@@ -48,9 +47,8 @@ export default function ProfileHeader({
   region,
   name,
   puuid,
-  onUpdateStart,
-  onUpdateComplete,
-  hasMatches,
+  hasActiveJob,
+  onUpdateStarted,
   lastUpdated
 }: Props) {
   const [iconError, setIconError] = useState(false)
@@ -59,13 +57,13 @@ export default function ProfileHeader({
     <section className="relative overflow-hidden bg-accent-darker">
       {mostPlayedChampion && championImageUrl && (
         <>
-          <div className="absolute inset-0 opacity-50" style={{ right: '-20%' }}>
+          <div className="absolute inset-0 opacity-50" style={{ right: "-20%" }}>
             <Image 
               src={championImageUrl}
-              alt={`${mostPlayedChampion} centered`}
+              alt={mostPlayedChampion}
               fill
               className="object-cover"
-              style={{ objectPosition: 'center 30%' }}
+              style={{ objectPosition: "center 30%" }}
               unoptimized
               priority
             />
@@ -80,7 +78,7 @@ export default function ProfileHeader({
             <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
               <Image 
                 src={iconError 
-                  ? profileIconUrl.replace(/\d+\.png$/, '29.png')
+                  ? profileIconUrl.replace(/\d+\.png$/, "29.png")
                   : profileIconUrl
                 }
                 alt="Profile Icon"
@@ -88,6 +86,7 @@ export default function ProfileHeader({
                 height={96}
                 className="w-full h-full object-cover"
                 unoptimized
+                priority
                 onError={() => setIconError(true)}
               />
             </div>
@@ -105,12 +104,11 @@ export default function ProfileHeader({
           </h1>
           <div className="flex flex-col gap-1">
             <UpdateButton 
-              region={region} 
-              name={name} 
-              puuid={puuid} 
-              onUpdateStart={onUpdateStart} 
-              onUpdateComplete={onUpdateComplete}
-              hasMatches={hasMatches}
+              region={region}
+              name={name}
+              puuid={puuid}
+              hasActiveJob={hasActiveJob}
+              onUpdateStarted={onUpdateStarted}
             />
             {lastUpdated && (
               <p className="text-xs text-subtitle">

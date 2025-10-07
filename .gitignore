@@ -24,5 +24,7 @@ dist-ssr
 *.sw?
 
 .next
+.github
 next-env.d.ts
 dist
+supabase

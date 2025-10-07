@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation"
 export default function Navbar() {
   const pathname = usePathname()
   
-  // Hide navbar on landing page
+  // hide navbar on landing page
   if (pathname === '/') {
     return null
   }
