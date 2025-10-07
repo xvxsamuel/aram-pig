@@ -30,15 +30,6 @@ export default function AboutPage() {
                 All match data is stored securely and updated in real-time.
               </p>
             </div>
-
-            <div className="pt-6 border-t border-gold-dark/20">
-              <p className="text-sm text-gray-400">
-                ARAM PIG isn't endorsed by Riot Games and doesn't reflect the views or opinions 
-                of Riot Games or anyone officially involved in producing or managing Riot Games 
-                properties. Riot Games, and all associated properties are trademarks or registered 
-                trademarks of Riot Games, Inc.
-              </p>
-            </div>
           </div>
         </section>
       </div>

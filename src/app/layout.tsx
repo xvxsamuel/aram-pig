@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { League_Spartan } from 'next/font/google'
 import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 
 const leagueSpartanLight = League_Spartan({
   subsets: ['latin'],
@@ -67,9 +68,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${leagueSpartanLight.variable} ${leagueSpartanRegular.variable}`}>
-      <body className='min-h-screen antialiased font-light'>
+      <body className='min-h-screen antialiased font-light flex flex-col'>
         <Navbar />
-        {children}
+        <main className="flex-1" style={{ marginLeft: '64px' }}>
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   )

@@ -300,6 +300,20 @@ export async function POST(request: Request) {
           deaths: p.deaths,
           assists: p.assists,
           win: p.win,
+          damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
+          damage_dealt_total: p.totalDamageDealt || 0,
+          damage_dealt_to_objectives: p.damageDealtToObjectives || 0,
+          damage_taken: p.totalDamageTaken || 0,
+          game_duration: match.info.gameDuration || 0,
+          time_ccing_others: p.timeCCingOthers || 0,
+          total_time_spent_dead: p.totalTimeSpentDead || 0,
+          total_minions_killed: p.totalMinionsKilled || 0,
+          gold_earned: p.goldEarned || 0,
+          damage_per_minute: p.challenges?.damagePerMinute || 
+            (match.info.gameDuration > 0 ? ((p.totalDamageDealtToChampions || 0) / match.info.gameDuration) * 60 : 0),
+          total_heals_on_teammates: p.totalHealsOnTeammates || 0,
+          total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
+          total_time_cc_dealt: p.totalTimeCCDealt || 0,
         }));
 
         const { error: junctionError } = await supabase

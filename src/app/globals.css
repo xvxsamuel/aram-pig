@@ -28,6 +28,30 @@ body {
     font-family: var(--font-family-light);
 }
 
+/* custom scrollbar styling */
+* {
+    scrollbar-color: var(--color-gold-dark) color-mix(in oklch, var(--color-accent-dark) 50%, transparent);
+}
+
+/* webkit browsers (chrome, safari, edge) */
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: color-mix(in oklch, var(--color-accent-dark) 50%, transparent);
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--color-gold-dark);
+    border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gold-light);
+}
+
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-family-title);
 }

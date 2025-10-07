@@ -56,7 +56,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
   }
 
   return (
-    <div className="w-full sm:flex-1 sm:min-w-0">
+    <div className="w-full xl:flex-1 xl:min-w-0">
       <section className="bg-accent-darker rounded-xl border border-gold-dark/20 overflow-hidden">
         <div className="p-6">
           <div className="flex items-center justify-between gap-4 mb-4">
@@ -92,12 +92,12 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
               <button
                 onClick={loadMore}
                 disabled={loading}
-                className="w-full mt-4 px-4 py-3 bg-accent-dark hover:bg-accent-dark/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors border border-gold-dark/20 flex items-center justify-center gap-2"
+                className="w-full mt-4 px-4 py-3 bg-gradient-to-t from-accent-r-dark to-accent-r-light hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <div className="relative w-5 h-5 flex-shrink-0">
-                    <div className="absolute inset-0 border-2 border-gray-700 rounded-full"></div>
-                    <div className="absolute inset-0 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
+                    <div className="absolute inset-0 border-2 border-accent-darker rounded-full"></div>
+                    <div className="absolute inset-0 border-2 border-gold-light rounded-full animate-spin border-t-transparent"></div>
                   </div>
                 ) : (
                   <>

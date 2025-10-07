@@ -57,7 +57,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
       <div className="relative h-8 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
         <div
           onClick={handleInputClick}
-          className="relative z-10 h-full w-full rounded-[inherit] bg-accent-darker flex items-center px-4 gap-2 cursor-pointer transition-colors"
+          className="relative z-10 h-full w-full rounded-[inherit] bg-accent-darkest flex items-center px-4 gap-2 cursor-pointer transition-colors"
         >
           {isOpen ? (
             <input

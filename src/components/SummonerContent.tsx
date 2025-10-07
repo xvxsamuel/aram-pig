@@ -300,14 +300,14 @@ export default function SummonerContent({
         lastUpdated={lastUpdated}
       />
 
-      <div className="bg-accent-darkest py-8 rounded-3xl">
+      <div className="bg-accent-darkest border border-gold-dark/20 py-8 rounded-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           {jobProgress && (
             <FetchMessage job={jobProgress} />
           )}
 
-          <div className="flex flex-col sm:flex-row gap-6">
-            <div className="flex flex-col gap-6 sm:w-80 w-full">
+          <div className="flex flex-col xl:flex-row gap-6">
+            <div className="flex flex-col gap-6 xl:w-80 w-full">
               <PigScoreCard />
               <AramStatsCard
                 totalGames={totalGames}

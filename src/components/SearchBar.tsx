@@ -66,7 +66,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
   return (
     <div className={clsx("relative px-4", className)}>
       <div className="relative h-full rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-      <div className="relative z-10 h-full w-full rounded-[inherit] bg-accent-darker flex items-center cursor-text">
+      <div className="relative z-10 h-full w-full rounded-[inherit] bg-accent-darkest flex items-center cursor-text">
         <form onSubmit={onSubmit} className="flex items-center gap-3 w-full h-full">
           <div className="relative flex-1 h-full flex items-center">
             <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 flex gap-1 pointer-events-none">

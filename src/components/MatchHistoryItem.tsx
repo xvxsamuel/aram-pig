@@ -15,6 +15,8 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
   const participant = match.info.participants.find(p => p.puuid === puuid)
   if (!participant) return null
 
+  // check if game was a remake
+  const isRemake = participant.gameEndedInEarlySurrender
   const isWin = participant.win
   const kda = participant.deaths === 0 
     ? "Perfect"
@@ -32,66 +34,74 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
     <div
       className={clsx(
         "rounded-lg border-l-[6px] overflow-hidden",
-        isWin 
-          ? "bg-[#28344E] border-[#5383E8]" 
-          : "bg-[#59343B] border-[#E84057]"
+        isRemake
+          ? "bg-[#3A3A3A] border-[#808080]"
+          : isWin 
+            ? "bg-[#28344E] border-[#5383E8]" 
+            : "bg-[#59343B] border-[#E84057]"
       )}
     >
-      <div className="flex items-center px-4 py-3 min-h-[80px] gap-0.5">
-        <div className="flex flex-col justify-center flex-shrink-0 min-w-[90px]">
-          <div className={clsx("text-sm font-bold", isWin ? "text-[#5383E8]" : "text-[#E84057]")}>
-            {isWin ? "WIN" : "LOSE"}
+      <div className="flex items-center px-4 py-3 min-h-[80px] gap-4">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-col justify-center min-w-[75px]">
+            <div className={clsx(
+              "text-sm font-bold",
+              isRemake 
+                ? "text-[#808080]"
+                : isWin ? "text-[#5383E8]" : "text-[#E84057]"
+            )}>
+              {isRemake ? "REMAKE" : isWin ? "WIN" : "LOSS"}
+            </div>
+            <div className="text-xs text-gray-400 mt-0.5">
+              {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, "0")}
+            </div>
+            <div className="text-xs text-gray-400">
+              {timeAgo}
+            </div>
           </div>
-          <div className="text-xs text-gray-400 mt-0.5">
-            {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, "0")}
-          </div>
-          <div className="text-xs text-gray-400">
-            {timeAgo}
+
+          <div className="flex items-center gap-1">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-xl overflow-hidden bg-accent-dark border-2 border-gray-600">
+                <Image
+                  src={getChampionImageUrl(participant.championName, ddragonVersion)}
+                  alt={participant.championName}
+                  width={64}
+                  height={64}
+                  className="w-full h-full scale-110 object-cover"
+                  unoptimized
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 text-xs font-bold">
+                {participant.champLevel}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                <Image
+                  src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
+                  alt="Spell 1"
+                  width={28}
+                  height={28}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              </div>
+              <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                <Image
+                  src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
+                  alt="Spell 2"
+                  width={28}
+                  height={28}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-xl overflow-hidden bg-accent-dark border-2 border-gray-600">
-              <Image
-                src={getChampionImageUrl(participant.championName, ddragonVersion)}
-                alt={participant.championName}
-                width={64}
-                height={64}
-                className="w-full h-full scale-110 object-cover"
-                unoptimized
-              />
-            </div>
-            <div className="absolute -bottom-1 -right-1 bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 text-xs font-bold">
-              {participant.champLevel}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
-              <Image
-                src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
-                alt="Spell 1"
-                width={28}
-                height={28}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
-            </div>
-            <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
-              <Image
-                src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
-                alt="Spell 2"
-                width={28}
-                height={28}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-1 flex-shrink-0 ml-4">
+        <div className="flex gap-1 flex-shrink-0">
           <div className="grid grid-cols-3 grid-rows-2 gap-1">
             {[
               participant.item0,
@@ -121,7 +131,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
         </div>
 
         {/* stats */}
-        <div className="flex flex-col justify-center flex-shrink-0 min-w-[140px] ml-2 text-center">
+        <div className="flex flex-col justify-center flex-shrink-0 min-w-[140px] text-center">
           <div className="flex items-baseline gap-1 justify-center">
             <span className="text-lg font-bold text-white">
               {participant.kills}
@@ -146,7 +156,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           </div>
         </div>
 
-        <div className="hidden sm:flex gap-3 ml-auto flex-shrink-0">
+        <div className="hidden lg:flex gap-3 ml-auto flex-shrink-0">
           <div className="flex flex-col gap-0.5 w-32">
             {team1.map((p, idx) => {
               const playerName = p.riotIdGameName || p.summonerName

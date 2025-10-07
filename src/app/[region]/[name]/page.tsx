@@ -138,7 +138,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
           // get lightweight match stats from summoner_matches (all matches, for stats calculation)
           const { data: allMatchStats, error: statsError } = await supabase
             .from("summoner_matches")
-            .select("match_id, champion_name, kills, deaths, assists, win")
+            .select("match_id, champion_name, kills, deaths, assists, win, damage_dealt_to_champions, game_duration")
             .eq("puuid", puuid)
             .order("match_id", { ascending: false })
 
@@ -146,25 +146,50 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
           if (!statsError && allMatchStats) {
             console.log(`Found ${allMatchStats.length} total matches for stats`)
             matchIds = allMatchStats.map(m => m.match_id)
-            totalGames = allMatchStats.length
             
-            // calculate basic stats from lightweight data
-            wins = allMatchStats.filter(m => m.win).length
-            totalKills = allMatchStats.reduce((sum, m) => sum + m.kills, 0)
-            totalDeaths = allMatchStats.reduce((sum, m) => sum + m.deaths, 0)
-            totalAssists = allMatchStats.reduce((sum, m) => sum + m.assists, 0)
+            // filter out remakes from calculations (check against match data)
+            const matchIdsSet = new Set(matchIds.slice(0, 100)) // only check first 100 for performance
+            const { data: matchesWithRemakes } = await supabase
+              .from("matches")
+              .select("match_id, match_data")
+              .in("match_id", Array.from(matchIdsSet))
+            
+            const remakeMatchIds = new Set<string>()
+            if (matchesWithRemakes) {
+              matchesWithRemakes.forEach((m: any) => {
+                const participants = m.match_data?.info?.participants || []
+                // check if any participant has gameEndedInEarlySurrender
+                const isRemake = participants.some((p: any) => p.gameEndedInEarlySurrender === true)
+                if (isRemake) {
+                  remakeMatchIds.add(m.match_id)
+                }
+              })
+            }
+            
+            // filter out remakes from stats
+            const validMatches = allMatchStats.filter(m => !remakeMatchIds.has(m.match_id))
+            
+            totalGames = validMatches.length
+            
+            // calculate basic stats from lightweight data (excluding remakes)
+            wins = validMatches.filter(m => m.win).length
+            totalKills = validMatches.reduce((sum, m) => sum + m.kills, 0)
+            totalDeaths = validMatches.reduce((sum, m) => sum + m.deaths, 0)
+            totalAssists = validMatches.reduce((sum, m) => sum + m.assists, 0)
+            totalDamage = validMatches.reduce((sum, m) => sum + (m.damage_dealt_to_champions || 0), 0)
+            totalGameDuration = validMatches.reduce((sum, m) => sum + (m.game_duration || 0), 0)
 
-            // find most played champion
+            // find most played champion (excluding remakes)
             const championCounts: { [key: string]: number } = {}
-            allMatchStats.forEach(m => {
+            validMatches.forEach(m => {
               championCounts[m.champion_name] = (championCounts[m.champion_name] || 0) + 1
             })
             mostPlayedChampion = Object.entries(championCounts)
               .sort(([, a], [, b]) => b - a)[0]?.[0] || ''
 
-            // calculate longest win streak
+            // calculate longest win streak (excluding remakes)
             let currentWinStreak = 0
-            allMatchStats.forEach(m => {
+            validMatches.forEach(m => {
               if (m.win) {
                 currentWinStreak++
                 if (currentWinStreak > longestWinStreak) {
@@ -176,29 +201,8 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             })
           }
           
-          // fetch damage and duration from ALL matches
+          // only fetch full match data for first 20 (for display)
           if (matchIds.length > 0) {
-            const { data: allMatchesData, error: allMatchesError } = await supabase
-              .from("matches")
-              .select("match_id, game_duration, match_data")
-              .in("match_id", matchIds)
-
-            if (!allMatchesError && allMatchesData) {
-              console.log(`Fetching damage/duration from ${allMatchesData.length} matches`)
-              allMatchesData.forEach(matchRecord => {
-                const match = matchRecord.match_data
-                if (match && match.info && match.info.participants) {
-                  const participant = match.info.participants.find((p: any) => p.puuid === puuid)
-                  if (participant) {
-                    totalDamage += participant.totalDamageDealtToChampions || 0
-                  }
-                }
-                totalGameDuration += matchRecord.game_duration || 0
-              })
-              console.log(`Total damage: ${totalDamage}, Total duration: ${totalGameDuration}`)
-            }
-
-            // only fetch full match data for first 20 (for display)
             const displayMatchIds = matchIds.slice(0, 20)
             const { data: displayMatches, error: displayError } = await supabase
               .from("matches")
@@ -240,7 +244,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
-      <div className={`max-w-7xl mx-auto px-4 ${error ? 'py-4' : ''}`}>
+      <div className={`max-w-7xl mx-auto px-4 ${error ? 'py-4' : 'pb-8'}`}>
         {error && (
           <div className="bg-red-900/20 border border-red-500/50 rounded-2xl p-6 mb-6">
             <p className="text-red-400 text-lg">{error}</p>

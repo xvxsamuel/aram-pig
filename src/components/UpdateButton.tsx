@@ -18,7 +18,7 @@ export default function UpdateButton({ region, name, puuid, hasActiveJob, onUpda
       <button 
         onClick={handleUpdate}
         disabled={hasActiveJob}
-        className="w-32 px-6 py-2 bg-gradient-to-t from-accent-r-dark to-accent-r-light hover:brightness-130 disabled:bg-gray-600 disabled:brightness-100 disabled:cursor-not-allowed rounded-lg font-semibold transition-all"
+        className="w-32 px-6 py-2 bg-gradient-to-t from-accent-r-dark to-accent-r-light hover:brightness-130 disabled:brightness:90 disabled:brightness-100 disabled:cursor-not-allowed rounded-lg font-semibold transition-all"
         data-update-button
       >
         {hasActiveJob ? 'Updating...' : 'Update'}

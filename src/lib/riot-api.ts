@@ -162,6 +162,7 @@ export interface ParticipantData {
   championId: number
   teamId: number
   win: boolean
+  gameEndedInEarlySurrender: boolean
   kills: number
   deaths: number
   assists: number
