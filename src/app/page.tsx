@@ -12,11 +12,11 @@ export default function HomePage() {
         quality={90}
         priority
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-accent-dark/65 pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-accent-darker/80 to-accent-dark/60 pointer-events-none z-0" />
       
-      <div className="relative z-10 w-full max-w-2xl flex-1 flex flex-col items-center justify-center gap-8 pb-[20vh]">
+      <div className="relative z-10 w-full max-w-2xl flex-1 flex flex-col items-center justify-center gap-[8vh] pb-[35vh]">
         <h1 className="sr-only">ARAM PIG</h1>
-        <div className="relative w-full h-[16vw] min-h-[80px] max-h-[200px] ">
+        <div className="relative w-full h-[16vw] min-h-[120px] max-h-[400px] ">
           <Image
             src="/title.svg"
             alt="ARAM PIG"

@@ -23,7 +23,7 @@ export default function Navbar() {
       >
         <div className="flex flex-col h-full">
           {/* logo section */}
-          <Link href="/" className="flex items-center p-4 hover:opacity-80 transition-opacity h-[64px]">
+          <Link href="/" className="flex items-center p-4 hover:opacity-70 transition-opacity h-[64px]">
             <img src="/logo.svg" alt="ARAM PIG Logo" className="h-8 w-8 flex-shrink-0" />
             <img 
               src="/title-bar.svg" 
@@ -47,11 +47,11 @@ export default function Navbar() {
               href="/champions" 
               className="flex items-center gap-4 py-3 rounded-lg hover:bg-accent-light/20 transition-all group relative h-[40px]"
             >
-              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[7px] top-[7px]">
+              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[4px] top-[8px]">
                 <UserGroupIcon className="w-6 h-6 text-gold-light group-hover:text-accent-light transition-colors" />
               </div>
               <span 
-                className="font-semibold whitespace-nowrap transition-all duration-300 bg-gradient-to-b from-gold-light to-gold-dark bg-clip-text text-transparent group-hover:from-subtitle group-hover:to-subtitle"
+                className="font-semibold whitespace-nowrap transition-all duration-300 bg-gradient-to-b from-gold-light to-gold-dark bg-clip-text text-transparent group-hover:from-accent-light group-hover:to-accent-light"
                 style={{ 
                   opacity: sidebarHovered ? 1 : 0,
                   marginLeft: '42px',
@@ -66,11 +66,11 @@ export default function Navbar() {
               href="/about" 
               className="flex items-center gap-4 py-3 rounded-lg hover:bg-accent-light/20 transition-all group relative h-[40px]"
             >
-              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[7px] top-[7px]">
+              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[4px] top-[8px]">
                 <InformationCircleIcon className="w-6 h-6 text-gold-light group-hover:text-accent-light transition-colors" />
               </div>
               <span 
-                className="font-semibold whitespace-nowrap transition-all duration-300 bg-gradient-to-b from-gold-light to-gold-dark bg-clip-text text-transparent group-hover:from-subtitle group-hover:to-subtitle"
+                className="font-semibold whitespace-nowrap transition-all duration-300 bg-gradient-to-b from-gold-light to-gold-dark bg-clip-text text-transparent group-hover:from-accent-light group-hover:to-accent-light"
                 style={{ 
                   opacity: sidebarHovered ? 1 : 0,
                   marginLeft: '42px',
