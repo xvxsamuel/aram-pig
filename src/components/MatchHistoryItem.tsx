@@ -1,8 +1,12 @@
+"use client"
+
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
 import type { MatchData } from "../lib/riot-api"
 import { getChampionImageUrl, getSummonerSpellUrl, getItemImageUrl } from "../lib/ddragon-client"
+import MatchDetails from "./MatchDetails"
 
 interface Props {
   match: MatchData
@@ -12,6 +16,7 @@ interface Props {
 }
 
 export default function MatchHistoryItem({ match, puuid, region, ddragonVersion }: Props) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const participant = match.info.participants.find(p => p.puuid === puuid)
   if (!participant) return null
 
@@ -156,7 +161,8 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           </div>
         </div>
 
-        <div className="hidden lg:flex gap-3 ml-auto flex-shrink-0">
+        {/* teams - hidden on small screens */}
+        <div className="hidden lg:flex gap-3 flex-shrink-0">
           <div className="flex flex-col gap-0.5 w-32">
             {team1.map((p, idx) => {
               const playerName = p.riotIdGameName || p.summonerName
@@ -233,7 +239,38 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             })}
           </div>
         </div>
+
+        {/* separator and expand button - always visible on right side */}
+        <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+          <div className="w-px h-12 bg-neutral-light/20"></div>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center justify-center w-8 h-8 rounded hover:bg-neutral-light/10 transition-colors"
+            aria-label="Toggle match details"
+          >
+            <svg
+              className={clsx(
+                "w-5 h-5 text-neutral-light transition-transform",
+                isExpanded && "rotate-180"
+              )}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
       </div>
+      
+      {/* detailed match breakdown */}
+      {isExpanded && (
+        <MatchDetails 
+          match={match} 
+          currentPuuid={puuid} 
+          ddragonVersion={ddragonVersion}
+        />
+      )}
     </div>
   )
 }

@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const maxMatches = 1000;
 
     while (start < maxMatches) {
-      const matchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchSize, start);
+      const matchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchSize, start, 'overhead');
       
       if (matchIds.length === 0) break;
 

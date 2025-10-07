@@ -1,6 +1,6 @@
 import { RiotAPI, RiotAPITypes, PlatformId, DDragon } from "@fightmegg/riot-api"
 import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "./regions"
-import { waitForRateLimit } from "./rate-limiter"
+import { waitForRateLimit, type RequestType } from "./rate-limiter"
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY
 
@@ -47,6 +47,7 @@ const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, string> = {
 }
 
 // helper to retry api calls if job id conflicts
+// don't retry on 404s (account not found)
 async function retryWithDelay<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -56,6 +57,11 @@ async function retryWithDelay<T>(
     try {
       return await fn()
     } catch (error: any) {
+      // don't retry on 404s - account doesn't exist
+      if (error?.response?.status === 404) {
+        throw error
+      }
+      
       const isJobConflict = error?.message?.includes('A job with the same id already exists')
       const isLastAttempt = attempt === maxRetries - 1
       
@@ -72,7 +78,14 @@ async function retryWithDelay<T>(
   throw new Error('max retries reached')
 }
 
-export async function getAccountByRiotId(gameName: string, tagLine: string, region: RegionalCluster) {
+export async function getAccountByRiotId(
+  gameName: string, 
+  tagLine: string, 
+  region: RegionalCluster,
+  requestType: RequestType = 'overhead'
+) {
+  await waitForRateLimit(region, requestType);
+  
   try {
     const account = await retryWithDelay(() => 
       rAPI.account.getByRiotId({
@@ -90,7 +103,14 @@ export async function getAccountByRiotId(gameName: string, tagLine: string, regi
   }
 }
 
-export async function getSummonerByPuuid(puuid: string, platform: PlatformCode) {
+export async function getSummonerByPuuid(
+  puuid: string, 
+  platform: PlatformCode,
+  requestType: RequestType = 'overhead'
+) {
+  const region = PLATFORM_TO_REGIONAL[platform];
+  await waitForRateLimit(region, requestType);
+  
   try {
     const summoner = await retryWithDelay(() =>
       rAPI.summoner.getByPUUID({
@@ -112,9 +132,10 @@ export async function getMatchIdsByPuuid(
   region: RegionalCluster,
   queue: number = 450,
   count: number = 20,
-  start: number = 0
+  start: number = 0,
+  requestType: RequestType = 'priority'
 ) {
-  await waitForRateLimit(region);
+  await waitForRateLimit(region, requestType);
   
   const limitedCount = Math.min(count, 100)
   const matchIds = await retryWithDelay(() =>
@@ -131,8 +152,8 @@ export async function getMatchIdsByPuuid(
   return matchIds
 }
 
-export async function getMatchById(matchId: string, region: RegionalCluster) {
-  await waitForRateLimit(region);
+export async function getMatchById(matchId: string, region: RegionalCluster, requestType: RequestType = 'priority') {
+  await waitForRateLimit(region, requestType);
   
   const match = await retryWithDelay(() =>
     rAPI.matchV5.getMatchById({
@@ -185,6 +206,19 @@ export interface ParticipantData {
   item4: number
   item5: number
   item6: number
+  perks?: {
+    styles: Array<{
+      style: number
+      selections: Array<{
+        perk: number
+      }>
+    }>
+    statPerks: {
+      offense: number
+      flex: number
+      defense: number
+    }
+  }
 }
 
 export async function getSummonerByRiotId(

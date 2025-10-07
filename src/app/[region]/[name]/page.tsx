@@ -67,7 +67,6 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   let summonerData = null
   let matches: MatchData[] = []
   let error = null
-  let hasIncompleteData = false
   let lastUpdated: string | null = null
   let wins = 0
   let totalKills = 0
@@ -131,45 +130,23 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
           lastUpdated = summonerRecord?.last_updated || null
 
-          // data is only incomplete if the profile has never been indexed (no game_name or last_updated)
-          // once indexed, user must manually trigger updates via the Update button
-          hasIncompleteData = !summonerRecord?.game_name || !summonerRecord?.last_updated
-
-          console.log(`Fetching matches for puuid: ${puuid}`)
+          console.log(`fetching matches for puuid: ${puuid}`)
           
-          // get lightweight match stats from summoner_matches (all matches, for stats calculation)
+          // get lightweight match stats from summoner_matches (exclude remakes from stats)
           const { data: allMatchStats, error: statsError } = await supabase
             .from("summoner_matches")
-            .select("match_id, champion_name, kills, deaths, assists, win, damage_dealt_to_champions, game_duration")
+            .select("match_id, champion_name, kills, deaths, assists, win, damage_dealt_to_champions, game_duration, game_ended_in_early_surrender")
             .eq("puuid", puuid)
             .order("match_id", { ascending: false })
 
           let matchIds: string[] = []
           if (!statsError && allMatchStats) {
-            console.log(`Found ${allMatchStats.length} total matches for stats`)
+            console.log(`Found ${allMatchStats.length} total matches`)
             matchIds = allMatchStats.map(m => m.match_id)
             
-            // filter out remakes from calculations (check against match data)
-            const matchIdsSet = new Set(matchIds.slice(0, 100)) // only check first 100 for performance
-            const { data: matchesWithRemakes } = await supabase
-              .from("matches")
-              .select("match_id, match_data")
-              .in("match_id", Array.from(matchIdsSet))
-            
-            const remakeMatchIds = new Set<string>()
-            if (matchesWithRemakes) {
-              matchesWithRemakes.forEach((m: any) => {
-                const participants = m.match_data?.info?.participants || []
-                // check if any participant has gameEndedInEarlySurrender
-                const isRemake = participants.some((p: any) => p.gameEndedInEarlySurrender === true)
-                if (isRemake) {
-                  remakeMatchIds.add(m.match_id)
-                }
-              })
-            }
-            
-            // filter out remakes from stats
-            const validMatches = allMatchStats.filter(m => !remakeMatchIds.has(m.match_id))
+            // filter out remakes from stats calculation
+            const validMatches = allMatchStats.filter(m => !m.game_ended_in_early_surrender)
+            console.log(`${validMatches.length} matches after excluding remakes`)
             
             totalGames = validMatches.length
             
@@ -203,20 +180,97 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             })
           }
           
-          // only fetch full match data for first 20 (for display)
+          // fetch full match data for first 20 (for display)
           if (matchIds.length > 0) {
             const displayMatchIds = matchIds.slice(0, 20)
-            const { data: displayMatches, error: displayError } = await supabase
+            
+            // get match metadata
+            const { data: matchRecords, error: matchError } = await supabase
               .from("matches")
-              .select("match_data")
+              .select("match_id, game_creation, game_duration")
               .in("match_id", displayMatchIds)
 
-            if (!displayError && displayMatches) {
-              // sort to match the order of displayMatchIds
-              const matchMap = new Map(displayMatches.map((m: any) => [m.match_data.metadata.matchId, m.match_data]))
-              matches = displayMatchIds
-                .map(id => matchMap.get(id))
-                .filter((m: any) => m !== null) as MatchData[]
+            // get all participants for these matches
+            const { data: participants, error: participantsError } = await supabase
+              .from("summoner_matches")
+              .select("*")
+              .in("match_id", displayMatchIds)
+
+            if (!matchError && !participantsError && matchRecords && participants) {
+              // reconstruct match data structure
+              matches = displayMatchIds.map(matchId => {
+                const match = matchRecords.find(m => m.match_id === matchId)
+                const matchParticipants = participants.filter(p => p.match_id === matchId)
+                
+                if (!match || matchParticipants.length === 0) return null
+
+                return {
+                  metadata: {
+                    matchId: match.match_id,
+                    participants: matchParticipants.map(p => p.puuid)
+                  },
+                  info: {
+                    gameCreation: match.game_creation,
+                    gameDuration: match.game_duration,
+                    gameEndTimestamp: match.game_creation + (match.game_duration * 1000),
+                    gameMode: "ARAM",
+                    queueId: 450,
+                    participants: matchParticipants.map(p => ({
+                      puuid: p.puuid,
+                      summonerName: p.summoner_name || "",
+                      riotIdGameName: p.riot_id_game_name || "",
+                      riotIdTagline: p.riot_id_tagline || "",
+                      championName: p.champion_name,
+                      championId: 0,
+                      teamId: p.team_id || 100,
+                      win: p.win,
+                      gameEndedInEarlySurrender: p.game_ended_in_early_surrender || false,
+                      kills: p.kills,
+                      deaths: p.deaths,
+                      assists: p.assists,
+                      champLevel: p.champ_level || 18,
+                      totalDamageDealtToChampions: p.damage_dealt_to_champions,
+                      goldEarned: p.gold_earned,
+                      totalMinionsKilled: p.total_minions_killed,
+                      neutralMinionsKilled: 0,
+                      summoner1Id: p.summoner1_id || 0,
+                      summoner2Id: p.summoner2_id || 0,
+                      item0: p.item0 || 0,
+                      item1: p.item1 || 0,
+                      item2: p.item2 || 0,
+                      item3: p.item3 || 0,
+                      item4: p.item4 || 0,
+                      item5: p.item5 || 0,
+                      item6: p.item6 || 0,
+                      perks: {
+                        styles: [
+                          {
+                            style: p.perk_primary_style || 0,
+                            selections: [
+                              { perk: p.perk0 || 0 },
+                              { perk: p.perk1 || 0 },
+                              { perk: p.perk2 || 0 },
+                              { perk: p.perk3 || 0 },
+                            ]
+                          },
+                          {
+                            style: p.perk_sub_style || 0,
+                            selections: [
+                              { perk: p.perk4 || 0 },
+                              { perk: p.perk5 || 0 },
+                            ]
+                          }
+                        ],
+                        statPerks: {
+                          offense: p.stat_perk0 || 0,
+                          flex: p.stat_perk1 || 0,
+                          defense: p.stat_perk2 || 0,
+                        }
+                      }
+                    }))
+                  }
+                }
+              }).filter(m => m !== null) as MatchData[]
               
               console.log(`Loaded ${matches.length} matches for display`)
             }
@@ -277,7 +331,6 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             totalGameDuration={totalGameDuration}
             region={region}
             name={name}
-            hasIncompleteData={hasIncompleteData}
             championImageUrl={championImageUrl}
             profileIconUrl={profileIconUrl}
             ddragonVersion={ddragonVersion}

@@ -6,6 +6,7 @@ import type { UpdateJobProgress } from "../../../types/update-jobs"
 async function cleanupStaleJobs(supabase: any) {
   const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
   
   // cleanup jobs older than 15 minutes
   await supabase
@@ -28,6 +29,13 @@ async function cleanupStaleJobs(supabase: any) {
     })
     .eq("status", "processing")
     .lt("updated_at", fiveMinutesAgo)
+  
+  // delete completed/failed jobs older than 2 minutes (prevents refresh loops)
+  await supabase
+    .from("update_jobs")
+    .delete()
+    .in("status", ["completed", "failed"])
+    .lt("completed_at", twoMinutesAgo)
 }
 
 export async function POST(request: Request) {

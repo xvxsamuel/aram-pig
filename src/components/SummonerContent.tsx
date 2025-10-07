@@ -27,7 +27,6 @@ interface Props {
   totalGameDuration: number
   region: string
   name: string
-  hasIncompleteData: boolean
   championImageUrl?: string
   profileIconUrl: string
   ddragonVersion: string
@@ -49,7 +48,6 @@ export default function SummonerContent({
   totalGameDuration,
   region,
   name,
-  hasIncompleteData,
   championImageUrl,
   profileIconUrl,
   ddragonVersion,
@@ -59,22 +57,27 @@ export default function SummonerContent({
   const router = useRouter()
   const { startLoading, stopLoading } = useLoading()
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
-  const [hasAutoTriggered, setHasAutoTriggered] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>("Your profile is up to date!")
   const [toastType, setToastType] = useState<"success" | "error">("success")
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // debug logging for jobProgress state
+  // show loading bar briefly on initial mount for better ux
   useEffect(() => {
-    console.log("jobProgress state:", jobProgress)
-  }, [jobProgress])
+    startLoading()
+    const timer = setTimeout(() => {
+      stopLoading()
+    }, 500)
+    
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [])
 
-  // check for active job and auto-trigger on mount
+  // check for active job on mount
   useEffect(() => {
-    const checkAndTrigger = async () => {
+    const checkForActiveJob = async () => {
       try {
-        // check for existing active job
         const statusResponse = await fetch("/api/update-status", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -85,65 +88,17 @@ export default function SummonerContent({
           const statusData = await statusResponse.json()
           
           if (statusData.hasActiveJob && statusData.job) {
-            // active job found, start polling
             startLoading()
             setJobProgress(statusData.job)
-            return
-          }
-        }
-
-        // no active job - auto-trigger if incomplete data
-        if (hasIncompleteData && !hasAutoTriggered) {
-          setHasAutoTriggered(true)
-          startLoading()
-          
-          const decodedName = decodeURIComponent(name)
-          const summonerName = decodedName.replace("-", "#")
-          const [gameName, tagLine] = summonerName.includes("#") 
-            ? summonerName.split("#") 
-            : [summonerName, getDefaultTag(region.toUpperCase())]
-
-          const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
-          const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : "europe"
-
-          // set placeholder job to show ui immediately
-          setJobProgress({
-            jobId: "pending",
-            status: "pending",
-            totalMatches: 0,
-            fetchedMatches: 0,
-            progressPercentage: 0,
-            etaSeconds: 0,
-            startedAt: new Date().toISOString()
-          })
-
-          const updateResponse = await fetch("/api/update-profile", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              region: regionalCode,
-              gameName,
-              tagLine,
-              platform: platformCode,
-            })
-          })
-
-          if (updateResponse.ok) {
-            // poll immediately to get real job data
-            setTimeout(() => pollJobStatus(), 500)
-          } else {
-            // clear placeholder if failed
-            setJobProgress(null)
-            stopLoading()
           }
         }
       } catch (error) {
-        console.error("Failed to check/trigger update:", error)
+        console.error("failed to check job status:", error)
       }
     }
 
-    checkAndTrigger()
-  }, [summonerData.account.puuid, hasIncompleteData, hasAutoTriggered])
+    checkForActiveJob()
+  }, [summonerData.account.puuid])
 
   // poll for job status
   const pollJobStatus = useCallback(async () => {
@@ -168,7 +123,7 @@ export default function SummonerContent({
         setJobProgress(data.job)
       } else {
         // job completed or failed
-        console.log("Job completed, refreshing page")
+        console.log("job completed, refreshing data")
         setJobProgress(null)
         stopLoading()
         if (pollIntervalRef.current) {
@@ -176,13 +131,15 @@ export default function SummonerContent({
           pollIntervalRef.current = null
         }
         
-        // show toast before refresh
+        // show success toast
+        setToastMessage("profile updated successfully!")
+        setToastType("success")
         setShowToast(true)
         
-        // delay refresh to show toast
+        // use router refresh for smooth update without full page reload
         setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+          router.refresh()
+        }, 500)
       }
     } catch (error: any) {
       // ignore abort errors (happens when page refreshes during fetch)
@@ -314,7 +271,7 @@ export default function SummonerContent({
       <div className="bg-accent-darkest border border-gold-dark/20 py-8 rounded-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           {jobProgress && (
-            <FetchMessage job={jobProgress} />
+            <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />
           )}
 
           <div className="flex flex-col xl:flex-row gap-6">

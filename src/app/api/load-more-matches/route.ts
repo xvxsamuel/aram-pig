@@ -26,25 +26,100 @@ export async function POST(request: Request) {
 
     const matchIds = matchStats.map(m => m.match_id)
     
-    // fetch full match data
-    const { data: matchesData, error } = await supabase
+    // get match metadata
+    const { data: matchRecords, error: matchError } = await supabase
       .from("matches")
-      .select("match_data")
+      .select("match_id, game_creation, game_duration")
       .in("match_id", matchIds)
 
-    if (error) {
-      console.error("Error loading matches:", error)
+    // get all participants for these matches
+    const { data: participants, error: participantsError } = await supabase
+      .from("summoner_matches")
+      .select("*")
+      .in("match_id", matchIds)
+
+    if (matchError || participantsError) {
+      console.error("Error loading matches:", matchError || participantsError)
       return NextResponse.json(
         { error: "failed to load matches" },
         { status: 500 }
       )
     }
 
-    // sort to maintain order
-    const matchMap = new Map(matchesData.map((m: any) => [m.match_data.metadata.matchId, m.match_data]))
-    const matches = matchIds
-      .map(id => matchMap.get(id))
-      .filter(m => m !== null)
+    // reconstruct match data structure
+    const matches = matchIds.map(matchId => {
+      const match = matchRecords?.find(m => m.match_id === matchId)
+      const matchParticipants = participants?.filter(p => p.match_id === matchId) || []
+      
+      if (!match || matchParticipants.length === 0) return null
+
+      return {
+        metadata: {
+          matchId: match.match_id,
+          participants: matchParticipants.map(p => p.puuid)
+        },
+        info: {
+          gameCreation: match.game_creation,
+          gameDuration: match.game_duration,
+          gameEndTimestamp: match.game_creation + (match.game_duration * 1000),
+          gameMode: "ARAM",
+          queueId: 450,
+          participants: matchParticipants.map(p => ({
+            puuid: p.puuid,
+            summonerName: p.summoner_name || "",
+            riotIdGameName: p.riot_id_game_name || "",
+            riotIdTagline: p.riot_id_tagline || "",
+            championName: p.champion_name,
+            championId: 0,
+            teamId: p.team_id || 100,
+            win: p.win,
+            gameEndedInEarlySurrender: p.game_ended_in_early_surrender || false,
+            kills: p.kills,
+            deaths: p.deaths,
+            assists: p.assists,
+            champLevel: p.champ_level || 18,
+            totalDamageDealtToChampions: p.damage_dealt_to_champions,
+            goldEarned: p.gold_earned,
+            totalMinionsKilled: p.total_minions_killed,
+            neutralMinionsKilled: 0,
+            summoner1Id: p.summoner1_id || 0,
+            summoner2Id: p.summoner2_id || 0,
+            item0: p.item0 || 0,
+            item1: p.item1 || 0,
+            item2: p.item2 || 0,
+            item3: p.item3 || 0,
+            item4: p.item4 || 0,
+            item5: p.item5 || 0,
+            item6: p.item6 || 0,
+            perks: {
+              styles: [
+                {
+                  style: p.perk_primary_style || 0,
+                  selections: [
+                    { perk: p.perk0 || 0 },
+                    { perk: p.perk1 || 0 },
+                    { perk: p.perk2 || 0 },
+                    { perk: p.perk3 || 0 },
+                  ]
+                },
+                {
+                  style: p.perk_sub_style || 0,
+                  selections: [
+                    { perk: p.perk4 || 0 },
+                    { perk: p.perk5 || 0 },
+                  ]
+                }
+              ],
+              statPerks: {
+                offense: p.stat_perk0 || 0,
+                flex: p.stat_perk1 || 0,
+                defense: p.stat_perk2 || 0,
+              }
+            }
+          }))
+        }
+      }
+    }).filter(m => m !== null)
 
     return NextResponse.json({
       matches,

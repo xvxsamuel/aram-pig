@@ -59,7 +59,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
     <div className="w-full xl:flex-1 xl:min-w-0">
       <section className="bg-accent-darker rounded-xl border border-gold-dark/20 overflow-hidden">
         <div className="p-6">
-          <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center justify-between gap-4 mb-1">
             <h2 className="text-xl font-bold flex-shrink-0">Recent Matches</h2>
             <ChampionFilter
               value={championFilter}

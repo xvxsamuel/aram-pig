@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '../../../lib/supabase';
 import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById } from '../../../lib/riot-api';
+import type { RequestType } from '../../../lib/rate-limiter';
 import { PLATFORM_TO_REGIONAL, type PlatformCode } from '../../../lib/regions';
 import type { UpdateJob } from '../../../types/update-jobs';
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
-async function fetchMatchIds(region: string, puuid: string, count?: number) {
+async function fetchMatchIds(region: string, puuid: string, count?: number, requestType: RequestType = 'priority') {
   const allMatchIds: string[] = [];
   const maxPerRequest = 100;
   let start = 0;
@@ -16,7 +17,8 @@ async function fetchMatchIds(region: string, puuid: string, count?: number) {
     
     const batchCount = count ? Math.min(maxPerRequest, count - allMatchIds.length) : maxPerRequest;
     
-    const batchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchCount, start);
+    // use appropriate request type based on queue
+    const batchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchCount, start, requestType);
     
     if (batchIds.length === 0) break;
     
@@ -30,8 +32,9 @@ async function fetchMatchIds(region: string, puuid: string, count?: number) {
   return allMatchIds;
 }
 
-async function fetchMatch(region: string, matchId: string) {
-  return await getMatchById(matchId, region as any);
+async function fetchMatch(region: string, matchId: string, requestType: RequestType = 'priority') {
+  // use appropriate request type based on queue
+  return await getMatchById(matchId, region as any, requestType);
 }
 
 // cleanup stale jobs before starting new one
@@ -247,13 +250,18 @@ export async function POST(request: Request) {
       });
     }
 
+    // determine request type based on match count
+    // <= 10 matches = priority queue (fast lane for small updates)
+    // > 10 matches = batch queue (bulk fetching with majority of capacity)
+    const requestType: RequestType = newMatchIds.length <= 10 ? 'priority' : 'batch';
+
     // calculate initial eta (rough estimate)
     const apiCallsNeeded = newMatchIds.length + Math.ceil(newMatchIds.length / 100);
     const etaSeconds = Math.ceil(apiCallsNeeded / 15);
 
     // create job
     jobId = await createJob(supabase, accountData.puuid, newMatchIds.length, etaSeconds);
-    console.log(`Created job ${jobId} for ${newMatchIds.length} matches`)
+    console.log(`created job ${jobId} for ${newMatchIds.length} matches (type: ${requestType})`)
 
     let fetchedMatches = 0;
     const updateProgressInterval = 5; // update progress every 5 matches
@@ -262,7 +270,7 @@ export async function POST(request: Request) {
     for (const matchId of newMatchIds) {
       try {
         console.log(`Fetching match ${fetchedMatches + 1}/${newMatchIds.length}: ${matchId}`)
-        const match = await fetchMatch(region, matchId);
+        const match = await fetchMatch(region, matchId, requestType);
 
         const { error: matchError } = await supabase
           .from('matches')
@@ -293,10 +301,14 @@ export async function POST(request: Request) {
           puuid: p.puuid,
           match_id: match.metadata.matchId,
           champion_name: p.championName,
+          summoner_name: p.summonerName || '',
+          riot_id_game_name: p.riotIdGameName || '',
+          riot_id_tagline: p.riotIdTagline || '',
           kills: p.kills,
           deaths: p.deaths,
           assists: p.assists,
           win: p.win,
+          game_ended_in_early_surrender: p.gameEndedInEarlySurrender || false,
           damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
           damage_dealt_total: p.totalDamageDealt || 0,
           damage_dealt_to_objectives: p.damageDealtToObjectives || 0,
@@ -322,6 +334,17 @@ export async function POST(request: Request) {
           team_id: p.teamId || 0,
           summoner1_id: p.summoner1Id || 0,
           summoner2_id: p.summoner2Id || 0,
+          perk_primary_style: p.perks?.styles?.[0]?.style || 0,
+          perk_sub_style: p.perks?.styles?.[1]?.style || 0,
+          perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
+          perk1: p.perks?.styles?.[0]?.selections?.[1]?.perk || 0,
+          perk2: p.perks?.styles?.[0]?.selections?.[2]?.perk || 0,
+          perk3: p.perks?.styles?.[0]?.selections?.[3]?.perk || 0,
+          perk4: p.perks?.styles?.[1]?.selections?.[0]?.perk || 0,
+          perk5: p.perks?.styles?.[1]?.selections?.[1]?.perk || 0,
+          stat_perk0: p.perks?.statPerks?.offense || 0,
+          stat_perk1: p.perks?.statPerks?.flex || 0,
+          stat_perk2: p.perks?.statPerks?.defense || 0,
         }));
 
         const { error: junctionError } = await supabase
