@@ -58,8 +58,8 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
   return (
     <div className="w-full xl:flex-1 xl:min-w-0">
       <section className="bg-accent-darker rounded-xl border border-gold-dark/20 overflow-hidden">
-        <div className="p-6">
-          <div className="flex items-center justify-between gap-4 mb-1">
+        <div className="px-6 py-3">
+          <div className="flex items-center justify-between gap-4 mb-3">
             <h2 className="text-xl font-bold flex-shrink-0">Recent Matches</h2>
             <ChampionFilter
               value={championFilter}
@@ -68,7 +68,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
               ddragonVersion={ddragonVersion}
             />
           </div>
-          <div className="h-px bg-gradient-to-r from-transparent via-gold-dark/30 to-transparent mb-6" />
+          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
           
           {filteredMatches.length === 0 ? (
           <div className="text-center text-subtitle py-8">
@@ -76,7 +76,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
           </div>
         ) : (
           <>
-            <div className="space-y-2">
+            <div className="space-y-2 px-3">
               {filteredMatches.map((match) => (
                 <MatchHistoryItem 
                   key={match.metadata.matchId} 
@@ -89,25 +89,27 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
             </div>
             
             {!championFilter && hasMore && (
-              <button
-                onClick={loadMore}
-                disabled={loading}
-                className="w-full mt-4 px-4 py-3 bg-gradient-to-t from-accent-r-dark to-accent-r-light hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <div className="relative w-5 h-5 flex-shrink-0">
-                    <div className="absolute inset-0 border-2 border-accent-darker rounded-full"></div>
-                    <div className="absolute inset-0 border-2 border-gold-light rounded-full animate-spin border-t-transparent"></div>
-                  </div>
-                ) : (
-                  <>
-                    <span>Show More</span>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </>
-                )}
-              </button>
+              <div className="px-3">
+                <button
+                  onClick={loadMore}
+                  disabled={loading}
+                  className="w-full mt-4 px-4 py-3 bg-gradient-to-t from-accent-r-dark to-accent-r-light hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <div className="relative w-5 h-5 flex-shrink-0">
+                      <div className="absolute inset-0 border-2 border-accent-darker rounded-full"></div>
+                      <div className="absolute inset-0 border-2 border-gold-light rounded-full animate-spin border-t-transparent"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <span>Show More</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </>
         )}

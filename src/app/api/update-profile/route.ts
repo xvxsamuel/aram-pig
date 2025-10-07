@@ -285,13 +285,21 @@ export async function POST(request: Request) {
           continue;
         }
 
-        const allPuuids = match.info.participants.map((p: any) => p.puuid);
+        // cache all participants with their riot ids for faster lookups
+        const participantData = match.info.participants.map((p: any) => ({
+          puuid: p.puuid,
+          game_name: p.riotIdGameName || null,
+          tag_line: p.riotIdTagLine || null,
+          summoner_level: p.summonerLevel || null,
+          profile_icon_id: p.profileIcon || null,
+        }));
+        
         const { error: summonersError } = await supabase
           .from('summoners')
-          .upsert(
-            allPuuids.map((puuid: string) => ({ puuid })),
-            { onConflict: 'puuid', ignoreDuplicates: true }
-          );
+          .upsert(participantData, { 
+            onConflict: 'puuid',
+            ignoreDuplicates: false // update cache fields if we have newer data
+          });
 
         if (summonersError) {
           console.error('Summoners insert error:', summonersError);

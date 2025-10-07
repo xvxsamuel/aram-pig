@@ -83,15 +83,19 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     let loadedFromCache = false
     
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      const { data: cachedSummoner } = await supabase
+      const { data: cachedSummoner, error: cacheError } = await supabase
         .from("summoners")
         .select("puuid, game_name, tag_line, summoner_level, profile_icon_id")
         .ilike("game_name", gameName)
         .ilike("tag_line", tagLine)
         .single()
       
-      if (cachedSummoner?.puuid) {
-        console.log("Loaded summoner from database cache")
+      if (cacheError && cacheError.code !== 'PGRST116') {
+        console.warn(`Cache lookup error: ${cacheError.message}`)
+      }
+      
+      if (cachedSummoner?.puuid && cachedSummoner?.game_name && cachedSummoner?.tag_line) {
+        console.log(`Loaded summoner from database cache (${gameName}#${tagLine})`)
         // construct summoner data from cache
         summonerData = {
           account: {
@@ -111,7 +115,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     
     // only call riot api if not found in cache
     if (!loadedFromCache) {
-      console.log("Fetching summoner from Riot API")
+      console.log(`Cache miss - fetching summoner from Riot API (${gameName}#${tagLine})`)
       summonerData = await getSummonerByRiotId(gameName, tagLine, platformCode)
     }
     
