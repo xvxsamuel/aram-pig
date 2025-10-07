@@ -1,11 +1,25 @@
 // client helpers
 
+// normalize champion names for ddragon urls
+function normalizeChampionName(championName: string): string {
+  // special cases where api name differs from ddragon id
+  const nameMap: Record<string, string> = {
+    'FiddleSticks': 'Fiddlesticks',
+    'MonkeyKing': 'MonkeyKing', // wukong uses monkeyking
+    'Renata': 'Renata', // renata glasc
+  }
+  
+  return nameMap[championName] || championName
+}
+
 export function getChampionImageUrl(championName: string, version: string): string {
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${championName}.png`
+  const normalizedName = normalizeChampionName(championName)
+  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${normalizedName}.png`
 }
 
 export function getChampionCenteredUrl(championName: string, skinNum: number = 0): string {
-  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${championName}_${skinNum}.jpg`
+  const normalizedName = normalizeChampionName(championName)
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${normalizedName}_${skinNum}.jpg`
 }
 
 export function getProfileIconUrl(iconId: number, version: string): string {
@@ -21,7 +35,7 @@ export function getItemImageUrl(itemId: number, version: string): string {
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png`
 }
 
-// spells
+// spells - maps riot api spell ids to ddragon file names
 function getSpellName(spellId: number): string {
   const spellMap: Record<number, string> = {
     1: 'Boost',      // cleanse
@@ -31,13 +45,13 @@ function getSpellName(spellId: number): string {
     7: 'Heal',
     11: 'Smite',
     12: 'Teleport',
-    13: 'Clarity',
+    13: 'Mana',      // clarity
     14: 'Dot',       // ignite
     21: 'Barrier',
     30: 'PoroRecall',
     31: 'PoroThrow',
     32: 'Snowball',  // mark
-    39: 'Snowball',  // mark recast should be useless but just in case
+    39: 'Snowball',  // mark recast
   }
   return spellMap[spellId] || 'Flash'
 }

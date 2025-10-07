@@ -171,55 +171,25 @@ export async function getSummonerByRiotId(
   }
 }
 
-// ddragon
-export async function getChampionImageUrl(championName: string): Promise<string> {
-  const version = await getLatestVersion()
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${championName}.png`
+// ddragon helpers - normalize champion names for ddragon urls
+function normalizeChampionName(championName: string): string {
+  const nameMap: Record<string, string> = {
+    'FiddleSticks': 'Fiddlesticks',
+    'MonkeyKing': 'MonkeyKing',
+    'Renata': 'Renata',
+  }
+  return nameMap[championName] || championName
 }
 
+// async versions for server components
 export async function getChampionCenteredUrl(championName: string, skinNum: number = 0): Promise<string> {
-  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${championName}_${skinNum}.jpg`
+  const normalizedName = normalizeChampionName(championName)
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${normalizedName}_${skinNum}.jpg`
 }
 
 export async function getProfileIconUrl(iconId: number): Promise<string> {
   const version = await getLatestVersion()
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${iconId}.png`
-}
-
-export async function getSummonerSpellUrl(spellId: number): Promise<string> {
-  const version = await getLatestVersion()
-  const spellName = getSpellName(spellId)
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell/Summoner${spellName}.png`
-}
-
-export async function getItemImageUrl(itemId: number): Promise<string> {
-  const version = await getLatestVersion()
-    return `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png`
-}
-
-// spells
-const SUMMONER_SPELL_MAP: Record<number, string> = {
-}
-
-// summoner spells
-function getSpellName(spellId: number): string {
-  const spellMap: Record<number, string> = {
-    1: 'Boost',    // cleanse
-    3: 'Exhaust',
-    4: 'Flash',
-    6: 'Haste',    // ghost
-    7: 'Heal',
-    11: 'Smite',
-    12: 'Teleport',
-    13: 'Clarity',
-    14: 'Ignite',
-    21: 'Barrier',
-    30: 'PoroRecall',
-    31: 'PoroThrow',
-    32: 'Mark',    // snowball
-    39: 'Mark',    
-  }
-  return spellMap[spellId] || 'Flash'
 }
 
 export { ddragon, getLatestVersion }
