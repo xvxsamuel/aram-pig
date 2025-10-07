@@ -3,6 +3,8 @@ import './globals.css'
 import { League_Spartan } from 'next/font/google'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import LoadingBar from '../components/LoadingBar'
+import { LoadingProvider } from '../lib/loading-context'
 
 const leagueSpartanLight = League_Spartan({
   subsets: ['latin'],
@@ -69,11 +71,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${leagueSpartanLight.variable} ${leagueSpartanRegular.variable}`}>
       <body className='min-h-screen antialiased font-light flex flex-col'>
-        <Navbar />
-        <main className="flex-1" style={{ marginLeft: '64px' }}>
-          {children}
-        </main>
-        <Footer />
+        <LoadingProvider>
+          <Navbar />
+          <LoadingBar />
+          <main className="flex-1" style={{ marginLeft: '64px' }}>
+            {children}
+          </main>
+          <Footer />
+        </LoadingProvider>
       </body>
     </html>
   )

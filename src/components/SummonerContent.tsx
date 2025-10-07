@@ -11,6 +11,7 @@ import Toast from "./Toast"
 import type { MatchData } from "../lib/riot-api"
 import type { UpdateJobProgress } from "../types/update-jobs"
 import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
+import { useLoading } from "../lib/loading-context"
 
 interface Props {
   summonerData: any
@@ -56,6 +57,7 @@ export default function SummonerContent({
   lastUpdated
 }: Props) {
   const router = useRouter()
+  const { startLoading, stopLoading } = useLoading()
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
   const [hasAutoTriggered, setHasAutoTriggered] = useState(false)
   const [showToast, setShowToast] = useState(false)
@@ -84,6 +86,7 @@ export default function SummonerContent({
           
           if (statusData.hasActiveJob && statusData.job) {
             // active job found, start polling
+            startLoading()
             setJobProgress(statusData.job)
             return
           }
@@ -92,6 +95,7 @@ export default function SummonerContent({
         // no active job - auto-trigger if incomplete data
         if (hasIncompleteData && !hasAutoTriggered) {
           setHasAutoTriggered(true)
+          startLoading()
           
           const decodedName = decodeURIComponent(name)
           const summonerName = decodedName.replace("-", "#")
@@ -130,6 +134,7 @@ export default function SummonerContent({
           } else {
             // clear placeholder if failed
             setJobProgress(null)
+            stopLoading()
           }
         }
       } catch (error) {
@@ -165,6 +170,7 @@ export default function SummonerContent({
         // job completed or failed
         console.log("Job completed, refreshing page")
         setJobProgress(null)
+        stopLoading()
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current)
           pollIntervalRef.current = null
@@ -208,6 +214,8 @@ export default function SummonerContent({
   }, [jobProgress, pollJobStatus])
 
   const handleManualUpdate = async () => {
+    startLoading()
+    
     // set placeholder job to show ui immediately
     setJobProgress({
       jobId: "pending",
@@ -247,6 +255,7 @@ export default function SummonerContent({
         // check if profile was recently updated (5 min cd from server)
         if (result.recentlyUpdated) {
           setJobProgress(null)
+          stopLoading()
           setToastMessage("Profile updated recently. Please try again later.")
           setToastType("error")
           setShowToast(true)
@@ -256,6 +265,7 @@ export default function SummonerContent({
         // check if already up to date (no new matches found)
         if (result.newMatches === 0) {
           setJobProgress(null)
+          stopLoading()
           setToastMessage("Your profile is up to date!")
           setToastType("success")
           setShowToast(true)
@@ -267,6 +277,7 @@ export default function SummonerContent({
       } else {
         // clear placeholder if failed
         setJobProgress(null)
+        stopLoading()
       }
     } catch (error) {
       console.error("Update failed:", error)

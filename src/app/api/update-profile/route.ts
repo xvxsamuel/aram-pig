@@ -270,9 +270,6 @@ export async function POST(request: Request) {
             match_id: match.metadata.matchId,
             game_creation: match.info.gameCreation,
             game_duration: match.info.gameDuration,
-            game_mode: match.info.gameMode,
-            queue_id: match.info.queueId,
-            match_data: match,
           });
 
         if (matchError) {
@@ -314,6 +311,17 @@ export async function POST(request: Request) {
           total_heals_on_teammates: p.totalHealsOnTeammates || 0,
           total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
           total_time_cc_dealt: p.totalTimeCCDealt || 0,
+          item0: p.item0 || 0,
+          item1: p.item1 || 0,
+          item2: p.item2 || 0,
+          item3: p.item3 || 0,
+          item4: p.item4 || 0,
+          item5: p.item5 || 0,
+          item6: p.item6 || 0,
+          champ_level: p.champLevel || 0,
+          team_id: p.teamId || 0,
+          summoner1_id: p.summoner1Id || 0,
+          summoner2_id: p.summoner2Id || 0,
         }));
 
         const { error: junctionError } = await supabase

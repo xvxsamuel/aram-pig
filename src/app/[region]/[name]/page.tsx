@@ -131,6 +131,8 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
           lastUpdated = summonerRecord?.last_updated || null
 
+          // data is only incomplete if the profile has never been indexed (no game_name or last_updated)
+          // once indexed, user must manually trigger updates via the Update button
           hasIncompleteData = !summonerRecord?.game_name || !summonerRecord?.last_updated
 
           console.log(`Fetching matches for puuid: ${puuid}`)

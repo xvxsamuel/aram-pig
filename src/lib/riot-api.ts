@@ -1,5 +1,6 @@
 import { RiotAPI, RiotAPITypes, PlatformId, DDragon } from "@fightmegg/riot-api"
 import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "./regions"
+import { waitForRateLimit } from "./rate-limiter"
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY
 
@@ -113,6 +114,8 @@ export async function getMatchIdsByPuuid(
   count: number = 20,
   start: number = 0
 ) {
+  await waitForRateLimit(region);
+  
   const limitedCount = Math.min(count, 100)
   const matchIds = await retryWithDelay(() =>
     rAPI.matchV5.getIdsByPuuid({
@@ -129,6 +132,8 @@ export async function getMatchIdsByPuuid(
 }
 
 export async function getMatchById(matchId: string, region: RegionalCluster) {
+  await waitForRateLimit(region);
+  
   const match = await retryWithDelay(() =>
     rAPI.matchV5.getMatchById({
       cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
