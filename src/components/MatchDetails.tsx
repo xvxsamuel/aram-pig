@@ -2,15 +2,20 @@
 
 import type { MatchData } from "../lib/riot-api"
 import Image from "next/image"
-import { getChampionImageUrl } from "../lib/ddragon-client"
+import Link from "next/link"
+import clsx from "clsx"
+import { getChampionImageUrl, getItemImageUrl } from "../lib/ddragon-client"
 
 interface Props {
   match: MatchData
   currentPuuid: string
   ddragonVersion: string
+  region: string
+  isWin: boolean
+  isRemake: boolean
 }
 
-export default function MatchDetails({ match, currentPuuid, ddragonVersion }: Props) {
+export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin, isRemake }: Props) {
 
   // separate teams
   const team100 = match.info.participants.filter(p => p.teamId === 100)
@@ -26,75 +31,114 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion }: Pr
   const team200Kills = team200.reduce((sum, p) => sum + p.kills, 0)
 
   const formatGold = (gold: number) => `${(gold / 1000).toFixed(1)}k`
+  const formatDamage = (dmg: number) => `${(dmg / 1000).toFixed(0)}k`
 
   const renderPlayer = (p: any, isCurrentPlayer: boolean) => {
     const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6]
+    const kda = p.deaths === 0 ? "Perfect" : ((p.kills + p.assists) / p.deaths).toFixed(2)
+    const dpm = ((p.totalDamageDealtToChampions || 0) / (match.info.gameDuration / 60)).toFixed(0)
+    const playerName = p.riotIdGameName || p.summonerName
+    const playerTag = p.riotIdTagline || "EUW"
+    const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
     
     return (
       <div
         key={p.puuid}
-        className={`flex items-center gap-3 p-2 rounded ${
-          isCurrentPlayer ? 'bg-accent-dark/20' : ''
-        }`}
+        className={clsx(
+          "flex items-center gap-3 py-1 px-2 rounded text-xs",
+          isCurrentPlayer && "bg-gold-dark/10 ring-1 ring-gold-light/20"
+        )}
       >
-        {/* champion icon */}
-        <div className="relative">
-          <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-accent-dark border-2 border-gray-600">
+        {/* champion icon + level */}
+        <div className="relative flex-shrink-0">
+          <div className="w-8 h-8 rounded overflow-hidden bg-accent-dark border border-gray-600">
             <Image
               src={getChampionImageUrl(p.championName, ddragonVersion)}
               alt={p.championName}
-              width={40}
-              height={40}
+              width={32}
+              height={32}
               className="w-full h-full scale-110 object-cover"
-              unoptimized
             />
           </div>
-          <div className="absolute -bottom-1 -right-1 bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 text-xs font-bold">
+          <div className="absolute -bottom-0.5 -right-0.5 bg-gray-800 border border-gray-600 rounded px-0.5 text-[9px] font-bold leading-none">
             {p.champLevel}
           </div>
         </div>
 
-        {/* summoner name */}
-        <div className="flex-1 min-w-0">
-          <div className={`font-medium truncate ${isCurrentPlayer ? 'text-accent-light' : ''}`}>
-            {p.riotIdGameName || p.summonerName || 'Unknown'}
-            {p.riotIdTagline && <span className="text-neutral-light">#{p.riotIdTagline}</span>}
+        {/* name - clickable */}
+        <Link 
+          href={profileUrl}
+          className={clsx(
+            "flex-1 min-w-0 font-medium truncate hover:text-gold-light transition-colors",
+            isCurrentPlayer ? "text-gold-light" : "text-white"
+          )}
+        >
+          {playerName}
+          {p.riotIdTagline && <span className="text-subtitle">#{p.riotIdTagline}</span>}
+        </Link>
+
+        {/* damage */}
+        <div className="flex flex-col items-center w-12 flex-shrink-0">
+          <div className="text-xs text-white font-medium leading-tight">
+            {formatDamage(p.totalDamageDealtToChampions || 0)}
           </div>
-          <div className="text-xs text-neutral-light">
-            {p.kills}/{p.deaths}/{p.assists} • {formatGold(p.goldEarned)} • {p.totalMinionsKilled} cs
+          <div className="text-[9px] text-gray-400 leading-tight">
+            {dpm} DPM
+          </div>
+        </div>
+
+        {/* kda */}
+        <div className="flex flex-col items-center w-12 flex-shrink-0">
+          <div className="text-xs text-white font-medium leading-tight">
+            {p.kills}/{p.deaths}/{p.assists}
+          </div>
+          <div className="text-[9px] text-gray-400 leading-tight">
+            {kda} KDA
+          </div>
+        </div>
+
+        {/* gold */}
+        <div className="flex flex-col items-center w-12 flex-shrink-0">
+          <div className="text-xs text-white font-medium leading-tight">
+            {formatGold(p.goldEarned)}
+          </div>
+          <div className="text-[9px] text-gray-400 leading-tight">
+            {p.totalMinionsKilled} CS
           </div>
         </div>
 
         {/* items */}
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           {items.map((item, idx) => (
             <div
               key={idx}
-              className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden flex-shrink-0"
+              className="w-5 h-5 rounded bg-gray-800 border border-gray-700 overflow-hidden"
             >
               {item > 0 && (
                 <Image
-                  src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/item/${item}.png`}
+                  src={getItemImageUrl(item, ddragonVersion)}
                   alt={`Item ${item}`}
-                  width={28}
-                  height={28}
+                  width={20}
+                  height={20}
                   className="w-full h-full object-cover"
                 />
               )}
             </div>
           ))}
         </div>
-
-        {/* damage */}
-        <div className="text-right text-sm text-neutral-light flex-shrink-0 w-16">
-          {(p.totalDamageDealtToChampions / 1000).toFixed(1)}k
-        </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-[#1a1f2e] p-4">
+    <div className={clsx(
+      "p-4 rounded-b-lg",
+      isRemake 
+        ? "bg-[#2A2A2A]"
+        : isWin 
+          ? "bg-[#1a2339]"
+          : "bg-[#3d2329]"
+    )}>
       <div className="space-y-4">
         {/* team 100 */}
           <div className={`border-2 rounded-lg p-3 ${

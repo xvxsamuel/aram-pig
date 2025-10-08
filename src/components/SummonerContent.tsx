@@ -25,6 +25,10 @@ interface Props {
   longestWinStreak: number
   totalDamage: number
   totalGameDuration: number
+  totalDoubleKills: number
+  totalTripleKills: number
+  totalQuadraKills: number
+  totalPentaKills: number
   region: string
   name: string
   championImageUrl?: string
@@ -46,6 +50,10 @@ export default function SummonerContent({
   longestWinStreak,
   totalDamage,
   totalGameDuration,
+  totalDoubleKills,
+  totalTripleKills,
+  totalQuadraKills,
+  totalPentaKills,
   region,
   name,
   championImageUrl,
@@ -62,15 +70,19 @@ export default function SummonerContent({
   const [toastType, setToastType] = useState<"success" | "error">("success")
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // show loading bar briefly on initial mount for better ux
+  // cleanup loading bar on unmount
   useEffect(() => {
-    startLoading()
-    const timer = setTimeout(() => {
-      stopLoading()
-    }, 500)
-    
-    return () => {
-      clearTimeout(timer)
+    return () => stopLoading()
+  }, [stopLoading])
+
+  // check for profile update flag on mount
+  useEffect(() => {
+    const wasUpdated = sessionStorage.getItem('profileUpdated')
+    if (wasUpdated === 'true') {
+      sessionStorage.removeItem('profileUpdated')
+      setToastMessage("Profile updated successfully!")
+      setToastType("success")
+      setShowToast(true)
     }
   }, [])
 
@@ -93,7 +105,7 @@ export default function SummonerContent({
           }
         }
       } catch (error) {
-        console.error("failed to check job status:", error)
+        console.error("Failed to check job status:", error)
       }
     }
 
@@ -122,8 +134,8 @@ export default function SummonerContent({
       if (data.hasActiveJob && data.job) {
         setJobProgress(data.job)
       } else {
-        // job completed or failed
-        console.log("job completed, refreshing data")
+        // job completed - reload to show fresh data
+        console.log("Job completed, reloading page")
         setJobProgress(null)
         stopLoading()
         if (pollIntervalRef.current) {
@@ -131,15 +143,11 @@ export default function SummonerContent({
           pollIntervalRef.current = null
         }
         
-        // show success toast
-        setToastMessage("profile updated successfully!")
-        setToastType("success")
-        setShowToast(true)
+        // set flag in sessionStorage to show toast after reload
+        sessionStorage.setItem('profileUpdated', 'true')
         
-        // use router refresh for smooth update without full page reload
-        setTimeout(() => {
-          router.refresh()
-        }, 500)
+        // reload immediately to show updated data
+        window.location.reload()
       }
     } catch (error: any) {
       // ignore abort errors (happens when page refreshes during fetch)
@@ -286,6 +294,10 @@ export default function SummonerContent({
                 longestWinStreak={longestWinStreak}
                 totalDamage={totalDamage}
                 totalGameDuration={totalGameDuration}
+                totalDoubleKills={totalDoubleKills}
+                totalTripleKills={totalTripleKills}
+                totalQuadraKills={totalQuadraKills}
+                totalPentaKills={totalPentaKills}
               />
             </div>
             <MatchHistoryList

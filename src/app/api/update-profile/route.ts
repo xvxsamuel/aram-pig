@@ -331,6 +331,10 @@ export async function POST(request: Request) {
           total_heals_on_teammates: p.totalHealsOnTeammates || 0,
           total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
           total_time_cc_dealt: p.totalTimeCCDealt || 0,
+          double_kills: p.doubleKills || 0,
+          triple_kills: p.tripleKills || 0,
+          quadra_kills: p.quadraKills || 0,
+          penta_kills: p.pentaKills || 0,
           item0: p.item0 || 0,
           item1: p.item1 || 0,
           item2: p.item2 || 0,
@@ -373,10 +377,7 @@ export async function POST(request: Request) {
         if (fetchedMatches % updateProgressInterval === 0 || fetchedMatches === newMatchIds.length) {
           const elapsedMs = Date.now() - startTime;
           await updateJobProgress(supabase, jobId, fetchedMatches, elapsedMs, newMatchIds.length);
-          
-          const avgTimePerMatch = elapsedMs / fetchedMatches;
-          const etaSeconds = Math.ceil((avgTimePerMatch * (newMatchIds.length - fetchedMatches)) / 1000);
-          console.log(`✓ Progress update: ${fetchedMatches}/${newMatchIds.length} (${Math.round((fetchedMatches/newMatchIds.length)*100)}%) - ETA: ${etaSeconds}s`)
+          console.log(`✓ Progress update: ${fetchedMatches}/${newMatchIds.length} (${Math.round((fetchedMatches/newMatchIds.length)*100)}%)`)
         }
       } catch (err) {
         console.error(`Failed to fetch/store match ${matchId}:`, err);

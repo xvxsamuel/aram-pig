@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useLoading } from '../lib/loading-context';
+import { useEffect, useState } from "react";
+import { useLoading } from "../lib/loading-context";
 
 export default function LoadingBar() {
   const [showBar, setShowBar] = useState(false);
@@ -27,11 +27,11 @@ export default function LoadingBar() {
   if (!showBar) return null;
 
   return (
-    <div className="fixed top-[64px] left-[64px] right-0 h-1 bg-transparent z-50 overflow-hidden">
+    <div className="fixed top-[64px] left-[64px] right-0 h-1 bg-transparent z-40 overflow-hidden">
       <div 
         className="h-full w-full bg-gradient-to-r from-accent-light to-accent-dark rounded-full"
         style={{
-          animation: 'loadingBar 1.5s ease-in-out infinite'
+          animation: "loadingBar 1.5s ease-in-out infinite"
         }}
       />
     </div>

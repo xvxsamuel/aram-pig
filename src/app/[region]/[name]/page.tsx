@@ -77,6 +77,10 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   let totalDamage = 0
   let totalGameDuration = 0
   let totalGames = 0
+  let totalDoubleKills = 0
+  let totalTripleKills = 0
+  let totalQuadraKills = 0
+  let totalPentaKills = 0
 
   try {
     // try to load from database first to avoid riot api calls
@@ -139,7 +143,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
           // get lightweight match stats from summoner_matches (exclude remakes from stats)
           const { data: allMatchStats, error: statsError } = await supabase
             .from("summoner_matches")
-            .select("match_id, champion_name, kills, deaths, assists, win, damage_dealt_to_champions, game_duration, game_ended_in_early_surrender")
+            .select("match_id, champion_name, kills, deaths, assists, win, damage_dealt_to_champions, game_duration, game_ended_in_early_surrender, double_kills, triple_kills, quadra_kills, penta_kills")
             .eq("puuid", puuid)
             .order("match_id", { ascending: false })
 
@@ -161,6 +165,10 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             totalAssists = validMatches.reduce((sum, m) => sum + m.assists, 0)
             totalDamage = validMatches.reduce((sum, m) => sum + (m.damage_dealt_to_champions || 0), 0)
             totalGameDuration = validMatches.reduce((sum, m) => sum + (m.game_duration || 0), 0)
+            totalDoubleKills = validMatches.reduce((sum, m) => sum + (m.double_kills || 0), 0)
+            totalTripleKills = validMatches.reduce((sum, m) => sum + (m.triple_kills || 0), 0)
+            totalQuadraKills = validMatches.reduce((sum, m) => sum + (m.quadra_kills || 0), 0)
+            totalPentaKills = validMatches.reduce((sum, m) => sum + (m.penta_kills || 0), 0)
 
             // find most played champion (excluding remakes)
             const championCounts: { [key: string]: number } = {}
@@ -333,6 +341,10 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             longestWinStreak={longestWinStreak}
             totalDamage={totalDamage}
             totalGameDuration={totalGameDuration}
+            totalDoubleKills={totalDoubleKills}
+            totalTripleKills={totalTripleKills}
+            totalQuadraKills={totalQuadraKills}
+            totalPentaKills={totalPentaKills}
             region={region}
             name={name}
             championImageUrl={championImageUrl}

@@ -4,8 +4,9 @@ import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
+import { ChevronDownIcon } from "@heroicons/react/24/solid"
 import type { MatchData } from "../lib/riot-api"
-import { getChampionImageUrl, getSummonerSpellUrl, getItemImageUrl } from "../lib/ddragon-client"
+import { getChampionImageUrl, getSummonerSpellUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl } from "../lib/ddragon-client"
 import MatchDetails from "./MatchDetails"
 
 interface Props {
@@ -36,24 +37,26 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
   const team2 = match.info.participants.filter(p => p.teamId === 200)
 
   return (
-    <div className="rounded-lg overflow-hidden">
-      <div
-        className={clsx(
-          "border-l-[6px]",
-          isRemake
-            ? "bg-[#3A3A3A] border-[#808080]"
-            : isWin 
-              ? "bg-[#28344E] border-[#5383E8]" 
-              : "bg-[#59343B] border-[#E84057]"
-        )}
-      >
-        <div className="flex items-center px-4 py-3 min-h-[80px] gap-4">
-        {/* left side: game info, champion, items, stats */}
-        <div className="flex items-center gap-4 flex-shrink-0">
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="flex flex-col justify-center min-w-[75px]">
+    <div className={clsx("overflow-hidden", isExpanded ? "rounded-t-lg" : "rounded-lg")}>
+      <div className="flex">
+        {/* main content */}
+        <div
+          className={clsx(
+            "border-l-[6px] flex-1",
+            isExpanded ? "rounded-tl-lg" : "rounded-l-lg",
+            isRemake
+              ? "bg-[#3A3A3A] border-[#808080]"
+              : isWin 
+                ? "bg-[#28344E] border-[#5383E8]" 
+                : "bg-[#59343B] border-[#E84057]"
+          )}
+        >
+          <div className="flex items-center px-4 py-3 min-h-[80px] gap-4">
+        {/* left side: game info, champion, summoners, runes */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-col justify-center min-w-[75px]">
               <div className={clsx(
-                "text-sm font-bold",
+                "text-base font-bold",
                 isRemake 
                   ? "text-[#808080]"
                   : isWin ? "text-[#5383E8]" : "text-[#E84057]"
@@ -70,47 +73,74 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
 
             <div className="flex items-center gap-1">
               <div className="relative">
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-accent-dark border-2 border-gray-600">
+                <div className="w-14 h-14 rounded-lg overflow-hidden bg-accent-dark border-2 border-gray-600">
                   <Image
                     src={getChampionImageUrl(participant.championName, ddragonVersion)}
                     alt={participant.championName}
-                    width={64}
-                    height={64}
+                    width={56}
+                    height={56}
                     className="w-full h-full scale-110 object-cover"
-                    unoptimized
+
                   />
                 </div>
-                <div className="absolute -bottom-1 -right-1 bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 text-xs font-bold">
+                <div className="absolute -bottom-0.5 -right-0.5 bg-gray-800 border border-gray-600 rounded px-1 py-0.5 text-[10px] font-bold leading-none">
                   {participant.champLevel}
                 </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+              <div className="flex flex-col gap-0.5">
+                <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
                   <Image
                     src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
                     alt="Spell 1"
-                    width={28}
-                    height={28}
+                    width={24}
+                    height={24}
                     className="w-full h-full object-cover"
-                    unoptimized
+
                   />
                 </div>
-                <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
                   <Image
                     src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
                     alt="Spell 2"
-                    width={28}
-                    height={28}
+                    width={24}
+                    height={24}
                     className="w-full h-full object-cover"
-                    unoptimized
+
                   />
                 </div>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {participant.perks?.styles?.[0]?.selections?.[0]?.perk && (
+                  <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                    <Image
+                      src={getRuneImageUrl(participant.perks.styles[0].selections[0].perk)}
+                      alt="Primary Rune"
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-cover"
+
+                    />
+                  </div>
+                )}
+                {participant.perks?.styles?.[1]?.style && (
+                  <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                    <Image
+                      src={getRuneStyleImageUrl(participant.perks.styles[1].style)}
+                      alt="Secondary Rune"
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-cover"
+
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="flex gap-1 flex-shrink-0">
-            <div className="grid grid-cols-3 grid-rows-2 gap-1">
+          {/* items section */}
+          <div className="flex gap-0.5 flex-shrink-0 mx-auto">
+            <div className="grid grid-cols-3 grid-rows-2 gap-0.5">
               {[
                 participant.item0,
                 participant.item1,
@@ -130,7 +160,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                       width={32}
                       height={32}
                       className="w-full h-full object-cover"
-                      unoptimized
+
                     />
                   )}
                 </div>
@@ -139,35 +169,34 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           </div>
 
           {/* stats */}
-          <div className="flex flex-col justify-center flex-shrink-0 min-w-[140px] text-center">
+          <div className="flex flex-col justify-center flex-shrink-0 min-w-[100px] mx-auto">
             <div className="flex items-baseline gap-1 justify-center">
-              <span className="text-lg font-bold text-white">
+              <span className="text-base font-bold text-white">
                 {participant.kills}
               </span>
               <span className="text-gray-500 text-sm">/</span>
-              <span className="text-lg font-bold text-[#E84057]">
+              <span className="text-base font-bold text-[#E84057]">
                 {participant.deaths}
               </span>
               <span className="text-gray-500 text-sm">/</span>
-              <span className="text-lg font-bold text-white">
+              <span className="text-base font-bold text-white">
                 {participant.assists}
               </span>
             </div>
-            <div className="text-xs text-gray-400 mb-1r">
-              ({kda} KDA)
+            <div className="text-xs text-white text-center mt-0.5">
+              {kda} KDA
             </div>
-            <div className="text-xs text-gray-400">
-              {participant.totalMinionsKilled + participant.neutralMinionsKilled} CS ({((participant.totalMinionsKilled + participant.neutralMinionsKilled) / gameDurationMinutes).toFixed(1)})
+            <div className="text-xs text-white text-center mt-0.5">
+              {participant.totalMinionsKilled + participant.neutralMinionsKilled} CS
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-white text-center mt-0.5">
               {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
             </div>
           </div>
-        </div>
 
         {/* middle: teams - hidden on small screens, can grow/shrink */}
-        <div className="hidden lg:flex gap-3 flex-1 min-w-0">
-          <div className="flex flex-col gap-0.5 w-32">
+        <div className="hidden lg:flex gap-4 flex-shrink-0 ml-auto">
+          <div className="flex flex-col gap-0.5 w-24 flex-shrink-0">
             {team1.map((p, idx) => {
               const playerName = p.riotIdGameName || p.summonerName
               const playerTag = p.riotIdTagline || "EUW"
@@ -188,7 +217,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                       width={16}
                       height={16}
                       className="w-full h-full object-cover"
-                      unoptimized
+
                     />
                   </div>
                   <Link 
@@ -197,6 +226,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                       "text-xs hover:text-gold-light truncate flex-1",
                       isCurrentUser ? "text-white" : "text-subtitle"
                     )}
+                    title={playerName}
                   >
                     {playerName}
                   </Link>
@@ -205,7 +235,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             })}
           </div>
 
-          <div className="flex flex-col gap-0.5 w-32">
+          <div className="flex flex-col gap-0.5 w-24 flex-shrink-0">
             {team2.map((p, idx) => {
               const playerName = p.riotIdGameName || p.summonerName
               const playerTag = p.riotIdTagline || "EUW"
@@ -226,7 +256,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                       width={16}
                       height={16}
                       className="w-full h-full object-cover"
-                      unoptimized
+
                     />
                   </div>
                   <Link 
@@ -235,6 +265,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                       "text-xs hover:text-gold-light truncate flex-1 transition-colors",
                       isCurrentUser ? "text-white" : "text-subtitle"
                     )}
+                    title={playerName}
                   >
                     {playerName}
                   </Link>
@@ -243,29 +274,32 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             })}
           </div>
         </div>
-
-        {/* right side: separator and expand button - always on far right */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="w-px h-12 bg-subtitle"></div>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center justify-center w-8 h-8 rounded bg-neutral-light/5 hover:bg-neutral-light/20 transition-colors"
-            aria-label="Toggle match details"
-          >
-            <svg
-              className={clsx(
-                "w-6 h-6 text-subtitle transition-transform",
-                isExpanded && "rotate-180"
-              )}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+          </div>
         </div>
-      </div>
+
+        {/* clickable chevron section - separate div that looks connected */}
+        <div
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={clsx(
+            "flex items-end justify-center px-3 pb-3 cursor-pointer transition-colors",
+            isExpanded ? "rounded-tr-lg" : "rounded-r-lg",
+            isRemake
+              ? "bg-[#4A4A4A] hover:bg-[#5A5A5A]"
+              : isWin 
+                ? "bg-[#38445E] hover:bg-[#48546E]" 
+                : "bg-[#69444B] hover:bg-[#79545B]"
+          )}
+          role="button"
+          aria-label="Toggle match details"
+        >
+          <ChevronDownIcon
+            className={clsx(
+              "w-5 h-5 text-subtitle transition-transform",
+              isExpanded && "rotate-180"
+            )}
+            strokeWidth={3}
+          />
+        </div>
       </div>
       
       {/* detailed match breakdown */}
@@ -274,6 +308,9 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           match={match} 
           currentPuuid={puuid} 
           ddragonVersion={ddragonVersion}
+          region={region}
+          isWin={isWin}
+          isRemake={isRemake}
         />
       )}
     </div>

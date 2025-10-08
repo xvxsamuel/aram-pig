@@ -199,6 +199,10 @@ export interface ParticipantData {
   neutralMinionsKilled: number
   summoner1Id: number
   summoner2Id: number
+  doubleKills?: number
+  tripleKills?: number
+  quadraKills?: number
+  pentaKills?: number
   item0: number
   item1: number
   item2: number

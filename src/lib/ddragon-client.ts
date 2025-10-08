@@ -55,3 +55,55 @@ function getSpellName(spellId: number): string {
   }
   return spellMap[spellId] || 'Flash'
 }
+
+export function getRuneImageUrl(perkId: number): string {
+  // primary keystone runes need to map to their specific paths
+  // format: perk-images/Styles/[TreeName]/[RuneName]/[PerkId].png
+  const runePathMap: Record<number, string> = {
+    // precision
+    8005: 'Precision/PressTheAttack/PressTheAttack',
+    8008: 'Precision/LethalTempo/LethalTempoTemp',
+    8021: 'Precision/FleetFootwork/FleetFootwork',
+    8010: 'Precision/Conqueror/Conqueror',
+    // domination
+    8112: 'Domination/Electrocute/Electrocute',
+    8124: 'Domination/Predator/Predator',
+    8128: 'Domination/DarkHarvest/DarkHarvest',
+    9923: 'Domination/HailOfBlades/HailOfBlades',
+    // sorcery
+    8214: 'Sorcery/SummonAery/SummonAery',
+    8229: 'Sorcery/ArcaneComet/ArcaneComet',
+    8230: 'Sorcery/PhaseRush/PhaseRush',
+    // resolve
+    8437: 'Resolve/GraspOfTheUndying/GraspOfTheUndying',
+    8439: 'Resolve/VeteranAftershock/VeteranAftershock',
+    8465: 'Resolve/Guardian/Guardian',
+    // inspiration
+    8351: 'Inspiration/GlacialAugment/GlacialAugment',
+    8360: 'Inspiration/UnsealedSpellbook/UnsealedSpellbook',
+    8369: 'Inspiration/FirstStrike/FirstStrike',
+  }
+  
+  const runePath = runePathMap[perkId]
+  if (!runePath) {
+    return '' // return empty string if not found
+  }
+  
+  return `https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${runePath}.png`
+}
+
+export function getRuneStyleImageUrl(styleId: number): string {
+  // style/tree images use different path format
+  const styleMap: Record<number, string> = {
+    8000: '7201_Precision',
+    8100: '7200_Domination', 
+    8200: '7202_Sorcery',
+    8300: '7203_Whimsy',
+    8400: '7204_Resolve',
+  }
+  const styleName = styleMap[styleId]
+  if (!styleName) {
+    return '' // return empty string if not found
+  }
+  return `https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${styleName}.png`
+}

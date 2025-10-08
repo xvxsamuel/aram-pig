@@ -22,14 +22,6 @@ export default function AboutPage() {
                 <li>Get a personal rating number indicative of your itemization and tendencies (Coming soon)</li>
               </ul>
             </div>
-
-            <div>
-              <h2 className="text-2xl font-semibold mb-3 text-white">Technology</h2>
-              <p className="leading-relaxed">
-                Built with Next.js, TypeScript, and powered by the Riot Games API. 
-                All match data is stored securely and updated in real-time.
-              </p>
-            </div>
           </div>
         </section>
       </div>

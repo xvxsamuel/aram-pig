@@ -54,7 +54,7 @@ export default function FetchMessage({ job, region }: Props) {
               </p>
             )}
             <p className="text-xs text-subtitle">
-              This may take a few minutes due to riot api limits. The page will automatically refresh when complete.
+              This may take a few minutes due to Riot API limits. The page will automatically refresh when complete.
             </p>
           </div>
         </div>

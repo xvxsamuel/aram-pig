@@ -113,7 +113,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
                       width={24}
                       height={24}
                       className="w-full h-full object-cover"
-                      unoptimized
+
                     />
                   </div>
                   <span>{displayName}</span>

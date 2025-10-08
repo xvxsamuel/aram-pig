@@ -7,6 +7,10 @@ interface Props {
   longestWinStreak: number
   totalDamage: number
   totalGameDuration: number
+  totalDoubleKills: number
+  totalTripleKills: number
+  totalQuadraKills: number
+  totalPentaKills: number
 }
 
 export default function AramStatsCard({ 
@@ -17,7 +21,11 @@ export default function AramStatsCard({
   totalAssists,
   longestWinStreak,
   totalDamage,
-  totalGameDuration
+  totalGameDuration,
+  totalDoubleKills,
+  totalTripleKills,
+  totalQuadraKills,
+  totalPentaKills
 }: Props) {
   // calculations
   const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : '0'
@@ -67,6 +75,40 @@ export default function AramStatsCard({
               <span className="text-subtitle text-sm">DPM</span>
               <span className="text-xl font-bold">{damagePerMinute}</span>
             </div>
+
+            {(totalDoubleKills > 0 || totalTripleKills > 0 || totalQuadraKills > 0 || totalPentaKills > 0) && (
+              <>
+                <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent my-4 -mx-6" />
+                
+                {totalPentaKills > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-subtitle text-sm">Pentakills</span>
+                    <span className="text-xl font-bold">{totalPentaKills}</span>
+                  </div>
+                )}
+                
+                {totalQuadraKills > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-subtitle text-sm">Quadrakills</span>
+                    <span className="text-xl font-bold">{totalQuadraKills}</span>
+                  </div>
+                )}
+                
+                {totalTripleKills > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-subtitle text-sm">Triple Kills</span>
+                    <span className="text-xl font-bold">{totalTripleKills}</span>
+                  </div>
+                )}
+                
+                {totalDoubleKills > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-subtitle text-sm">Double Kills</span>
+                    <span className="text-xl font-bold">{totalDoubleKills}</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </section>

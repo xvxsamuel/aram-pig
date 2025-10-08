@@ -70,6 +70,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${leagueSpartanLight.variable} ${leagueSpartanRegular.variable}`}>
+      <head>
+        <link rel="preload" href="/bg.png" as="image" />
+      </head>
       <body className='min-h-screen antialiased font-light flex flex-col'>
         <LoadingProvider>
           <Navbar />
