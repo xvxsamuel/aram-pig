@@ -90,7 +90,10 @@ export async function POST(request: Request) {
             item3: p.item3 || 0,
             item4: p.item4 || 0,
             item5: p.item5 || 0,
-            item6: p.item6 || 0,
+            pigScore: p.pig_score,
+            firstItem: p.first_item,
+            secondItem: p.second_item,
+            thirdItem: p.third_item,
             perks: {
               styles: [
                 {

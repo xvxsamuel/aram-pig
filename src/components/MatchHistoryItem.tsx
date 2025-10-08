@@ -1,13 +1,20 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import clsx from "clsx"
-import { ChevronDownIcon } from "@heroicons/react/24/solid"
-import type { MatchData } from "../lib/riot-api"
-import { getChampionImageUrl, getSummonerSpellUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl } from "../lib/ddragon-client"
-import MatchDetails from "./MatchDetails"
+import { useState, useEffect } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import clsx from 'clsx'
+import { ChevronDownIcon } from '@heroicons/react/24/solid'
+import type { MatchData } from '../lib/riot-api'
+import {
+  getChampionImageUrl,
+  getSummonerSpellUrl,
+  getItemImageUrl,
+  getRuneImageUrl,
+  getRuneStyleImageUrl,
+} from '../lib/ddragon-client'
+import MatchDetails from './MatchDetails'
+import { supabase } from '../lib/supabase'
 
 interface Props {
   match: MatchData
@@ -18,8 +25,108 @@ interface Props {
 
 export default function MatchHistoryItem({ match, puuid, region, ddragonVersion }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const participant = match.info.participants.find(p => p.puuid === puuid)
+  const [itemWinratesBySlot, setItemWinratesBySlot] = useState<{
+    slot1: Map<number, number>
+    slot2: Map<number, number>
+    slot3: Map<number, number>
+    topWr1: number
+    topWr2: number
+    topWr3: number
+  }>({ slot1: new Map(), slot2: new Map(), slot3: new Map(), topWr1: 0, topWr2: 0, topWr3: 0 })
+
+  const participant = match.info.participants.find((p) => p.puuid === puuid)
   if (!participant) return null
+
+  // fetch optimal items by slot for this champion
+  useEffect(() => {
+    if (!participant) return
+
+    async function fetchOptimalItemsBySlot() {
+      try {
+        const { data } = await supabase
+          .from('aram_stats')
+          .select('slot_1_items, slot_2_items, slot_3_items')
+          .eq('champion_name', participant!.championName.toLowerCase())
+          .single()
+
+        if (data) {
+          const slot1Map = new Map<number, number>()
+          const slot2Map = new Map<number, number>()
+          const slot3Map = new Map<number, number>()
+          
+          let maxWr1 = 0
+          let maxWr2 = 0
+          let maxWr3 = 0
+
+          // slot 1 items
+          ;(data.slot_1_items || []).forEach((item: any) => {
+            slot1Map.set(item.id, item.wr)
+            if (item.wr > maxWr1) maxWr1 = item.wr
+          })
+
+          // slot 2 items
+          ;(data.slot_2_items || []).forEach((item: any) => {
+            slot2Map.set(item.id, item.wr)
+            if (item.wr > maxWr2) maxWr2 = item.wr
+          })
+
+          // slot 3 items
+          ;(data.slot_3_items || []).forEach((item: any) => {
+            slot3Map.set(item.id, item.wr)
+            if (item.wr > maxWr3) maxWr3 = item.wr
+          })
+
+          setItemWinratesBySlot({
+            slot1: slot1Map,
+            slot2: slot2Map,
+            slot3: slot3Map,
+            topWr1: maxWr1,
+            topWr2: maxWr2,
+            topWr3: maxWr3,
+          })
+        }
+      } catch (err) {
+        console.error('failed to fetch optimal items:', err)
+      }
+    }
+
+    fetchOptimalItemsBySlot()
+  }, [participant])
+
+  // check if item is suboptimal (only for first 3 purchases, >5% worse than best for that slot)
+  const isSuboptimalItem = (itemId: number, slotIndex: number) => {
+    if (itemId === 0) return false // empty slot
+
+    // only check first 3 items (timeline purchases)
+    const firstItem = participant.firstItem
+    const secondItem = participant.secondItem
+    const thirdItem = participant.thirdItem
+
+    // determine which slot this item is in
+    let slotWinrates: Map<number, number> | null = null
+    let topWinrate = 0
+
+    if (itemId === firstItem && slotIndex === 0) {
+      slotWinrates = itemWinratesBySlot.slot1
+      topWinrate = itemWinratesBySlot.topWr1
+    } else if (itemId === secondItem && slotIndex === 1) {
+      slotWinrates = itemWinratesBySlot.slot2
+      topWinrate = itemWinratesBySlot.topWr2
+    } else if (itemId === thirdItem && slotIndex === 2) {
+      slotWinrates = itemWinratesBySlot.slot3
+      topWinrate = itemWinratesBySlot.topWr3
+    } else {
+      return false // not one of the first 3 purchases
+    }
+
+    if (!slotWinrates) return false
+
+    const itemWr = slotWinrates.get(itemId)
+    if (!itemWr) return false // not in top 5 for this slot
+
+    const wrDiff = topWinrate - itemWr
+    return wrDiff > 5 // red border only if >5% worse
+  }
 
   // check if game was a remake
   const isRemake = participant.gameEndedInEarlySurrender
@@ -63,6 +170,11 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
               )}>
                 {isRemake ? "REMAKE" : isWin ? "WIN" : "LOSS"}
               </div>
+              {participant.pigScore !== null && participant.pigScore !== undefined && (
+                <div className="text-sm font-semibold text-gold-light mt-0.5">
+                  {participant.pigScore} PIG
+                </div>
+              )}
               <div className="text-xs text-gray-400 mt-0.5">
                 {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, "0")}
               </div>
@@ -151,7 +263,12 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
               ].map((itemId, idx) => (
                 <div
                   key={idx}
-                  className="w-8 h-8 rounded bg-gray-800 border border-gray-700 overflow-hidden"
+                  className={clsx(
+                    "w-8 h-8 rounded overflow-hidden",
+                    isSuboptimalItem(itemId, idx) 
+                      ? "border-2 border-red-500 bg-gray-800" 
+                      : "border border-gray-700 bg-gray-800"
+                  )}
                 >
                   {itemId > 0 && (
                     <Image
@@ -175,7 +292,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                 {participant.kills}
               </span>
               <span className="text-gray-500 text-sm">/</span>
-              <span className="text-base font-bold text-[#E84057]">
+              <span className="text-base font-bold text-negative">
                 {participant.deaths}
               </span>
               <span className="text-gray-500 text-sm">/</span>

@@ -36,6 +36,8 @@ interface Props {
   ddragonVersion: string
   championNames: Record<string, string>
   lastUpdated: string | null
+  averagePigScore: number | null
+  pigScoreGames: number
 }
 
 export default function SummonerContent({
@@ -60,7 +62,9 @@ export default function SummonerContent({
   profileIconUrl,
   ddragonVersion,
   championNames,
-  lastUpdated
+  lastUpdated,
+  averagePigScore,
+  pigScoreGames
 }: Props) {
   const router = useRouter()
   const { startLoading, stopLoading } = useLoading()
@@ -284,7 +288,7 @@ export default function SummonerContent({
 
           <div className="flex flex-col xl:flex-row gap-6">
             <div className="flex flex-col gap-6 xl:w-80 w-full">
-              <PigScoreCard />
+              <PigScoreCard averagePigScore={averagePigScore} totalGames={pigScoreGames} />
               <AramStatsCard
                 totalGames={totalGames}
                 wins={wins}

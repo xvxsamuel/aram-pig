@@ -34,7 +34,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const formatDamage = (dmg: number) => `${(dmg / 1000).toFixed(0)}k`
 
   const renderPlayer = (p: any, isCurrentPlayer: boolean) => {
-    const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6]
+    const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
     const kda = p.deaths === 0 ? "Perfect" : ((p.kills + p.assists) / p.deaths).toFixed(2)
     const dpm = ((p.totalDamageDealtToChampions || 0) / (match.info.gameDuration / 60)).toFixed(0)
     const playerName = p.riotIdGameName || p.summonerName
@@ -69,13 +69,28 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         <Link 
           href={profileUrl}
           className={clsx(
-            "flex-1 min-w-0 font-medium truncate hover:text-gold-light transition-colors",
+            "flex-1 min-w-0 font-medium truncate hover:text-gold-light transition-colors text-base",
             isCurrentPlayer ? "text-gold-light" : "text-white"
           )}
         >
           {playerName}
           {p.riotIdTagline && <span className="text-subtitle">#{p.riotIdTagline}</span>}
         </Link>
+
+        {/* pig score */}
+        {p.pigScore !== null && p.pigScore !== undefined && (
+          <div className="flex flex-col items-center w-10 flex-shrink-0">
+            <div className={clsx(
+              "text-xs font-bold leading-tight",
+              p.pigScore >= 50 ? "text-accent-light" : "text-negative"
+            )}>
+              {p.pigScore.toFixed(0)}
+            </div>
+            <div className="text-[9px] text-gray-400 leading-tight">
+              PIG
+            </div>
+          </div>
+        )}
 
         {/* damage */}
         <div className="flex flex-col items-center w-12 flex-shrink-0">
@@ -89,8 +104,12 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
 
         {/* kda */}
         <div className="flex flex-col items-center w-12 flex-shrink-0">
-          <div className="text-xs text-white font-medium leading-tight">
-            {p.kills}/{p.deaths}/{p.assists}
+          <div className="text-xs text-white font-medium leading-tight flex items-baseline gap-0.5">
+            <span>{p.kills}</span>
+            <span className="text-gray-500">/</span>
+            <span className="text-negative">{p.deaths}</span>
+            <span className="text-gray-500">/</span>
+            <span>{p.assists}</span>
           </div>
           <div className="text-[9px] text-gray-400 leading-tight">
             {kda} KDA
@@ -112,14 +131,14 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           {items.map((item, idx) => (
             <div
               key={idx}
-              className="w-5 h-5 rounded bg-gray-800 border border-gray-700 overflow-hidden"
+              className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden"
             >
               {item > 0 && (
                 <Image
                   src={getItemImageUrl(item, ddragonVersion)}
                   alt={`Item ${item}`}
-                  width={20}
-                  height={20}
+                  width={28}
+                  height={28}
                   className="w-full h-full object-cover"
                 />
               )}

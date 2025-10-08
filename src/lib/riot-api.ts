@@ -164,6 +164,78 @@ export async function getMatchById(matchId: string, region: RegionalCluster, req
   return match as unknown as MatchData
 }
 
+// fetch match timeline for item purchase order
+export async function getMatchTimeline(matchId: string, region: RegionalCluster, requestType: RequestType = 'priority') {
+  await waitForRateLimit(region, requestType);
+  
+  const timeline = await retryWithDelay(() =>
+    rAPI.matchV5.getMatchTimelineById({
+      cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
+      matchId,
+    })
+  )
+  return timeline as unknown as MatchTimeline
+}
+
+export interface MatchTimeline {
+  metadata: {
+    matchId: string
+    participants: string[]
+  }
+  info: {
+    frames: TimelineFrame[]
+    frameInterval: number
+  }
+}
+
+export interface TimelineFrame {
+  timestamp: number
+  participantFrames: Record<string, any>
+  events: TimelineEvent[]
+}
+
+export interface TimelineEvent {
+  type: string
+  timestamp: number
+  participantId?: number
+  itemId?: number
+  // other event fields...
+}
+
+// extract first 3 item purchases from timeline
+export function extractItemPurchases(timeline: MatchTimeline, participantId: number): number[] {
+  const purchases: number[] = []
+  const excludedItems = new Set([
+    // boots
+    1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158,
+    // consumables & wards
+    2003, 2055, 2138, 2139, 2140,
+    // starter items that aren't final builds
+    1036, 1037, 1038, 1042, 1043, 1052, 1053, 1054, 1055, 1056, 1057, 1058,
+    // aram specific starting items
+    3400, 3330, 3340,
+  ])
+  
+  for (const frame of timeline.info.frames) {
+    for (const event of frame.events) {
+      if (event.type === 'ITEM_PURCHASED' && 
+          event.participantId === participantId && 
+          event.itemId && 
+          !excludedItems.has(event.itemId)) {
+        
+        purchases.push(event.itemId)
+        
+        // only need first 3 completed items
+        if (purchases.length >= 3) {
+          return purchases
+        }
+      }
+    }
+  }
+  
+  return purchases
+}
+
 export interface MatchData {
   metadata: {
     matchId: string
@@ -194,6 +266,7 @@ export interface ParticipantData {
   assists: number
   champLevel: number
   totalDamageDealtToChampions: number
+  totalTimeSpentDead?: number
   goldEarned: number
   totalMinionsKilled: number
   neutralMinionsKilled: number
@@ -209,7 +282,10 @@ export interface ParticipantData {
   item3: number
   item4: number
   item5: number
-  item6: number
+  pigScore?: number
+  firstItem?: number
+  secondItem?: number
+  thirdItem?: number
   perks?: {
     styles: Array<{
       style: number

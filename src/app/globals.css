@@ -18,6 +18,7 @@
     --color-gold-light: oklch(0.7975 0.0627 90.79);
     --color-gold-dark: oklch(0.4713 0.0697 81.41);
     --color-subtitle: oklch(0.7412 0 0);
+    --color-negative: #E84057;
     --font-family-light: var(--font-light);
     --font-family-title: var(--font-regular);
     --font-family-amiamie: 'Amiamie', sans-serif;

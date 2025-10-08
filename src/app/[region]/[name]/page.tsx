@@ -81,6 +81,8 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   let totalTripleKills = 0
   let totalQuadraKills = 0
   let totalPentaKills = 0
+  let averagePigScore: number | null = null
+  let pigScoreGames = 0
 
   try {
     // try to load from database first to avoid riot api calls
@@ -143,7 +145,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
           // get lightweight match stats from summoner_matches (exclude remakes from stats)
           const { data: allMatchStats, error: statsError } = await supabase
             .from("summoner_matches")
-            .select("match_id, champion_name, kills, deaths, assists, win, damage_dealt_to_champions, game_duration, game_ended_in_early_surrender, double_kills, triple_kills, quadra_kills, penta_kills")
+            .select("match_id, champion_name, kills, deaths, assists, win, damage_dealt_to_champions, game_duration, game_ended_in_early_surrender, double_kills, triple_kills, quadra_kills, penta_kills, pig_score")
             .eq("puuid", puuid)
             .order("match_id", { ascending: false })
 
@@ -169,6 +171,33 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             totalTripleKills = validMatches.reduce((sum, m) => sum + (m.triple_kills || 0), 0)
             totalQuadraKills = validMatches.reduce((sum, m) => sum + (m.quadra_kills || 0), 0)
             totalPentaKills = validMatches.reduce((sum, m) => sum + (m.penta_kills || 0), 0)
+
+            // calculate average pig score (only from games with pig scores, last 30 days)
+            const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+            const matchesWithPigScore = validMatches.filter(m => m.pig_score !== null && m.pig_score !== undefined)
+            
+            if (matchesWithPigScore.length > 0) {
+              // fetch match dates for pig score matches
+              const pigScoreMatchIds = matchesWithPigScore.map(m => m.match_id)
+              const { data: matchDates } = await supabase
+                .from("matches")
+                .select("match_id, game_creation")
+                .in("match_id", pigScoreMatchIds)
+              
+              if (matchDates) {
+                const matchDateMap = new Map(matchDates.map(m => [m.match_id, m.game_creation]))
+                const recentMatchesWithPigScore = matchesWithPigScore.filter(m => {
+                  const matchDate = matchDateMap.get(m.match_id)
+                  return matchDate && matchDate >= thirtyDaysAgo
+                })
+                
+                if (recentMatchesWithPigScore.length > 0) {
+                  const totalPigScore = recentMatchesWithPigScore.reduce((sum, m) => sum + (m.pig_score || 0), 0)
+                  averagePigScore = totalPigScore / recentMatchesWithPigScore.length
+                  pigScoreGames = recentMatchesWithPigScore.length
+                }
+              }
+            }
 
             // find most played champion (excluding remakes)
             const championCounts: { [key: string]: number } = {}
@@ -253,7 +282,10 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
                       item3: p.item3 || 0,
                       item4: p.item4 || 0,
                       item5: p.item5 || 0,
-                      item6: p.item6 || 0,
+                      pigScore: p.pig_score,
+                      firstItem: p.first_item,
+                      secondItem: p.second_item,
+                      thirdItem: p.third_item,
                       perks: {
                         styles: [
                           {
@@ -352,6 +384,8 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             ddragonVersion={ddragonVersion}
             championNames={championNames}
             lastUpdated={lastUpdated}
+            averagePigScore={averagePigScore}
+            pigScoreGames={pigScoreGames}
           />
         )}
       </div>

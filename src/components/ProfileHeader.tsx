@@ -71,19 +71,19 @@ export default function ProfileHeader({
           <div className="absolute inset-0 bg-gradient-to-r from-accent-darker from-5% via-transparent/50 via-60% to-accent-darker" />
         </>
       )}
-      <div className="max-w-7xl mx-auto px-8 py-6 min-h-24">
-        <div className="flex items-center gap-4 relative z-10">
+      <div className="max-w-7xl mx-auto px-8 py-8 min-h-40">
+        <div className="flex items-start gap-6 relative z-10">
         <div className="relative flex-shrink-0">
           <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-            <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+            <div className="w-32 h-32 rounded-[inherit] bg-accent-dark overflow-hidden">
               <Image 
                 src={iconError 
                   ? profileIconUrl.replace(/\d+\.png$/, "29.png")
                   : profileIconUrl
                 }
                 alt="Profile Icon"
-                width={96}
-                height={96}
+                width={120}
+                height={120}
                 className="w-full h-full object-cover"
 
                 priority
@@ -92,17 +92,17 @@ export default function ProfileHeader({
             </div>
           </div>
           <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-md p-px bg-gradient-to-b from-gold-light to-gold-dark">
-            <div className="px-2 py-[0.5px] rounded-[inherit] bg-accent-darkest">
-              <span className="text-[12px] font-bold text-white">{summonerLevel}</span>
+            <div className="px-3 py-1 rounded-[inherit] bg-accent-darkest">
+              <span className="text-sm font-bold text-white">{summonerLevel}</span>
             </div>
           </div>
         </div>
-        <div className="flex-1 pb-1">
-          <h1 className="text-3xl font-bold mb-2 text-white">
+        <div className="flex-1 flex flex-col justify-between h-32">
+          <h1 className="text-3xl font-bold text-white">
             {gameName}
             <span className="text-subtitle"> #{tagLine}</span>
           </h1>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <UpdateButton 
               region={region}
               name={name}
@@ -110,11 +110,9 @@ export default function ProfileHeader({
               hasActiveJob={hasActiveJob}
               onUpdateStarted={onUpdateStarted}
             />
-            {lastUpdated && (
-              <p className="text-xs text-subtitle">
-                Last updated: {getTimeAgo(lastUpdated)}
-              </p>
-            )}
+            <p className="text-xs text-subtitle">
+              Last updated: {lastUpdated ? getTimeAgo(lastUpdated) : 'Never'}
+            </p>
           </div>
         </div>
         </div>
