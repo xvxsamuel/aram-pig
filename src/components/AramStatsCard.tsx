@@ -30,10 +30,10 @@ export default function AramStatsCard({
     <div className="w-full">
       <section className="bg-accent-darker rounded-xl border border-gold-dark/20 overflow-hidden">
         <div className="px-6 py-3">
-          <h2 className="text-xl font-bold text-center mb-3">Stats</h2>
-          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-3" />
+          <h2 className="text-xl font-bold text-left mb-3">Stats</h2>
+          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
           
-          <div className="space-y-3 px-3">
+          <div className="space-y-3 px-0">
             <div className="flex justify-between items-center">
               <span className="text-subtitle text-sm">Win Rate</span>
               <span className="text-2xl font-bold">{winRate}%</span>
@@ -49,7 +49,7 @@ export default function AramStatsCard({
               <span className="text-xl font-bold">{longestWinStreak}</span>
             </div>
 
-            <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent my-4 -mx-3" />
+            <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent my-4 -mx-6" />
 
             <div className="flex justify-between items-center">
               <span className="text-subtitle text-sm">Average KDA</span>

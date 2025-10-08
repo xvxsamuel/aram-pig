@@ -2,6 +2,7 @@
 
 import type { MatchData } from "../lib/riot-api"
 import Image from "next/image"
+import { getChampionImageUrl } from "../lib/ddragon-client"
 
 interface Props {
   match: MatchData
@@ -37,15 +38,18 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion }: Pr
         }`}
       >
         {/* champion icon */}
-        <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-          <Image
-            src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/champion/${p.championName}.png`}
-            alt={p.championName}
-            width={40}
-            height={40}
-            className="object-cover"
-          />
-          <div className="absolute bottom-0 right-0 bg-neutral-dark text-xs px-1 rounded">
+        <div className="relative">
+          <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-accent-dark border-2 border-gray-600">
+            <Image
+              src={getChampionImageUrl(p.championName, ddragonVersion)}
+              alt={p.championName}
+              width={40}
+              height={40}
+              className="w-full h-full scale-110 object-cover"
+              unoptimized
+            />
+          </div>
+          <div className="absolute -bottom-1 -right-1 bg-gray-800 border border-gray-600 rounded px-1.5 py-0.5 text-xs font-bold">
             {p.champLevel}
           </div>
         </div>
@@ -66,7 +70,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion }: Pr
           {items.map((item, idx) => (
             <div
               key={idx}
-              className="w-7 h-7 rounded bg-neutral-dark border border-neutral-light/20 overflow-hidden flex-shrink-0"
+              className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden flex-shrink-0"
             >
               {item > 0 && (
                 <Image
@@ -74,7 +78,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion }: Pr
                   alt={`Item ${item}`}
                   width={28}
                   height={28}
-                  className="object-cover"
+                  className="w-full h-full object-cover"
                 />
               )}
             </div>
@@ -90,7 +94,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion }: Pr
   }
 
   return (
-    <div className="border-t border-neutral-light/10 bg-neutral-dark/30 p-4">
+    <div className="bg-[#1a1f2e] p-4">
       <div className="space-y-4">
         {/* team 100 */}
           <div className={`border-2 rounded-lg p-3 ${
@@ -98,7 +102,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion }: Pr
           }`}>
             <div className="flex justify-between items-center mb-2">
               <h3 className={`font-bold ${team100Won ? 'text-accent-light' : 'text-red-400'}`}>
-                {team100Won ? '✓ VICTORY' : '✗ DEFEAT'}
+                {team100Won ? 'VICTORY' : 'DEFEAT'}
               </h3>
               <div className="text-sm text-neutral-light">
                 {team100Kills} kills • {formatGold(team100Gold)} gold
@@ -115,7 +119,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion }: Pr
           }`}>
             <div className="flex justify-between items-center mb-2">
               <h3 className={`font-bold ${team200Won ? 'text-accent-light' : 'text-red-400'}`}>
-                {team200Won ? '✓ VICTORY' : '✗ DEFEAT'}
+                {team200Won ? 'VICTORY' : 'DEFEAT'}
               </h3>
               <div className="text-sm text-neutral-light">
                 {team200Kills} kills • {formatGold(team200Gold)} gold

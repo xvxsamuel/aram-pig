@@ -36,17 +36,18 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
   const team2 = match.info.participants.filter(p => p.teamId === 200)
 
   return (
-    <div
-      className={clsx(
-        "rounded-lg border-l-[6px] overflow-hidden",
-        isRemake
-          ? "bg-[#3A3A3A] border-[#808080]"
-          : isWin 
-            ? "bg-[#28344E] border-[#5383E8]" 
-            : "bg-[#59343B] border-[#E84057]"
-      )}
-    >
-      <div className="flex items-center px-4 py-3 min-h-[80px] gap-4">
+    <div className="rounded-lg overflow-hidden">
+      <div
+        className={clsx(
+          "border-l-[6px]",
+          isRemake
+            ? "bg-[#3A3A3A] border-[#808080]"
+            : isWin 
+              ? "bg-[#28344E] border-[#5383E8]" 
+              : "bg-[#59343B] border-[#E84057]"
+        )}
+      >
+        <div className="flex items-center px-4 py-3 min-h-[80px] gap-4">
         {/* left side: game info, champion, items, stats */}
         <div className="flex items-center gap-4 flex-shrink-0">
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -245,7 +246,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
 
         {/* right side: separator and expand button - always on far right */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="w-px h-12 bg-neutral-light/20"></div>
+          <div className="w-px h-12 bg-subtitle"></div>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="flex items-center justify-center w-8 h-8 rounded bg-neutral-light/5 hover:bg-neutral-light/20 transition-colors"
@@ -253,7 +254,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           >
             <svg
               className={clsx(
-                "w-6 h-6 text-white transition-transform",
+                "w-6 h-6 text-subtitle transition-transform",
                 isExpanded && "rotate-180"
               )}
               fill="none"
@@ -264,6 +265,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             </svg>
           </button>
         </div>
+      </div>
       </div>
       
       {/* detailed match breakdown */}
