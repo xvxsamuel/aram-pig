@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     
     if (!puuid) {
       return NextResponse.json(
-        { error: "puuid is required" },
+        { error: "PUUID is required" },
         { status: 400 }
       )
     }
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     if (matchError || participantsError) {
       console.error("Error loading matches:", matchError || participantsError)
       return NextResponse.json(
-        { error: "failed to load matches" },
+        { error: "Failed to load matches" },
         { status: 500 }
       )
     }
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Load more matches error:", error)
     return NextResponse.json(
-      { error: error.message || "failed to load matches" },
+      { error: error.message || "Failed to load matches" },
       { status: 500 }
     )
   }

@@ -1,0 +1,3096 @@
+{
+  "1001": {
+    "name": "Boots",
+    "description": "",
+    "totalCost": 300,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 25
+    }
+  },
+  "1004": {
+    "name": "Faerie Charm",
+    "description": "",
+    "totalCost": 200,
+    "itemType": "component",
+    "stats": {
+      "Mana Regen": 50
+    }
+  },
+  "1006": {
+    "name": "Rejuvenation Bead",
+    "description": "",
+    "totalCost": 300,
+    "itemType": "component",
+    "stats": {
+      "Health Regen": 100
+    }
+  },
+  "1011": {
+    "name": "Giant's Belt",
+    "description": "",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Health": 350
+    }
+  },
+  "1018": {
+    "name": "Cloak of Agility",
+    "description": "",
+    "totalCost": 600,
+    "itemType": "component",
+    "stats": {
+      "Critical Strike Chance": 15
+    }
+  },
+  "1026": {
+    "name": "Blasting Wand",
+    "description": "",
+    "totalCost": 850,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 45
+    }
+  },
+  "1027": {
+    "name": "Sapphire Crystal",
+    "description": "",
+    "totalCost": 300,
+    "itemType": "component",
+    "stats": {
+      "Mana": 300
+    }
+  },
+  "1028": {
+    "name": "Ruby Crystal",
+    "description": "",
+    "totalCost": 400,
+    "itemType": "component",
+    "stats": {
+      "Health": 150
+    }
+  },
+  "1029": {
+    "name": "Cloth Armor",
+    "description": "",
+    "totalCost": 300,
+    "itemType": "component",
+    "stats": {
+      "Armor": 15
+    }
+  },
+  "1031": {
+    "name": "Chain Vest",
+    "description": "",
+    "totalCost": 800,
+    "itemType": "component",
+    "stats": {
+      "Armor": 40
+    }
+  },
+  "1033": {
+    "name": "Null-Magic Mantle",
+    "description": "",
+    "totalCost": 400,
+    "itemType": "component",
+    "stats": {
+      "Magic Resistance": 20
+    }
+  },
+  "1036": {
+    "name": "Long Sword",
+    "description": "",
+    "totalCost": 350,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 10
+    }
+  },
+  "1037": {
+    "name": "Pickaxe",
+    "description": "",
+    "totalCost": 875,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 25
+    }
+  },
+  "1038": {
+    "name": "B. F. Sword",
+    "description": "",
+    "totalCost": 1300,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40
+    }
+  },
+  "1042": {
+    "name": "Dagger",
+    "description": "",
+    "totalCost": 250,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 10
+    }
+  },
+  "1043": {
+    "name": "Recurve Bow",
+    "description": "Sting: Basic attacks deal {{as|15 '''bonus''' physical damage}} [[on-hit]].",
+    "totalCost": 700,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 15
+    }
+  },
+  "1052": {
+    "name": "Amplifying Tome",
+    "description": "",
+    "totalCost": 400,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 20
+    }
+  },
+  "1053": {
+    "name": "Vampiric Scepter",
+    "description": "",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 15,
+      "Life Steal": 7
+    }
+  },
+  "1054": {
+    "name": "Doran's Shield",
+    "description": "Enduring Focus: After taking damage from a [[champion]], gain '''bonus''' [[health regeneration]] per second equal to {{pp|0 to 5.625 for 11|round=3|type='''missing''' health|color=health|key1=%|0 to 75|formula=0.375 bonus health regeneration for every 1% missing health}} for 8 seconds. Reduced to{{ft|66% effectiveness|{{pp|0*0.66 to 5.625*0.66 for 11|round=4|type='''missing''' health|color=health|key1=%|0 to 75|formula=0.2475 bonus health regeneration for every 1% missing health}}}}if owned by {{tip|ranged}} champions or when triggered by [[area of effect]], [[damage over time]], or [[damage|proc]].\nHelping Hand: Basic attacks deal {{as|5 '''bonus''' physical damage}} [[on-hit]] against [[minions]].",
+    "totalCost": 450,
+    "itemType": "starter",
+    "stats": {
+      "Health": 110,
+      "Health Regen": 4
+    }
+  },
+  "1055": {
+    "name": "Doran's Blade",
+    "description": "",
+    "totalCost": 450,
+    "itemType": "starter",
+    "stats": {
+      "Attack Damage": 10,
+      "Health": 80,
+      "Life Steal": 3
+    }
+  },
+  "1056": {
+    "name": "Doran's Ring",
+    "description": "Restoration: Restore {{as|{{fd|1.25}} mana}} every second. If you cannot gain mana, {{tip|healing|heal}} {{as|{{fd|0.55}} health}} instead.\nHelping Hand: Basic attacks deal {{as|5 '''bonus''' physical damage}} [[on-hit]] against [[minions]].",
+    "totalCost": 400,
+    "itemType": "starter",
+    "stats": {
+      "Ability Power": 18,
+      "Health": 90
+    }
+  },
+  "1057": {
+    "name": "Negatron Cloak",
+    "description": "",
+    "totalCost": 850,
+    "itemType": "component",
+    "stats": {
+      "Magic Resistance": 45
+    }
+  },
+  "1058": {
+    "name": "Needlessly Large Rod",
+    "description": "",
+    "totalCost": 1200,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 65
+    }
+  },
+  "1082": {
+    "name": "Dark Seal",
+    "description": "Glory: Gain 2 stacks for each champion [[kill]] and 1 stack for each [[assist]], up to a '''maximum''' of 10 stacks. For every stack, gain {{as|4 ability power}}, up to {{as|40|AP}} at '''maximum''' stacks. Lose 5 stacks on [[death]]. Stacks are preserved when upgrading to {{ii|Mejai's Soulstealer}}.",
+    "totalCost": 350,
+    "itemType": "starter",
+    "stats": {
+      "Ability Power": 15,
+      "Health": 50
+    }
+  },
+  "1083": {
+    "name": "Cull",
+    "description": "Reap: Killing a [[minion]] grants an additional {{g|1}}, up to a '''maximum''' of {{g|100}}.",
+    "totalCost": 450,
+    "itemType": "starter",
+    "stats": {
+      "Attack Damage": 7
+    }
+  },
+  "1101": {
+    "name": "Scorchclaw Pup",
+    "description": "Jungle Companions: Summon a ''Scorchclaw Pup'' companion to assist you in combat against monsters.\nScorchclaw's Slash: Feed your companion enough treats to evolve it and upgrade your {{si|Smite}}. Upon the companion reaching its final evolution, this item is consumed, granting you the {{bi|Scorchclaw's Slash}} buff.",
+    "totalCost": 450,
+    "itemType": "starter",
+    "stats": {}
+  },
+  "1102": {
+    "name": "Gustwalker Hatchling",
+    "description": "Jungle Companions: Summon a ''Gustwalker Hatchling'' companion to assist you in combat against monsters.\nGustwalker's Gait: Feed your companion enough treats to evolve it and upgrade your {{si|Smite}}. Upon the companion reaching its final evolution, this item is consumed, granting you the {{bi|Gustwalker's Gait}} buff.",
+    "totalCost": 450,
+    "itemType": "starter",
+    "stats": {}
+  },
+  "1103": {
+    "name": "Mosstomper Seedling",
+    "description": "Jungle Companions: Summon a ''Mosstomper Seedling'' companion to assist you in combat against monsters.\nMosstomper's Courage: Feed your companion enough treats to evolve it and upgrade your {{si|Smite}}. Upon the companion reaching its final evolution, this item is consumed, granting you the {{bi|Mosstomper's Courage}} buff.",
+    "totalCost": 450,
+    "itemType": "starter",
+    "stats": {}
+  },
+  "1500": {
+    "name": "Ohmwrecker (Turret Item)",
+    "description": "Dodge Piercing: Turret attacks cannot be dodged.\nWarming Up: Turrets gain a stack for 5 seconds each time they strike a champion. Each stack increases their damage dealt by 50%, up to 150%.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1501": {
+    "name": "Lane Swap Detector",
+    "description": ": Activates special rules in this lane if two non-Jungler enemies appear in it: Turret takes less damage, deals massively increased damage, and redirects kill {{g|gold}} to the nearest allied champion. Allied minions redirect kill {{g|gold}} to the nearest allied champion. Enemy champions gain reduced resources from minions. This item disappears shortly after the start of the game.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1502": {
+    "name": "Reinforced Armor (Turret Item)",
+    "description": ": While no enemy {{tip|minions}} or {{ui|Rift Herald|Rift Herald Mercenary}} are within range, gain 80% damage reduction, including against {{as|true damage}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1503": {
+    "name": "Warden's Eye",
+    "description": "True Sight: Can see {{tip|camouflage|camouflaged}} and {{tip|invisible}} units within 1100 units.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1506": {
+    "name": "Base Turret Reinforced Armor (Turret Item)",
+    "description": ": While no enemy {{tip|minions}} or {{ui|Rift Herald|Rift Herald Mercenary}} are within range, gain 80% damage reduction, including against {{as|true damage}}.\n: Base turrets have health regeneration, but cannot regenerate past their current segment. They are segmented at {{as|33%|health}}, {{as|66%|health}} and {{as|100% health}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1507": {
+    "name": "Overcharged",
+    "description": ": At 55 minutes, this turret begins to malfunction, losing {{as|armor}} and {{as|magic resist}}. After 5 minutes, it will start breaking down, losing an increasing percentage of its {{as|{{sti|health|'''maximum''' health}}}} every 30 seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1508": {
+    "name": "Anti-Tower Socks",
+    "description": ": {{tip|Turret}} basic attacks are modified to deal {{as|{{pp|key=%|14;11;8|Outer;Inner;Inhibitor/Nexus|type=turret type}} of this minion's '''maximum''' health}} as {{tt|pre-mitigation damage|Damage calculated before modifiers}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1509": {
+    "name": "Gusto",
+    "description": ": {{tip|Turret}} basic attacks are modified to deal {{as|45% of this minion's '''maximum''' health}} as {{tt|pre-mitigation damage|Damage calculated before modifiers}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1510": {
+    "name": "Phreakish Gusto",
+    "description": ": {{tip|Turret}} basic attacks are modified to deal {{as|70% of this minion's '''maximum''' health}} as {{tt|pre-mitigation damage|Damage calculated before modifiers}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1511": {
+    "name": "Super Mech Armor",
+    "description": ": {{tip|Turret}} basic attacks are modified to deal {{as|7% of this minion's '''maximum''' health}} as {{tt|pre-mitigation damage|Damage calculated before modifiers}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1512": {
+    "name": "Super Mech Power Field",
+    "description": ": Grants nearby minions (excluding super minions) {{as|35 armor}} and {{as|35 magic resistance}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "1515": {
+    "name": "Turret Plating",
+    "description": ": Provides extra defensive measures. Attackers are rewarded for destroying portions of the plating. This item disappears after 14 minutes.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "2003": {
+    "name": "Health Potion",
+    "description": "",
+    "totalCost": 50,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2010": {
+    "name": "Total Biscuit of Everlasting Will",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "2019": {
+    "name": "Steel Sigil",
+    "description": "",
+    "totalCost": 1100,
+    "itemType": "component",
+    "stats": {
+      "Armor": 30,
+      "Attack Damage": 15
+    }
+  },
+  "2020": {
+    "name": "The Brutalizer",
+    "description": "",
+    "totalCost": 1337,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 25,
+      "Lethality": 5,
+      "Ability Haste": 10
+    }
+  },
+  "2021": {
+    "name": "Tunneler",
+    "description": "",
+    "totalCost": 1150,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 15,
+      "Health": 250
+    }
+  },
+  "2022": {
+    "name": "Glowing Mote",
+    "description": "",
+    "totalCost": 250,
+    "itemType": "component",
+    "stats": {
+      "Ability Haste": 5
+    }
+  },
+  "2031": {
+    "name": "Refillable Potion",
+    "description": ": Holds charges that refill upon visiting the [[shop]].",
+    "totalCost": 150,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2049": {
+    "name": "Guardian's Amulet",
+    "description": "Recovery: Restore {{as|10 mana}} every 5 seconds. Manaless champions restore {{as|3 health}} instead.",
+    "totalCost": 500,
+    "itemType": "starter",
+    "stats": {
+      "Ability Power": 20,
+      "Ability Haste": 20
+    }
+  },
+  "2050": {
+    "name": "Guardian's Shroud",
+    "description": "",
+    "totalCost": 500,
+    "itemType": "starter",
+    "stats": {
+      "Ability Power": 35,
+      "Health": 300,
+      "Ability Haste": 15
+    }
+  },
+  "2051": {
+    "name": "Guardian's Horn",
+    "description": "Undaunted: Reduces all sources of incoming champion damage by 15 ''({{fd|3.75}} against [[damage over time]] abilities)''.",
+    "totalCost": 950,
+    "itemType": "starter",
+    "stats": {
+      "Health": 150,
+      "Health Regen": 20
+    }
+  },
+  "2052": {
+    "name": "Poro-Snax",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "2055": {
+    "name": "Control Ward",
+    "description": "",
+    "totalCost": 75,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2065": {
+    "name": "Shurelya's Battlesong",
+    "description": "Inspiring Speech: Grants you and all allies within 1000 units {{as|30% '''bonus''' movement speed}} for 4 seconds.",
+    "totalCost": 2200,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 50,
+      "Mana Regen": 125,
+      "Move Speed": 4,
+      "Ability Haste": 15
+    }
+  },
+  "2138": {
+    "name": "Elixir of Iron",
+    "description": "",
+    "totalCost": 500,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2139": {
+    "name": "Elixir of Sorcery",
+    "description": "",
+    "totalCost": 500,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2140": {
+    "name": "Elixir of Wrath",
+    "description": "",
+    "totalCost": 500,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2141": {
+    "name": "Cappa Juice",
+    "description": "",
+    "totalCost": 300,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2142": {
+    "name": "Juice of Power",
+    "description": "",
+    "totalCost": 500,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2143": {
+    "name": "Juice of Vitality",
+    "description": "",
+    "totalCost": 500,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2144": {
+    "name": "Juice of Haste",
+    "description": "",
+    "totalCost": 500,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2145": {
+    "name": "Lucky Dice",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "2146": {
+    "name": "Enhanced Lucky Dice",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "2150": {
+    "name": "Elixir of Skill",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2151": {
+    "name": "Elixir of Avarice",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2152": {
+    "name": "Elixir of Force",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2420": {
+    "name": "Seeker's Armguard",
+    "description": "Time Stop: Put yourself in {{tip|stasis (buff)|stasis}} for {{fd|2.5}} seconds, rendering you {{tip|untargetable}} and {{tip|invulnerable}} for the duration but also unable to move, declare [[basic attack]]s, cast [[champion ability|abilities]], use [[summoner spell]]s, or [[active ability items|activate items]].",
+    "totalCost": 1600,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 40,
+      "Armor": 25
+    }
+  },
+  "2421": {
+    "name": "Shattered Armguard",
+    "description": "",
+    "totalCost": 1600,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 40,
+      "Armor": 25
+    }
+  },
+  "2422": {
+    "name": "Slightly Magical Boots",
+    "description": "Slightly Quicker: Gain {{as|10 '''bonus''' movement speed}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Move Speed": 25
+    }
+  },
+  "2501": {
+    "name": "Overlord's Bloodmail",
+    "description": "Tyranny: Gain {{as|'''bonus''' attack damage}} equal to {{as|{{fd|2.5}}% '''bonus''' health}}.\nRetribution: Gain {{as|'''bonus''' attack damage}} equal to {{pp|0 to 12 by 1|0 to 70|key=%|key1=%|type='''missing''' health|color=health}} of your {{as|'''total''' attack damage}} from other sources.",
+    "totalCost": 3300,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 30,
+      "Health": 550
+    }
+  },
+  "2502": {
+    "name": "Unending Despair",
+    "description": "Anguish: Every 4 seconds after entering combat with champions, sap all enemy champions around you within 650 units to deal {{as|magic damage}} equal to {{as|3% of your '''bonus''' health}} to them and {{tip|heal}} yourself equal to 250% of the {{tt|post-mitigation|Damage calculated after modifiers}} damage dealt.",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 25,
+      "Health": 400,
+      "Magic Resistance": 25,
+      "Ability Haste": 10
+    }
+  },
+  "2503": {
+    "name": "Blackfire Torch",
+    "description": "Baleful Blaze: Dealing [[ability damage]] burns enemies, causing them to take {{as|{{ap|60/6}} {{as|(+ {{ap|6/6}}% AP)}} magic damage|magic damage}} every {{fd|0.5}} seconds over 3 seconds, for a total of {{as|60|magic damage}} {{as|(+ 6% AP)}}. Against monsters, the burn deals {{as|10 '''bonus''' magic damage}} per tick, dealing a total of {{as|{{ap|(60/6)+10}} {{as|(+ {{ap|6/6}}% AP)}} magic damage|magic damage}} per tick for up to {{as|{{ap|60+(10*6)}}|magic damage}} {{as|(+ 6% AP)}}.\nBlackfire: For each champion, epic monster, and large monster afflicted with ''Baleful Blaze's'' burn, increase your {{as|ability power}} by 4%.",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 80,
+      "Mana": 600,
+      "Ability Haste": 20
+    }
+  },
+  "2504": {
+    "name": "Kaenic Rookern",
+    "description": "Magebane: After not taking {{as|magic damage}} for 15 seconds, gain a {{tip|shield}} that absorbs {{as|magic damage}} equal to {{as|15% of '''maximum''' health}} until destroyed.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 400,
+      "Health Regen": 100,
+      "Magic Resistance": 80
+    }
+  },
+  "2508": {
+    "name": "Fated Ashes",
+    "description": "Inflame: Dealing [[ability damage]] burns enemies, causing them to take {{as|{{ap|15/6}} magic damage}} every {{fd|0.5}} seconds over 3 seconds, for a total of {{as|15|magic damage}}. Against monsters, the burn deals {{as|{{fd|7.5}} '''bonus''' magic damage}} per tick, dealing a total of {{as|{{ap|(15/6)+7.5}} magic damage}} per tick for up to {{as|{{ap|15+(7.5*6)}}|magic damage}}.",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 30
+    }
+  },
+  "3002": {
+    "name": "Trailblazer",
+    "description": "Lead the Way: While moving, generate 7 stacks of ''Momentum'' every {{fd|0.25}} seconds, granting up to {{as|20 '''bonus''' movement speed}} at 100 stacks after {{fd|3.75}} seconds of moving. At '''maximum''' stacks, you leave behind a path briefly that grants {{as|15% of your '''total''' movement speed}} as {{as|'''bonus''' movement speed}} to allied champions within. Basic attacks consume all stacks. If you are {{tip|melee}} and at '''maximum''' stacks, your next basic attack {{tip|slow|slows}} the target by 50% for 1 second.",
+    "totalCost": 2400,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 40,
+      "Health": 250,
+      "Move Speed": 4
+    }
+  },
+  "3003": {
+    "name": "Archangel's Staff",
+    "description": "Awe: Grants {{as|ability power}} equal to {{as|1% '''bonus''' mana}}.\nManaflow: Grants a charge every 8 seconds, up to 5 charges. Affecting an enemy or ally with an [[champion ability|ability]] consumes a charge to grant {{as|5 '''bonus''' mana}}, increased to {{as|10|mana}} if they are a champion, up to a '''maximum''' of {{as|360 '''bonus''' mana}}.\n: Transforms into {{ii|Seraph's Embrace}} at {{as|360 '''bonus''' mana}}.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 70,
+      "Mana": 600,
+      "Ability Haste": 25
+    }
+  },
+  "3004": {
+    "name": "Manamune",
+    "description": "Awe: Grants {{as|'''bonus''' attack damage}} equal to {{as|2% '''maximum''' mana}}.\nManaflow: Grants a charge every 8 seconds, up to 4 charges. Consumes a charge [[on-hit]] and whenever affecting an enemy or ally with an [[champion ability|ability]] to grant {{as|3 '''bonus''' mana}}, increased to {{as|6|mana}} for champion targets, up to a '''maximum''' of {{as|360 '''bonus''' mana}}.\n: Transforms into {{ii|Muramana}} at {{as|360 '''bonus''' mana}}.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 35,
+      "Mana": 500,
+      "Ability Haste": 15
+    }
+  },
+  "3006": {
+    "name": "Berserker's Greaves",
+    "description": "",
+    "totalCost": 1100,
+    "itemType": "boots",
+    "stats": {
+      "Attack Speed": 25,
+      "Move Speed": 45
+    }
+  },
+  "3009": {
+    "name": "Boots of Swiftness",
+    "description": "Fleetfooted: Gain 25% [[slow resist]].",
+    "totalCost": 1000,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 55
+    }
+  },
+  "3010": {
+    "name": "Symbiotic Soles",
+    "description": "Synchrony: Gain {{as|10 '''bonus''' movement speed}} while [[Combat status|out-of-combat]].\nSymbiosis: After moving a total of 150,000 units of distance, capped at 500 units at a time for {{tip|dash|dashes}} and {{tip|blink|blinks}}, upgrade this item to {{ii|Synchronized Souls}}.",
+    "totalCost": 900,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 40
+    }
+  },
+  "3013": {
+    "name": "Synchronized Souls",
+    "description": "Voidborn: Gain {{si|Empowered Recall}}.\nSynchrony: Gain {{as|45 '''bonus''' movement speed}} while out-of-combat.",
+    "totalCost": 900,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 45
+    }
+  },
+  "3020": {
+    "name": "Sorcerer's Shoes",
+    "description": "",
+    "totalCost": 1100,
+    "itemType": "boots",
+    "stats": {
+      "Magic Penetration": 12,
+      "Move Speed": 45
+    }
+  },
+  "3024": {
+    "name": "Glacial Buckler",
+    "description": "",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Armor": 25,
+      "Mana": 300,
+      "Ability Haste": 10
+    }
+  },
+  "3026": {
+    "name": "Guardian Angel",
+    "description": "Rebirth: Upon taking [[death|lethal damage]], enter {{tip|resurrection}} for 4 seconds, during which you are {{tip|invulnerable}}, {{tip|untargetable}}, and unable to act, and afterwards {{tip|heal}} for {{as|50% of '''base''' health}} and restore {{as|100% of '''maximum''' mana}} (300 second cooldown, starts after resurrection ends).",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 45,
+      "Attack Damage": 55
+    }
+  },
+  "3031": {
+    "name": "Infinity Edge",
+    "description": "",
+    "totalCost": 3450,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 65,
+      "Critical Strike Chance": 25
+    }
+  },
+  "3032": {
+    "name": "Yun Tal Wildarrows",
+    "description": "Practice Makes Lethal: Basic attacks {{tip|on-attack}} grant {{as|{{rd|{{fd|0.4}}%|{{fd|0.2}}%}} critical strike chance}} permanently, stacking up to {{rd|63|125}} times (capped at {{as|25% critical strike chance}}).\nFlurry: Launching a basic attack against an enemy champion grants you {{as|30% '''bonus''' attack speed}} for 6 seconds (30 second cooldown, reduced by 1 second {{tip|on-hit}} and 2 seconds if the attack {{tip|critical strike|critically strikes}}).",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Attack Speed": 35
+    }
+  },
+  "3033": {
+    "name": "Mortal Reminder",
+    "description": "Grievous Wounds: Dealing {{as|physical damage}} to enemy champions inflicts them with {{tip|Grievous Wounds}} for 3 seconds.",
+    "totalCost": 3300,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 35,
+      "Critical Strike Chance": 25
+    }
+  },
+  "3035": {
+    "name": "Last Whisper",
+    "description": "",
+    "totalCost": 1450,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 20
+    }
+  },
+  "3036": {
+    "name": "Lord Dominik's Regards",
+    "description": "",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 35,
+      "Critical Strike Chance": 25
+    }
+  },
+  "3040": {
+    "name": "Seraph's Embrace",
+    "description": "Awe: Grants {{as|ability power}} equal to {{as|2% '''bonus''' mana}}.\nLifeline: If you would take damage that would reduce you below {{as|30% of your '''maximum''' health}}, you first gain a {{tip|shield}} for 3 seconds that absorbs damage equal to {{as|18% '''maximum''' mana}} for 3 seconds.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 70,
+      "Mana": 1000,
+      "Ability Haste": 25
+    }
+  },
+  "3041": {
+    "name": "Mejai's Soulstealer",
+    "description": "Glory: Gain 4 stacks for each champion [[kill]] and 2 stacks for each [[assist]], up to a '''maximum''' of 25 stacks. For every stack, gain {{as|5 ability power}}, up to {{as|125|AP}} at '''maximum''' stacks. If you have at least 10 stacks, also gain {{as|10% '''bonus''' movement speed}}. Lose 10 stacks on [[death]]. Stacks are preserved from {{ii|Dark Seal}}.",
+    "totalCost": 1500,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 20,
+      "Health": 100
+    }
+  },
+  "3042": {
+    "name": "Muramana",
+    "description": "Awe: Grants {{as|'''bonus''' attack damage}} equal to {{as|2% '''maximum''' mana}}.\nShock: Basic attacks [[on-hit]] against champions deal {{as|{{as|{{fd|1.2}}% '''maximum''' mana}} '''bonus''' physical damage}}. Dealing [[Ability_effects#Triggering_from_champion_ability_damage|ability damage]] to champions deals {{as|{{as|{{rd|4%|3%}} '''maximum''' mana}} '''bonus''' physical damage|physical damage}}. Can only be triggered on the same target once every {{fd|6.5}} seconds from the same attack or cast.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 35,
+      "Mana": 860,
+      "Ability Haste": 15
+    }
+  },
+  "3044": {
+    "name": "Phage",
+    "description": "Rage: Basic attacks [[on-hit]] grant {{as|{{rd|20|10}} '''bonus''' movement speed}} for 2 seconds.",
+    "totalCost": 1100,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 15,
+      "Health": 200
+    }
+  },
+  "3046": {
+    "name": "Phantom Dancer",
+    "description": "Spectral Waltz: Become permanently {{tip|ghosted}}.",
+    "totalCost": 2650,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Speed": 65,
+      "Critical Strike Chance": 25,
+      "Move Speed": 10
+    }
+  },
+  "3047": {
+    "name": "Plated Steelcaps",
+    "description": "Plating: Reduces incoming [[damage]] from all [[basic attack]]s by 10% (''excluding [[turret]] attacks'').",
+    "totalCost": 1200,
+    "itemType": "boots",
+    "stats": {
+      "Armor": 25,
+      "Move Speed": 45
+    }
+  },
+  "3050": {
+    "name": "Zeke's Convergence",
+    "description": "Frostfire Tempest: Upon casting your ultimate ability, you summon a storm of flame and ice around you for 5 seconds, dealing{{ft|{{as|{{ap|30/4}} magic damage}} every {{fd|0.25}} seconds|{{as|{{ap|30*5}} '''total''' magic damage}} over the duration}}to enemies within {{tip|cr|icononly=true}} 350 units and {{tip|slow|slowing}} them by 30% (45 second cooldown, starts on ultimate cast).",
+    "totalCost": 2200,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 25,
+      "Health": 300,
+      "Magic Resistance": 25,
+      "Ability Haste": 10
+    }
+  },
+  "3051": {
+    "name": "Hearthbound Axe",
+    "description": "",
+    "totalCost": 1200,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 20,
+      "Attack Speed": 20
+    }
+  },
+  "3053": {
+    "name": "Sterak's Gage",
+    "description": "The Claws that Catch: Gain {{as|'''bonus''' attack damage}} equal to {{as|45% '''base''' AD}}.\nLifeline: If you would take damage that would reduce you below {{as|30% of your '''maximum''' health}}, you first gain a {{tip|shield}} that absorbs damage equal to {{as|60% of '''bonus''' health}} which decays over {{fd|4.5}} seconds.",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 400,
+      "Tenacity": 20
+    }
+  },
+  "3057": {
+    "name": "Sheen",
+    "description": "Spellblade: After using an [[Champion ability|ability]], your next basic attack within 10 seconds deals {{as|100% '''base''' AD}} {{as|'''bonus''' physical damage}} [[on-hit]] ({{fd|1.5}} second cooldown, starts after using the empowered attack).",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Ability Haste": 10
+    }
+  },
+  "3065": {
+    "name": "Spirit Visage",
+    "description": "Boundless Vitality: Increases all {{tip|heal|healing}} and {{tip|shield|shielding}} received as well as {{stil|health regeneration}} by 25%.",
+    "totalCost": 2700,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 400,
+      "Health Regen": 100,
+      "Magic Resistance": 50,
+      "Ability Haste": 10
+    }
+  },
+  "3066": {
+    "name": "Winged Moonplate",
+    "description": "",
+    "totalCost": 800,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Move Speed": 4
+    }
+  },
+  "3067": {
+    "name": "Kindlegem",
+    "description": "",
+    "totalCost": 800,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Ability Haste": 10
+    }
+  },
+  "3068": {
+    "name": "Sunfire Aegis",
+    "description": "Immolate: Taking or dealing damage activates this passive for 3 seconds. Deal {{as|20 {{as|(+ 1% '''bonus''' health)}} magic damage|magic damage}} every second to enemies within {{tip|cr|icononly = true}} 325 (+ 100% '''bonus''' [[size]]) units, with the damage being increased by 50% against {{tip|minions}} and {{tip|monsters}}. This executes minions that would be killed by one more tick of damage.",
+    "totalCost": 2700,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 50,
+      "Health": 350,
+      "Ability Haste": 10
+    }
+  },
+  "3070": {
+    "name": "Tear of the Goddess",
+    "description": "Manaflow: Grants a charge every 8 seconds, up to 4 charges. Affecting an enemy or ally with an [[champion ability|ability]] consumes a charge to grant {{as|3 '''bonus''' mana}}, increased to {{as|6|mana}} if they are a champion, up to '''maximum''' of {{as|360 '''bonus''' mana}}.\nHelping Hand: Basic attacks deal {{as|5 '''bonus''' physical damage}} [[on-hit]] against [[minions]].",
+    "totalCost": 400,
+    "itemType": "starter",
+    "stats": {
+      "Mana": 240
+    }
+  },
+  "3071": {
+    "name": "Black Cleaver",
+    "description": "Carve: Dealing {{as|physical damage}} to an enemy champion applies a stack of ''Carve'' for 6 seconds, stacking up to 5 times. Each stack inflicts {{as|6% armor reduction}}, up to {{as|30%|armor}} at 5 stacks.\nFervor: Dealing {{as|physical damage}} grants you {{as|20 '''bonus''' movement speed}} for 2 seconds.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 400,
+      "Ability Haste": 20
+    }
+  },
+  "3072": {
+    "name": "Bloodthirster",
+    "description": "Ichorshield: Convert the {{tip|healing}} received from {{sti|life steal}} in excess of {{as|'''maximum''' health}} into a {{tip|shield}} for up to {{pp|165 to 315 for 11|1;9 to 18|formula=165 base, then +15 per level starting from level 9.}}, which lasts until destroyed.",
+    "totalCost": 3400,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 80,
+      "Life Steal": 15
+    }
+  },
+  "3073": {
+    "name": "Experimental Hexplate",
+    "description": "Hexcharged: Gain 30 [[Haste#Ultimate haste|ultimate haste]].\nOverdrive: Upon casting your ultimate ability, enter ''Overdrive'' to gain {{as|30% '''bonus''' attack speed}} and {{as|15% '''bonus''' movement speed}} for 8 seconds (30 second cooldown, starts on ultimate cast).",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Attack Speed": 20,
+      "Health": 450
+    }
+  },
+  "3074": {
+    "name": "Ravenous Hydra",
+    "description": "Cleave: Basic attacks [[on-hit]] deal {{as|{{rd|40% AD|20% AD}}|ad}} {{as|physical damage}} to other enemies in a {{tip|cr|icononly = true}} 350 radius centered around the target.\nRavenous Crescent: Deal {{as|80% AD}} {{as|physical damage}} to enemies within a {{tip|cr|icononly = true}} 450 radius in front of you.",
+    "totalCost": 3300,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 65,
+      "Life Steal": 12,
+      "Ability Haste": 15
+    }
+  },
+  "3075": {
+    "name": "Thornmail",
+    "description": "Thorns: When struck by a basic attack [[on-hit]], deal {{as|20 {{as|(+ 10% '''bonus''' armor)}} magic damage|magic damage}} to the attacker and, if they are a champion, inflict them with {{tip|Grievous Wounds}} for 3 seconds.",
+    "totalCost": 2450,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 75,
+      "Health": 150
+    }
+  },
+  "3076": {
+    "name": "Bramble Vest",
+    "description": "Thorns: When struck by a basic attack [[on-hit]], deal {{as|10 magic damage}} to the attacker and, if they are a champion, inflict them with {{tip|Grievous Wounds}} for 3 seconds.",
+    "totalCost": 800,
+    "itemType": "component",
+    "stats": {
+      "Armor": 30
+    }
+  },
+  "3077": {
+    "name": "Tiamat",
+    "description": "Cleave: Basic attacks [[on-hit]] deal {{as|{{rd|40% AD|20% AD}}|ad}} {{as|physical damage}} to other enemies in a {{tip|cr|icononly = true}} 350 radius centered around the target.\nCrescent: Deal {{as|75% AD}} {{as|physical damage}} to enemies within a {{tip|cr|icononly = true}} 450 radius in front of you.",
+    "totalCost": 1200,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 20
+    }
+  },
+  "3078": {
+    "name": "Trinity Force",
+    "description": "Spellblade: After using an [[Champion ability|ability]], your next basic attack within 10 seconds deals {{as|200% '''base''' AD}} {{as|'''bonus''' physical damage}} [[on-hit]] ({{fd|1.5}} second cooldown, starts after using the empowered attack).\nQuicken: Basic attacks [[on-hit]] grant {{as|20 '''bonus''' movement speed}} for 2 seconds",
+    "totalCost": 3333,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 36,
+      "Attack Speed": 30,
+      "Health": 333,
+      "Ability Haste": 15
+    }
+  },
+  "3082": {
+    "name": "Warden's Mail",
+    "description": "Rock Solid: Every first incoming instance of {{tt|post-mitigation|Damage calculated after modifiers}} {{tip|basic damage}} per {{tip|cast instance}} is [[Damage modifier|reduced]] by 15, with a '''maximum''' of 20% reduction each.",
+    "totalCost": 1000,
+    "itemType": "component",
+    "stats": {
+      "Armor": 40
+    }
+  },
+  "3083": {
+    "name": "Warmog's Armor",
+    "description": ": Grants ''Warmog's Heart'' if you have at least {{as|2000 '''bonus''' health}}.\nWarmog's Heart: {{stil|Health regeneration|Regenerate}}{{ft|{{as|{{fd|1.5}}% '''maximum''' health}} every {{fd|0.5}} seconds|{{as|15% '''maximum''' health}} every 5 seconds}}if [[damage]] has not been taken in the last 8 seconds (3 seconds for damage from non-champions).\nWarmog's Vitality: Gain {{as|'''bonus''' health}} equal to {{as|12% '''bonus''' health '''from items'''}}.",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 1000,
+      "Health Regen": 100
+    }
+  },
+  "3084": {
+    "name": "Heartsteel",
+    "description": "Colossal Consumption: While within 700 units of an enemy champion, generate a stack on them each second, stacking up to 3 times. Your next basic attack against a target with 3 stacks is empowered to consume them all to deal {{as|70|physical damage}} {{as|(+ 6% '''maximum''' health)}} {{as|'''bonus''' physical damage}} [[on-hit]] and grant you permanent {{as|'''bonus''' health}} equal to{{ft|8% of that amount|{{as|{{ap|70*0.08}} (+ {{ap|6*0.08}}% '''maximum''' health)}}}} (30 second cooldown per target).\nGoliath: Gain {{as|{{pp|key=%|0 to 30 for 11|0 to 10000|type='''maximum''' health}}|hp}} increased size.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 900,
+      "Health Regen": 100
+    }
+  },
+  "3085": {
+    "name": "Runaan's Hurricane",
+    "description": "Wind's Fury: Basic attacks [[on-attack]] fire additional bolts at up to 2 enemies {{tt|in front of you|180{{degree}}}}, each dealing {{as|55% AD}} {{as|physical damage}}. Bolts apply {{tip|on-hit}} effects and are affected by {{tip|critical strike}} modifiers.",
+    "totalCost": 2650,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Speed": 40,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4
+    }
+  },
+  "3086": {
+    "name": "Zeal",
+    "description": "",
+    "totalCost": 1200,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 15,
+      "Critical Strike Chance": 15,
+      "Move Speed": 4
+    }
+  },
+  "3087": {
+    "name": "Statikk Shiv",
+    "description": "Electrospark: Your next 3 basic attacks {{tip|on-hit}} within 8 seconds are empowered to deal {{as|60 '''bonus''' magic damage}}, increased to {{as|85|magic damage}} against non-champions. This bounces to the closest target within 500 units, repeating from the new target to strike up to 5 targets ({{pp|25 to 10 for 6|1;8 to 12}} second cooldown, starts after using the first empowered attack).\nElectroshock: Scoring a {{tip|takedown}} against an enemy champion within 3 seconds of damaging them resets ''Electrospark's'' cooldown.",
+    "totalCost": 2700,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 45,
+      "Attack Speed": 30,
+      "Move Speed": 4
+    }
+  },
+  "3089": {
+    "name": "Rabadon's Deathcap",
+    "description": "Magical Opus: Increase your {{as|ability power}} by 30%.",
+    "totalCost": 3500,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 130
+    }
+  },
+  "3091": {
+    "name": "Wit's End",
+    "description": "Fray: Basic attacks deal {{as|45 '''bonus''' magic damage}} [[on-hit]].",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Speed": 50,
+      "Magic Resistance": 45,
+      "Tenacity": 20
+    }
+  },
+  "3094": {
+    "name": "Rapid Firecannon",
+    "description": "Energized: Moving and basic attacking generates ''Energize'' stacks, up to 100.\nSharpshooter: When fully {{tip|Energized}}, your next basic attack deals {{as|40 '''bonus''' magic damage}} [[on-hit]]. ''Energized'' attacks gain 35% '''bonus''' range, capped at 150.",
+    "totalCost": 2650,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Speed": 35,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4
+    }
+  },
+  "3100": {
+    "name": "Lich Bane",
+    "description": "Spellblade: After using an [[Champion ability|ability]], your next basic attack within 10 seconds gains {{as|50% '''bonus''' attack speed}} and deals {{as|75% '''base''' AD}} {{as|(+ 40% AP)}} {{as|'''bonus''' magic damage}} [[on-hit]] ({{fd|1.5}} second cooldown, starts after using the empowered attack).",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 100,
+      "Move Speed": 4,
+      "Ability Haste": 10
+    }
+  },
+  "3102": {
+    "name": "Banshee's Veil",
+    "description": "Annul: Grants a {{tip|spell shield}} that blocks the next hostile ability (40 second cooldown, timer restarts upon taking damage from champions).",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 105,
+      "Magic Resistance": 40
+    }
+  },
+  "3105": {
+    "name": "Aegis of the Legion",
+    "description": "",
+    "totalCost": 1100,
+    "itemType": "component",
+    "stats": {
+      "Armor": 25,
+      "Magic Resistance": 25,
+      "Ability Haste": 10
+    }
+  },
+  "3107": {
+    "name": "Redemption",
+    "description": "Intervention: Call upon a 550-radius beam of light to strike upon the target location after {{fd|2.5}} seconds, granting {{tip|sight}} of the area for the duration. Allies within the area are {{tip|heal|healed}} for {{pp|200 to 400|type=target's level}}, while enemy champions within take {{as|10% of target's '''maximum''' health}} as {{as|true damage}}. '''Can be used while [[death|dead]].'''",
+    "totalCost": 2300,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Mana Regen": 100,
+      "Ability Haste": 15
+    }
+  },
+  "3108": {
+    "name": "Fiendish Codex",
+    "description": "",
+    "totalCost": 850,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 25,
+      "Ability Haste": 10
+    }
+  },
+  "3109": {
+    "name": "Knight's Vow",
+    "description": "Sacrifice: While your ''Worthy'' ally is {{tt|tethered to you|1250 units, center to edge}} and you are above {{as|30% of your '''maximum''' health}}, redirect 12% of the {{tt|pre-mitigation|Damage calculated before the Worthy ally's modifiers}} {{as|physical|physical damage}} and {{as|magic|magic damage}} damage they take to you as the respective damage type. Additionally, you {{tip|heal}} for 10% of the {{tt|post-mitigation damage|Damage calculated after modifiers}} dealt by your ''Worthy'' ally to champions.\nPledge: Designate the target allied champion as being ''Worthy'', forming a {{tip|tether}} between you and them. Champions can only be designated as ''Worthy'' by one '''Knight's Vow''' at a time. You cannot be designated as ''Worthy'' by an ally's '''Knight's Vow'''.",
+    "totalCost": 2300,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 40,
+      "Health": 200,
+      "Health Regen": 100,
+      "Ability Haste": 10
+    }
+  },
+  "3110": {
+    "name": "Frozen Heart",
+    "description": "Winter's Caress: {{tip|Cripple|Cripples}} the [[attack speed]] of enemy champions within {{tt|700 units|center to edge}} by 20%.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 75,
+      "Mana": 400,
+      "Ability Haste": 20
+    }
+  },
+  "3111": {
+    "name": "Mercury's Treads",
+    "description": "",
+    "totalCost": 1250,
+    "itemType": "boots",
+    "stats": {
+      "Magic Resistance": 20,
+      "Move Speed": 45,
+      "Tenacity": 30
+    }
+  },
+  "3112": {
+    "name": "Guardian's Orb",
+    "description": "Recovery: Gain {{as|10 '''bonus''' mana regeneration}}. Manaless champions gain {{as|15 '''bonus''' health regeneration}} instead.",
+    "totalCost": 950,
+    "itemType": "starter",
+    "stats": {
+      "Ability Power": 50,
+      "Health": 150
+    }
+  },
+  "3113": {
+    "name": "Aether Wisp",
+    "description": "",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 30,
+      "Move Speed": 4
+    }
+  },
+  "3114": {
+    "name": "Forbidden Idol",
+    "description": "",
+    "totalCost": 600,
+    "itemType": "component",
+    "stats": {
+      "Mana Regen": 50
+    }
+  },
+  "3115": {
+    "name": "Nashor's Tooth",
+    "description": "Icathian Bite: Basic attacks deal {{as|15 {{as|(+ 15% AP)}} '''bonus''' magic damage|magic damage}} [[on-hit]].",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 80,
+      "Attack Speed": 50,
+      "Ability Haste": 15
+    }
+  },
+  "3116": {
+    "name": "Rylai's Crystal Scepter",
+    "description": "Rimefrost: Dealing {{tip|ability damage}} {{tip|slow|slows}} affected [[unit]]s by 30% for 1 second.",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 65,
+      "Health": 400
+    }
+  },
+  "3118": {
+    "name": "Malignance",
+    "description": "Scorn: Gain 20 [[Haste#Ultimate haste|ultimate haste]].\nHatefog: Dealing [[ability damage]] to enemy champions with your [[champion ability|ultimate ability]] creates a {{pp|type=ultimate's damage instance|251;251.8;253.1;255.5;259.8;267.3;280.7;304.2;345.9;419.7;550|0 to 823|formula=250 + 2^(damage dealt/100)}} radius scorched zone beneath them for 3 seconds, applying a ''Curse'' to enemies within that deals {{ft|{{as|{{ap|60/4}}|magic damage}} {{as|(+ {{ap|5/4}}% AP)}} {{as|magic damage}} every {{fd|0.25}} seconds|{{as|{{ap|60*3}}|magic damage}} {{as|(+ {{ap|5*3}}% AP)}} {{as|'''total''' magic damage}} over the duration}} and reduces their {{as|magic resistance by 10}} (3 second cooldown per target, starts on zone creation).",
+    "totalCost": 2700,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 90,
+      "Mana": 600,
+      "Ability Haste": 15
+    }
+  },
+  "3119": {
+    "name": "Winter's Approach",
+    "description": "Awe: Grants {{as|'''bonus''' health}} equal to {{as|15% '''bonus''' mana}}.\nManaflow: Grants a charge every 8 seconds, up to 4 charges. Consumes a charge [[on-hit]] and whenever affecting an enemy or ally with an [[champion ability|ability]] to grant {{as|3 '''bonus''' mana}}, increased to {{as|6|mana}} for champion targets, up to a '''maximum''' of {{as|360 '''bonus''' mana}}.\n: Transforms into {{ii|Fimbulwinter}} at {{as|360 '''bonus''' mana}}.",
+    "totalCost": 2400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 550,
+      "Mana": 500,
+      "Ability Haste": 15
+    }
+  },
+  "3121": {
+    "name": "Fimbulwinter",
+    "description": "Awe: Grants {{as|'''bonus''' health}} equal to {{as|15% '''bonus''' mana}}.\nEverlasting: {{tip|immobilize|Immobilizing}}, or {{tip|slow|slowing}} if you are {{tip|melee}}, an enemy champion grants a 100 {{as|(+ {{fd|4.5}}% '''current''' mana)}} {{tip|shield}} for 3 seconds (8 second cooldown). The shield's strength is increased{{ft|by 80%|to 100 {{as|(+ {{ap|4.5*1.8}}% '''current''' mana)}}}}if there is more than one enemy champion within {{tip|cr|icononly=true}} 1200 units.",
+    "totalCost": 2400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 550,
+      "Mana": 860,
+      "Ability Haste": 15
+    }
+  },
+  "3123": {
+    "name": "Executioner's Calling",
+    "description": "Grievous Wounds: Dealing {{as|physical damage}} to enemy champions inflicts them with {{tip|Grievous Wounds}} for 3 seconds.",
+    "totalCost": 800,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 15
+    }
+  },
+  "3124": {
+    "name": "Guinsoo's Rageblade",
+    "description": "Wrath: Basic attacks deal {{as|30 '''bonus''' magic damage}} on-hit.\nSeething Strike: Basic attacks grant {{as|8% '''bonus''' attack speed}} for 3 seconds, stacking up to 4 times for a total of {{as|32% '''bonus''' attack speed}}. At maximum stacks, basic attacks {{tip|on-attack}} also grant a ''Phantom'' stack for 6 seconds, up to 2 stacks. At 2 ''Phantom'' stacks, the next basic attack consumes all of those stacks {{tip|on-attack}} to trigger a ''Phantom Hit'' that applies {{tip|on-hit}} effects to the target after a {{fd|0.15}} second delay.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 30,
+      "Attack Damage": 30,
+      "Attack Speed": 25
+    }
+  },
+  "3133": {
+    "name": "Caulfield's Warhammer",
+    "description": "",
+    "totalCost": 1050,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 20,
+      "Ability Haste": 10
+    }
+  },
+  "3134": {
+    "name": "Serrated Dirk",
+    "description": "",
+    "totalCost": 1000,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 20,
+      "Lethality": 10
+    }
+  },
+  "3135": {
+    "name": "Void Staff",
+    "description": "",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 95,
+      "Magic Penetration": 40
+    }
+  },
+  "3137": {
+    "name": "Cryptbloom",
+    "description": "Life From Death: Scoring a {{tip|takedown}} against an enemy champion while alive and within 3 seconds of damaging them summons a nova that radiates from the location of their death over {{fd|1.75}} seconds, {{tip|heal|healing}} you and allied champions hit for 100 {{as|(+ 20% AP)}}.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 75,
+      "Magic Penetration": 30,
+      "Ability Haste": 20
+    }
+  },
+  "3139": {
+    "name": "Mercurial Scimitar",
+    "description": "Quicksilver: Removes all {{tip|crowd control}} debuffs (except {{tip|Airborne}}) from your champion and grants {{as|50% '''bonus total''' movement speed}} and {{tip|ghosted|ghosting}} for {{fd|1.5}} seconds.",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Life Steal": 10,
+      "Magic Resistance": 40
+    }
+  },
+  "3140": {
+    "name": "Quicksilver Sash",
+    "description": "Quicksilver: Removes all {{tip|crowd control}} debuffs (except {{tip|Airborne}}) from your champion.",
+    "totalCost": 1300,
+    "itemType": "component",
+    "stats": {
+      "Magic Resistance": 30
+    }
+  },
+  "3142": {
+    "name": "Youmuu's Ghostblade",
+    "description": "Haunt: Gain {{as|{{rd|20|10}} '''bonus''' movement speed}} while out-of-combat with enemy champions for 3 seconds.\nWraith Step: Gain {{as|{{rd|20%|15%}} '''bonus''' movement speed}} and {{tip|ghosted|ghosting}} for {{rd|6|4}} seconds.",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 18,
+      "Move Speed": 4
+    }
+  },
+  "3143": {
+    "name": "Randuin's Omen",
+    "description": "Resilience: Reduces incoming damage from {{tip|critical strike|critical strikes}} by 30%.\nHumility: Unleash a shockwave around you that {{tip|slow|slows}} nearby enemies by 70% for 2 seconds.",
+    "totalCost": 2700,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 75,
+      "Health": 350
+    }
+  },
+  "3144": {
+    "name": "Scout's Slingshot",
+    "description": "Bullseye: Damaging an enemy champion deals {{as|40 '''bonus''' magic damage}} (40 second cooldown, reduced by 1 second {{tip|on-attack}}).",
+    "totalCost": 600,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 20
+    }
+  },
+  "3145": {
+    "name": "Hextech Alternator",
+    "description": "Revved: Damaging an enemy champion deals {{as|65 '''bonus''' magic damage}}.",
+    "totalCost": 1100,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 45
+    }
+  },
+  "3147": {
+    "name": "Haunting Guise",
+    "description": "Madness: For each second in combat with enemy champions, deal 2% increased damage, stacking up to 3 times for a total of 6%.",
+    "totalCost": 1300,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 30,
+      "Health": 200
+    }
+  },
+  "3152": {
+    "name": "Hextech Rocketbelt",
+    "description": "Supersonic: {{tip|Dash}} 275 units in the target direction, though not through terrain, then unleash an arc of 7 rockets forward which upon collision explode in a {{tip|cr|icononly = true}} {{tt|185-radius|estimated}} area. Enemies within {{tt|85 units|center-to-edge, estimated}} of your dash, a {{tt|400 unit|center-to-edge, estimated}} distance behind you{{bug|2}}, and ones hit by any rocket's explosion are dealt {{as|100 {{as|(+ 10% AP)}} magic damage|magic damage}}, once per cast.",
+    "totalCost": 2650,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 70,
+      "Health": 300,
+      "Ability Haste": 20
+    }
+  },
+  "3153": {
+    "name": "Blade of the Ruined King",
+    "description": "Mist's Edge: Basic attacks deal {{as|'''bonus''' physical damage}} [[on-hit]] equal to {{as|{{rd|9%|6%}} of the target's '''current''' health}}, with a '''maximum''' of 100 against {{tip|minions}} and {{tip|monsters}}.\nClawing Shadows: Basic attacks on-hit against enemy champions apply a stack for 6 seconds, stacking up to 3 times. The third stack consumes them all to {{tip|slow}} the target by 30% for 1 second.",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Attack Speed": 25,
+      "Life Steal": 10
+    }
+  },
+  "3155": {
+    "name": "Hexdrinker",
+    "description": "Lifeline: If you would take {{as|magic damage}} that would reduce you below {{as|30% of your '''maximum''' health}}, you first gain a {{tip|shield}} that absorbs {{as|{{rd|110 to 280|82.5 to 210|pp=true}} magic damage}} for {{fd|2.5}} seconds.",
+    "totalCost": 1300,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 25,
+      "Magic Resistance": 25
+    }
+  },
+  "3156": {
+    "name": "Maw of Malmortius",
+    "description": "Lifeline: If you would take {{as|magic damage}} that would reduce you below {{as|30% of your '''maximum''' health}}, you first gain a {{tip|shield}} that absorbs {{as|{{rd|200|150}}|magic damage}} {{as|(+ {{rd|150%|{{fd|112.5}}%}} '''bonus''' AD)}} {{as|magic damage}} for 3 seconds. Additionally, triggering this effect grants you {{as|10% omnivamp}} until the end of [[combat status|combat]].",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 60,
+      "Magic Resistance": 40,
+      "Ability Haste": 15
+    }
+  },
+  "3157": {
+    "name": "Zhonya's Hourglass",
+    "description": "Time Stop: Put yourself in {{tip|stasis (buff)|stasis}} for {{fd|2.5}} seconds, rendering you {{tip|untargetable}} and {{tip|invulnerable}} for the duration but also unable to move, declare [[basic attack]]s, cast [[champion ability|abilities]], use [[summoner spell]]s, or [[active ability items|activate items]].",
+    "totalCost": 3250,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 105,
+      "Armor": 50
+    }
+  },
+  "3158": {
+    "name": "Ionian Boots of Lucidity",
+    "description": "Ionian Insight: Gain 10 [[Haste#Summoner spell haste|summoner spell haste]].",
+    "totalCost": 900,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 45,
+      "Ability Haste": 10
+    }
+  },
+  "3161": {
+    "name": "Spear of Shojin",
+    "description": "Dragonforce: Gain 25 [[Haste#Basic ability haste|basic ability haste]].\nFocused Will: Dealing [[ability damage]] with a non-innate [[champion ability|ability]] grants a stack for 6 seconds, stacking up to 4 times and up to once per {{tip|cast instance}} per second and every second for [[damage over time]] abilities. For each stack, your non-{{tip|basic damage}} dealt by non-[[item|items]] gain 3% increased damage, for a total increase of 12% at '''maximum''' stacks.",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 45,
+      "Health": 450
+    }
+  },
+  "3165": {
+    "name": "Morellonomicon",
+    "description": "Grievous Wounds: Dealing {{as|magic damage}} to enemy champions inflicts them with {{tip|Grievous Wounds}} for 3 seconds.",
+    "totalCost": 2850,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 75,
+      "Health": 350,
+      "Ability Haste": 15
+    }
+  },
+  "3170": {
+    "name": "Swiftmarch",
+    "description": "Fleetfooted: Gain 25% [[slow resist]].\nNoxian Fervor: Gain {{tip|adaptive force}} equal to {{as|5% of your '''total''' movement speed}}.",
+    "totalCost": 1500,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 65
+    }
+  },
+  "3171": {
+    "name": "Crimson Lucidity",
+    "description": "Ionian Insight: Gain 10 [[Haste#Summoner spell haste|summoner spell haste]].\nNoxian Haste: {{tip|heal|Healing}}, {{tip|shield|shielding}} or buffing an ally, damaging abilities against champions, and using [[summoner spell]]s grants you {{as|{{rd|10%|8%}} '''bonus''' movement speed}} for 4 seconds. This can be triggered from the same {{tip|cast instance}} only once every 4 seconds.",
+    "totalCost": 1400,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 50,
+      "Ability Haste": 25
+    }
+  },
+  "3172": {
+    "name": "Zephyr",
+    "description": "Like the Wind: Basic attacks [[on-hit]] grant a stack of ''Like The Wind'' for 6 seconds, refreshing on subsequent attacks. For each stack, gain {{as|5% '''bonus''' movement speed|ms}}, stacking up to 5 times for a total of {{as|25%|ms}}.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Speed": 50,
+      "Move Speed": 10,
+      "Ability Haste": 30,
+      "Tenacity": 20
+    }
+  },
+  "3173": {
+    "name": "Chainlaced Crushers",
+    "description": "Noxian Persistence: Taking {{as|magic damage}} from champions grants you a {{tip|shield}} that absorbs {{pp|10 to 120|color=md}} {{as|(+ 4% '''maximum''' health)}} {{as|magic damage}} for 4 seconds.",
+    "totalCost": 1750,
+    "itemType": "boots",
+    "stats": {
+      "Magic Resistance": 35,
+      "Move Speed": 50,
+      "Tenacity": 30
+    }
+  },
+  "3174": {
+    "name": "Armored Advance",
+    "description": "Plating: Reduces incoming [[damage]] from all [[basic attack]]s by 10% (''excluding [[turret]] attacks'').\nNoxian Endurance: Taking {{as|physical damage}} from champions grants you a {{tip|shield}} that absorbs {{pp|10 to 120|color=pd}} {{as|(+ 4% '''maximum''' health)}} {{as|physical damage}} for 4 seconds.",
+    "totalCost": 1700,
+    "itemType": "boots",
+    "stats": {
+      "Armor": 40,
+      "Move Speed": 50
+    }
+  },
+  "3175": {
+    "name": "Spellslinger's Shoes",
+    "description": "",
+    "totalCost": 1600,
+    "itemType": "boots",
+    "stats": {
+      "Magic Penetration": 18,
+      "Move Speed": 50
+    }
+  },
+  "3176": {
+    "name": "Forever Forward",
+    "description": "Voidborn: Gain {{si|Empowered Recall}}.\nNoxian Synchrony: Gain {{as|45 (+ 8% '''total''' movement speed) '''bonus''' movement speed}} while out-of-combat.",
+    "totalCost": 1400,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 55
+    }
+  },
+  "3177": {
+    "name": "Guardian's Blade",
+    "description": "",
+    "totalCost": 950,
+    "itemType": "starter",
+    "stats": {
+      "Attack Damage": 30,
+      "Health": 150,
+      "Ability Haste": 15
+    }
+  },
+  "3179": {
+    "name": "Umbral Glaive",
+    "description": "Blackout: When near an enemy [[Stealth#Stealthed_traps_and_wards|stealthed]] {{tip|ward}} or {{tip|stealthed trap|trap}}, gain ''Blackout'' for 8 seconds.\nBlackout: You {{tip|disabled ward|disable}} surrounding stealthed wards, as well as {{tip|expose}} and {{tip|true sight|reveal}} nearby stealthed wards and traps while ''Blackout'' is active.\nExtinguish: Your [[basic attack]]s deal {{as|{{rd|2|1}} '''bonus''' true damage}} to wards.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 15,
+      "Ability Haste": 10
+    }
+  },
+  "3181": {
+    "name": "Hullbreaker",
+    "description": "Skipper: Basic attacks [[on-hit]] against any enemy grant a stack for 10 seconds, stacking up to 5 times. At '''maximum''' stacks, or 4 stacks, your next basic attack against a champion, epic monster, or structure consumes all stacks to deal {{as|{{rd|120%|{{ap|120*0.7}}%}} '''base''' AD|ad}} {{as|(+ {{rd|5%|{{ap|5*0.7}}%}} '''maximum''' health)}} {{as|'''bonus''' physical damage}}, increased to {{as|{{rd|300%|{{ap|300*0.7}}%}} '''base''' AD|ad}} {{as|(+ {{rd|10%|{{ap|10*0.7}}%}} '''maximum''' health)}} against structures.\nBoarding Party: Allied {{ui|Blue Siege Minion|link=Siege minion|siege minions}} and {{ui|Blue Super Minion|link=Super minion|super minions}} within {{tip|er|icononly=true}} {{tt|1050|Estimated}} units gain {{rd|70 to 130 for 11|70*0.5 to 130*0.5 for 11|levels=1;9 to 18|pp=true}} {{as|'''bonus''' armor}} and {{as|'''bonus''' magic resistance}}, as well as 10% increased size.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 500,
+      "Move Speed": 4
+    }
+  },
+  "3184": {
+    "name": "Guardian's Hammer",
+    "description": "",
+    "totalCost": 950,
+    "itemType": "starter",
+    "stats": {
+      "Attack Damage": 25,
+      "Health": 150,
+      "Life Steal": 5
+    }
+  },
+  "3190": {
+    "name": "Locket of the Iron Solari",
+    "description": "Devotion: Grants you and allied champions within {{tip|cr|icononly=true}} 850 units a {{tip|shield}} for {{pp|200 to 360|type=target's level}} that decays over {{fd|2.5}} seconds.",
+    "totalCost": 2200,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 25,
+      "Health": 200,
+      "Magic Resistance": 25,
+      "Ability Haste": 10
+    }
+  },
+  "3211": {
+    "name": "Spectre's Cowl",
+    "description": "",
+    "totalCost": 1250,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Health Regen": 100,
+      "Magic Resistance": 35
+    }
+  },
+  "3222": {
+    "name": "Mikael's Blessing",
+    "description": "Purify: Remove all {{tip|crowd control}} debuffs (except {{tip|Airborne}}, {{tip|Blind}}, {{tip|Disarm}}, {{tip|Nearsight}}, and {{tip|Suppression}}) from yourself or the target allied champion and {{tip|heal}} the target for {{pp|100 to 250|type=target's level}}.",
+    "totalCost": 2300,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 250,
+      "Mana Regen": 100,
+      "Ability Haste": 15
+    }
+  },
+  "3302": {
+    "name": "Terminus",
+    "description": "Shadow: Basic attacks deal {{as|30 '''bonus''' magic damage}} [[on-hit]].\nJuxtaposition: Basic attacks {{tip|on-hit}} against champions alternate between ''Light'' and ''Dark'' hits, each one granting a bonus for 5 seconds that stacks up to 3 times. ''Light'' hits grant {{pp|6 to 8 for 3|1;11;14|type=level}} {{as|'''bonus''' armor}} and {{as|'''bonus''' magic resistance}} while ''Dark'' hits grant 10% {{as|armor penetration}} and {{as|magic penetration}}, for a total of {{pp|6*3 to 8*3}} '''bonus''' resistances and 30% resistances penetration at maximum stacks of each.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 30,
+      "Attack Speed": 35
+    }
+  },
+  "3330": {
+    "name": "Scarecrow Effigy",
+    "description": "Trinket: Consume a charge to place a visible {{tip|Effigy}} at the target location, which grants {{tip|sight}} over the surrounding area for {{pp|130 to 280|type=level}} seconds. For enemies, it visually appears identical to {{ci|Fiddlesticks}} (including on the minimap) and has no visible [[health bar]] until it ''activates''. Enemy {{tip|champion|champions}} that approach it will activate it, causing it to automatically sound a Danger [[ping]] to its allies as well as fake a random action for up to 2 seconds. If not destroyed by that time, it will deal 1 damage to itself.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3340": {
+    "name": "Stealth Ward",
+    "description": "Trinket: Consume a charge to place an invisible {{tip|Totem Ward}} at the target location, which grants {{tip|sight}} of the surrounding area for {{pp|90 to 120|type=average champion level}} seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3348": {
+    "name": "Arcane Sweeper (Trinket)",
+    "description": ": Summons a mist over the target location for 5 seconds, granting {{tip|sight}} of the area in a 375 radius and {{tip|true sight|revealing}} enemy {{tip|stealthed trap|traps}} within for 3 seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3363": {
+    "name": "Farsight Alteration",
+    "description": "Trinket: Places a visible {{tip|Farsight Ward}} at the target location that grants {{tip|sight}} of the surrounding area, including over [[terrain]] and through [[brush]] and lasting indefinitely. Also grants sight of the area in a 800 radius for 2 seconds. Upon detecting an enemy champion, the ward will increase its sight radius to 800 units and destroy itself after 3 seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3364": {
+    "name": "Oracle Lens",
+    "description": ": Consume one charge to summon a {{tip|Sweeper Drone}} that escorts you for the next 6 seconds, detecting nearby enemies that are not {{tip|sight|visible}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3400": {
+    "name": "Your Cut",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3430": {
+    "name": "Rite of Ruin",
+    "description": "Wrath and Ruin: Casting an [[Champion ability|ability]] grants {{sti|{{fd|2.5}}% critical strike chance}} for 6 seconds, stacking up to 8 times for a maximum of {{sti|critical strike chance|20%}}.\nSalvage the Wreckage: Casting an ability has a {{pp|key=%|key1=%|type=critical strike chance|0 to 100 for 11|0 to 100|formula=1% per 1% critical strike chance, capped at 100% critical strike chance}} chance to grant you or your ally a {{tip|shield}} for 3 seconds that absorbs {{pp|70 to 210}} {{as|(+ 25% '''bonus''' AD)}} {{as|(+ 15% AP)}} damage.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 50,
+      "Critical Strike Chance": 25,
+      "Ability Haste": 15
+    }
+  },
+  "3504": {
+    "name": "Ardent Censer",
+    "description": "Sanctify: {{tip|Heal|Healing}} or {{tip|shield|shielding}} allied champions (''excluding yourself'') enhances you and them for 6 seconds, granting {{as|25% '''bonus''' attack speed|attack speed}} and {{as|20 '''bonus''' magic damage}} [[on-hit]] on basic attacks.",
+    "totalCost": 2200,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 45,
+      "Mana Regen": 125,
+      "Move Speed": 4
+    }
+  },
+  "3508": {
+    "name": "Essence Reaver",
+    "description": "Essence Drain: Basic attacks [[on-hit]] restore {{as|15|mana}} {{as|(+ 10% '''bonus''' AD)|ad}} {{as|mana}}.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 60,
+      "Critical Strike Chance": 25,
+      "Ability Haste": 15
+    }
+  },
+  "3513": {
+    "name": "Eye of the Herald",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3599": {
+    "name": "Black Spear",
+    "description": "Oathsworn Bond: Consumes this item to initiate a {{fd|3.5}}-second [[Channel#Casting Times|cast time]] and a 3-second {{tip|channel}} afterwards from the user and the target allied champion, both becoming bound allies. The target is unable to act for 6 seconds after the channel's duration. Afterwards, the target becomes an ''Oathsworn''.",
+    "totalCost": 0,
+    "itemType": "starter",
+    "stats": {}
+  },
+  "3742": {
+    "name": "Dead Man's Plate",
+    "description": "Shipwrecker: While moving, generates 7 stacks of ''Momentum'' every {{fd|0.25}} seconds, granting up to {{as|20 '''bonus''' movement speed}} at 100 stacks after {{fd|3.75}} seconds of moving. Basic attacks consume all stacks to deal {{as|{{pp|0 to 40 for 11|0 to 100|type=Momentum|label1=stacks of Momentum|formula=0.4 for every 1 stack of Momentum, capped at 40}}|physical damage}} {{as|(+ {{pp|0 to 100 for 11|0 to 100|key=%|type=Momentum|label1=stacks of Momentum|formula=1% for every 1 stack of Momentum, capped at 100}} '''base''' AD)}} {{as|'''bonus''' physical damage}} [[on-hit]].\nUnsinkable: Gain 15% {{tip|slow resist}}.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 55,
+      "Health": 350,
+      "Move Speed": 4
+    }
+  },
+  "3748": {
+    "name": "Titanic Hydra",
+    "description": "Cleave: Basic attacks [[on-hit]] deal {{as|{{rd|1%|{{fd|0.5}}%}} '''maximum''' health|hp}} {{as|'''bonus''' physical damage}} to the target and {{as|{{rd|3%|{{fd|1.5}}%}} '''maximum''' health|hp}} {{as|physical damage}} to other enemies in a cone in the direction of the primary target.\nTitanic Crescent: Your next basic attack within 10 seconds empowers ''Cleave'' to deal {{as|{{rd|4%|2%}} '''maximum''' health|hp}} {{as|'''bonus''' physical damage}} to the primary target and {{as|{{rd|9%|{{fd|4.5}}%}} '''maximum''' health|hp}} {{as|physical damage}} to secondary targets (10 second cooldown, starts after using the empowered attack).",
+    "totalCost": 3300,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 600
+    }
+  },
+  "3801": {
+    "name": "Crystalline Bracer",
+    "description": "",
+    "totalCost": 800,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Health Regen": 100
+    }
+  },
+  "3802": {
+    "name": "Lost Chapter",
+    "description": "Enlighten: Upon leveling up, restores {{as|20% of '''maximum''' mana}} over 3 seconds.",
+    "totalCost": 1200,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 40,
+      "Mana": 300,
+      "Ability Haste": 10
+    }
+  },
+  "3803": {
+    "name": "Catalyst of Aeons",
+    "description": "Eternity: Restore {{as|mana}} equal to 10% of {{tt|pre-mitigation damage|Damage calculated before modifiers}} taken from champions, and {{tip|heal}} for an amount equal to {{as|25% of mana spent}}, up to 20 per cast. Toggled abilities can only heal for up to 20 per second.",
+    "totalCost": 1300,
+    "itemType": "component",
+    "stats": {
+      "Health": 350,
+      "Mana": 375
+    }
+  },
+  "3814": {
+    "name": "Edge of Night",
+    "description": "Annul: Grants a {{tip|spell shield}} that blocks the next hostile ability (40 second cooldown, timer restarts upon taking damage from champions).",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Health": 250,
+      "Lethality": 15
+    }
+  },
+  "3865": {
+    "name": "World Atlas",
+    "description": "Support Quest: Earn {{g|400}} through ''Shared Riches'' to automatically upgrade to {{ii|Runic Compass}}, gaining the ''Ward'' active with 3 wards in stock.\nShared Riches: Grants a '''Shared Riches''' charge every 20 seconds, up to 3 charges. When an allied champion is within {{tip|er|icononly=true}} 1050 units of you, consume a charge in the following ways:<br>• Kill a minion by any means, granting you {{g|15}} and the nearest allied champion kill {{g|gold}}. Damaging a minion {{as|'''below''' {{rd|50%|30%}} of its '''maximum''' health}} {{tip|execute|executes}} it.<br>• Damage an enemy champion or structure with a basic attack or ability, granting you {{g|{{rd|22|20}}}}. A charge may be consumed this way only once per attack or ability.\n: Receives diminishing gold from excessive minion kills.\n: Receives {{ii|Lane Swap Detector}} penalties if detected within the top or middle [[lane]]s early in the game.",
+    "totalCost": 400,
+    "itemType": "starter",
+    "stats": {
+      "Health": 30,
+      "Health Regen": 25,
+      "Mana Regen": 25
+    }
+  },
+  "3866": {
+    "name": "Runic Compass",
+    "description": "Support Quest: Earn {{g|800}} through ''Shared Riches'' to automatically upgrade to {{ii|Bounty of Worlds}}, increasing the ''Ward'' active to instead have 4 wards in stock.\nShared Riches: Grants a '''Shared Riches''' charge every 20 seconds, up to 3 charges. When an allied champion is within {{tip|er|icononly=true}} 1050 units of you, consume a charge in the following ways:<br>• Kill a minion by any means, granting you {{g|20}} and the nearest allied champion kill {{g|gold}}. Damaging a minion {{as|'''below''' {{rd|50%|30%}} of its '''maximum''' health}} {{tip|execute|executes}} it.<br>• Damage an enemy champion or structure with a basic attack or ability, granting you {{g|{{rd|24|22}}}}. A charge may be consumed this way only once per attack or ability.\n: Receives diminishing gold from excessive minion kills.\nWard: Consumes a charge to place a {{tip|Stealth Ward}} at the target location, which grants {{tip|sight}} of the surrounding area. '''Warding''' charges refill upon visiting the shop.",
+    "totalCost": 400,
+    "itemType": "component",
+    "stats": {
+      "Health": 100,
+      "Health Regen": 50,
+      "Mana Regen": 50
+    }
+  },
+  "3867": {
+    "name": "Bounty of Worlds",
+    "description": "Upgrade: You have completed the support quest and can now upgrade this item, '''Bounty of Worlds''', for free into ''{{ii|Bloodsong}}'', ''{{ii|Celestial Opposition}}'', ''{{ii|Dream Maker}}'', ''{{ii|Solstice Sleigh}}'', or ''{{ii|Zaz'Zak's Realmspike}}'' by selecting one of them from a custom menu in the HUD or the shop. ''The upgrade can be done outside the shop using the menu.''\n: Receives diminishing gold from excessive minion kills.\nWard: Consumes a charge to place a {{tip|Stealth Ward}} at the target location, which grants {{tip|sight}} of the surrounding area. Charges refill upon visiting the shop.",
+    "totalCost": 400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Health Regen": 75,
+      "Mana Regen": 75
+    }
+  },
+  "3869": {
+    "name": "Celestial Opposition",
+    "description": "Blessing of the Mountain: Become ''Blessed'' to reduce incoming champion damage by {{rd|35%|25%}}, lingering for 2 seconds after taking damage from a champion. After the linger ends, you lose ''Blessed'' to unleash a shockwave around you that {{tip|slow|slows}} enemies within 500 units by 50% for {{fd|1.5}} seconds (18 second cooldown, timer restarts upon taking damage from champions).\n: Receives diminishing gold from excessive minion kills.\nWard: Consumes a charge to place a {{tip|Stealth Ward}} at the target location, which grants {{tip|sight}} of the surrounding area. Charges refill upon visiting the shop.",
+    "totalCost": 400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Health Regen": 75,
+      "Mana Regen": 75
+    }
+  },
+  "3870": {
+    "name": "Dream Maker",
+    "description": "Dream Maker: Every 8 seconds, you gain a ''Blue Dream Bubble'' and a ''Purple Dream Bubble''. Granting a {{tip|heal}} or {{tip|shield}} to an allied champion ''(excluding yourself)'' causes you to blow both of your ''Dream Bubbles'' to them, empowering them for 3 seconds. The ''Blue Bubble'' reduces the next instance of non-{{tip|minion}} damage they take by {{pp|75 to 255 for 13|1;7 to 18|type=your level}} and the ''Purple Bubble'' grants them {{as|{{pp|50 to 170 for 13|1;7 to 18|type=your level}} '''bonus''' magic damage}} [[on-hit]] on their next basic attack.\n: Receives diminishing gold from excessive minion kills.\nWard: Consumes a charge to place a {{tip|Stealth Ward}} at the target location, which grants {{tip|sight}} of the surrounding area. Charges refill upon visiting the shop.",
+    "totalCost": 400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Health Regen": 75,
+      "Mana Regen": 75
+    }
+  },
+  "3871": {
+    "name": "Zaz'Zak's Realmspike",
+    "description": "Void Explosion: Dealing [[ability damage]] to an enemy champion creates an explosion at their location after a {{fd|0.5}}-second delay, dealing {{as|10|magic damage}} {{as|(+ 15% AP)}} {{as|(+ 3% of each target's '''maximum''' health)}} {{as|magic damage}} to enemies within the area, capped at 300 against {{tip|monsters}}.\n: Receives diminishing gold from excessive minion kills.\nWard: Consumes a charge to place a {{tip|Stealth Ward}} at the target location, which grants {{tip|sight}} of the surrounding area. Charges refill upon visiting the shop.",
+    "totalCost": 400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Health Regen": 75,
+      "Mana Regen": 75
+    }
+  },
+  "3876": {
+    "name": "Solstice Sleigh",
+    "description": "Going Sledding: {{tip|Slow|Slowing}} or {{tip|immobilize|immobilizing}} an enemy champion causes you and the most wounded allied champion within 1500 units to gain {{as|20% '''bonus''' movement speed}} decaying over {{fd|2.5}} seconds and {{as|{{pp|50 to 230 for 13|1;7 to 18|type=your level}}|hp}} {{as|'''bonus''' health}} for {{fd|2.5}} seconds.\n: Receives diminishing gold from excessive minion kills.\nWard: Consumes a charge to place a {{tip|Stealth Ward}} at the target location, which grants {{tip|sight}} of the surrounding area. Charges refill upon visiting the shop.",
+    "totalCost": 400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Health Regen": 75,
+      "Mana Regen": 75
+    }
+  },
+  "3877": {
+    "name": "Bloodsong",
+    "description": "Spellblade: After using an ability, your next basic attack within 10 seconds deals {{as|100% '''base''' AD}} {{as|'''bonus''' physical damage}} [[on-hit]]. If the target is a champion, inflict them with ''Expose Weakness'' for 4 seconds, causing them to take {{rd|8%|5%}} increased damage from all sources ({{fd|1.5}} second cooldown, starts after using the empowered attack).\n: Receives diminishing gold from excessive minion kills.\nWard: Consumes a charge to place a {{tip|Stealth Ward}} at the target location, which grants {{tip|sight}} of the surrounding area. Charges refill upon visiting the shop.",
+    "totalCost": 400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Health Regen": 75,
+      "Mana Regen": 75
+    }
+  },
+  "3901": {
+    "name": "Fire at Will",
+    "description": "Fire at Will: {{ai|Cannon Barrage|Gangplank}} fires 2 additional clusters of 3 waves over the duration at an increased rate of fire (1 cluster per {{fd|1.33}} seconds), for a total of 18 waves over the 8 seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3902": {
+    "name": "Death's Daughter",
+    "description": "Death's Daughter: A massive cannonball lands after {{ais|Cannon Barrage|Gangplank}} first cluster of waves, dealing {{sti|true damage|{{as|{{ap|120 to 300 3}}|true damage}}}} {{as|(+ 30% AP)}} {{as|true damage}} to enemies struck and {{tip|slow|slowing}} them by 75% for 1 second.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3903": {
+    "name": "Raise Morale",
+    "description": "Raise Morale: {{ci|Gangplank}} and his allies within {{ai|Cannon Barrage|Gangplank}} gain {{as|40% '''bonus''' movement speed}}, which persists for 2 seconds after leaving the area.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "3916": {
+    "name": "Oblivion Orb",
+    "description": "Grievous Wounds: Dealing {{as|magic damage}} to enemy champions inflicts them with {{tip|Grievous Wounds}} for 3 seconds.",
+    "totalCost": 800,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 25
+    }
+  },
+  "4003": {
+    "name": "Lifeline",
+    "description": "Soul Anchor: Mark your current location. After 4 seconds, you automatically {{tip|blink}} to the marked location after a {{fd|0.5}}-second delay. ''Soul Anchor'' may be recast within its duration to manually blink to the marked location after the same delay (45 second cooldown, starts after the blink).",
+    "totalCost": 1600,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 25,
+      "Lethality": 5,
+      "Move Speed": 4
+    }
+  },
+  "4005": {
+    "name": "Imperial Mandate",
+    "description": "Coordinated Fire: Abilities that {{tip|slow}} or {{tip|immobilize}} enemy champions mark them for 5 seconds. Allied champions that damage marked enemies consume the mark to deal {{as|10% of the target's '''current''' health}} {{as|'''bonus''' magic damage}} (9 second cooldown per target, starts upon mark application).",
+    "totalCost": 2250,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 60,
+      "Mana Regen": 125,
+      "Ability Haste": 20
+    }
+  },
+  "4011": {
+    "name": "Sword of Blossoming Dawn",
+    "description": "Effervescence: Gain {{as|{{fd|1.2}}% '''bonus''' attack speed}} per 1% {{stil|heal and shield power}}.\nPeppermint: Basic attacks [[on-hit]] cause the most wounded and nearest allied champion to be {{tip|heal|healed}} for {{pp|15 to 45}} {{as|(+ 10% '''bonus''' AD)}} {{as|(+ 7% AP)}}.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 45,
+      "Health": 200,
+      "Ability Haste": 15
+    }
+  },
+  "4015": {
+    "name": "Perplexity",
+    "description": "Giant Slayer: Deal {{pp|type='''maximum''' health difference|color=health|key=%|0 to 15 for 11|0 to 2500|formula=0.6% per 100 greater '''maximum''' health}} increased damage against enemy champions with greater {{as|'''maximum''' health}} than you.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 60,
+      "Magic Penetration": 30,
+      "Move Speed": 5
+    }
+  },
+  "4016": {
+    "name": "Wordless Promise",
+    "description": "Promise: While your ''Promised'' ally is {{tt|tethered|1250 units, center to edge}} to you, gain {{as|ability power}} equal to {{as|20% of ''Promised'' ally's AP}}, and grant your ''Promised'' ally {{as|ability haste}} equal to {{as|20% of your ability haste}}. ''Increases and decreases to each teammate's stats recalculate this effect.''\nPromise: Make a ''Promise'' to the target allied champion, forming a {{tip|tether}} between you and them.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 50,
+      "Ability Haste": 25
+    }
+  },
+  "4017": {
+    "name": "Hellfire Hatchet",
+    "description": "Char: Your next ability hit applies a {{as|Burn}} that deals {{ft|{{pp|5 to (2*5) for 11|0 to 2000|key=%|type='''maximum''' health difference|showtype=false|round=3|color=health}} {{as|(+ {{pp|2/10 to (2*2)/10 for 11|0 to 2000|key=%|type='''maximum''' health difference|showtype=false|round=3}} per 1 Lethality)|lethality}} {{as|(based on '''maximum''' health difference)|hp}} {{as|of the target's '''current''' health}} {{as|physical damage}} seconds over 4 seconds.|{{pp|5/8 to (2*5/8) for 11|0 to 2000|key=%|type='''maximum''' health difference|showtype=false|round=3|color=health}} {{as|(+ {{pp|0.2/8 to (2*0.2)/8 for 11|0 to 2000|key=%|type='''maximum''' health difference|showtype=false|round=3}} per 1 Lethality)|lethality}} {{as|(based on '''maximum''' health difference)|hp}} {{as|of the target's '''current''' health}} {{as|physical damage}} every {{fd|0.5}} over 4 seconds.}}",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 35,
+      "Lethality": 12
+    }
+  },
+  "4401": {
+    "name": "Force of Nature",
+    "description": "Steadfast: Taking {{as|magic damage}} from champions grants a stack of ''Steadfast'' for 7 seconds, stacking up to 8 times with the duration refreshing on subsequent {{as|magic damage}} from them and whenever dealing damage to them. Becoming {{tip|immobilize|immobilized}} by an enemy champion grants 2 stacks and also refreshes the duration. Each incoming basic attack, ability per {{tip|cast instance}}, or item effect can only grant 1 stack of ''Steadfast'' from their damage every 1 second. At '''maximum''' stacks, gain {{as|70 '''bonus''' magic resistance}} and {{as|6% '''bonus''' movement speed}}.",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 400,
+      "Magic Resistance": 55,
+      "Move Speed": 4
+    }
+  },
+  "4628": {
+    "name": "Horizon Focus",
+    "description": "Hypershot: Dealing [[Ability_effects#Triggering_from_champion_ability_damage|ability damage]] to a champion at {{tip|cr|icononly = true}} 600 or more units away from the cast position {{tip|standard sight|reveals}} them for 6 seconds.\nFocus: Upon triggering ''Hypershot'', grant {{tip|sight}} of the {{tt|area|Grants sight through terrain and brush}} {{tip|cr|icononly=true}} 1400 units around the target for 2 seconds and apply ''Hypershot's'' effects to enemy champions within the area for 3 seconds.",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 115,
+      "Ability Haste": 25
+    }
+  },
+  "4629": {
+    "name": "Cosmic Drive",
+    "description": "Spelldance: Dealing {{as|magic|magic damage}} or {{as|true|true damage}} damage to an enemy champion grants you {{as|20 '''bonus''' movement speed|ms}} for 4 seconds.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 70,
+      "Health": 350,
+      "Move Speed": 4,
+      "Ability Haste": 25
+    }
+  },
+  "4630": {
+    "name": "Blighting Jewel",
+    "description": "",
+    "totalCost": 1100,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 25,
+      "Magic Penetration": 13
+    }
+  },
+  "4632": {
+    "name": "Verdant Barrier",
+    "description": "Annul: Grants a {{tip|spell shield}} that blocks the next hostile ability (60 second cooldown, timer restarts upon taking damage from champions).",
+    "totalCost": 1600,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 40,
+      "Magic Resistance": 25
+    }
+  },
+  "4633": {
+    "name": "Riftmaker",
+    "description": "Void Corruption: For each second [[combat status|in combat]] with champions, deal 2% increased damage, stacking up to 4 times for a total of 8% increased damage. At maximum stacks, gain {{as|{{rd|10%|6%}} omnivamp}}.\nVoid Infusion: Gain {{as|ability power}} equal to {{as|2% '''bonus''' health}}.",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 70,
+      "Health": 350,
+      "Ability Haste": 15
+    }
+  },
+  "4638": {
+    "name": "Watchful Wardstone",
+    "description": "Arcane Cache: Purchasing a {{ii|Control Ward}} [[ammunition|stocks]] it as a charge, up to maximum of 3.\n: Consumes a charge of ''Arcane Cache'' to place a visible {{tip|Control Ward}} at the target location (600 range).",
+    "totalCost": 1100,
+    "itemType": "component",
+    "stats": {
+      "Armor": 10,
+      "Health": 150,
+      "Magic Resistance": 15,
+      "Ability Haste": 10
+    }
+  },
+  "4642": {
+    "name": "Bandleglass Mirror",
+    "description": "",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 20,
+      "Mana Regen": 100,
+      "Ability Haste": 10
+    }
+  },
+  "4643": {
+    "name": "Vigilant Wardstone",
+    "description": "Arcane Cache: Purchasing a {{ii|Control Ward}} [[ammunition|stocks]] it as a charge, up to maximum of 3.\nBehold: Increase your {{tip|Stealth Ward}}, {{tip|Totem Ward}}, and {{tip|Control Ward}} caps by 1.\n: Consumes a charge of ''Arcane Cache'' to place a visible {{tip|Control Ward}} at the target location (600 range).",
+    "totalCost": 2300,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 25,
+      "Health": 250,
+      "Magic Resistance": 30,
+      "Ability Haste": 20
+    }
+  },
+  "4645": {
+    "name": "Shadowflame",
+    "description": "Cinderbloom: Your {{as|magic|magic damage}} and {{as|true|true damage}} damage will {{tip|critical strike|critically strike}} for 120% damage against enemies {{as|below 40% '''maximum''' health}}.",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 110,
+      "Magic Penetration": 15
+    }
+  },
+  "4646": {
+    "name": "Stormsurge",
+    "description": "Stormraider: Dealing damage to an enemy champion equal to {{as|25% of their '''maximum''' health}} within {{fd|2.5}} seconds inflicts them with ''Squall'' (30 second cooldown, starts on ''Squall's'' application).\nSquall: After 2 seconds of having applied ''Squall'', strike the target with lightning, dealing {{as|125|magic damage}} {{as|(+ 10% AP)}} {{as|magic damage}} to them. If the target dies before being struck, they emit an electric field instantly that shocks all enemy champions near them, dealing them the same damage.",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 90,
+      "Magic Penetration": 15,
+      "Move Speed": 6
+    }
+  },
+  "6333": {
+    "name": "Death's Dance",
+    "description": "Ignore Pain: Reduces {{rd|30%|10%}} of all {{tt|post-mitigation|Damage calculated after modifiers}} {{as|physical|physical damage}} and {{as|magic|magic damage}} damage received and instead stores the damage to successively take it as {{as|true damage}} over 3 seconds, dealing a third of the stored damage each second.\nDefy: If an enemy champion dies within 3 seconds of you damaging them, removes ''Ignore Pain's'' remaining stored damage and {{tip|heals}} you for {{as|75% '''bonus''' AD}} over 2 seconds.",
+    "totalCost": 3300,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 50,
+      "Attack Damage": 60,
+      "Ability Haste": 15
+    }
+  },
+  "6609": {
+    "name": "Chempunk Chainsword",
+    "description": "Hackshorn: Dealing {{as|physical damage}} to enemy champions inflicts them with {{tip|Grievous Wounds}} for 3 seconds.",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 45,
+      "Health": 450,
+      "Ability Haste": 15
+    }
+  },
+  "6610": {
+    "name": "Sundered Sky",
+    "description": "Lightshield Strike: Your next basic attack against a champion is empowered to {{tip|critical strike|critically strike}} for {{tt|175% damage|Affected by critical damage modifiers}} and {{tip|heal}} you for {{as|{{rd|100%|50%}} '''base''' AD}} {{as|(+ 6% of your '''missing''' health)}} (8 second cooldown per target). Excess healing beyond {{as|'''maximum''' health}} is converted to {{as|'''bonus''' health}} for 8 seconds.",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 400,
+      "Ability Haste": 10
+    }
+  },
+  "6616": {
+    "name": "Staff of Flowing Water",
+    "description": "Rapids: {{tip|Heal|Healing}} or {{tip|shield|shielding}} allied champions (''excluding yourself'') grants you and them {{as|45 ability power}} for 6 seconds.",
+    "totalCost": 2250,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 35,
+      "Mana Regen": 125,
+      "Ability Haste": 15
+    }
+  },
+  "6617": {
+    "name": "Moonstone Renewer",
+    "description": "Starlit Grace: {{tip|Heal|Healing}} or {{tip|shield|shielding}} an allied champion chains the effect to the other nearest allied champion within {{tip|cr|icononly = true}} 800 units of them (''excluding yourself''), granting them 30% of the heal or 35% of the shield's initial strength. If no other allied champions are in the radius, grant the same target an additional 30% of the heal or 35% of the shield.",
+    "totalCost": 2200,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 25,
+      "Health": 200,
+      "Mana Regen": 125,
+      "Ability Haste": 20
+    }
+  },
+  "6620": {
+    "name": "Echoes of Helia",
+    "description": "Soul Siphon: Damaging an enemy champion with a basic attack or [[ability damage]] grants a ''Soul Shard'', up to 2. {{tip|Heal|Healing}} or {{tip|shield|shielding}} an allied champion (''excluding yourself'') consumes all ''Soul Shards'' to heal them for 65 per shard and deal {{as|50 magic damage}} per shard to the nearest enemy champion within 1100 units of the ally.",
+    "totalCost": 2200,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 35,
+      "Health": 200,
+      "Mana Regen": 125,
+      "Ability Haste": 20
+    }
+  },
+  "6621": {
+    "name": "Dawncore",
+    "description": "First Light: Gain {{as|2% heal and shield power|hsp}} and {{as|10 ability power}} for every additional {{as|100% '''base''' mana regeneration}}.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 45,
+      "Mana Regen": 100
+    }
+  },
+  "6631": {
+    "name": "Stridebreaker",
+    "description": "Cleave: Basic attacks [[on-hit]] deal {{as|{{rd|40% AD|20% AD}}|ad}} {{as|physical damage}} to other enemies in a {{tip|cr|icononly = true}} 350 radius centered around the target.\nBreaking Shockwave: Deal {{as|80% AD}} {{as|physical damage}} to enemies in a {{tip|cr|icononly = true}} 450 radius centered around you and {{tip|slow}} them by 35% for 3 seconds. For each champion hit, gain {{as|35% '''bonus''' movement speed}} decaying over 3 seconds. Can move while casting.",
+    "totalCost": 3300,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Attack Speed": 25,
+      "Health": 450
+    }
+  },
+  "6653": {
+    "name": "Liandry's Torment",
+    "description": "Torment: Dealing [[ability damage]] burns enemies, causing them to take{{ft|{{as|1% of the target's '''maximum''' health}} {{as|magic damage}} every {{fd|0.5}} seconds over 3 seconds, capped at 20 per tick against monsters.|{{as|6% of the target's '''maximum''' health}} {{as|'''total''' magic damage}} over 3 seconds, capped at 120 against monsters.}}\nSuffering: For each second in combat with enemy champions, deal 2% increased damage, stacking up to 3 times for a total of 6%.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 60,
+      "Health": 300
+    }
+  },
+  "6655": {
+    "name": "Luden's Companion",
+    "description": "Fire: Gain 6 ''Shot Charge'' stacks to fire. Dealing [[ability damage]] to an enemy consumes all ''Shot Charges'' to deal {{as|75|magic damage}} {{as|(+ 5% AP)}} {{as|'''bonus''' magic damage}} to them and, for each charge consumed beyond the first, an additional enemy within {{tip|cr|icononly=true}} 600 units of them, firing an orb at each secondary target that impacts after {{rutngt|0.5}} to deal the damage. If the number of additional targets fired at is less than the number of charges consumed,{{ft|deal an additional {{as|{{pp|75*0.2 to 75*5*0.2 for 5|1 to 5|changedisplay=true|type=remaining ''Shot Charges''}}|magic damage}} {{as|(+ {{pp|key=%|5*0.2 to 5*5*0.2 for 5|1 to 5|type=remaining ''Shot Charges''|changedisplay=true|showtype=false}} AP)}} {{as|magic damage}} to the primary target, for a total of {{as|{{pp|(75*0.2)+75 to (75*5*0.2)+75 for 5|1 to 5|type=remaining ''Shot Charges''|changedisplay=true|showtype=false}}|magic damage}} {{as|(+ {{pp|key=%|(5*0.2)+5 to (5*5*0.2)+5 for 5|1 to 5|type=remaining ''Shot Charges''|changedisplay=true|showtype=false}} AP)}}.|deal an additional 20% damage to the primary target for each remaining charge.}}",
+    "totalCost": 2750,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 100,
+      "Mana": 600,
+      "Ability Haste": 10
+    }
+  },
+  "6657": {
+    "name": "Rod of Ages",
+    "description": "Timeless: This item gains {{as|10 '''bonus''' health}}, {{as|30 '''bonus''' mana}}, and {{as|3 ability power}} every minute, up to 10 times, for a maximum of {{as|100 '''bonus''' health}}, {{as|300 '''bonus''' mana}}, and {{as|30 ability power}}. Upon reaching maximum stacks, gain a level that preserves your current experience (cap remains at level 18).\nEternity: Restore {{as|mana}} equal to 10% of {{tt|pre-mitigation damage|Damage calculated before modifiers}} taken from champions, and {{tip|heal}} for an amount equal to {{as|25% of mana spent}}, up to 20 per cast. Toggled abilities can only heal for up to 20 per second.",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 45,
+      "Health": 350,
+      "Mana": 500
+    }
+  },
+  "6660": {
+    "name": "Bami's Cinder",
+    "description": "Immolate: Taking or dealing damage activates this passive for 3 seconds. Deal {{as|15 magic damage}} every second to enemies within {{tip|cr|icononly = true}} 325 (+ 100% '''bonus''' [[size]]) units, with the damage being increased by 50% against {{tip|minions}} and {{tip|monsters}}. This executes minions that would be killed by one more tick of damage.",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Health": 150,
+      "Ability Haste": 5
+    }
+  },
+  "6662": {
+    "name": "Iceborn Gauntlet",
+    "description": "Spellblade: After using an [[champion ability|ability]], your next basic attack within 10 seconds deals {{as|150% '''base''' AD}} {{as|'''bonus''' physical damage}} [[on-hit]] and creates a 300 radius frost field for 2 seconds. Enemies within the field are slowed by {{rd|25%|{{ap|25*0.5}}%}} ({{fd|1.5}} second cooldown, starts after using the empowered attack).",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 50,
+      "Health": 300,
+      "Ability Haste": 15
+    }
+  },
+  "6664": {
+    "name": "Hollow Radiance",
+    "description": "Immolate: Taking or dealing damage activates this passive for 3 seconds. Deal {{as|{{#vardefineecho:hollow_ibase|15}} {{as|(+ {{#vardefineecho:hollow_ihp|1}}% '''bonus''' health)}} magic damage|magic damage}} every second to enemies within {{tip|cr|icononly=true}} 325 (+ 100% '''bonus''' size) units, with the damage being increased by 25% against {{tip|minions}} and {{tip|monsters}}. This executes minions that would be killed by one more tick of damage.\nDesolate: Killing a {{tt|non-champion unit|Excluding wards and structures.}} causes an eruption around their death location that deals{{ft|{{as|{{ap|{{#var:hollow_ibase}}*2}} {{as|(+ {{ap|{{#var:hollow_ihp}}*2}}% '''bonus''' health)}} magic damage|magic damage}}|200% of ''Immolate's'' damage}}to enemies within 350 units. Scoring a {{tip|takedown}} against an enemy champion within 3 seconds of damaging them causes a larger eruption that deals{{ft|{{as|{{ap|{{#var:hollow_ibase}}*4}} {{as|(+ {{ap|{{#var:hollow_ihp}}*4}}% '''bonus''' health)}} magic damage|magic damage}}|400% of ''Immolate's'' damage}}to enemies within 500 units.",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 400,
+      "Health Regen": 100,
+      "Magic Resistance": 40,
+      "Ability Haste": 10
+    }
+  },
+  "6665": {
+    "name": "Jak'Sho, The Protean",
+    "description": "Voidborn Resilience: Gain a stack for each second [[Combat status|in combat]] with enemy champions, stacking up to 5 times. At '''maximum''' stacks, increase your {{as|'''bonus''' armor}} and {{as|'''bonus''' magic resistance}} by 30% until the end of combat.",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 45,
+      "Health": 350,
+      "Magic Resistance": 45
+    }
+  },
+  "6670": {
+    "name": "Noonquiver",
+    "description": "",
+    "totalCost": 1300,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 15,
+      "Critical Strike Chance": 20
+    }
+  },
+  "6672": {
+    "name": "Kraken Slayer",
+    "description": "Bring It Down: Basic attacks [[on-hit]] grant a stack for 3 seconds, up to 2 stacks. At 2 stacks, the next basic attack consumes all stacks to deal {{as|{{rd|150 to 200 for 11|150*0.8 to 200*0.8 for 11|levels=1;9 to 18|pp=true}} '''bonus''' physical damage|physical damage}} on-hit, increased by {{pp|0 to 75 by 5|0 to 100|key=%|color=health|type=target's '''missing''' health|key1=%}}, for up to {{as|{{rd|150*1.75 to 200*1.75 for 11|150*0.8*1.75 to 200*0.8*1.75 for 11|levels=1;9 to 18|pp=true}} '''bonus''' physical damage|physical damage}}.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 45,
+      "Attack Speed": 40,
+      "Move Speed": 4
+    }
+  },
+  "6673": {
+    "name": "Immortal Shieldbow",
+    "description": "Lifeline: If you would take damage that would reduce you below {{as|30% of your '''maximum''' health}}, you first gain a {{tip|shield}} that absorbs {{rd|400 to 700 for 11|400*0.8 to 700*0.8 for 11|levels=1;9 to 18|pp=true}} damage for 3 seconds.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Critical Strike Chance": 25
+    }
+  },
+  "6675": {
+    "name": "Navori Flickerblade",
+    "description": "Transcendence: Basic attacks [[on-attack]] reduce the '''remaining''' cooldowns of your basic abilities by 15%.",
+    "totalCost": 2650,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Speed": 40,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4
+    }
+  },
+  "6676": {
+    "name": "The Collector",
+    "description": "Death: If you deal {{tt|post-mitigation|Damage calculated after modifiers}} damage that would leave a champion below {{as|5% of their '''maximum''' health}}, {{tip|execute}} them.\nTaxes: Killing a champion grants you an additional {{g|25}}.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Critical Strike Chance": 25,
+      "Lethality": 10
+    }
+  },
+  "6690": {
+    "name": "Rectrix",
+    "description": "",
+    "totalCost": 775,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 15,
+      "Move Speed": 4
+    }
+  },
+  "6692": {
+    "name": "Eclipse",
+    "description": "Ever Rising Moon: Damaging [[basic attack]]s, [[champion ability|abilities]], [[Named item effect|item effects]], and [[summoner spell]]s, as well as the application of {{tip|crowd control}} and [[damage over time]] effects, generate [[stack]]s against enemy champions, up to one per attack or cast per champion. Applying 2 stacks to a champion within a 2 second period deals {{as|'''bonus''' physical damage}} to them equal to {{as|{{rd|6%|4%}} of target's '''maximum''' health}} and grants you a {{tip|shield}} for {{rd|160|80}} {{as|(+ {{rd|40%|20%}} '''bonus''' AD)}} for 2 seconds.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 60,
+      "Ability Haste": 15
+    }
+  },
+  "6694": {
+    "name": "Serylda's Grudge",
+    "description": "Bitter Cold: Dealing [[ability damage]] to an enemy that is at or below {{as|50% of their '''maximum''' health}} {{tip|slow|slows}} them by 30% for 1 second.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 45,
+      "Ability Haste": 15
+    }
+  },
+  "6695": {
+    "name": "Serpent's Fang",
+    "description": "Shield Reaver: Dealing damage to an enemy champion inflicts them with venom for 3 seconds, reducing any {{tip|shield|shields}} they gain within the duration by {{rd|50%|35%}}, and if the target was not already afflicted by the venom, reducing all of their active shields by the same amount.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 15
+    }
+  },
+  "6696": {
+    "name": "Axiom Arc",
+    "description": "Flux: Scoring a {{tip|takedown}} against an enemy champion within 3 seconds of damaging them refunds 15% {{as|(+ {{fd|0.15}}% per 1 Lethality)}} of your ultimate ability's '''total''' cooldown.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 18,
+      "Ability Haste": 20
+    }
+  },
+  "6697": {
+    "name": "Hubris",
+    "description": "Eminence: Scoring a {{tip|takedown}} against an enemy champion within 3 seconds of damaging them generates a permanent stack and grants you {{as|15|ad}} (+ 2 per stack) {{as|'''bonus''' attack damage}} for 90 seconds.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 60,
+      "Lethality": 18,
+      "Ability Haste": 10
+    }
+  },
+  "6698": {
+    "name": "Profane Hydra",
+    "description": "Cleave: Damaging basic attacks deal {{as|{{rd|40% AD|20% AD}}|ad}} {{as|physical damage}} to other enemies in a {{tip|cr|icononly=true}} 350 radius centered around the target.\nHeretical Cleave: Deal {{as|80% AD}} {{as|physical damage}} to enemies in a {{tip|cr|icononly = true}} 450 radius.",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 60,
+      "Lethality": 18,
+      "Ability Haste": 10
+    }
+  },
+  "6699": {
+    "name": "Voltaic Cyclosword",
+    "description": "Energized: Moving and basic attacking generates ''Energize'' stacks, up to 100.\nGalvanize: {{tip|Energized}} stack generation is increased by 75% for distance travelled from {{tip|dash|dashes}}, {{tip|lunge|lunges}} and {{tip|blink|blinks}}, as well as while moving in {{tip|stealth}}.\nFirmament: When fully {{tip|Energized}}, your next basic attack deals {{as|100 '''bonus''' physical damage}} [[on-hit]] and {{tip|slow|slows}} the target by {{rd|99%|20%}} for {{fd|0.75}} seconds.",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 18,
+      "Ability Haste": 10
+    }
+  },
+  "6701": {
+    "name": "Opportunity",
+    "description": "Preparation: After being [[Combat status|out-of-combat]] with enemy champions for 8 seconds, gain {{as|{{rd|11|5}} lethality}}. This bonus remains for 3 seconds after dealing damage to an enemy champion.\nExtraction: Scoring a {{tip|takedown}} against an enemy champion within 3 seconds of damaging them grants you {{as|200 '''bonus''' movement speed}} that decays over {{fd|1.5}} seconds.",
+    "totalCost": 2700,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 18
+    }
+  },
+  "8010": {
+    "name": "Bloodletter's Curse",
+    "description": "Vile Decay: Dealing {{as|magic damage}} to an enemy champion with a [[champion ability]] applies a stack of ''Vile Decay'' to them for 6 seconds, stacking up to 4 times and up to once per basic attack or ability per {{tip|cast instance}} every {{fd|0.3}} seconds. Each stack inflicts {{as|{{fd|7.5}}% magic resistance reduction}}, up to {{as|30%|mr}} at 4 stacks.",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 65,
+      "Health": 400,
+      "Ability Haste": 15
+    }
+  },
+  "8020": {
+    "name": "Abyssal Mask",
+    "description": "Unmake: Enemy champions within {{tt|700 units|center to edge}} of you become cursed, causing them to receive {{as|12% increased magic damage|magic damage}} from all sources.",
+    "totalCost": 2650,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 350,
+      "Magic Resistance": 45,
+      "Ability Haste": 15
+    }
+  },
+  "220000": {
+    "name": "Stat Bonus",
+    "description": "",
+    "totalCost": 750,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "220001": {
+    "name": "Legendary Fighter Item",
+    "description": "",
+    "totalCost": 2000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "220002": {
+    "name": "Legendary Marksman Item",
+    "description": "",
+    "totalCost": 2000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "220003": {
+    "name": "Legendary Assassin Item",
+    "description": "",
+    "totalCost": 2000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "220004": {
+    "name": "Legendary Mage Item",
+    "description": "",
+    "totalCost": 2000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "220005": {
+    "name": "Legendary Tank Item",
+    "description": "",
+    "totalCost": 2000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "220006": {
+    "name": "Legendary Support Item",
+    "description": "",
+    "totalCost": 2000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "220007": {
+    "name": "Prismatic Item",
+    "description": "",
+    "totalCost": 4000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "223005": {
+    "name": "Ghostcrawlers",
+    "description": "Wall Walk: Become ghostly for 6 seconds, ignoring terrain collision until you basic attack or cast an ability. While inside terrain, gain {{as|300 '''bonus''' movement speed}}.",
+    "totalCost": 500,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 70
+    }
+  },
+  "223039": {
+    "name": "Atma's Reckoning",
+    "description": "Big Hands: Gain {{as|1% critical strike chance}} for every {{as|100 '''bonus''' health}}, up to a '''maximum''' of {{as|30% critical strike chance}} at {{as|3000 '''bonus''' health}}.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Critical Strike Chance": 20,
+      "Health": 700
+    }
+  },
+  "223095": {
+    "name": "Stormrazor",
+    "description": "Energized: Moving and basic attacking generates ''Energize'' stacks, up to 100.\nBolt: When fully {{tip|Energized}}, your next basic attack deals {{as|100 '''bonus''' magic damage}} [[on-hit]] and grants you {{as|45% '''bonus''' movement speed}} for {{fd|1.5}} seconds.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 45,
+      "Attack Speed": 25,
+      "Critical Strike Chance": 25
+    }
+  },
+  "223146": {
+    "name": "Hextech Gunblade",
+    "description": "Lightning Bolt: Shocks the target enemy champion with a bolt of lightning, dealing {{as|{{pp|175 to 253}}|magic damage}} {{as|(+ 30% '''bonus''' AD)}} {{as|(+ 30% AP)}} {{as|magic damage}} and {{tip|slow|slowing}} them by 40% for 2 seconds.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 90,
+      "Attack Damage": 45,
+      "Omnivamp": 15
+    }
+  },
+  "223185": {
+    "name": "Guardian's Dirk",
+    "description": "Agricultural Reaper: Increases the effects of [[File:Power Flowers unit icon.png|20px|link=]] ''[[Arena#Power Flowers|Power Flowers]]'' by 20%. Additionally, dealing damage to a ''Power Flower'' grants you {{as|100 '''bonus''' movement speed}} for 3 seconds.",
+    "totalCost": 500,
+    "itemType": "starter",
+    "stats": {
+      "Attack Damage": 25,
+      "Lethality": 11,
+      "Ability Haste": 10
+    }
+  },
+  "224004": {
+    "name": "Spectral Cutlass",
+    "description": "Soul Anchor: Mark your current location. After 4 seconds, you automatically {{tip|blink}} to the marked location after a {{fd|0.5}}-second delay. ''Soul Anchor'' may be recast within its duration to manually blink to the marked location after the same delay (45 second cooldown, starts after the blink).",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Lethality": 15,
+      "Move Speed": 4
+    }
+  },
+  "224403": {
+    "name": "The Golden Spatula",
+    "description": "Doing Something: You are permanently [[File:On Fire! buff.png|20px|link=]] '''On Fire!''', causing you to {{as|Burn}} nearby enemies every second for {{as|magic damage}} and reduce your cooldowns twice as fast as well as gain {{as|'''bonus''' movement speed}} while facing nearby enemy champions, {{as|'''bonus''' attack speed}}, and {{as|'''bonus''' mana regeneration}}. While '''On Fire!''', however, you also take increased damage and reduce the effectiveness of incoming heals and shields.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 125,
+      "Armor": 40,
+      "Attack Damage": 90,
+      "Attack Speed": 60,
+      "Critical Strike Chance": 25,
+      "Health": 350,
+      "Health Regen": 200,
+      "Life Steal": 15,
+      "Magic Resistance": 40,
+      "Mana": 350,
+      "Mana Regen": 200,
+      "Move Speed": 10,
+      "Ability Haste": 20
+    }
+  },
+  "226630": {
+    "name": "Goredrinker",
+    "description": "Thirsting Slash: Deal {{as|175% '''base''' AD}} {{as|physical damage}} to enemies in a {{tip|cr|icononly = true}} 450 radius centered around you. {{tip|Heal}} for {{as|20% AD}} {{as|(+ 8% of your '''missing''' health)}} for each enemy champion hit.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 55,
+      "Health": 400,
+      "Ability Haste": 20
+    }
+  },
+  "228001": {
+    "name": "Anathema's Chains",
+    "description": "Vendetta: Take 30% reduced damage from your ''Nemesis'' and reduce their {{tip|tenacity}} by 20% while they are within {{tip|cr|icononly=true}} 700 units of you.\nVow: Curse the target enemy champion, designating them as your ''Nemesis''. Choosing a new ''Nemesis'' removes the curse from the old one. Cannot be cast for 15 seconds while in combat with enemy champions.",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 650,
+      "Ability Haste": 20
+    }
+  },
+  "228002": {
+    "name": "Wooglet's Witchcap",
+    "description": "Magical Opus: Increase your {{as|ability power}} by 50%.\nStasis: Put yourself in {{tip|stasis (buff)|stasis}} for {{fd|2.5}} seconds, rendering you {{tip|untargetable}} and {{tip|invulnerable}} for the duration but also unable to move, declare [[basic attack]]s, cast [[champion ability|abilities]], use [[summoner spell]]s, or [[active ability items|activate items]].",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 300,
+      "Armor": 50,
+      "Ability Haste": 20
+    }
+  },
+  "443054": {
+    "name": "Darksteel Talons",
+    "description": "Gash: Basic attacks [[on-hit]] deal {{as|{{rd|20 to 40|10 to 20|pp=true}}|true damage}} {{as|(+ {{rd|25%|20%}} '''bonus''' armor)|armor}} {{as|'''bonus''' true damage}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Armor": 55,
+      "Attack Speed": 50,
+      "Move Speed": 10
+    }
+  },
+  "443055": {
+    "name": "Fulmination",
+    "description": "Energized: Moving and basic attacking generates ''Energize'' stacks, up to 100.\nPolarity: Your {{tip|Energized}} attacks against targets not hit by your previous ''Energized'' attack do not consume any ''Energize'' stacks on-hit.\nDynamo: When fully {{tip|Energized}}, your next basic attack deals {{as|'''bonus''' magic damage}} [[on-hit]] equal to {{as|10% of the target's '''current''' health}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 55,
+      "Attack Speed": 45,
+      "Move Speed": 15
+    }
+  },
+  "443056": {
+    "name": "Demon King's Crown",
+    "description": "Supremacy: Increase your '''total''' {{as|attack damage}}, {{as|ability power}}, {{as|attack speed}}, {{as|'''maximum''' health}}, {{as|armor}}, {{as|magic resistance}}, and {{as|ability haste}} by 26%, further increased by 1% for each round you win and reduced by 3% for each round you lose.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "443058": {
+    "name": "Shield of Molten Stone",
+    "description": "Immovable as the Earth: Increase your {{as|'''total''' armor}} by {{as|20%|armor}}. Additionally, basic attacks that hit you have a chance of being {{tip|block|blocked}} equal to 5% per {{as|200 '''total''' armor}}, up to a maximum of 50% chance.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Armor": 100,
+      "Health": 300
+    }
+  },
+  "443059": {
+    "name": "Cloak of Starry Night",
+    "description": "Limitless as the Stars: Increase your {{as|'''total''' magic resistance}} by {{as|20%|mr}}. Additionally, reduce all incoming damage received from non-basic attack sources by 5% per {{as|200 '''total''' magic resistance}}, up to a maximum of 50% damage reduction.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Health": 300,
+      "Magic Resistance": 100
+    }
+  },
+  "443060": {
+    "name": "Sword of the Divine",
+    "description": "Excoriate: {{tip|Critical strike|Critical strikes}} gain random {{as|'''bonus''' critical strike damage|critical damage}} that scales up to {{as|50% of critical strike chance}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Critical Strike Chance": 50
+    }
+  },
+  "443061": {
+    "name": "Force of Entropy",
+    "description": "Atrophy: {{tip|Immobilize|Immobilizing}} effects against {{tip|champions}} have a {{pp|key=%|key1=%|type=critical strike chance|0 to 100 for 11|0 to 100|formula=1% per 1% critical strike chance, capped at 100% critical strike chance}} chance to increase in duration by {{fd|0.25}} seconds (+ 33% of immobilizing effect's duration).",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Critical Strike Chance": 25,
+      "Health": 900,
+      "Ability Haste": 30
+    }
+  },
+  "443062": {
+    "name": "Sanguine Gift",
+    "description": "Patronage: Store 15% of {{tt|post-mitigation damage|Damage calculated after modifiers}} dealt. Whenever the stored amount exceeds a value of 333, consume it to {{tip|heal}} yourself and the nearest allied champion for that same amount. Stored damage is reset every round and between each phase in a round.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 80,
+      "Ability Haste": 20
+    }
+  },
+  "443063": {
+    "name": "Eleisa's Miracle",
+    "description": "Enduring Vitality: Gain {{sti|hsp|{{fd|2.5}}% heal and shield power}} per {{as|100 '''current''' health}} you are missing, up to 60% at {{as|2400 '''current''' health}} missing.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Armor": 50,
+      "Magic Resistance": 50,
+      "Ability Haste": 25
+    }
+  },
+  "443064": {
+    "name": "Talisman of Ascension",
+    "description": "Imbricate: Reroll the stats on this item, up to twice per round and up to thrice with the [[File:Apex Inventor augment.png|20px|link=]] [[Arena/Augments|Apex Inventor]] augment. Each time you do so, the stats become higher in value.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "443069": {
+    "name": "Hamstringer",
+    "description": "Scour: {{tip|Critical strike|Critical strikes}} inflict a bleed on the target for 2 seconds, dealing {{as|'''bonus''' physical damage}} equal to{{ft|{{pp|20/4 to 80/4|color=physical damage}} plus {{ap|25/4}}% of the {{tt|pre-mitigation|Damage calculated before resistances and reductions.}} {{tip|critical strike}} instance every {{fd|0.5}} seconds,|{{pp|20 to 80|color=physical damage}} plus 25% of the {{tip|critical strike}} instance over the duration,}}as well as applies a 7% {{tip|slow}} for the same duration. The bleed's damage is affected by {{tip|critical strike}} modifiers and stacks infinitely; the slow stacks up to 35%.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 45,
+      "Attack Speed": 40,
+      "Critical Strike Chance": 25
+    }
+  },
+  "443079": {
+    "name": "Turbo Chemtank",
+    "description": "Supercharged: Removes all {{tip|crowd control}} debuffs (except {{tip|Airborne}}) from your champion and grants you {{tip|Cc-immune|total crowd control immunity}} for the next 3 seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Health": 600
+    }
+  },
+  "443080": {
+    "name": "Twin Mask",
+    "description": "Unanimity: Gain 15% of your teammate's {{as|attack damage}}, {{as|ability power}}, {{as|'''total''' attack speed}}, {{as|'''maximum''' health}}, {{as|armor}}, {{as|magic resistance}}, and {{as|ability haste}}, increased to 30% if they also have '''Twin Mask''' and are alive.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "443081": {
+    "name": "Hexbolt Companion",
+    "description": "Covering Fire: While your ally is within {{tt|1200 units|center-to-edge}}, your basic attacks [[on-hit]] generate a stack of ''Covering Fire''. At 1 stack, your next basic attack consumes them all to cause your ally to fire a bolt at the target, dealing {{as|{{pp|20 to 60}} physical damage}} and applying your ally's on-hit effects at 100% effectiveness.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Speed": 75,
+      "Health": 500
+    }
+  },
+  "443090": {
+    "name": "Reaper's Toll",
+    "description": "Reap: Basic attacks [[on-hit]] apply a ''Reap'' stack to the target, stacking infinitely and lasting for the remainder of the combat phase, and deal {{as|'''bonus''' true damage}} equal to {{as|{{rd|{{fd|0.7}}%|{{fd|0.5}}%}} (+ {{fd|0.1}}% per target's ''Reap'' stack) of the target's '''maximum''' health}}. Additionally, the target is inflicted a [[Health#Health threshold|health threshold]] equal to {{as|100% of their '''maximum''' health}} minus the '''total''' amount of '''bonus''' damage dealt against them, lasting until the end of the round and capped at a threshold of {{as|50% of their '''maximum''' health}}.\nSow: Increases the {{as|attack speed}} gained from all sources by 25%.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Speed": 50,
+      "Move Speed": 10
+    }
+  },
+  "443193": {
+    "name": "Gargoyle Stoneplate",
+    "description": "Unbreakable: Gain a {{tip|shield}} for 300 {{as|(+ 100% '''bonus''' health)}} that decays over 5 seconds, and 25% increased [[size]] for the same duration.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Armor": 65,
+      "Magic Resistance": 65,
+      "Move Speed": 10,
+      "Ability Haste": 15
+    }
+  },
+  "444636": {
+    "name": "Night Harvester",
+    "description": "Soulrend: Damaging an enemy champion with a basic attack or [[ability damage]] deals {{as|125 {{as|(+ 15% AP)}} '''bonus''' magic damage|magic damage}} and grants you {{as|40% '''bonus''' movement speed}} for {{fd|1.5}} seconds, with the duration extending on subsequent triggers (10 second cooldown per champion).",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 90,
+      "Health": 300,
+      "Ability Haste": 25
+    }
+  },
+  "444637": {
+    "name": "Demonic Embrace",
+    "description": "Sinister Pact: Increase your {{as|ability power}} by {{as|{{fd|1.5}}%|ap}} and gain {{as|{{fd|1.5}}% '''bonus''' movement speed}} for every {{as|100 '''current''' health}} you are missing, up to an increase of {{as|45% ability power}} and {{as|45% '''bonus''' movement speed}} at {{as|3000 '''current''' health}} missing.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 80,
+      "Health": 700
+    }
+  },
+  "444644": {
+    "name": "Crown of the Shattered Queen",
+    "description": "Safeguard: Become ''Safeguarded'' to reduce incoming champion damage by 40%, lingering for 3 seconds after taking damage from a champion (30 second cooldown, timer restarts upon taking damage from champions).",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 85,
+      "Health": 300,
+      "Mana": 600,
+      "Ability Haste": 25
+    }
+  },
+  "446632": {
+    "name": "Divine Sunderer",
+    "description": "Spellblade: After using an [[champion ability|ability]], your next basic attack within 10 seconds deals {{as|180% '''base''' AD}} {{as|(+ {{rd|4%|2%}} of target's '''maximum''' health)}} as {{as|'''bonus''' physical damage}} [[on-hit]], for a '''minimum''' of {{as|180% '''base''' AD}}. If the target is a champion, {{tip|heal}} for{{ft|{{as|{{ap|180*0.55}}% '''base''' AD}} {{as|(+ {{rd|{{ap|4*0.55}}%|{{ap|2*0.55}}%}} of target's '''maximum''' health)|health}}|55% of the damage value}}({{fd|1.5}} second cooldown, starts after using the empowered attack).",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 55,
+      "Health": 350,
+      "Ability Haste": 20
+    }
+  },
+  "446656": {
+    "name": "Everfrost",
+    "description": "Glaciate: Unleash a fan of icy shards in a cone in the target direction, dealing {{as|250|magic damage}} {{as|(+ 85% AP)}} {{as|magic damage}} to enemies struck within and {{tip|slow|slowing}} them by 70% for {{fd|1.5}} seconds. Enemies hit in the center of the cone are {{tip|root|rooted}} for the same duration instead.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 100,
+      "Health": 250,
+      "Mana": 600,
+      "Ability Haste": 25
+    }
+  },
+  "446667": {
+    "name": "Radiant Virtue",
+    "description": "Guiding Light: Upon casting your [[champion ability|ultimate]], you ''Transcend'' for 9 seconds. While ''Transcended'', increase your {{as|'''maximum''' health by {{fd|12.5}}%}} and cause you and all allies within {{tip|cr|icononly=true}} 1200 units to {{tip|heal}} for {{as|{{fd|2.5}}% of your '''maximum''' health}} upon you ''Transcending'' and every 3 seconds thereafter, for a total healing of {{as|{{ap|2.5*4}}% of your '''maximum''' health}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Armor": 35,
+      "Health": 400,
+      "Magic Resistance": 35
+    }
+  },
+  "446671": {
+    "name": "Galeforce",
+    "description": "Cloudburst II: {{tip|Dash}} to the target location and fire three homing missiles at the {{tt|most wounded|Lowest health percent}} enemy within {{tip|cr|icononly=true}} 750 units of you at the end of the dash, prioritizing enemy champions. Each missile deals {{as|{{pp|150/3 to 350/3|1;8 to 18 by 1}} {{as|(+ {{fd|26.6{{recurring|6}}}}% '''bonus''' AD)}} physical damage|physical damage}}, for a total of {{as|{{pp|150 to 350|1;8 to 18 by 1}} {{as|(+ 80% '''bonus''' AD)}}|physical damage}}, increased by {{pp|type= target's '''missing''' health|color=health|key=%|0 to 50|key1=%|0 to 75 for 11|formula=5% per 7.5% of enemies' '''missing''' health}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 65,
+      "Attack Speed": 30,
+      "Critical Strike Chance": 25,
+      "Move Speed": 12
+    }
+  },
+  "446691": {
+    "name": "Duskblade of Draktharr",
+    "description": "Nightstalker: Your abilities deal {{as|{{rd|{{pp|0 to 22.5 for 11|0 to 70|key=%|key1=%|type=target's '''missing''' health|showtype=false}}|{{pp|0 to 12.5 for 11|0 to 70|key=%|key1=%|type=target's '''missing''' health|showtype=false}}}}|hp}} {{as|(based on target's '''missing''' health)}} increased damage against enemy champions. Scoring a {{tip|takedown}} against an enemy champion within 3 seconds of damaging them renders you {{tip|untargetable}} for {{fd|1.5}} seconds, which ends prematurely if you perform an action that {{tip|break stealth|breaks stealth}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 50,
+      "Lethality": 20,
+      "Ability Haste": 20
+    }
+  },
+  "446693": {
+    "name": "Prowler's Claw",
+    "description": "Sandswipe: {{tip|Dash}} to 150 units beyond the {{tt|target enemy champion's location|At the end of the cast time.}}, and upon completing the dash, deal {{as|12% {{as|(+ 5% per 100 '''bonus''' AD)}} of target's '''maximum''' health}} {{as|'''bonus''' physical damage}} to the target. You then deal 20% increased damage to the target for the next 3 seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 22,
+      "Ability Haste": 20
+    }
+  },
+  "447100": {
+    "name": "Mirage Blade",
+    "description": "Blur: Basic attacks [[on-hit]] reduce the remaining cooldowns of your abilities and spells with {{tip|dash|dashes}} and/or {{tip|blink|blinks}} by 12%, modified to 4% for your ultimate ability.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Speed": 60,
+      "Move Speed": 12
+    }
+  },
+  "447101": {
+    "name": "Gambler's Blade",
+    "description": "Money In The Bank: Basic attacks [[on-hit]] and ability hits have a 12% chance to store between {{g|30}} and {{as|240|gold}} ({{fd|2.5}}-second cooldown per attack/ability). If you win the round, gain {{g|gold}} equal to the stored amount, otherwise lose 25% of it.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Speed": 70,
+      "Move Speed": 8,
+      "Ability Haste": 40
+    }
+  },
+  "447102": {
+    "name": "Reality Fracture",
+    "description": "ZZ'Rot: Basic attacks [[on-attack]] and damaging abilities against enemies summon 8 allied {{ui|Voidmite|Voidmites}} that are {{tip|untargetable}} and attack the target (15 second cooldown). {{ui|Voidmite|Voidmites}} deal {{as|6|magic damage}} {{as|(+ 4% of your AD)}} {{as|(+ 8% of your AP)}} {{as|magic damage}} with each of their basic attacks and last for up to 3 seconds. Additionally, summon 6 {{ui|Voidmite|Voidmites}} upon your death.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 80,
+      "Attack Speed": 40,
+      "Health": 300
+    }
+  },
+  "447103": {
+    "name": "Hemomancer's Helm",
+    "description": "Scarlet Allegiance: If your {{stil|life steal}} and {{stil|omnivamp}} sum to at least 30%, gain {{as|500 '''bonus''' health}} and {{tip|heal}} yourself equal to 10% of the damage that enemy champions in a {{tip|cr|icononly=true}} 525 units radius around you take from all sources.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 60,
+      "Ability Haste": 30,
+      "Omnivamp": 15
+    }
+  },
+  "447104": {
+    "name": "Innervating Locket",
+    "description": "Fill the Soul: Gain a charge each time you or champions within 800 units cast an [[champion ability|ability]], up to 30. At maximum charges, gain {{as|{{pp|100 to 250}} ability power}} and {{as|{{pp|15 to 25|key=%}} '''bonus''' movement speed}} for the rest of the round, as well as a {{pp|400 to 750}} {{tip|shield}} that lasts until destroyed. Charges are reset every round and between each phase in a round.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 70,
+      "Health": 200,
+      "Ability Haste": 20
+    }
+  },
+  "447105": {
+    "name": "Empyrean Promise",
+    "description": "Vigilance: {{tip|Dash}} to the current location of your ally and upon completion grant both yourself and the ally a {{tip|shield}} that absorbs {{pp|100 to 250}} {{as|(+ 100% of your AP)}} {{as|(+ 10% of your '''bonus''' health)}} damage for 5 seconds. '''Can be used even while the ally is dead.'''",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 70,
+      "Mana Regen": 125,
+      "Ability Haste": 30
+    }
+  },
+  "447106": {
+    "name": "Dragonheart",
+    "description": "Inner Flame: Every 2 rounds, gain a random {{bi|Dragon Soul}}. Additionally, increase your '''total''' {{as|attack damage}}, {{as|ability power}}, {{as|attack speed}}, {{as|'''maximum''' health}}, {{as|armor}}, {{as|magic resistance}}, and {{as|ability haste}} by 4% for each {{bi|Dragon Soul}} you possess, up to 30% at maximum souls.<br><br>Once you have obtained all 6 {{bi|Dragon Soul|Dragon Souls}}, you also gain the {{bi|Aspect of the Dragon}} buff permanently at the next round interval. This buff counts as a soul for this effect, for a total stat increase of 35%.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {}
+  },
+  "447107": {
+    "name": "Decapitator",
+    "description": "Anticipation: [[Basic attack]]s and [[Champion ability|basic ability]] casts generate 1 and 2 stacks of ''Anticipation'' for the rest of the round, respectively, stacking up to 40 times. For each stack, increase your ultimate ability's damage by 3% and gain 2 [[Haste#Ultimate haste|ultimate haste]], up to 120% increased ultimate damage and 80 ultimate haste. Stacks are reset every round and between each phase in a round.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Speed": 50,
+      "Move Speed": 12
+    }
+  },
+  "447108": {
+    "name": "Runecarver",
+    "description": "Energized: Moving and basic attacking generates ''Energize'' stacks, up to 100.\nHelix: Dealing damage with an ability generates 30 ''Energize'' stacks and triggers the effects of {{tip|Energized}} attacks if they are ready ({{fd|2.5}}-second cooldown per {{tip|cast instance}}).\nSpiral Out: When fully {{tip|Energized}}, your next basic attack generates a ''Rune'' stack and fires a missile at the target for each ''Rune'' stack you have, dealing {{as|{{pp|20 to 45}}|magic damage}} {{as|(+ 11% '''bonus''' AD)}} {{as|(+ 8% AP)}} {{as|(+ {{fd|0.3}} per 100 '''bonus''' health)}} {{as|magic damage}} with each missile. Stacks are reset every round and between each phase in a round.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 80,
+      "Move Speed": 8,
+      "Ability Haste": 20
+    }
+  },
+  "447109": {
+    "name": "Cruelty",
+    "description": "Watch Them Fall: {{tip|Immobilize|Immobilizing}} or {{tip|ground|grounding}} an enemy champion summons a comet above them that lands at their current location after 1 second, dealing {{as|{{pp|50 to 150}}|magic damage}} {{as|(+ 40% AP)}} {{as|(+ 4% of your '''maximum''' health)}} {{as|magic damage}} to enemies within the area (6 second cooldown per target per {{tip|cast instance}}).",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 80,
+      "Armor": 30,
+      "Magic Resistance": 30
+    }
+  },
+  "447110": {
+    "name": "Moonflair Spellblade",
+    "description": "Relentless: Casting an ability {{tip|basic attack reset|resets}} your basic attack timer and empowers your next two basic attacks with {{as|90% '''bonus''' attack speed}}. Additionally, each basic attack [[on-attack]] reduces the cooldowns of all your abilities by {{fd|0.5}} seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 85,
+      "Health": 400,
+      "Tenacity": 30
+    }
+  },
+  "447112": {
+    "name": "Flesheater",
+    "description": "Hack the Meat: Dealing damage reduces the target's {{as|armor}} and {{as|magic resistance}} by 3 for 5 seconds, stacking up to 10 times for a total resistances reduction of 30. Stacks can be applied to each enemy only once every second.\nCannibalize: If you or the allied champion on your team score a {{tip|takedown}} against an enemy champion, you are both {{tip|heal|healed}} for {{as|18% of the taken down target's '''maximum''' health}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Health": 500,
+      "Ability Haste": 20
+    }
+  },
+  "447113": {
+    "name": "Detonation Orb",
+    "description": "The Bomb: Dealing ability damage against enemy champions marks them for 3 seconds, storing 20% of the {{tt|post-mitigation damage|Damage calculated after modifiers}} you deal to them, increased to 25% if they are {{tip|immobilize|immobilized}}. Each instance of your ability damage dealt to a marked target refreshes their mark. Once the mark expires, it detonates to deal {{as|true damage}} equal to the amount stored against the target. If a mark would deal lethal damage to the target, it is detonated immediately.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 90,
+      "Magic Penetration": 12,
+      "Mana": 600,
+      "Ability Haste": 20
+    }
+  },
+  "447114": {
+    "name": "Reverberation",
+    "description": "Reverberate: After 2 seconds from the start of the combat phase in each round, gain {{as|5 '''bonus''' health}} per {{as|1% '''bonus''' attack speed}}.\nResonate: Basic attacks {{tip|on-hit}} deal {{as|10|magic damage}} {{as|(+ 2% of your '''bonus''' health)}} {{as|'''bonus''' magic damage}}.\nRumble: {{tip|Immobilize|Immobilizing}} an enemy champion generates 25 stacks of ''Reverberation'' for 10 seconds, stacking up to 100 times and refreshing {{tip|on-hit}} as well as on subsequent immobilizations. At '''maximum''' stacks and upon {{tip|immobilize|immobilizing}} an enemy, your on-hit effects are applied to them 3 times.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Armor": 35,
+      "Attack Speed": 40,
+      "Magic Resistance": 35
+    }
+  },
+  "447115": {
+    "name": "Regicide",
+    "description": "End the Line: At the start of the combat phase in each round, declare the enemy champion with the lowest {{as|'''total maximum''' health}} as the ''Regent''. Scoring a {{tip|takedown}} against the ''Regent'' for the first time in the combat phase grants you {{as|10 '''bonus''' attack damage}} permanently and sets the '''current''' cooldown of your ultimate ability to {{fd|0.5}} seconds.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Damage": 60,
+      "Lethality": 15,
+      "Move Speed": 8
+    }
+  },
+  "447116": {
+    "name": "Kinkou Jitte",
+    "description": "Between the Ribs: You can now identify the ''Weakpoints'' of nearby enemy champions, marked as an arc around them and pointing towards a specific direction. ''Weakpoints'' on targets take 4 seconds to become exposed and linger for {{fd|11.25}} seconds afterwards. Dealing damage in the direction of an exposed ''Weakpoint'' will consume it to deal {{as|'''bonus''' true damage}} equal to {{as|3%|hp}} {{as|(+ 3% per 100 AD)}} {{as|(+ 2% per 100 AP)}} {{as|of the target's '''maximum''' health}} and grant you {{as|{{pp|30 to 75|key=%}} '''bonus''' movement speed}} for {{fd|1.5}} seconds. Once a target's ''Weakpoint'' is consumed or expires, you identify a new ''Weakpoint'' on them.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Health": 400,
+      "Ability Haste": 30
+    }
+  },
+  "447118": {
+    "name": "Pyromancer's Cloak",
+    "description": "Spark: Basic attacks and ability hits against enemies inflicts them with a {{as|Burn}} that deals{{ft|{{as|{{pp|200 to 450}} magic damage}} over 3 seconds.|{{as|{{pp|200/12 to 450/12}} magic damage}} every {{fd|0.25}} seconds over 3 seconds.}}\nCleansing Flame: Inflicting an enemy champion with a {{as|Burn|buzzword3}} effect releases a fireball from the target, landing to a location near you after {{fd|0.5}} seconds. Upon landing, a blaze is created at the impact area with a radius of 175 units, lasting for 5 seconds (3 second cooldown per target). While you are within the blaze, gain {{as|20% '''bonus total''' movement speed}}, lingering for {{fd|0.75}} seconds after exiting, and {{tip|heal}} for {{pp|60 to 150}} upon entering and each second of the blaze's lifetime thereafter. While enemies are within the blaze, they are dealt {{as|100 magic damage}} every second.<br><br>For each unique {{as|Burn|buzzword3}} effect source that you have, up to 10, increase the blaze's size by 40 units, and its strength by {{as|4% '''bonus total''' movement speed}} and {{as|30|hsp}} healing per second for the buff and {{as|60 magic damage}} per tick for the enemy effect.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Health": 400,
+      "Ability Haste": 15
+    }
+  },
+  "447119": {
+    "name": "Lightning Rod",
+    "description": "Call Lightning: {{as|Automatically|river}} summon a storm cloud above you, which strikes a lightning bolt at your current location after {{fd|1.5}} seconds to deal {{as|{{pp|135 to 230}}|magic damage}} {{as|(+ 30% '''bonus''' AD)}} {{as|(+ 50% AP)}} {{as|(+ 10% of target's '''maximum''' health)}} {{as|magic damage}} to enemies within the area and {{tip|slow}} them by 30% for 2 seconds. If you are within the lightning strike, gain a {{tip|shield}} equal to {{as|14% of your '''maximum''' health}} {{as|(+ 75% AP)}} for 2 seconds.\nFully Automated: {{as|Automatic|river}} effects have their cooldown reduced by 1 second and now benefit from your {{as|ability haste}}. ''Call Lightning's'' cooldown cannot be reduced below 5 seconds by this effect.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Armor": 30,
+      "Attack Speed": 30,
+      "Health": 500,
+      "Magic Resistance": 30,
+      "Move Speed": 8
+    }
+  },
+  "447120": {
+    "name": "Diamond-Tipped Spear",
+    "description": "Reach Weapon: Gain {{sti|range|75 '''bonus''' attack range}}.\nSweet Spot: Basic attacks deal {{pp|0 to 30 for 11|0 to 1000|key=%|type=distance|label1=units}} increased damage and abilities deal {{pp|0 to 40 for 11|0 to 1000|key=%|type=distance|label1=units}} increased damage. The distance is calculated from your {{tip|cr|icononly=true}} current position to the target's position when the triggering attack or ability hits them.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Speed": 30
+    }
+  },
+  "447121": {
+    "name": "Twilight's Edge",
+    "description": "The Path Between: If you have at least {{as|130 '''bonus''' attack damage}} and {{as|180 ability power}}, enter either the ''Material World'' or the ''Spirit World'', determined randomly, at the start of the combat phase in each round:<br><br>• '''Material World''': Increase your {{as|attack damage}} by 20% and gain {{as|{{pp|50 to 150|key=%}} '''bonus''' attack speed}}.<br>• '''Spirit World''': Increase your {{as|ability power}} by 20% and gain {{as|{{pp|30 to 120}} ability haste}}.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Ability Power": 100,
+      "Attack Damage": 70
+    }
+  },
+  "447122": {
+    "name": "Black Hole Gauntlet",
+    "description": "Accretion: Basic attacks [[on-hit]] and {{tip|immobilize|immobilizing}} effects against enemy champions generate 1 and 5 stacks of ''Accretion'', respectively, up to 50. For each ''Accretion'' stack, gain {{as|10% '''base''' health regeneration}}, up to {{as|500% '''base''' health regeneration}} at '''maximum''' stacks. Additionally, for every 10 ''Accretion'' stacks, gain 20% increased size, up to 100% at '''maximum''' stacks. Stacks are reset every round and between each phase in a round.\nDark Star: Summon a black hole at the target location after a {{fd|0.5}}-second delay that lasts for 2 {{as|(+ {{fd|0.1}} per 100 '''bonus''' health)}} seconds. Enemies within are dealt {{as|{{pp|30 to 100}}|magic damage}} {{as|(+ {{fd|6.5}}% of user's '''maximum''' health)}} {{as|magic damage}} every second, {{tip|slow|slowed}} by 35%, and {{tip|kinematics|dragged}} inward until they reach the horizon at the center. Additionally, for each enemy champion inside the black hole, generate 1 stack of ''Accretion'' per second.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Health": 900,
+      "Ability Haste": 25
+    }
+  },
+  "447123": {
+    "name": "Puppeteer",
+    "description": "Pull Their Strings: Basic attacks [[on-hit]] against enemy champions apply a ''Puppeteer'' stack for 15 seconds, stacking up to 4 times. The fourth stack against a target consumes them all to render the target {{tip|berserk}} for 2 seconds, causing them to gain {{as|50%|as}} {{as|(+ 150% of your heal and shield power)}} {{as|'''bonus''' attack speed}} and {{as|40% '''bonus''' movement speed}} (25 second cooldown). If only one champion is alive on the enemy team, instead {{tip|fear}} the target for the same duration.\n: Granting yourself or an ally a {{tip|heal}}, {{tip|shield}}, or [[champion ability|ability-sourced]] buff reduces the cooldown of ''Pull Their Strings'' by 5 seconds, once per cast.",
+    "totalCost": 0,
+    "itemType": "other",
+    "stats": {
+      "Attack Speed": 30,
+      "Mana Regen": 150,
+      "Ability Haste": 40
+    }
+  }
+}

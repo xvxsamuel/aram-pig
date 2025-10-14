@@ -202,26 +202,18 @@ export interface TimelineEvent {
   // other event fields...
 }
 
+import { isCompletedItem } from './tooltip-data'
+
 // extract first 3 item purchases from timeline
 export function extractItemPurchases(timeline: MatchTimeline, participantId: number): number[] {
   const purchases: number[] = []
-  const excludedItems = new Set([
-    // boots
-    1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158,
-    // consumables & wards
-    2003, 2055, 2138, 2139, 2140,
-    // starter items that aren't final builds
-    1036, 1037, 1038, 1042, 1043, 1052, 1053, 1054, 1055, 1056, 1057, 1058,
-    // aram specific starting items
-    3400, 3330, 3340,
-  ])
   
   for (const frame of timeline.info.frames) {
     for (const event of frame.events) {
       if (event.type === 'ITEM_PURCHASED' && 
           event.participantId === participantId && 
           event.itemId && 
-          !excludedItems.has(event.itemId)) {
+          isCompletedItem(event.itemId)) {
         
         purchases.push(event.itemId)
         

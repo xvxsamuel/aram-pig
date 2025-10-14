@@ -78,13 +78,13 @@ export async function GET(request: Request) {
       message: status.canProceed 
         ? totalPending > 0 
           ? `${totalPending} requests ahead`
-          : 'ready to process'
+          : 'Ready to process'
         : `rate limit hit, wait ${Math.ceil(status.waitTime / 1000)}s`
     });
   } catch (error) {
-    console.error('rate limit status error:', error);
+    console.error('Rate limit status error:', error);
     return NextResponse.json(
-      { error: 'failed to check rate limit status' },
+      { error: 'Failed to check rate limit status' },
       { status: 500 }
     );
   }

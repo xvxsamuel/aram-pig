@@ -398,7 +398,7 @@ async function processMatchesInBackground(
               if (p.gameEndedInEarlySurrender) {
                 pigScore = null
               } else {
-                pigScore = await calculatePigScore(p, match, firstItem, secondItem, thirdItem)
+                pigScore = await calculatePigScore(p, match, firstItem, secondItem, thirdItem, fetchedMatches === 0)
                 console.log(`  PIG score for ${p.championName}: ${pigScore}`)
               }
             } catch (err) {

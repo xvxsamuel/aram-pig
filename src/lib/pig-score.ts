@@ -71,17 +71,25 @@ async function calculateItemPenalty(
     const optimalItems = slotData.slice(0, 5) // top 5 items for this slot
     if (optimalItems.length === 0) continue
 
+    // items already sorted by winrate, first item = highest wr
     const topItem = optimalItems[0]
     const playerItemMatch = optimalItems.find((i: any) => i.id === itemId)
 
     if (playerItemMatch) {
-      // player bought item in top 5 - penalize based on winrate difference
-      // -3 points per 1% winrate difference (harsh!)
+      // player bought item in top 5 - penalize exponentially based on winrate difference
       const wrDiff = topItem.wr - playerItemMatch.wr
-      const itemPenalty = wrDiff * 3 * weight
-      totalPenalty += itemPenalty
       
-      // example: 56% vs 44% item = 12% diff = -36 points for first item alone!
+      // only penalize if worse than best (wrDiff > 0)
+      if (wrDiff > 0) {
+        // exponential scaling: penalty = wrDiff^1.3 * 1.2 * weight (softer)
+        // examples:
+        // - 1% diff = ~1.2 points
+        // - 5% diff = ~8 points
+        // - 10% diff = ~24 points
+        // - 15% diff = ~50 points
+        const itemPenalty = Math.pow(wrDiff, 1.3) * 1.2 * weight
+        totalPenalty += itemPenalty
+      }
     }
     // if item not in top 5, ignore it (could be situational/good)
   }
@@ -109,24 +117,27 @@ async function calculateKeystonePenalty(
 
   if (!championData?.keystones || !Array.isArray(championData.keystones)) return 0
 
-  const keystones = championData.keystones.filter((k: any) => k.name && k.wr)
+  const keystones = championData.keystones.filter((k: any) => k.id && k.wr)
   if (keystones.length === 0) return 0
 
+  // keystones already sorted by winrate, first item = highest wr
   const topKeystone = keystones[0]
   
-  // match by id or name
-  const playerKeystone = keystones.find((k: any) => 
-    k.id === keystoneId || k.name === keystoneName
-  )
+  // match by id
+  const playerKeystone = keystones.find((k: any) => k.id === keystoneId)
 
   if (playerKeystone) {
-    // -3 points per 1% winrate difference (harsh like items)
+    // -1.5 points per 1% winrate difference (softer)
     const wrDiff = topKeystone.wr - playerKeystone.wr
-    return wrDiff * 3
+    // only penalize if worse than best
+    if (wrDiff > 0) {
+      return wrDiff * 1.5
+    }
+    return 0
   }
 
-  // player used non-meta keystone - huge penalty
-  return 20
+  // player used non-meta keystone - moderate penalty
+  return 12
 }
 
 // calculate damage penalty - penalize low damage output (up to -20 points)
@@ -138,7 +149,7 @@ function calculateDamagePenalty(
   return 0 // placeholder - no damage penalty for now
 }
 
-// calculate death timing penalty (up to -20 points)
+// calculate death timing penalty (up to -15 points, softer)
 function calculateDeathTimingPenalty(
   participant: ParticipantData,
   match: MatchData
@@ -151,13 +162,13 @@ function calculateDeathTimingPenalty(
   if (minutesPerDeath >= 2 && minutesPerDeath <= 3) {
     return 0 // no penalty - perfect timing
   } else if (minutesPerDeath < 2) {
-    // dying too often - exponential penalty
+    // dying too often - exponential penalty (softer)
     const excessDeaths = 2 - minutesPerDeath
-    return Math.min(20, Math.pow(excessDeaths * 3, 1.5))
+    return Math.min(15, Math.pow(excessDeaths * 2.5, 1.3))
   } else {
-    // not dying enough - HARSH exponential penalty (hoarding gold)
+    // not dying enough - exponential penalty (softer)
     const notDyingEnough = Math.min(10, minutesPerDeath - 2.5)
-    return Math.min(20, Math.pow(notDyingEnough * 2.5, 1.4))
+    return Math.min(15, Math.pow(notDyingEnough * 2, 1.2))
   }
 }
 
@@ -207,7 +218,7 @@ async function calculateChampionWinratePenalty(
     ]
     
     if (apItems.includes(firstItem)) {
-      return 50 // max penalty
+      return 30 // reduced penalty for ap malphite
     } else {
       return 0
     }
@@ -219,11 +230,11 @@ async function calculateChampionWinratePenalty(
   // calculate how far below 50% the champion is
   const wrDiff = 50 - winrate
   
-  // harsh exponential penalty with exponent 3.0 for really bad champions
-  // 49.5% = ~0.4pts, 45% = ~9pts, 40% = ~25pts, 38% = ~32pts (capped)
-  const penalty = Math.pow(wrDiff * 0.7, 3.0)
+  // softer exponential penalty
+  // 49.5% = ~0.2pts, 45% = ~4pts, 40% = ~12pts, 38% = ~15pts (capped at 20)
+  const penalty = Math.pow(wrDiff * 0.5, 2.5)
   
-  return Math.min(30, penalty) // cap at -30 points
+  return Math.min(20, penalty) // cap at -20 points (reduced from 30)
 }
 
 // main pig score calculation - starts at 100, penalties subtract
@@ -233,14 +244,24 @@ export async function calculatePigScore(
   match: MatchData,
   firstItem?: number,
   secondItem?: number,
-  thirdItem?: number
+  thirdItem?: number,
+  isFirstMatch?: boolean
 ): Promise<number | null> {
   // must have timeline data to calculate pig score
-  if (!firstItem || !secondItem || !thirdItem) {
+  // check for undefined/null, but allow 0 (could happen in edge cases)
+  if (firstItem === undefined || firstItem === null || 
+      secondItem === undefined || secondItem === null || 
+      thirdItem === undefined || thirdItem === null) {
+    if (isFirstMatch) {
+      console.log(`pig score null: missing items. first=${firstItem}, second=${secondItem}, third=${thirdItem}`)
+    }
     return null
   }
 
   const championName = participant.championName
+  if (isFirstMatch) {
+    console.log(`calculating pig score for ${championName}. items: ${firstItem}, ${secondItem}, ${thirdItem}`)
+  }
 
   // start at perfect score, subtract penalties
   let score = 100
@@ -250,10 +271,18 @@ export async function calculatePigScore(
   const deathTimingPenalty = calculateDeathTimingPenalty(participant, match)
   const championWinratePenalty = await calculateChampionWinratePenalty(championName, firstItem)
 
+  if (isFirstMatch) {
+    console.log(`penalties - item: ${itemPenalty}, keystone: ${keystonePenalty}, death: ${deathTimingPenalty}, champ: ${championWinratePenalty}`)
+  }
+
   score -= itemPenalty
   score -= keystonePenalty
   score -= deathTimingPenalty
   score -= championWinratePenalty
+
+  if (isFirstMatch) {
+    console.log(`final pig score: ${score}`)
+  }
 
   // clamp to 0-100
   return Math.max(0, Math.min(100, Math.round(score)))

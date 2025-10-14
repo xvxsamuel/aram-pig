@@ -14,6 +14,7 @@ import {
   getRuneStyleImageUrl,
 } from '../lib/ddragon-client'
 import MatchDetails from './MatchDetails'
+import Tooltip from './Tooltip'
 import { supabase } from '../lib/supabase'
 
 interface Props {
@@ -25,6 +26,7 @@ interface Props {
 
 export default function MatchHistoryItem({ match, puuid, region, ddragonVersion }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState(false)
   const [itemWinratesBySlot, setItemWinratesBySlot] = useState<{
     slot1: Map<number, number>
     slot2: Map<number, number>
@@ -43,47 +45,71 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
 
     async function fetchOptimalItemsBySlot() {
       try {
-        const { data } = await supabase
+        const championName = participant!.championName.toLowerCase()
+        console.log('Fetching items for champion:', championName)
+        
+        const { data, error, count } = await supabase
           .from('aram_stats')
-          .select('slot_1_items, slot_2_items, slot_3_items')
-          .eq('champion_name', participant!.championName.toLowerCase())
+          .select('slot_1_items, slot_2_items, slot_3_items', { count: 'exact' })
+          .eq('champion_name', championName)
           .single()
+        
+        console.log('Query result:', { data: !!data, error, count })
+        
+        if (error) {
+          console.error('Failed to fetch champion items:', error)
+          return
+        }
 
         if (data) {
+          console.log('Raw data:', {
+            slot1Length: data.slot_1_items?.length,
+            slot2Length: data.slot_2_items?.length,
+            slot3Length: data.slot_3_items?.length,
+            slot1First: data.slot_1_items?.[0],
+            slot2First: data.slot_2_items?.[0],
+            slot3First: data.slot_3_items?.[0],
+          })
+
           const slot1Map = new Map<number, number>()
           const slot2Map = new Map<number, number>()
           const slot3Map = new Map<number, number>()
           
-          let maxWr1 = 0
-          let maxWr2 = 0
-          let maxWr3 = 0
-
-          // slot 1 items
+          // slot 1 items (already sorted by wr, first item = highest)
           ;(data.slot_1_items || []).forEach((item: any) => {
             slot1Map.set(item.id, item.wr)
-            if (item.wr > maxWr1) maxWr1 = item.wr
           })
 
-          // slot 2 items
+          // slot 2 items (already sorted by wr, first item = highest)
           ;(data.slot_2_items || []).forEach((item: any) => {
             slot2Map.set(item.id, item.wr)
-            if (item.wr > maxWr2) maxWr2 = item.wr
           })
 
-          // slot 3 items
+          // slot 3 items (already sorted by wr, first item = highest)
           ;(data.slot_3_items || []).forEach((item: any) => {
             slot3Map.set(item.id, item.wr)
-            if (item.wr > maxWr3) maxWr3 = item.wr
           })
 
-          setItemWinratesBySlot({
+          const newState = {
             slot1: slot1Map,
             slot2: slot2Map,
             slot3: slot3Map,
-            topWr1: maxWr1,
-            topWr2: maxWr2,
-            topWr3: maxWr3,
+            topWr1: data.slot_1_items?.[0]?.wr || 0,
+            topWr2: data.slot_2_items?.[0]?.wr || 0,
+            topWr3: data.slot_3_items?.[0]?.wr || 0,
+          }
+          
+          console.log('Setting state:', {
+            slot1Size: newState.slot1.size,
+            slot2Size: newState.slot2.size,
+            slot3Size: newState.slot3.size,
+            topWr1: newState.topWr1,
+            topWr2: newState.topWr2,
+            topWr3: newState.topWr3,
           })
+
+          setItemWinratesBySlot(newState)
+          setDataLoaded(true)
         }
       } catch (err) {
         console.error('failed to fetch optimal items:', err)
@@ -93,39 +119,72 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
     fetchOptimalItemsBySlot()
   }, [participant])
 
-  // check if item is suboptimal (only for first 3 purchases, >5% worse than best for that slot)
-  const isSuboptimalItem = (itemId: number, slotIndex: number) => {
-    if (itemId === 0) return false // empty slot
+  // check if item is suboptimal and return winrate difference for color coding
+  const getItemPenalty = (itemId: number, slotIndex: number): number => {
+    if (itemId === 0) return 0 // empty slot
+    if (!dataLoaded) return 0 // wait for data to load
 
-    // only check first 3 items (timeline purchases)
+    // get the first 3 completed items from timeline
     const firstItem = participant.firstItem
     const secondItem = participant.secondItem
     const thirdItem = participant.thirdItem
 
-    // determine which slot this item is in
+    // debug: log for first match only
+    if (slotIndex === 0 && typeof window !== 'undefined' && !(window as any)._itemDebugLogged) {
+      console.log('Item highlighting debug:', {
+        firstItem,
+        secondItem,
+        thirdItem,
+        hasData: itemWinratesBySlot.slot1?.size > 0,
+        topWr1: itemWinratesBySlot.topWr1,
+        topWr2: itemWinratesBySlot.topWr2,
+        topWr3: itemWinratesBySlot.topWr3,
+        dataLoaded,
+      });
+      (window as any)._itemDebugLogged = true
+    }
+
+    // check if this item is one of the first 3 purchases
+    let purchaseOrder = -1
+    if (itemId === firstItem) purchaseOrder = 0
+    else if (itemId === secondItem) purchaseOrder = 1
+    else if (itemId === thirdItem) purchaseOrder = 2
+    else return 0
+
+    // get winrates for this purchase slot
     let slotWinrates: Map<number, number> | null = null
     let topWinrate = 0
 
-    if (itemId === firstItem && slotIndex === 0) {
+    if (purchaseOrder === 0) {
       slotWinrates = itemWinratesBySlot.slot1
       topWinrate = itemWinratesBySlot.topWr1
-    } else if (itemId === secondItem && slotIndex === 1) {
+    } else if (purchaseOrder === 1) {
       slotWinrates = itemWinratesBySlot.slot2
       topWinrate = itemWinratesBySlot.topWr2
-    } else if (itemId === thirdItem && slotIndex === 2) {
+    } else if (purchaseOrder === 2) {
       slotWinrates = itemWinratesBySlot.slot3
       topWinrate = itemWinratesBySlot.topWr3
-    } else {
-      return false // not one of the first 3 purchases
     }
 
-    if (!slotWinrates) return false
+    if (!slotWinrates || slotWinrates.size === 0) return 0
 
     const itemWr = slotWinrates.get(itemId)
-    if (!itemWr) return false // not in top 5 for this slot
-
+    
+    
+    // if item not in top 5, ignore it (could be situational/good)
+    if (!itemWr) return 0
+    
+    // return winrate difference
     const wrDiff = topWinrate - itemWr
-    return wrDiff > 5 // red border only if >5% worse
+    return wrDiff
+  }
+
+  // get border color based on penalty: yellow (3-7%) -> orange (7-10%) -> red (10%+)
+  const getItemBorderColor = (wrDiff: number): string => {
+    if (wrDiff < 3) return "border-gray-700" // minor penalty - don't show
+    if (wrDiff <= 7) return "border-yellow-500" // moderate penalty
+    if (wrDiff <= 10) return "border-orange-500" // significant penalty
+    return "border-red-500" // major penalty
   }
 
   // check if game was a remake
@@ -192,7 +251,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                     width={56}
                     height={56}
                     className="w-full h-full scale-110 object-cover"
-
+                    unoptimized
                   />
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 bg-gray-800 border border-gray-600 rounded px-1 py-0.5 text-[10px] font-bold leading-none">
@@ -200,51 +259,59 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                 </div>
               </div>
               <div className="flex flex-col gap-0.5">
-                <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
-                  <Image
-                    src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
-                    alt="Spell 1"
-                    width={24}
-                    height={24}
-                    className="w-full h-full object-cover"
-
-                  />
-                </div>
-                <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
-                  <Image
-                    src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
-                    alt="Spell 2"
-                    width={24}
-                    height={24}
-                    className="w-full h-full object-cover"
-
-                  />
-                </div>
+                <Tooltip id={participant.summoner1Id} type="summoner-spell">
+                  <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                    <Image
+                      src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
+                      alt="Spell 1"
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  </div>
+                </Tooltip>
+                <Tooltip id={participant.summoner2Id} type="summoner-spell">
+                  <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                    <Image
+                      src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
+                      alt="Spell 2"
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  </div>
+                </Tooltip>
               </div>
               <div className="flex flex-col gap-0.5">
                 {participant.perks?.styles?.[0]?.selections?.[0]?.perk && (
-                  <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
-                    <Image
-                      src={getRuneImageUrl(participant.perks.styles[0].selections[0].perk)}
-                      alt="Primary Rune"
-                      width={24}
-                      height={24}
-                      className="w-full h-full object-cover"
-
-                    />
-                  </div>
+                  <Tooltip id={participant.perks.styles[0].selections[0].perk} type="rune">
+                    <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                      <Image
+                        src={getRuneImageUrl(participant.perks.styles[0].selections[0].perk)}
+                        alt="Primary Rune"
+                        width={24}
+                        height={24}
+                        className="w-full h-full object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  </Tooltip>
                 )}
                 {participant.perks?.styles?.[1]?.style && (
-                  <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
-                    <Image
-                      src={getRuneStyleImageUrl(participant.perks.styles[1].style)}
-                      alt="Secondary Rune"
-                      width={24}
-                      height={24}
-                      className="w-full h-full object-cover"
-
-                    />
-                  </div>
+                  <Tooltip id={participant.perks.styles[1].style} type="rune">
+                    <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center">
+                      <Image
+                        src={getRuneStyleImageUrl(participant.perks.styles[1].style)}
+                        alt="Secondary Rune"
+                        width={20}
+                        height={20}
+                        className="w-4 h-4 object-contain"
+                        unoptimized
+                      />
+                    </div>
+                  </Tooltip>
                 )}
               </div>
             </div>
@@ -260,28 +327,32 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                 participant.item3,
                 participant.item4,
                 participant.item5,
-              ].map((itemId, idx) => (
-                <div
-                  key={idx}
-                  className={clsx(
-                    "w-8 h-8 rounded overflow-hidden",
-                    isSuboptimalItem(itemId, idx) 
-                      ? "border-2 border-red-500 bg-gray-800" 
-                      : "border border-gray-700 bg-gray-800"
-                  )}
-                >
-                  {itemId > 0 && (
-                    <Image
-                      src={getItemImageUrl(itemId, ddragonVersion)}
-                      alt={`Item ${itemId}`}
-                      width={32}
-                      height={32}
-                      className="w-full h-full object-cover"
-
-                    />
-                  )}
-                </div>
-              ))}
+              ].map((itemId, idx) => {
+                const penalty = getItemPenalty(itemId, idx)
+                const borderColor = getItemBorderColor(penalty)
+                const hasPenalty = penalty >= 3 // only show colored border if penalty >= 3%
+                return (
+                  <Tooltip key={idx} id={itemId} type="item">
+                    <div
+                      className={clsx(
+                        "w-8 h-8 rounded overflow-hidden bg-gray-800",
+                        hasPenalty ? `border-2 ${borderColor}` : "border border-gray-700"
+                      )}
+                    >
+                      {itemId > 0 && (
+                        <Image
+                          src={getItemImageUrl(itemId, ddragonVersion)}
+                          alt={`Item ${itemId}`}
+                          width={32}
+                          height={32}
+                          className="w-full h-full object-cover"
+                          unoptimized
+                        />
+                      )}
+                    </div>
+                  </Tooltip>
+                )
+              })}
             </div>
           </div>
 
@@ -334,7 +405,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                       width={16}
                       height={16}
                       className="w-full h-full object-cover"
-
+                      unoptimized
                     />
                   </div>
                   <Link 
@@ -373,7 +444,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                       width={16}
                       height={16}
                       className="w-full h-full object-cover"
-
+                      unoptimized
                     />
                   </div>
                   <Link 

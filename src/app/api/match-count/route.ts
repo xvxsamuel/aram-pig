@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       console.log(`batch ${start / batchSize + 1}: ${newMatches.length}/${matchIds.length} new`);
 
       if (newMatches.length < matchIds.length) {
-        console.log('reached existing matches');
+        console.log('Reached existing matches');
         break;
       }
       
@@ -53,12 +53,12 @@ export async function POST(request: Request) {
       start += batchSize;
     }
 
-    console.log(`total new: ${newMatchCount}`);
+    console.log(`Total new: ${newMatchCount}`);
 
     return NextResponse.json({ totalMatches: newMatchCount });
 
   } catch (error: any) {
-    console.error('match count error:', error);
+    console.error('Match count error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to get match count' },
       { status: 500 }
