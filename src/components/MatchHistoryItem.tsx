@@ -332,7 +332,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                 const borderColor = getItemBorderColor(penalty)
                 const hasPenalty = penalty >= 3 // only show colored border if penalty >= 3%
                 return (
-                  <Tooltip key={idx} id={itemId} type="item">
+                  <Tooltip key={idx} id={itemId} type="item" ddragonVersion={ddragonVersion}>
                     <div
                       className={clsx(
                         "w-8 h-8 rounded overflow-hidden bg-gray-800",

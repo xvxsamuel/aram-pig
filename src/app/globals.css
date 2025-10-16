@@ -26,11 +26,15 @@
     /* tooltip description colors */
     --tooltip-ad: #ffaa55;
     --tooltip-ad-bonus: #ff8844;
-    --tooltip-health: #44cc44;
+    --tooltip-health: #389641;
     --tooltip-mana: #5588ff;
+    --tooltip-armor: #ffdd33;
+    --tooltip-mr: #66bbff;
     --tooltip-ms: #99ff66;
     --tooltip-magic: #aa88ff;
-    --tooltip-heal: #44ff88;
+    --tooltip-heal: #3fdd64;
+    --tooltip-gold: #d4af37;
+    --tooltip-vamp: #c41e3a;
 }
 
 
@@ -43,7 +47,6 @@ body {
     scrollbar-color: var(--color-gold-dark) color-mix(in oklch, var(--color-accent-dark) 50%, transparent);
 }
 
-/* webkit browsers (chrome, safari, edge) */
 *::-webkit-scrollbar {
     width: 8px;
     height: 8px;

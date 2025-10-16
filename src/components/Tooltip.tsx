@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import { getTooltipData, type TooltipType } from '../lib/tooltip-data'
 import { cleanWikiMarkup } from '../lib/wiki-markup-simple'
+import { getItemImageUrl, getRuneImageUrl } from '../lib/ddragon-client'
 
 interface TooltipProps {
   id: number
   type?: 'item' | 'rune' | 'summoner-spell'
   children: React.ReactNode
+  ddragonVersion?: string
 }
 
 // get item type label
@@ -29,8 +32,11 @@ function getKeywordIcon(keyword: string): string | null {
   // status effects
   if (lower === 'slow' || lower === 'slowing' || lower === 'slows') return '/icons/tooltips/slow_icon.png'
   if (lower === 'stun' || lower === 'stuns' || lower === 'stunned') return '/icons/tooltips/stun_icon.png'
+  if (lower === 'immobilize' || lower === 'immobilizing' || lower === 'immobilized') return '/icons/tooltips/stun_icon.png'
+  if (lower === 'cripple' || lower === 'crippling' || lower === 'crippled') return '/icons/tooltips/cripple_icon.png'
   if (lower === 'stasis' || lower === 'stasis (buff)') return '/icons/tooltips/stasis_icon.png'
   if (lower === 'untargetable') return '/icons/tooltips/untargetable_icon.png'
+  if (lower === 'invulnerable') return '/icons/tooltips/taric_cosmic_radiance.png'
   
   // unit types
   if (lower === 'melee') return '/icons/tooltips/melee_role_icon.png'
@@ -42,6 +48,7 @@ function getKeywordIcon(keyword: string): string | null {
   if (lower === 'on-hit') return '/icons/tooltips/on-hit_icon.png'
   if (lower === 'on-attack') return '/icons/tooltips/on-attack_icon.png'
   if (lower === 'critical strike' || lower === 'critically strikes') return '/icons/tooltips/critical_strike_icon.png'
+  if (lower === 'takedown' || lower === 'takedowns') return '/icons/tooltips/damage_rating.png'
   
   // healing/shielding
   if (lower === 'heal' || lower === 'healing' || lower === 'healed') return '/icons/tooltips/heal_power_icon.png'
@@ -115,88 +122,9 @@ function formatDescription(desc: string, isRune: boolean = false): React.ReactNo
     // pass 1: clean wiki markup to text with markers
     const cleanedText = cleanWikiMarkup(currentText)
     
-    // pass 2: split by markers and render react elements
-    // split by <scaling>, <tip>, <keyword>, <ad>, <ad-bonus>, <health>, <mana>, <heal>, <ms>, <magic>, <italic>, <bold> markers while keeping them in the result
-    const parts = cleanedText.split(/(<scaling>.*?<\/scaling>|<tip>.*?<\/tip>|<keyword>.*?<\/keyword>|<ad>.*?<\/ad>|<ad-bonus>.*?<\/ad-bonus>|<health>.*?<\/health>|<mana>.*?<\/mana>|<heal>.*?<\/heal>|<ms>.*?<\/ms>|<magic>.*?<\/magic>|<italic>.*?<\/italic>|<bold>.*?<\/bold>)/g)
-    
-    parts.forEach((part: string) => {
-      if (!part) return
-      
-      if (part.startsWith('<scaling>')) {
-        // teal text for ability scaling
-        const content = part.slice(9, -10) // remove <scaling> and </scaling>
-        elements.push(<span key={key++} className="text-teal-400">{renderInlineFormatting(content, key)}</span>)
-      } else if (part.startsWith('<tip>')) {
-        // white/gray text for tips with icon (no color)
-        const content = part.slice(5, -6) // remove <tip> and </tip>
-        
-        // check for keyword|||display format
-        const parts = content.split('|||')
-        if (parts.length === 2) {
-          const [tipKeyword, displayText] = parts
-          const icon = getKeywordIcon(tipKeyword)
-          
-          if (icon) {
-            elements.push(
-              <span key={key++} className="text-white">
-                <img src={icon} alt="" className="inline h-[1em] w-auto align-baseline mr-0.5" />
-                {displayText}
-              </span>
-            )
-          } else {
-            elements.push(<span key={key++} className="text-white">{displayText}</span>)
-          }
-        } else {
-          elements.push(<span key={key++} className="text-white">{content}</span>)
-        }
-      } else if (part.startsWith('<keyword>')) {
-        // orange text for keywords (sti/ai icons)
-        const content = part.slice(9, -10) // remove <keyword> and </keyword>
-        elements.push(<span key={key++} className="text-orange-400">{content}</span>)
-      } else if (part.startsWith('<ad>')) {
-        // yellowish orange for base AD
-        const content = part.slice(4, -5) // remove <ad> and </ad>
-        elements.push(<span key={key++} style={{ color: 'var(--tooltip-ad)' }}>{renderInlineFormatting(content, key)}</span>)
-      } else if (part.startsWith('<ad-bonus>')) {
-        // darker orange for bonus physical damage
-        const content = part.slice(10, -11) // remove <ad-bonus> and </ad-bonus>
-        elements.push(<span key={key++} style={{ color: 'var(--tooltip-ad-bonus)' }}>{renderInlineFormatting(content, key)}</span>)
-      } else if (part.startsWith('<health>')) {
-        // green for health
-        const content = part.slice(8, -9) // remove <health> and </health>
-        elements.push(<span key={key++} style={{ color: 'var(--tooltip-health)' }}>{renderInlineFormatting(content, key)}</span>)
-      } else if (part.startsWith('<mana>')) {
-        // blue for mana
-        const content = part.slice(6, -7) // remove <mana> and </mana>
-        elements.push(<span key={key++} style={{ color: 'var(--tooltip-mana)' }}>{renderInlineFormatting(content, key)}</span>)
-      } else if (part.startsWith('<heal>')) {
-        // bright green for healing/shielding
-        const content = part.slice(6, -7) // remove <heal> and </heal>
-        elements.push(<span key={key++} style={{ color: 'var(--tooltip-heal)' }}>{renderInlineFormatting(content, key)}</span>)
-      } else if (part.startsWith('<ms>')) {
-        // lime green for movement speed
-        const content = part.slice(4, -5) // remove <ms> and </ms>
-        elements.push(<span key={key++} style={{ color: 'var(--tooltip-ms)' }}>{renderInlineFormatting(content, key)}</span>)
-      } else if (part.startsWith('<magic>')) {
-        // purple for AP/magic damage
-        const content = part.slice(7, -8) // remove <magic> and </magic>
-        elements.push(<span key={key++} style={{ color: 'var(--tooltip-magic)' }}>{renderInlineFormatting(content, key)}</span>)
-      } else if (part.startsWith('<italic>')) {
-        // italic text
-        const content = part.slice(8, -9) // remove <italic> and </italic>
-        elements.push(<em key={key++}>{content}</em>)
-      } else if (part.startsWith('<bold>')) {
-        // bold text - inherit parent color
-        const content = part.slice(6, -7) // remove <bold> and </bold>
-        elements.push(<strong key={key++}>{content}</strong>)
-      } else {
-        // regular text - check for inline formatting (bold/italic)
-        const formatted = renderInlineFormatting(part, key)
-        if (formatted.length > 0) {
-          elements.push(<span key={key++}>{formatted}</span>)
-        }
-      }
-    })
+    // pass 2: recursively render all nested markers
+    const rendered = renderNestedMarkers(cleanedText, lineIdx * 10000)
+    elements.push(...rendered)
     
     return (
       <div key={lineIdx} className="mb-1 last:mb-0">
@@ -206,23 +134,119 @@ function formatDescription(desc: string, isRune: boolean = false): React.ReactNo
   })
 }
 
-// helper to render bold/italic formatting within colored text
-function renderInlineFormatting(text: string, baseKey: number): React.ReactNode[] {
+// helper to recursively render nested markers (color tags, bold, italic)
+function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
   const parts: React.ReactNode[] = []
-  // split by <bold> and <italic> markers
-  const segments = text.split(/(<bold>.*?<\/bold>|<italic>.*?<\/italic>)/g)
+  
+  // split by all possible markers - use more specific patterns that match opening and closing tags correctly
+  const segments = text.split(/(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g)
   
   segments.forEach((segment, idx) => {
     if (!segment) return
     
-    if (segment.startsWith('<bold>')) {
+    const key = `${baseKey}-${idx}`
+    
+    if (segment.startsWith('<ap>')) {
+      const content = segment.slice(4, -5)
+      parts.push(<span key={key} className="text-teal-400">{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<rd>')) {
+      const content = segment.slice(4, -5)
+      parts.push(<span key={key} style={{ whiteSpace: 'nowrap' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<gold>')) {
       const content = segment.slice(6, -7)
-      parts.push(<strong key={`${baseKey}-${idx}`}>{content}</strong>)
+      parts.push(
+        <span key={key} style={{ color: 'var(--tooltip-gold)', whiteSpace: 'nowrap' }}>
+          <img src="/icons/tooltips/gold_colored_icon.png" alt="" className="inline h-[1em] w-auto align-baseline mr-0.5" />
+          {content}
+        </span>
+      )
+    } else if (segment.startsWith('<magic>')) {
+      const content = segment.slice(7, -8)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-magic)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<ad>')) {
+      const content = segment.slice(4, -5)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-ad)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<ad-bonus>')) {
+      const content = segment.slice(10, -11)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-ad-bonus)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<health>')) {
+      const content = segment.slice(8, -9)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-health)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<mana>')) {
+      const content = segment.slice(6, -7)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-mana)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<armor>')) {
+      const content = segment.slice(7, -8)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-armor)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<mr>')) {
+      const content = segment.slice(4, -5)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-mr)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<heal>')) {
+      const content = segment.slice(6, -7)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-heal)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<vamp>')) {
+      const content = segment.slice(6, -7)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-vamp)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<ms>')) {
+      const content = segment.slice(4, -5)
+      parts.push(<span key={key} style={{ color: 'var(--tooltip-ms)' }}>{renderNestedMarkers(content, idx * 1000)}</span>)
+    } else if (segment.startsWith('<tip>')) {
+      const content = segment.slice(5, -6)
+      const tipParts = content.split('|||')
+      if (tipParts.length === 2) {
+        const [tipKeyword, displayText] = tipParts
+        const icon = getKeywordIcon(tipKeyword)
+        const lowerKeyword = tipKeyword.toLowerCase().trim()
+        const isIconOnly = displayText === 'ICONONLY'
+        
+        // determine text color based on keyword type
+        let textColor = 'text-white'
+        if (lowerKeyword === 'heal' || lowerKeyword === 'healing' || lowerKeyword === 'healed' || 
+            lowerKeyword === 'shield' || lowerKeyword === 'shielding') {
+          textColor = '' // use style instead
+        }
+        
+        if (icon) {
+          if (isIconOnly) {
+            // render only the icon without text
+            parts.push(
+              <img key={key} src={icon} alt={tipKeyword} className="inline h-[1em] w-auto align-baseline" />
+            )
+          } else {
+            parts.push(
+              <span key={key} className={textColor} style={{ whiteSpace: 'nowrap', ...((!textColor ? { color: 'var(--tooltip-heal)' } : {})) }}>
+                <img src={icon} alt="" className="inline h-[1em] w-auto align-baseline mr-0.5" />
+                {displayText}
+              </span>
+            )
+          }
+        } else {
+          parts.push(<span key={key} className={textColor} style={!textColor ? { color: 'var(--tooltip-heal)' } : undefined}>{isIconOnly ? '' : displayText}</span>)
+        }
+      } else {
+        parts.push(<span key={key} className="text-white">{content}</span>)
+      }
+    } else if (segment.startsWith('<keyword>')) {
+      const content = segment.slice(9, -10)
+      const icon = getKeywordIcon(content)
+      if (icon) {
+        parts.push(
+          <span key={key} className="text-white" style={{ whiteSpace: 'nowrap' }}>
+            <img src={icon} alt="" className="inline h-[1em] w-auto align-baseline mr-0.5" />
+            {content}
+          </span>
+        )
+      } else {
+        parts.push(<span key={key} className="text-orange-400">{content}</span>)
+      }
+    } else if (segment.startsWith('<bold>')) {
+      const content = segment.slice(6, -7)
+      parts.push(<strong key={key}>{renderNestedMarkers(content, idx * 1000)}</strong>)
     } else if (segment.startsWith('<italic>')) {
       const content = segment.slice(8, -9)
-      parts.push(<em key={`${baseKey}-${idx}`}>{content}</em>)
+      parts.push(<em key={key}>{renderNestedMarkers(content, idx * 1000)}</em>)
     } else {
-      parts.push(<span key={`${baseKey}-${idx}`}>{segment}</span>)
+      parts.push(segment)
     }
   })
   
@@ -230,11 +254,14 @@ function renderInlineFormatting(text: string, baseKey: number): React.ReactNode[
 }
 
 // unified tooltip component
-export default function Tooltip({ id, type = 'item', children }: TooltipProps) {
+export default function Tooltip({ id, type = 'item', children, ddragonVersion = '15.20.1' }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const triggerRef = useRef<HTMLDivElement>(null)
-  const tooltipData = getTooltipData(id, type)
+  
+  // hubris id override 126697 to 6697
+  const actualId = id === 126697 ? 6697 : id
+  const tooltipData = getTooltipData(actualId, type)
 
   useEffect(() => {
     const updatePosition = () => {
@@ -286,25 +313,35 @@ export default function Tooltip({ id, type = 'item', children }: TooltipProps) {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 {type === 'item' && (
-                  <img 
-                    src={`https://ddragon.leagueoflegends.com/cdn/14.23.1/img/item/${id}.png`}
-                    alt={tooltipData.name}
-                    className="w-8 h-8 rounded border border-[#785a28]"
-                  />
+                  <div className="w-8 h-8 rounded border border-[#785a28] overflow-hidden relative">
+                    <Image 
+                      src={getItemImageUrl(actualId, ddragonVersion)}
+                      alt={tooltipData.name}
+                      width={32}
+                      height={32}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  </div>
                 )}
                 {type === 'rune' && tooltipData.icon && (
-                  <img 
-                    src={`https://ddragon.leagueoflegends.com/cdn/img/${tooltipData.icon}`}
-                    alt={tooltipData.name}
-                    className="w-8 h-8 rounded border border-[#785a28]"
-                  />
+                  <div className="w-8 h-8 rounded border border-[#785a28] overflow-hidden relative">
+                    <Image 
+                      src={`https://ddragon.leagueoflegends.com/cdn/img/${tooltipData.icon}`}
+                      alt={tooltipData.name}
+                      width={32}
+                      height={32}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  </div>
                 )}
                 <div className="text-sm font-semibold text-[#c8aa6e]">
                   {tooltipData.name}
                 </div>
               </div>
               {tooltipData.totalCost !== undefined && tooltipData.totalCost > 0 && (
-                <div className="text-sm font-semibold text-[#d4af37] ml-2 flex items-center gap-1">
+                <div className="text-sm font-semibold ml-2 flex items-center gap-1" style={{ color: 'var(--tooltip-gold)' }}>
                   <img 
                     src="/icons/tooltips/gold_colored_icon.png" 
                     alt="gold" 
