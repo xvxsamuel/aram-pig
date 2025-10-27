@@ -3,7 +3,7 @@ import Image from 'next/image'
 
 export default function HomePage() {
   return (
-    <main className="relative min-h-screen flex flex-col items-center px-4 bg-accent-dark overflow-hidden">
+    <main className="home-page relative min-h-screen flex flex-col items-center px-4 bg-accent-dark overflow-hidden">
       <Image
         src="/bg.png"
         alt="Background"

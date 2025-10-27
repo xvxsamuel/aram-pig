@@ -16,6 +16,7 @@
     "@upstash/redis": "^1.35.5",
     "clsx": "^2.1.1",
     "next": "latest",
+    "nextjs-toploader": "^3.9.17",
     "react": "latest",
     "react-dom": "latest"
   },

@@ -42,6 +42,15 @@ body {
     font-family: var(--font-family-light);
 }
 
+/* position loading bar at top on home page, below navbar on other pages */
+body:has(main.home-page) #nprogress .bar {
+    top: 0 !important;
+}
+
+body:not(:has(main.home-page)) #nprogress .bar {
+    top: 64px !important;
+}
+
 /* custom scrollbar styling */
 * {
     scrollbar-color: var(--color-gold-dark) color-mix(in oklch, var(--color-accent-dark) 50%, transparent);

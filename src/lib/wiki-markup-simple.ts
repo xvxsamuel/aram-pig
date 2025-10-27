@@ -10,7 +10,7 @@ export function cleanWikiMarkup(text: string): string {
     prevCleaned = cleaned
     iterations++
     
-    // {{ap|value}} - ability power, evaluate math expressions if needed
+    // ability power, evaluate math expressions if needed
     cleaned = cleaned.replace(/\{\{ap\|([^}]+)\}\}/g, (match, value) => {
       const trimmed = value.trim()
       // if it's a simple math expression (no spaces), try to evaluate it

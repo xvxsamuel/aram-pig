@@ -1,39 +1,21 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useLoading } from "../lib/loading-context";
+import NextTopLoader from 'nextjs-toploader';
 
 export default function LoadingBar() {
-  const [showBar, setShowBar] = useState(false);
-  const { isLoading } = useLoading();
-
-  useEffect(() => {
-    let showTimer: NodeJS.Timeout;
-    
-    if (isLoading) {
-      // start a timer to show loading bar only if it takes longer than 500ms
-      showTimer = setTimeout(() => {
-        setShowBar(true);
-      }, 500);
-    } else {
-      setShowBar(false);
-    }
-
-    return () => {
-      clearTimeout(showTimer);
-    };
-  }, [isLoading]);
-
-  if (!showBar) return null;
-
-  return (
-    <div className="fixed top-[64px] left-[64px] right-0 h-1 bg-transparent z-40 overflow-hidden">
-      <div 
-        className="h-full w-full bg-gradient-to-r from-accent-light to-accent-dark rounded-full"
-        style={{
-          animation: "loadingBar 1.5s ease-in-out infinite"
-        }}
-      />
-    </div>
-  );
-}
+    return (
+        <NextTopLoader
+        color="#2299DD"
+        initialPosition={0.08}
+        crawlSpeed={200}
+        height={3}
+        crawl={true}
+        showSpinner={true}
+        easing="ease"
+        speed={200}
+        shadow="0 0 10px #2299DD,0 0 5px #2299DD"
+        template='<div class="bar" role="bar"><div class="peg"></div></div> 
+        <div class="spinner" role="spinner"><div class="spinner-icon"></div></div>'
+        zIndex={1600}
+        showAtBottom={false}
+        />
+    )
+} 

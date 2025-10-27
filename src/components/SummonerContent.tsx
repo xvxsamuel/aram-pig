@@ -11,7 +11,6 @@ import Toast from "./Toast"
 import type { MatchData } from "../lib/riot-api"
 import type { UpdateJobProgress } from "../types/update-jobs"
 import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
-import { useLoading } from "../lib/loading-context"
 
 interface Props {
   summonerData: any
@@ -67,17 +66,11 @@ export default function SummonerContent({
   pigScoreGames
 }: Props) {
   const router = useRouter()
-  const { startLoading, stopLoading } = useLoading()
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>("Your profile is up to date!")
   const [toastType, setToastType] = useState<"success" | "error">("success")
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  // cleanup loading bar on unmount
-  useEffect(() => {
-    return () => stopLoading()
-  }, [stopLoading])
 
   // check for profile update flag on mount
   useEffect(() => {
@@ -104,7 +97,6 @@ export default function SummonerContent({
           const statusData = await statusResponse.json()
           
           if (statusData.hasActiveJob && statusData.job) {
-            startLoading()
             setJobProgress(statusData.job)
           }
         }
@@ -141,7 +133,6 @@ export default function SummonerContent({
         // job completed - reload to show fresh data
         console.log("Job completed, reloading page")
         setJobProgress(null)
-        stopLoading()
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current)
           pollIntervalRef.current = null
@@ -183,7 +174,6 @@ export default function SummonerContent({
   }, [jobProgress, pollJobStatus])
 
   const handleManualUpdate = async () => {
-    startLoading()
     
     // set placeholder job to show ui immediately
     setJobProgress({
@@ -224,7 +214,6 @@ export default function SummonerContent({
         // check if profile was recently updated (5 min cd from server)
         if (result.recentlyUpdated) {
           setJobProgress(null)
-          stopLoading()
           setToastMessage("Profile updated recently. Please try again later.")
           setToastType("error")
           setShowToast(true)
@@ -234,7 +223,6 @@ export default function SummonerContent({
         // check if already up to date (no new matches found)
         if (result.newMatches === 0) {
           setJobProgress(null)
-          stopLoading()
           setToastMessage("Your profile is up to date!")
           setToastType("success")
           setShowToast(true)
@@ -246,7 +234,6 @@ export default function SummonerContent({
       } else {
         // clear placeholder if failed
         setJobProgress(null)
-        stopLoading()
       }
     } catch (error) {
       console.error("Update failed:", error)

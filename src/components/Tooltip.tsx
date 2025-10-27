@@ -138,7 +138,7 @@ function formatDescription(desc: string, isRune: boolean = false): React.ReactNo
 function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
   const parts: React.ReactNode[] = []
   
-  // split by all possible markers - use more specific patterns that match opening and closing tags correctly
+  // split by all possible markers
   const segments = text.split(/(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g)
   
   segments.forEach((segment, idx) => {
@@ -259,7 +259,7 @@ export default function Tooltip({ id, type = 'item', children, ddragonVersion = 
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const triggerRef = useRef<HTMLDivElement>(null)
   
-  // hubris id override 126697 to 6697
+  // hubris id override
   const actualId = id === 126697 ? 6697 : id
   const tooltipData = getTooltipData(actualId, type)
 
