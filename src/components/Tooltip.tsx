@@ -308,12 +308,12 @@ export default function Tooltip({ id, type = 'item', children, ddragonVersion = 
             transform: 'translate(-50%, calc(-100% - 8px))'
           }}
         >
-          <div className="bg-[#1a1a1a] border border-[#785a28] rounded-lg p-3 shadow-xl w-80">
+          <div className="bg-[#1a1a1a] border border-gold-dark/40 rounded-lg p-3 shadow-xl w-80">
             {/* header with icon and name */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 {type === 'item' && (
-                  <div className="w-8 h-8 rounded border border-[#785a28] overflow-hidden relative">
+                  <div className="w-8 h-8 rounded border border-gold-dark/40 overflow-hidden relative">
                     <Image 
                       src={getItemImageUrl(actualId, ddragonVersion)}
                       alt={tooltipData.name}
@@ -325,7 +325,7 @@ export default function Tooltip({ id, type = 'item', children, ddragonVersion = 
                   </div>
                 )}
                 {type === 'rune' && tooltipData.icon && (
-                  <div className="w-8 h-8 rounded border border-[#785a28] overflow-hidden relative">
+                  <div className="w-8 h-8 rounded border border-gold-dark/40 overflow-hidden relative">
                     <Image 
                       src={`https://ddragon.leagueoflegends.com/cdn/img/${tooltipData.icon}`}
                       alt={tooltipData.name}

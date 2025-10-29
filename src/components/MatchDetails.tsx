@@ -74,7 +74,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           )}
         >
           {playerName}
-          {p.riotIdTagline && <span className="text-subtitle">#{p.riotIdTagline}</span>}
+          {p.riotIdTagline && <span className="text-text-muted">#{p.riotIdTagline}</span>}
         </Link>
 
         {/* pig score */}

@@ -16,7 +16,7 @@ export default function Navbar() {
     <>
       {/* sidebar */}
       <aside 
-        className="fixed left-0 top-0 h-screen bg-accent-darkest z-50 transition-all duration-300"
+        className="fixed left-0 top-0 h-screen bg-abyss-500 z-50 transition-all duration-300"
         style={{ width: sidebarHovered ? '240px' : '64px' }}
         onMouseEnter={() => setSidebarHovered(true)}
         onMouseLeave={() => setSidebarHovered(false)}
@@ -38,7 +38,7 @@ export default function Navbar() {
           
           {/* separator */}
           <div className="px-4">
-            <div className="h-px bg-gold-light/20" />
+            <div className="h-px bg-gold-light/40" />
           </div>
           
           {/* nav links */}
@@ -86,7 +86,7 @@ export default function Navbar() {
       
       {/* top navbar */}
       {!isLandingPage && (
-        <header className="sticky top-0 z-40 bg-accent-darker border-b border-gold-light/20" style={{ marginLeft: '64px' }}>
+        <header className="sticky top-0 z-40 bg-abyss-700  border-b border-gold-dark/40" style={{ marginLeft: '64px' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3">
             <div className="flex items-center justify-center h-10">
               <SearchBar className="w-full max-w-md h-10" />

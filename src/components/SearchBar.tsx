@@ -66,7 +66,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
   return (
     <div className={clsx("relative px-4", className)}>
       <div className="relative h-full rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-      <div className="relative z-10 h-full w-full rounded-[inherit] bg-accent-darkest flex items-center cursor-text">
+      <div className="relative z-10 h-full w-full rounded-[inherit] bg-abyss-500 flex items-center cursor-text">
         <form onSubmit={onSubmit} className="flex items-center gap-3 w-full h-full">
           <div className="relative flex-1 h-full flex items-center">
             <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 flex gap-1 pointer-events-none">
@@ -74,7 +74,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
                 {name}
               </span>
               {showDefaultTag && (
-                <span className="text-subtitle" style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}>
+                <span className="text-text-muted" style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}>
                   #{getDefaultTag(region)}
                 </span>
               )}
@@ -84,7 +84,7 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Search summoner name"
-              className="w-full h-full px-4 sm:px-6 leading-none text-white placeholder:text-transparent md:placeholder:text-subtitle placeholder:text-xs md:placeholder:text-sm bg-transparent outline-none relative z-10"
+              className="w-full h-full px-4 sm:px-6 leading-none text-white placeholder:text-transparent md:placeholder:text-text-muted placeholder:text-xs md:placeholder:text-sm bg-transparent outline-none relative z-10"
               style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}
             />
           </div>            <div className="flex items-center gap-3 pr-4 h-full">

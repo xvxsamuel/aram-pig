@@ -36,7 +36,7 @@ export default function FetchMessage({ job, region }: Props) {
 
   return (
     <div className="mb-6 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark" style={{ minHeight: '80px' }}>
-      <div className="bg-accent-darker rounded-xl p-4">
+      <div className="bg-abyss-700 rounded-xl p-4">
         <div className="flex items-center gap-4">
           <div className="relative w-10 h-10 flex-shrink-0">
             <div className="absolute inset-0 border-3 border-gray-700 rounded-full"></div>
@@ -53,7 +53,7 @@ export default function FetchMessage({ job, region }: Props) {
                 {eta !== null && ` • ETA: ${formatEta(eta)}`}
               </p>
             )}
-            <p className="text-xs text-subtitle">
+            <p className="text-xs text-text-muted">
               This may take a few minutes due to Riot API limits. The page will automatically refresh when complete.
             </p>
           </div>

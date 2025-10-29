@@ -22,7 +22,7 @@ export default function RegionSelector({
       aria-label={`Region: ${value}. Change region`}
       aria-haspopup="menu"
       aria-expanded={isOpen}
-      className={clsx("flex items-center justify-center h-[65%] aspect-[10/4] rounded-xl bg-gradient-to-t from-accent-r-dark to-accent-r-light text-white cursor-pointer tracking-wide outline-none focus-visible:ring-2 focus-visible:ring-white/30", className)}
+      className={clsx("flex items-center justify-center h-[65%] aspect-[10/4] rounded-xl bg-gradient-to-t from-action-200 to-action-100 text-white cursor-pointer tracking-wide outline-none focus-visible:ring-2 focus-visible:ring-white/30", className)}
     >
       <span style={{ fontFamily: "Amiamie, sans-serif", display: "block", transform: "translateY(12.5%)", lineHeight: 1 }}>
         {value.toUpperCase()}

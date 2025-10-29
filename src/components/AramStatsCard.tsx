@@ -36,43 +36,43 @@ export default function AramStatsCard({
 
   return (
     <div className="w-full">
-      <section className="bg-accent-darker rounded-xl border border-gold-dark/20 overflow-hidden">
+      <section className="bg-abyss-700 rounded-xl border border-gold-dark/20 overflow-hidden">
         <div className="px-6 py-3">
           <h2 className="text-xl font-bold text-left mb-3">Stats</h2>
           <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
           
           <div className="space-y-3 px-0">
             <div className="flex justify-between items-center">
-              <span className="text-subtitle text-sm">Win Rate</span>
+              <span className="text-text-muted text-sm">Win Rate</span>
               <span className="text-2xl font-bold">{winRate}%</span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-subtitle text-sm">Total Games</span>
+              <span className="text-text-muted text-sm">Total Games</span>
               <span className="text-xl font-bold">{totalGames} ({wins}W {totalGames - wins}L)</span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-subtitle text-sm">Longest Win Streak</span>
+              <span className="text-text-muted text-sm">Longest Win Streak</span>
               <span className="text-xl font-bold">{longestWinStreak}</span>
             </div>
 
             <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent my-4 -mx-6" />
 
             <div className="flex justify-between items-center">
-              <span className="text-subtitle text-sm">Average KDA</span>
+              <span className="text-text-muted text-sm">Average KDA</span>
               <span className="text-xl font-bold">{avgKDA}</span>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-subtitle text-sm">Per Game</span>
+              <span className="text-text-muted text-sm">Per Game</span>
               <span className="text-xl font-bold">
                 {(totalKills/totalGames).toFixed(1)} / {(totalDeaths/totalGames).toFixed(1)} / {(totalAssists/totalGames).toFixed(1)}
               </span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-subtitle text-sm">DPM</span>
+              <span className="text-text-muted text-sm">DPM</span>
               <span className="text-xl font-bold">{damagePerMinute}</span>
             </div>
 
@@ -82,28 +82,28 @@ export default function AramStatsCard({
                 
                 {totalPentaKills > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-subtitle text-sm">Pentakills</span>
+                    <span className="text-text-muted text-sm">Pentakills</span>
                     <span className="text-xl font-bold">{totalPentaKills}</span>
                   </div>
                 )}
                 
                 {totalQuadraKills > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-subtitle text-sm">Quadrakills</span>
+                    <span className="text-text-muted text-sm">Quadrakills</span>
                     <span className="text-xl font-bold">{totalQuadraKills}</span>
                   </div>
                 )}
                 
                 {totalTripleKills > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-subtitle text-sm">Triple Kills</span>
+                    <span className="text-text-muted text-sm">Triple Kills</span>
                     <span className="text-xl font-bold">{totalTripleKills}</span>
                   </div>
                 )}
                 
                 {totalDoubleKills > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-subtitle text-sm">Double Kills</span>
+                    <span className="text-text-muted text-sm">Double Kills</span>
                     <span className="text-xl font-bold">{totalDoubleKills}</span>
                   </div>
                 )}

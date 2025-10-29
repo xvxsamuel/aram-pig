@@ -412,7 +412,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                     href={profileUrl}
                     className={clsx(
                       "text-xs hover:text-gold-light truncate flex-1",
-                      isCurrentUser ? "text-white" : "text-subtitle"
+                      isCurrentUser ? "text-white" : "text-text-muted"
                     )}
                     title={playerName}
                   >
@@ -451,7 +451,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                     href={profileUrl}
                     className={clsx(
                       "text-xs hover:text-gold-light truncate flex-1 transition-colors",
-                      isCurrentUser ? "text-white" : "text-subtitle"
+                      isCurrentUser ? "text-white" : "text-text-muted"
                     )}
                     title={playerName}
                   >
@@ -482,7 +482,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
         >
           <ChevronDownIcon
             className={clsx(
-              "w-5 h-5 text-subtitle transition-transform",
+              "w-5 h-5 text-text-muted transition-transform",
               isExpanded && "rotate-180"
             )}
             strokeWidth={3}

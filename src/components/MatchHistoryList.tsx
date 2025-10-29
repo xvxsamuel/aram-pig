@@ -57,7 +57,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
 
   return (
     <div className="w-full xl:flex-1 xl:min-w-0">
-      <section className="bg-accent-darker rounded-xl border border-gold-dark/20 overflow-hidden">
+      <section className="bg-abyss-700 rounded-xl border border-gold-dark/40 overflow-hidden">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between gap-4 mb-3">
             <h2 className="text-xl font-bold flex-shrink-0">Recent Matches</h2>
@@ -71,7 +71,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
           <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
           
           {filteredMatches.length === 0 ? (
-          <div className="text-center text-subtitle py-8">
+          <div className="text-center text-text-muted py-8">
             {championFilter ? `No matches found for "${championFilter}"` : 'No ARAM matches found'}
           </div>
         ) : (
@@ -97,7 +97,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
                 >
                   {loading ? (
                     <div className="relative w-5 h-5 flex-shrink-0">
-                      <div className="absolute inset-0 border-2 border-accent-darker rounded-full"></div>
+                      <div className="absolute inset-0 border-2 border-abyss-700 rounded-full"></div>
                       <div className="absolute inset-0 border-2 border-gold-light rounded-full animate-spin border-t-transparent"></div>
                     </div>
                   ) : (

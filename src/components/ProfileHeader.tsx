@@ -54,7 +54,7 @@ export default function ProfileHeader({
   const [iconError, setIconError] = useState(false)
 
   return (
-    <section className="relative overflow-hidden bg-accent-darker">
+    <section className="relative overflow-hidden bg-abyss-700">
       {mostPlayedChampion && championImageUrl && (
         <>
           <div className="absolute inset-0 opacity-50" style={{ right: "-20%" }}>
@@ -68,7 +68,7 @@ export default function ProfileHeader({
               priority
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-accent-darker from-5% via-transparent/50 via-60% to-accent-darker" />
+          <div className="absolute inset-0 bg-gradient-to-r from-abyss-700 from-5% via-transparent/50 via-60% to-abyss-700" />
         </>
       )}
       <div className="max-w-7xl mx-auto px-8 py-8 min-h-40">
@@ -92,7 +92,7 @@ export default function ProfileHeader({
             </div>
           </div>
           <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-md p-px bg-gradient-to-b from-gold-light to-gold-dark">
-            <div className="px-3 py-1 rounded-[inherit] bg-accent-darkest">
+            <div className="px-3 py-1 rounded-[inherit] bg-abyss-500">
               <span className="text-sm font-bold text-white">{summonerLevel}</span>
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function ProfileHeader({
         <div className="flex-1 flex flex-col justify-between h-32">
           <h1 className="text-3xl font-bold text-white">
             {gameName}
-            <span className="text-subtitle"> #{tagLine}</span>
+            <span className="text-text-muted"> #{tagLine}</span>
           </h1>
           <div className="flex flex-col gap-2">
             <UpdateButton 
@@ -110,7 +110,7 @@ export default function ProfileHeader({
               hasActiveJob={hasActiveJob}
               onUpdateStarted={onUpdateStarted}
             />
-            <p className="text-xs text-subtitle">
+            <p className="text-xs text-text-muted">
               Last updated: {lastUpdated ? getTimeAgo(lastUpdated) : 'Never'}
             </p>
           </div>

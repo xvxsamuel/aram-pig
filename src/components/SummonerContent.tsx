@@ -267,7 +267,7 @@ export default function SummonerContent({
         lastUpdated={lastUpdated}
       />
 
-      <div className="bg-accent-darkest py-8 rounded-3xl">
+      <div className="bg-abyss-500 border-1 border-gold-dark/40 py-8 rounded-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           {jobProgress && (
             <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />

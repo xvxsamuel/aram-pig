@@ -9,20 +9,22 @@
 }
 
 @theme {
+    --color-text-muted: oklch(0.7412 0 0);
     --color-accent-light: oklch(0.6537 0.118 223.64);
     --color-accent-dark: oklch(0.3699 0.0866 245.06);
-    --color-accent-r-light: oklch(0.4522 0.0979 239.18);
-    --color-accent-r-dark: oklch(0.3728 0.0874 244.31);
-    --color-accent-darkest: oklch(0.2088 0.051 245.06); /* names don't correspond because i swapped them around lol */
-    --color-accent-darker: oklch(0.1653 0.0352 240.46); 
+    --color-action-200: oklch(0.4522 0.0979 239.18);
+    --color-action-100: oklch(0.3728 0.0874 244.31);
+    --color-abyss-700: oklch(0.15 0.050 245.06); /* names don't correspond because i swapped them around lol */
+    --color-abyss-500: oklch(0.2 0.050 245.06);
+    --color-abyss-400: oklch(0.25 0.050 245.06);  
+    --color-abyss-300: oklch(0.30 0.050 245.06);
+    --color-abyss-200: oklch(0.35 0.050 245.06);    
     --color-gold-light: oklch(0.7975 0.0627 90.79);
     --color-gold-dark: oklch(0.4713 0.0697 81.41);
-    --color-subtitle: oklch(0.7412 0 0);
     --color-negative: #E84057;
     --font-family-light: var(--font-light);
     --font-family-title: var(--font-regular);
     --font-family-amiamie: 'Amiamie', sans-serif;
-    
     /* tooltip description colors */
     --tooltip-ad: #ffaa55;
     --tooltip-ad-bonus: #ff8844;

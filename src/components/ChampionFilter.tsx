@@ -57,7 +57,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
       <div className="relative h-8 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
         <div
           onClick={handleInputClick}
-          className="relative z-10 h-full w-full rounded-[inherit] bg-accent-darkest flex items-center px-4 gap-2 cursor-pointer transition-colors"
+          className="relative z-10 h-full w-full rounded-[inherit] bg-abyss-500 flex items-center px-4 gap-2 cursor-pointer transition-colors"
         >
           {isOpen ? (
             <input
@@ -66,19 +66,19 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search champions"
-              className="text-sm flex-1 bg-transparent outline-none text-white placeholder:text-subtitle"
+              className="text-sm flex-1 bg-transparent outline-none text-white placeholder:text-text-muted"
             />
           ) : (
-            <span className={`text-sm flex-1 text-left ${value ? 'text-white' : 'text-subtitle'}`}>
+            <span className={`text-sm flex-1 text-left ${value ? 'text-white' : 'text-text-muted'}`}>
               {displayValue}
             </span>
           )}
-          <MagnifyingGlassIcon className="w-4 h-4 text-subtitle flex-shrink-0" />
+          <MagnifyingGlassIcon className="w-4 h-4 text-text-muted flex-shrink-0" />
         </div>
       </div>
 
       {isOpen && (
-        <div className="fixed bg-accent-darker rounded-xl border border-gold-dark/30 shadow-xl z-[100] overflow-hidden" style={{
+        <div className="fixed bg-abyss-700 rounded-xl border border-gold-dark/30 shadow-xl z-[100] overflow-hidden" style={{
           top: dropdownRef.current ? `${dropdownRef.current.getBoundingClientRect().bottom + 8}px` : '0',
           left: dropdownRef.current ? `${dropdownRef.current.getBoundingClientRect().left}px` : '0',
           width: dropdownRef.current ? `${dropdownRef.current.offsetWidth}px` : 'auto'
