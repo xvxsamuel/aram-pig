@@ -34,6 +34,8 @@ interface Props {
   hasActiveJob: boolean
   onUpdateStarted: () => void
   lastUpdated: string | null
+  selectedTab?: 'overview' | 'champions' | 'badges'
+  onTabChange?: (tab: 'overview' | 'champions' | 'badges') => void
 }
 
 export default function ProfileHeader({ 
@@ -49,9 +51,17 @@ export default function ProfileHeader({
   puuid,
   hasActiveJob,
   onUpdateStarted,
-  lastUpdated
+  lastUpdated,
+  selectedTab = 'overview',
+  onTabChange
 }: Props) {
   const [iconError, setIconError] = useState(false)
+
+  const tabs = [
+    { id: 'overview' as const, label: 'Overview' },
+    { id: 'champions' as const, label: 'Champions' },
+    { id: 'badges' as const, label: 'Badges' },
+  ]
 
   return (
     <section className="relative overflow-hidden bg-abyss-700">
@@ -63,19 +73,19 @@ export default function ProfileHeader({
               alt={mostPlayedChampion}
               fill
               className="object-cover"
-              style={{ objectPosition: "center 30%" }}
+              style={{ objectPosition: "center 25%" }}
 
               priority
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-abyss-700 from-5% via-transparent/50 via-60% to-abyss-700" />
+          <div className="absolute inset-0 bg-gradient-to-r from-abyss-700 from-35% via-transparent/30 via-60% to-abyss-700" />
         </>
       )}
-      <div className="max-w-7xl mx-auto px-8 py-8 min-h-40">
-        <div className="flex items-start gap-6 relative z-10">
+      <div className="max-w-6xl mx-auto px-8 py-6 min-h-40 relative z-10">
+        <div className="flex items-start gap-6">
         <div className="relative flex-shrink-0">
           <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-            <div className="w-32 h-32 rounded-[inherit] bg-accent-dark overflow-hidden">
+            <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
               <Image 
                 src={iconError 
                   ? profileIconUrl.replace(/\d+\.png$/, "29.png")
@@ -92,12 +102,12 @@ export default function ProfileHeader({
             </div>
           </div>
           <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-md p-px bg-gradient-to-b from-gold-light to-gold-dark">
-            <div className="px-3 py-1 rounded-[inherit] bg-abyss-500">
+            <div className="px-2 py-0.5 rounded-[inherit] bg-abyss-500">
               <span className="text-sm font-bold text-white">{summonerLevel}</span>
             </div>
           </div>
         </div>
-        <div className="flex-1 flex flex-col justify-between h-32">
+        <div className="flex-1 flex flex-col justify-between h-26">
           <h1 className="text-3xl font-bold text-white">
             {gameName}
             <span className="text-text-muted"> #{tagLine}</span>
@@ -115,6 +125,23 @@ export default function ProfileHeader({
             </p>
           </div>
         </div>
+        </div>
+
+        {/* tab navigation */}
+        <div className="flex gap-1 mt-4">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange?.(tab.id)}
+              className={`px-6 py-2 font-semibold transition-all border-b-2 ${
+                selectedTab === tab.id
+                  ? 'border-accent-light text-white'
+                  : 'border-transparent text-text-muted hover:text-white'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
     </section>

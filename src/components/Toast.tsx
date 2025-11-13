@@ -9,7 +9,7 @@ interface ToastProps {
   duration?: number
 }
 
-export default function Toast({ message, type = "success", onClose, duration = 3000 }: ToastProps) {
+export default function Toast({ message, type = "success", onClose, duration = 5000 }: ToastProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose()
@@ -20,7 +20,7 @@ export default function Toast({ message, type = "success", onClose, duration = 3
 
   const isError = type === "error"
   const borderColor = isError ? "border-[#E84057]" : "border-[#00a555]"
-  const iconColor = isError ? "text-[#E84057]" : "text-[#00a555]"
+  const iconColor = isError ? "text-text-muted" : "text-text-muted"
   const bgColor = isError ? "bg-[#2a1a1d]" : "bg-[#1a2a20]"
 
   return (

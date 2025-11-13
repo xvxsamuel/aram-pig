@@ -36,7 +36,7 @@ export default function AramStatsCard({
 
   return (
     <div className="w-full">
-      <section className="bg-abyss-700 rounded-xl border border-gold-dark/20 overflow-hidden">
+      <section className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
         <div className="px-6 py-3">
           <h2 className="text-xl font-bold text-left mb-3">Stats</h2>
           <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />

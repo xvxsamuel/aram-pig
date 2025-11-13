@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL, getDefaultTag } from "../../../lib/regions"
 import SummonerContent from "../../../components/SummonerContent"
 import { getSummonerByRiotId, type MatchData, getChampionCenteredUrl, getProfileIconUrl, getLatestVersion } from "../../../lib/riot-api"
-import { supabase } from "../../../lib/supabase"
+import { supabase, createAdminClient } from "../../../lib/supabase"
 import { fetchChampionNames } from "../../../lib/champion-names"
 import type { Metadata } from 'next'
 
@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   }
 }
 
-// disable caching to always fetch fresh data
+// disable caching
 export const revalidate = 0
 
 export default async function SummonerPage({ params }: { params: Promise<Params> }) {
@@ -60,9 +60,21 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   const decodedName = decodeURIComponent(name)
   const summonerName = decodedName.replace("-", "#")
 
-  const [gameName, tagLine] = summonerName.includes("#") 
+  const [rawGameName, rawTagLine] = summonerName.includes("#") 
     ? summonerName.split("#") 
     : [summonerName, getDefaultTag(regionLabel)]
+  
+  // trim whitespace from parsed name parts
+  const gameName = rawGameName.trim()
+  const tagLine = rawTagLine.trim()
+
+  console.log('URL parsing:', { 
+    rawName: name, 
+    decodedName, 
+    summonerName, 
+    gameName, 
+    tagLine 
+  })
 
   let summonerData = null
   let matches: MatchData[] = []
@@ -89,19 +101,34 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     let loadedFromCache = false
     
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      const { data: cachedSummoner, error: cacheError } = await supabase
-        .from("summoners")
-        .select("puuid, game_name, tag_line, summoner_level, profile_icon_id")
-        .ilike("game_name", gameName)
-        .ilike("tag_line", tagLine)
-        .single()
+      console.log(`Cache lookup: searching for ${gameName}#${tagLine} in ${regionLabel}`)
       
-      if (cacheError && cacheError.code !== 'PGRST116') {
-        console.warn(`Cache lookup error: ${cacheError.message}`)
+      // query with case-insensitive match on game_name and exact match on region
+      let query = supabase
+        .from("summoners")
+        .select("puuid, game_name, tag_line, summoner_level, profile_icon_id, region")
+        .eq("region", regionLabel)
+        .ilike("game_name", gameName)
+      
+      // handle tag line comparison (account for null values in old data)
+      if (tagLine) {
+        query = query.ilike("tag_line", tagLine)
+      }
+      
+      const { data: cachedSummoner, error: cacheError } = await query.single()
+      
+      console.log('Cache query result:', { cachedSummoner, error: cacheError?.message })
+      
+      if (cacheError) {
+        if (cacheError.code !== 'PGRST116') {
+          console.warn(`Cache lookup error: ${cacheError.message}`)
+        } else {
+          console.log('Cache miss: no matching summoner found')
+        }
       }
       
       if (cachedSummoner?.puuid && cachedSummoner?.game_name && cachedSummoner?.tag_line) {
-        console.log(`Loaded summoner from database cache (${gameName}#${tagLine})`)
+        console.log(`Loaded summoner from database cache (${cachedSummoner.game_name}#${cachedSummoner.tag_line})`)
         // construct summoner data from cache
         summonerData = {
           account: {
@@ -121,8 +148,34 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     
     // only call riot api if not found in cache
     if (!loadedFromCache) {
-      console.log(`Cache miss - fetching summoner from Riot API (${gameName}#${tagLine})`)
+      console.log(`Cache miss: Fetching summoner from Riot API: (${gameName}#${tagLine})`)
       summonerData = await getSummonerByRiotId(gameName, tagLine, platformCode)
+      
+      // store fetched summoner in database w/ admin client
+      if (summonerData) {
+        const accountTagLine = summonerData.account.tagLine || tagLine // fallback to parsed tagLine
+        console.log(`API returned: ${summonerData.account.gameName}${accountTagLine} Region:${regionLabel}`)
+        const adminClient = createAdminClient()
+        const { error: upsertError } = await adminClient
+          .from('summoners')
+          .upsert({
+            puuid: summonerData.account.puuid,
+            game_name: summonerData.account.gameName,
+            tag_line: accountTagLine,
+            summoner_level: summonerData.summoner.summonerLevel,
+            profile_icon_id: summonerData.summoner.profileIconId,
+            region: regionLabel,
+            last_updated: new Date().toISOString(),
+          }, {
+            onConflict: 'puuid'
+          })
+        
+        if (upsertError) {
+          console.error('Failed to cache summoner in database:', upsertError)
+        } else {
+          console.log(`Successfully cached summoner in database`)
+        }
+      }
     }
     
     if (!summonerData) {
@@ -140,7 +193,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
           lastUpdated = summonerRecord?.last_updated || null
 
-          console.log(`fetching matches for puuid: ${puuid}`)
+          console.log(`Fetching matches for puuid: ${puuid}`)
           
           // get lightweight match stats from summoner_matches (exclude remakes from stats)
           const { data: allMatchStats, error: statsError } = await supabase
@@ -350,7 +403,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             <p className="text-red-400 text-lg">{error}</p>
             {error.includes("Rate limit") ? (
               <p className="text-subtitle text-sm mt-2">
-                we're currently fetching your match history in the background. please wait a few moments without refreshing.
+                We're currently fetching your match history in the background. Please wait a few moments without refreshing.
               </p>
             ) : (
               <p className="text-subtitle text-sm mt-2">

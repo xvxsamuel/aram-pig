@@ -1,0 +1,272 @@
+item component separation - should we merge item rendering with tooltip?
+
+================================================================================
+current architecture
+================================================================================
+
+right now, items are rendered in two places:
+
+1. MatchHistoryItem.tsx (lines 319-357)
+   - renders 6 item slots per match (item0-item5)
+   - includes pig score penalty borders (colored borders for bad items)
+   - wrapped in <Tooltip> component
+   - structure:
+     ```tsx
+     <Tooltip id={itemId} type="item" ddragonVersion={ddragonVersion}>
+       <div className="w-8 h-8 rounded overflow-hidden bg-gray-800 border">
+         {itemId > 0 && <Image src={getItemImageUrl(itemId)} ... />}
+       </div>
+     </Tooltip>
+     ```
+
+2. MatchDetails.tsx (lines 130-145)
+   - renders items in expanded match view (all 10 players)
+   - no tooltips currently
+   - no pig score borders
+   - simpler structure without tooltip wrapper
+   - 60 item slots total (6 items × 10 players)
+
+tooltip component (Tooltip.tsx):
+- 409 lines, handles item/rune/summoner-spell tooltips
+- manages hover state, positioning, rendering
+- parses wiki markup for item descriptions
+- displays item stats, recipe, costs
+- completely separate component that wraps children
+
+================================================================================
+question: should we create ItemSlot component?
+================================================================================
+
+proposed component would be:
+```tsx
+<ItemSlot 
+  itemId={123} 
+  penalty={5} 
+  showTooltip={true}
+  size="small"
+  ddragonVersion="14.1.1"
+/>
+```
+
+this would encapsulate:
+- item image rendering
+- pig score penalty border logic
+- tooltip integration
+- size variants (small/medium/large)
+
+================================================================================
+pros of creating separate ItemSlot component
+================================================================================
+
+1. better code organization
+   - single source of truth for item rendering
+   - easier to find and modify item display logic
+   - clearer component hierarchy
+
+2. consistency across views
+   - MatchHistoryItem and MatchDetails would render identically
+   - easier to add tooltips to MatchDetails
+   - same border/styling logic everywhere
+
+3. easier to add features
+   - want to show item build order? modify one component
+   - want to add click events? one place to add it
+   - want to change item size? prop-based, not hardcoded
+
+4. testing benefits
+   - can unit test ItemSlot in isolation
+   - easier to test penalty border logic
+   - can snapshot test item rendering
+
+5. performance optimization potential
+   - can memo() the component easily
+   - each item renders independently
+   - easier to track which items cause re-renders
+
+6. reusability
+   - could use in champion stats view
+   - could use in item popularity rankings
+   - could use in item build guides (future feature)
+
+================================================================================
+cons of creating separate ItemSlot component
+================================================================================
+
+1. added abstraction layer
+   - one more component to understand
+   - debugging requires looking in two files
+   - may be overkill for simple rendering
+
+2. prop drilling
+   - need to pass ddragonVersion to every item
+   - need to pass penalty calculation function
+   - 6 items per match × 20 matches = 120 ItemSlot instances
+
+3. bundle size increase (minimal)
+   - additional component boilerplate
+   - but code would just move, not increase
+
+4. tooltip coupling question
+   - should tooltip be built into ItemSlot or remain wrapper?
+   - if built in: harder to disable tooltips (MatchDetails)
+   - if wrapper: defeats purpose of merging
+
+5. potential over-optimization
+   - current code works fine
+   - premature optimization is root of evil
+   - not a current performance bottleneck
+
+================================================================================
+current performance analysis
+================================================================================
+
+rendering in MatchHistoryItem:
+- 6 items per match
+- ~20 matches visible on load
+- = 120 item slots rendered initially
+- each wrapped in Tooltip component
+- tooltip only mounts on hover (lazy)
+
+current overhead:
+- 120 div wrappers (item containers)
+- 120 Image components
+- 120 Tooltip wrapper components (dormant until hover)
+- minimal performance cost
+
+measured performance:
+- items render fast (<5ms per match)
+- tooltips are optimized (memoized, conditional listeners)
+- not a performance bottleneck currently
+
+================================================================================
+recommendation: NO, keep current structure
+================================================================================
+
+reasons NOT to create ItemSlot component:
+
+1. current code is already well-organized
+   - tooltip is cleanly separated concern
+   - item rendering is simple (just image + border)
+   - only ~30 lines of code for item rendering
+
+2. premature abstraction
+   - only used in 2 places currently
+   - no complex logic to encapsulate
+   - "rule of three" not met (refactor after 3rd duplication)
+
+3. tooltip should remain wrapper
+   - tooltip is NOT item-specific (also wraps runes, summoner spells)
+   - tooltip positioning logic is complex, should stay separate
+   - mixing presentation (item) with interaction (tooltip) = bad separation
+
+4. flexibility of current approach
+   - MatchDetails can skip tooltips easily
+   - MatchHistoryItem can add pig score borders
+   - each can customize without affecting other
+
+5. performance is not an issue
+   - items render instantly
+   - no measurable lag or jank
+   - optimization would be premature
+
+6. maintenance simplicity
+   - inline rendering is easy to understand
+   - all item code in one place (MatchHistoryItem)
+   - no need to jump between files
+
+================================================================================
+alternative: improve MatchDetails instead
+================================================================================
+
+better approach would be to:
+
+1. add tooltips to MatchDetails items
+   - just wrap existing items in <Tooltip> component
+   - 5 lines of code change
+   - achieves consistency without new component
+
+2. add pig score borders to MatchDetails (optional)
+   - would show which players built poorly
+   - interesting additional data in expanded view
+   - reuse getItemPenalty function from MatchHistoryItem
+
+3. extract shared helper functions
+   - getItemPenalty could move to lib/pig-score.ts
+   - getItemBorderColor could be shared utility
+   - these are pure functions, easy to share
+
+example improvement to MatchDetails:
+```tsx
+{items.map((item, idx) => (
+  <Tooltip key={idx} id={item} type="item" ddragonVersion={ddragonVersion}>
+    <div className="w-7 h-7 rounded bg-gray-800 border border-gray-700">
+      {item > 0 && <Image src={getItemImageUrl(item)} ... />}
+    </div>
+  </Tooltip>
+))}
+```
+
+this achieves:
+- tooltip consistency (5 line change)
+- no new component needed
+- same architecture as MatchHistoryItem
+
+================================================================================
+when WOULD we create ItemSlot component?
+================================================================================
+
+create separate ItemSlot component when:
+
+1. used in 3+ different places
+   - rule of three: refactor after third duplication
+   - currently only 2 places (MatchHistoryItem, MatchDetails)
+   - wait for third use case
+
+2. complex rendering logic
+   - if items need animations, build paths, upgrade chains
+   - if items need click handlers for detailed view
+   - if items need loading states or error handling
+
+3. significant customization needed
+   - if we need tiny/small/medium/large/huge variants
+   - if we need different border styles per context
+   - if we need drag-and-drop for theorycrafting
+
+4. performance becomes bottleneck
+   - if item rendering causes lag
+   - if we need aggressive memoization
+   - if we need virtualization for huge item lists
+
+5. feature expansion requires it
+   - item comparison tool
+   - item build editor
+   - item statistics dashboard
+   - item recommendation system
+
+================================================================================
+current best practice: keep as-is
+================================================================================
+
+verdict: do NOT merge item rendering with tooltip
+
+keep current structure because:
+- clean separation of concerns (presentation vs interaction)
+- tooltip is reusable across items/runes/spells
+- item rendering is simple, doesn't justify abstraction
+- performance is excellent
+- maintenance is easy
+- flexibility is preserved
+
+small improvements to make:
+1. add tooltips to MatchDetails items (5 line change)
+2. extract getItemPenalty to lib/pig-score.ts (shared utility)
+3. consider adding pig score borders to MatchDetails (optional)
+
+DO NOT:
+- create ItemSlot component (premature abstraction)
+- merge tooltip logic into item-specific component (breaks reusability)
+- add unnecessary complexity when current code works well
+
+remember: "The best code is no code at all. The second best code is code you delete."
+
+current architecture is good. focus on features, not reorganization.

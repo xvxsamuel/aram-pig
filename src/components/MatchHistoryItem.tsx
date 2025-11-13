@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -15,7 +15,6 @@ import {
 } from '../lib/ddragon-client'
 import MatchDetails from './MatchDetails'
 import Tooltip from './Tooltip'
-import { supabase } from '../lib/supabase'
 
 interface Props {
   match: MatchData
@@ -26,166 +25,9 @@ interface Props {
 
 export default function MatchHistoryItem({ match, puuid, region, ddragonVersion }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [dataLoaded, setDataLoaded] = useState(false)
-  const [itemWinratesBySlot, setItemWinratesBySlot] = useState<{
-    slot1: Map<number, number>
-    slot2: Map<number, number>
-    slot3: Map<number, number>
-    topWr1: number
-    topWr2: number
-    topWr3: number
-  }>({ slot1: new Map(), slot2: new Map(), slot3: new Map(), topWr1: 0, topWr2: 0, topWr3: 0 })
 
   const participant = match.info.participants.find((p) => p.puuid === puuid)
   if (!participant) return null
-
-  // fetch optimal items by slot for this champion
-  useEffect(() => {
-    if (!participant) return
-
-    async function fetchOptimalItemsBySlot() {
-      try {
-        const championName = participant!.championName.toLowerCase()
-        console.log('Fetching items for champion:', championName)
-        
-        const { data, error, count } = await supabase
-          .from('aram_stats')
-          .select('slot_1_items, slot_2_items, slot_3_items', { count: 'exact' })
-          .eq('champion_name', championName)
-          .single()
-        
-        console.log('Query result:', { data: !!data, error, count })
-        
-        if (error) {
-          console.error('Failed to fetch champion items:', error)
-          return
-        }
-
-        if (data) {
-          console.log('Raw data:', {
-            slot1Length: data.slot_1_items?.length,
-            slot2Length: data.slot_2_items?.length,
-            slot3Length: data.slot_3_items?.length,
-            slot1First: data.slot_1_items?.[0],
-            slot2First: data.slot_2_items?.[0],
-            slot3First: data.slot_3_items?.[0],
-          })
-
-          const slot1Map = new Map<number, number>()
-          const slot2Map = new Map<number, number>()
-          const slot3Map = new Map<number, number>()
-          
-          // slot 1 items (already sorted by wr, first item = highest)
-          ;(data.slot_1_items || []).forEach((item: any) => {
-            slot1Map.set(item.id, item.wr)
-          })
-
-          // slot 2 items (already sorted by wr, first item = highest)
-          ;(data.slot_2_items || []).forEach((item: any) => {
-            slot2Map.set(item.id, item.wr)
-          })
-
-          // slot 3 items (already sorted by wr, first item = highest)
-          ;(data.slot_3_items || []).forEach((item: any) => {
-            slot3Map.set(item.id, item.wr)
-          })
-
-          const newState = {
-            slot1: slot1Map,
-            slot2: slot2Map,
-            slot3: slot3Map,
-            topWr1: data.slot_1_items?.[0]?.wr || 0,
-            topWr2: data.slot_2_items?.[0]?.wr || 0,
-            topWr3: data.slot_3_items?.[0]?.wr || 0,
-          }
-          
-          console.log('Setting state:', {
-            slot1Size: newState.slot1.size,
-            slot2Size: newState.slot2.size,
-            slot3Size: newState.slot3.size,
-            topWr1: newState.topWr1,
-            topWr2: newState.topWr2,
-            topWr3: newState.topWr3,
-          })
-
-          setItemWinratesBySlot(newState)
-          setDataLoaded(true)
-        }
-      } catch (err) {
-        console.error('failed to fetch optimal items:', err)
-      }
-    }
-
-    fetchOptimalItemsBySlot()
-  }, [participant])
-
-  // check if item is suboptimal and return winrate difference for color coding
-  const getItemPenalty = (itemId: number, slotIndex: number): number => {
-    if (itemId === 0) return 0 // empty slot
-    if (!dataLoaded) return 0 // wait for data to load
-
-    // get the first 3 completed items from timeline
-    const firstItem = participant.firstItem
-    const secondItem = participant.secondItem
-    const thirdItem = participant.thirdItem
-
-    // debug: log for first match only
-    if (slotIndex === 0 && typeof window !== 'undefined' && !(window as any)._itemDebugLogged) {
-      console.log('Item highlighting debug:', {
-        firstItem,
-        secondItem,
-        thirdItem,
-        hasData: itemWinratesBySlot.slot1?.size > 0,
-        topWr1: itemWinratesBySlot.topWr1,
-        topWr2: itemWinratesBySlot.topWr2,
-        topWr3: itemWinratesBySlot.topWr3,
-        dataLoaded,
-      });
-      (window as any)._itemDebugLogged = true
-    }
-
-    // check if this item is one of the first 3 purchases
-    let purchaseOrder = -1
-    if (itemId === firstItem) purchaseOrder = 0
-    else if (itemId === secondItem) purchaseOrder = 1
-    else if (itemId === thirdItem) purchaseOrder = 2
-    else return 0
-
-    // get winrates for this purchase slot
-    let slotWinrates: Map<number, number> | null = null
-    let topWinrate = 0
-
-    if (purchaseOrder === 0) {
-      slotWinrates = itemWinratesBySlot.slot1
-      topWinrate = itemWinratesBySlot.topWr1
-    } else if (purchaseOrder === 1) {
-      slotWinrates = itemWinratesBySlot.slot2
-      topWinrate = itemWinratesBySlot.topWr2
-    } else if (purchaseOrder === 2) {
-      slotWinrates = itemWinratesBySlot.slot3
-      topWinrate = itemWinratesBySlot.topWr3
-    }
-
-    if (!slotWinrates || slotWinrates.size === 0) return 0
-
-    const itemWr = slotWinrates.get(itemId)
-    
-    
-    // if item not in top 5, ignore it (could be situational/good)
-    if (!itemWr) return 0
-    
-    // return winrate difference
-    const wrDiff = topWinrate - itemWr
-    return wrDiff
-  }
-
-  // get border color based on penalty: yellow (3-7%) -> orange (7-10%) -> red (10%+)
-  const getItemBorderColor = (wrDiff: number): string => {
-    if (wrDiff < 3) return "border-gray-700" // minor penalty - don't show
-    if (wrDiff <= 7) return "border-yellow-500" // moderate penalty
-    if (wrDiff <= 10) return "border-orange-500" // significant penalty
-    return "border-red-500" // major penalty
-  }
 
   // check if game was a remake
   const isRemake = participant.gameEndedInEarlySurrender
@@ -203,8 +45,19 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
   const team2 = match.info.participants.filter(p => p.teamId === 200)
 
   return (
-    <div className={clsx("overflow-hidden", isExpanded ? "rounded-t-lg" : "rounded-lg")}>
-      <div className="flex">
+    <div className={clsx(
+      "group p-px transition-all",
+      isExpanded 
+        ? "bg-gradient-to-b from-gold-light to-gold-dark rounded-lg" 
+        : "bg-transparent hover:bg-gradient-to-b hover:from-gold-light hover:to-gold-dark rounded-lg"
+    )}>
+      <div className={clsx("overflow-hidden relative bg-abyss-600", isExpanded ? "rounded-lg" : "rounded-lg")}>
+        <div 
+          className="flex cursor-pointer"
+          onClick={() => setIsExpanded(!isExpanded)}
+          role="button"
+          aria-label="Toggle match details"
+        >
         {/* main content */}
         <div
           className={clsx(
@@ -217,9 +70,9 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                 : "bg-[#59343B] border-[#E84057]"
           )}
         >
-          <div className="flex items-center px-4 py-3 min-h-[80px] gap-4">
+          <div className="flex items-center px-4 py-3 min-h-[80px] gap-5">
         {/* left side: game info, champion, summoners, runes */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center flex-shrink-0">
           <div className="flex flex-col justify-center min-w-[75px]">
               <div className={clsx(
                 "text-base font-bold",
@@ -327,37 +180,27 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                 participant.item3,
                 participant.item4,
                 participant.item5,
-              ].map((itemId, idx) => {
-                const penalty = getItemPenalty(itemId, idx)
-                const borderColor = getItemBorderColor(penalty)
-                const hasPenalty = penalty >= 3 // only show colored border if penalty >= 3%
-                return (
-                  <Tooltip key={idx} id={itemId} type="item" ddragonVersion={ddragonVersion}>
-                    <div
-                      className={clsx(
-                        "w-8 h-8 rounded overflow-hidden bg-gray-800",
-                        hasPenalty ? `border-2 ${borderColor}` : "border border-gray-700"
-                      )}
-                    >
-                      {itemId > 0 && (
-                        <Image
-                          src={getItemImageUrl(itemId, ddragonVersion)}
-                          alt={`Item ${itemId}`}
-                          width={32}
-                          height={32}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                        />
-                      )}
-                    </div>
-                  </Tooltip>
-                )
-              })}
+              ].map((itemId, idx) => (
+                <Tooltip key={idx} id={itemId} type="item" ddragonVersion={ddragonVersion}>
+                  <div className="w-7.5 h-7.5 rounded overflow-hidden bg-gray-800 border border-gray-700">
+                    {itemId > 0 && (
+                      <Image
+                        src={getItemImageUrl(itemId, ddragonVersion)}
+                        alt={`Item ${itemId}`}
+                        width={32}
+                        height={32}
+                        className="w-full h-full object-cover"
+                        unoptimized
+                      />
+                    )}
+                  </div>
+                </Tooltip>
+              ))}
             </div>
           </div>
 
           {/* stats */}
-          <div className="flex flex-col justify-center flex-shrink-0 min-w-[100px] mx-auto">
+          <div className="flex flex-col justify-center flex-shrink-0 min-w-[75px] mx-auto">
             <div className="flex items-baseline gap-1 justify-center">
               <span className="text-base font-bold text-white">
                 {participant.kills}
@@ -410,6 +253,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                   </div>
                   <Link 
                     href={profileUrl}
+                    onClick={(e) => e.stopPropagation()}
                     className={clsx(
                       "text-xs hover:text-gold-light truncate flex-1",
                       isCurrentUser ? "text-white" : "text-text-muted"
@@ -435,7 +279,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                   <div
                     className={clsx(
                       "w-4 h-4 rounded overflow-hidden flex-shrink-0",
-                      isCurrentUser && "ring-2 ring-gold-light"
+                      isCurrentUser && "ring-1 ring-gold-light"
                     )}
                   >
                     <Image
@@ -449,6 +293,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                   </div>
                   <Link 
                     href={profileUrl}
+                    onClick={(e) => e.stopPropagation()}
                     className={clsx(
                       "text-xs hover:text-gold-light truncate flex-1 transition-colors",
                       isCurrentUser ? "text-white" : "text-text-muted"
@@ -465,28 +310,28 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           </div>
         </div>
 
-        {/* clickable chevron section - separate div that looks connected */}
-        <div
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={clsx(
-            "flex items-end justify-center px-3 pb-3 cursor-pointer transition-colors",
-            isExpanded ? "rounded-tr-lg" : "rounded-r-lg",
-            isRemake
-              ? "bg-[#4A4A4A] hover:bg-[#5A5A5A]"
-              : isWin 
-                ? "bg-[#38445E] hover:bg-[#48546E]" 
-                : "bg-[#69444B] hover:bg-[#79545B]"
-          )}
-          role="button"
-          aria-label="Toggle match details"
-        >
-          <ChevronDownIcon
-            className={clsx(
-              "w-5 h-5 text-text-muted transition-transform",
-              isExpanded && "rotate-180"
-            )}
-            strokeWidth={3}
-          />
+        {/* styled chevron button */}
+        <div className={clsx(
+          "flex items-end justify-center px-2 pb-2",
+          isExpanded ? "rounded-tr-lg" : "rounded-r-lg",
+          isRemake
+            ? "bg-[#3A3A3A]"
+            : isWin 
+              ? "bg-[#28344E]" 
+              : "bg-[#59343B]"
+        )}>
+          <div className="relative rounded-full p-px bg-gradient-to-b from-gold-light to-gold-dark">
+            {/* inner circle with chevron */}
+            <div className="relative w-6 h-6 rounded-full bg-abyss-700 flex items-center justify-center">
+              <ChevronDownIcon
+                className={clsx(
+                  "w-4 h-4 text-gold-light transition-transform",
+                  isExpanded && "rotate-180"
+                )}
+                strokeWidth={3}
+              />
+            </div>
+          </div>
         </div>
       </div>
       
@@ -501,6 +346,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
           isRemake={isRemake}
         />
       )}
+      </div>
     </div>
   )
 }

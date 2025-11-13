@@ -35,11 +35,11 @@ export default function FetchMessage({ job, region }: Props) {
   }
 
   return (
-    <div className="mb-6 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark" style={{ minHeight: '80px' }}>
-      <div className="bg-abyss-700 rounded-xl p-4">
+    <div className="mb-6 rounded-lg p-px bg-gradient-to-b from-gold-light to-gold-dark" style={{ minHeight: '80px' }}>
+      <div className="bg-abyss-700 rounded-[inherit] p-4">
         <div className="flex items-center gap-4">
           <div className="relative w-10 h-10 flex-shrink-0">
-            <div className="absolute inset-0 border-3 border-gray-700 rounded-full"></div>
+            <div className="absolute inset-0 border-3 border-abyss-400 rounded-full"></div>
             <div className="absolute inset-0 border-3 border-accent-light rounded-full animate-spin border-t-transparent"></div>
           </div>
 

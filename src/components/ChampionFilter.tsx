@@ -57,7 +57,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
       <div className="relative h-8 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
         <div
           onClick={handleInputClick}
-          className="relative z-10 h-full w-full rounded-[inherit] bg-abyss-500 flex items-center px-4 gap-2 cursor-pointer transition-colors"
+          className="relative z-10 h-full w-full rounded-[inherit] bg-abyss-700 flex items-center px-4 gap-2 cursor-pointer transition-colors"
         >
           {isOpen ? (
             <input
@@ -78,11 +78,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
       </div>
 
       {isOpen && (
-        <div className="fixed bg-abyss-700 rounded-xl border border-gold-dark/30 shadow-xl z-[100] overflow-hidden" style={{
-          top: dropdownRef.current ? `${dropdownRef.current.getBoundingClientRect().bottom + 8}px` : '0',
-          left: dropdownRef.current ? `${dropdownRef.current.getBoundingClientRect().left}px` : '0',
-          width: dropdownRef.current ? `${dropdownRef.current.offsetWidth}px` : 'auto'
-        }}>
+        <div className="absolute top-full mt-2 left-0 w-full bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-[100] overflow-hidden">
           <div className="max-h-64 overflow-y-auto" style={{
             scrollbarWidth: 'thin',
             scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',

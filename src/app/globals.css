@@ -14,11 +14,13 @@
     --color-accent-dark: oklch(0.3699 0.0866 245.06);
     --color-action-200: oklch(0.4522 0.0979 239.18);
     --color-action-100: oklch(0.3728 0.0874 244.31);
-    --color-abyss-700: oklch(0.15 0.050 245.06); /* names don't correspond because i swapped them around lol */
-    --color-abyss-500: oklch(0.2 0.050 245.06);
-    --color-abyss-400: oklch(0.25 0.050 245.06);  
-    --color-abyss-300: oklch(0.30 0.050 245.06);
-    --color-abyss-200: oklch(0.35 0.050 245.06);    
+    --color-abyss-800: oklch(0.125 0.05 245.06);
+    --color-abyss-700: oklch(0.15 0.05 245.06);
+    --color-abyss-600: oklch(0.175 0.05 245.06);
+    --color-abyss-500: oklch(0.2 0.05 245.06);
+    --color-abyss-400: oklch(0.25 0.05 245.06);  
+    --color-abyss-300: oklch(0.30 0.05 245.06);
+    --color-abyss-200: oklch(0.35 0.05 245.06);    
     --color-gold-light: oklch(0.7975 0.0627 90.79);
     --color-gold-dark: oklch(0.4713 0.0697 81.41);
     --color-negative: #E84057;
@@ -26,6 +28,7 @@
     --font-family-title: var(--font-regular);
     --font-family-amiamie: 'Amiamie', sans-serif;
     /* tooltip description colors */
+    --tooltip-ap: #2dd4bf;
     --tooltip-ad: #ffaa55;
     --tooltip-ad-bonus: #ff8844;
     --tooltip-health: #389641;
@@ -42,6 +45,7 @@
 
 body {
     font-family: var(--font-family-light);
+    font-weight: 400;
 }
 
 /* position loading bar at top on home page, below navbar on other pages */

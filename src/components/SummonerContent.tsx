@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import ProfileHeader from "./ProfileHeader"
 import PigScoreCard from "./PigScoreCard"
 import AramStatsCard from "./AramStatsCard"
 import MatchHistoryList from "./MatchHistoryList"
+import ChampionStatsList from "./ChampionStatsList"
 import FetchMessage from "./FetchMessage"
 import Toast from "./Toast"
 import type { MatchData } from "../lib/riot-api"
@@ -66,6 +67,8 @@ export default function SummonerContent({
   pigScoreGames
 }: Props) {
   const router = useRouter()
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'champions' | 'badges'>('overview')
+  const [renderedTabs, setRenderedTabs] = useState<Set<string>>(new Set(['overview']))
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>("Your profile is up to date!")
@@ -241,6 +244,52 @@ export default function SummonerContent({
     }
   }
 
+  // handle tab changes and mark tabs as rendered
+  const handleTabChange = (tab: 'overview' | 'champions' | 'badges') => {
+    setSelectedTab(tab)
+    setRenderedTabs(prev => new Set([...prev, tab]))
+  }
+
+  // memoize overview content to prevent re-rendering
+  const overviewContent = useMemo(() => (
+    <div className="flex flex-col xl:flex-row gap-4">
+      <div className="flex flex-col gap-4 xl:w-80 w-full">
+        <PigScoreCard averagePigScore={averagePigScore} totalGames={pigScoreGames} />
+        <AramStatsCard
+          totalGames={totalGames}
+          wins={wins}
+          totalKills={totalKills}
+          totalDeaths={totalDeaths}
+          totalAssists={totalAssists}
+          longestWinStreak={longestWinStreak}
+          totalDamage={totalDamage}
+          totalGameDuration={totalGameDuration}
+          totalDoubleKills={totalDoubleKills}
+          totalTripleKills={totalTripleKills}
+          totalQuadraKills={totalQuadraKills}
+          totalPentaKills={totalPentaKills}
+        />
+      </div>
+      <MatchHistoryList
+        matches={matches}
+        puuid={summonerData.account.puuid}
+        region={region}
+        ddragonVersion={ddragonVersion}
+        championNames={championNames}
+      />
+    </div>
+  ), [matches, averagePigScore, pigScoreGames, totalGames, wins, totalKills, totalDeaths, totalAssists, longestWinStreak, totalDamage, totalGameDuration, totalDoubleKills, totalTripleKills, totalQuadraKills, totalPentaKills, summonerData.account.puuid, region, ddragonVersion, championNames])
+
+  // memoize champions content
+  const championsContent = useMemo(() => (
+    <ChampionStatsList
+      matches={matches}
+      puuid={summonerData.account.puuid}
+      ddragonVersion={ddragonVersion}
+      championNames={championNames}
+    />
+  ), [matches, summonerData.account.puuid, ddragonVersion, championNames])
+
   return (
     <>
       {showToast && (
@@ -265,40 +314,34 @@ export default function SummonerContent({
         hasActiveJob={!!jobProgress}
         onUpdateStarted={handleManualUpdate}
         lastUpdated={lastUpdated}
+        selectedTab={selectedTab}
+        onTabChange={handleTabChange}
       />
 
-      <div className="bg-abyss-500 border-1 border-gold-dark/40 py-8 rounded-3xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+      <div className="">
+        <div className="max-w-6xl mx-auto px-2 sm:px-8">
           {jobProgress && (
             <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />
           )}
 
-          <div className="flex flex-col xl:flex-row gap-6">
-            <div className="flex flex-col gap-6 xl:w-80 w-full">
-              <PigScoreCard averagePigScore={averagePigScore} totalGames={pigScoreGames} />
-              <AramStatsCard
-                totalGames={totalGames}
-                wins={wins}
-                totalKills={totalKills}
-                totalDeaths={totalDeaths}
-                totalAssists={totalAssists}
-                longestWinStreak={longestWinStreak}
-                totalDamage={totalDamage}
-                totalGameDuration={totalGameDuration}
-                totalDoubleKills={totalDoubleKills}
-                totalTripleKills={totalTripleKills}
-                totalQuadraKills={totalQuadraKills}
-                totalPentaKills={totalPentaKills}
-              />
-            </div>
-            <MatchHistoryList
-              matches={matches}
-              puuid={summonerData.account.puuid}
-              region={region}
-              ddragonVersion={ddragonVersion}
-              championNames={championNames}
-            />
+          {/* keep all rendered tabs in dom, hide with css */}
+          <div className={selectedTab === 'overview' ? '' : 'hidden'}>
+            {overviewContent}
           </div>
+
+          {renderedTabs.has('champions') && (
+            <div className={selectedTab === 'champions' ? '' : 'hidden'}>
+              {championsContent}
+            </div>
+          )}
+
+          {renderedTabs.has('badges') && (
+            <div className={selectedTab === 'badges' ? '' : 'hidden'}>
+              <div className="py-8 text-center text-gray-400">
+                <p className="text-xl">badges view coming soon</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
