@@ -1,6 +1,7 @@
 // shared utility for storing match data to database
 import { createAdminClient } from './supabase'
-import type { MatchData, RegionalCluster } from './riot-api'
+import type { MatchData } from './riot-api'
+import type { RegionalCluster } from './regions'
 import { getMatchTimeline } from './riot-api'
 import { extractAbilityOrder } from './ability-leveling'
 import { calculatePigScore } from './pig-score-v2'
