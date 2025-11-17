@@ -257,7 +257,7 @@ async function processPuuid(
           continue
         }
         
-        const success = await storeMatchData(matchData, 'scraper')
+        const success = await storeMatchData(matchData, region, 'scraper')
         if (success) {
           stored++
           

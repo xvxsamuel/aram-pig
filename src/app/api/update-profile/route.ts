@@ -4,7 +4,7 @@ import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchByI
 import type { RequestType } from '../../../lib/rate-limiter';
 import { PLATFORM_TO_REGIONAL, type PlatformCode } from '../../../lib/regions';
 import type { UpdateJob } from '../../../types/update-jobs';
-import { calculatePigScore } from '../../../lib/pig-score';
+import { calculatePigScore } from '../../../lib/pig-score-v2';
 import { extractAbilityOrder } from '../../../lib/ability-leveling';
 import { extractPatch, getPatchFromDate } from '../../../lib/patch-utils';
 
@@ -396,7 +396,23 @@ async function processMatchesInBackground(
               if (p.gameEndedInEarlySurrender) {
                 pigScore = null
               } else {
-                pigScore = await calculatePigScore(p, match, fetchedMatches)
+                pigScore = await calculatePigScore({
+                  championName: p.championName,
+                  damage_dealt_to_champions: p.totalDamageDealtToChampions,
+                  total_damage_dealt: p.totalDamageDealt || 0,
+                  total_heals_on_teammates: p.totalHealsOnTeammates || 0,
+                  total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
+                  time_ccing_others: p.timeCCingOthers || 0,
+                  game_duration: match.info.gameDuration,
+                  item0: p.item0,
+                  item1: p.item1,
+                  item2: p.item2,
+                  item3: p.item3,
+                  item4: p.item4,
+                  item5: p.item5,
+                  perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
+                  patch: patchVersion,
+                })
                 console.log(`  PIG score for ${p.championName}: ${pigScore}`)
               }
             } catch (err) {
