@@ -1,11 +1,14 @@
 // shared utility for storing match data to database
 import { createAdminClient } from './supabase'
-import type { MatchData } from './riot-api'
+import type { MatchData, RegionalCluster } from './riot-api'
+import { getMatchTimeline } from './riot-api'
+import { extractAbilityOrder } from './ability-leveling'
 import { calculatePigScore } from './pig-score-v2'
 import { extractPatch, getPatchFromDate } from './patch-utils'
 
 export async function storeMatchData(
-  matchData: MatchData, 
+  matchData: MatchData,
+  region?: RegionalCluster,
   source: 'user' | 'scraper' = 'scraper'
 ): Promise<boolean> {
   const supabase = createAdminClient()
@@ -48,8 +51,22 @@ export async function storeMatchData(
       return false
     }
 
+    // fetch timeline data for ability leveling (only if region is provided)
+    let timeline = null
+    if (region) {
+      try {
+        timeline = await getMatchTimeline(matchData.metadata.matchId, region, 'batch')
+      } catch (error) {
+        console.log('could not fetch timeline (ability order will be null):', error)
+      }
+    }
+
     // store participant data with pig scores
-    const participantRows = await Promise.all(matchData.info.participants.map(async p => {
+    const participantRows = await Promise.all(matchData.info.participants.map(async (p, index) => {
+      // extract ability order from timeline (participantId is 1-indexed)
+      const participantId = index + 1
+      const abilityOrder = timeline ? extractAbilityOrder(timeline, participantId) : null
+
       // calculate pig score for this participant
       const pigScore = await calculatePigScore({
         championName: p.championName,
@@ -117,6 +134,7 @@ export async function storeMatchData(
         penta_kills: (p as any).pentaKills || 0,
         pig_score: pigScore,
         game_creation: matchData.info.gameCreation,
+        ability_order: abilityOrder,
       }
     }))
 
