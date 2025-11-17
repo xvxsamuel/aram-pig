@@ -1,10 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import type { MatchData } from "../lib/riot-api"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
-import { getChampionImageUrl, getItemImageUrl } from "../lib/ddragon-client"
+import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl } from "../lib/ddragon-client"
+import Tooltip from "./Tooltip"
+import runesData from "@/data/runes.json"
 
 interface Props {
   match: MatchData
@@ -16,6 +19,8 @@ interface Props {
 }
 
 export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin, isRemake }: Props) {
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'build'>('overview')
+  const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
 
   // separate teams
   const team100 = match.info.participants.filter(p => p.teamId === 100)
@@ -51,17 +56,21 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
       >
         {/* champion icon + level */}
         <div className="relative flex-shrink-0">
-          <div className="w-8 h-8 rounded overflow-hidden bg-accent-dark border border-gray-600">
-            <Image
-              src={getChampionImageUrl(p.championName, ddragonVersion)}
-              alt={p.championName}
-              width={32}
-              height={32}
-              className="w-full h-full scale-110 object-cover"
-            />
+          <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded">
+            <div className="w-8 h-8 rounded-[inherit] overflow-hidden bg-accent-dark">
+              <Image
+                src={getChampionImageUrl(p.championName, ddragonVersion)}
+                alt={p.championName}
+                width={32}
+                height={32}
+                className="w-full h-full scale-110 object-cover"
+              />
+            </div>
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 bg-gray-800 border border-gray-600 rounded px-0.5 text-[9px] font-bold leading-none">
-            {p.champLevel}
+          <div className="absolute -bottom-0.5 -right-0.5 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded">
+            <div className="bg-gray-800 rounded-[inherit] px-0.5 text-[9px] font-bold leading-none">
+              {p.champLevel}
+            </div>
           </div>
         </div>
 
@@ -150,49 +159,199 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   }
 
   return (
-    <div className={clsx(
-      "p-4 rounded-b-lg",
-      isRemake 
-        ? "bg-[#2A2A2A]"
-        : isWin 
-          ? "bg-[#1a2339]"
-          : "bg-[#3d2329]"
-    )}>
-      <div className="space-y-4">
-        {/* team 100 */}
-          <div className={`border-2 rounded-lg p-3 ${
-            team100Won ? 'border-accent-light/50 bg-accent-dark/10' : 'border-red-500/50 bg-red-900/10'
-          }`}>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className={`font-bold ${team100Won ? 'text-accent-light' : 'text-red-400'}`}>
-                {team100Won ? 'VICTORY' : 'DEFEAT'}
-              </h3>
-              <div className="text-sm text-neutral-light">
-                {team100Kills} kills • {formatGold(team100Gold)} gold
-              </div>
-            </div>
-            <div className="space-y-1">
-              {team100.map(p => renderPlayer(p, p.puuid === currentPuuid))}
-            </div>
-          </div>
-
-          {/* team 200 */}
-          <div className={`border-2 rounded-lg p-3 ${
-            team200Won ? 'border-accent-light/50 bg-accent-dark/10' : 'border-red-500/50 bg-red-900/10'
-          }`}>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className={`font-bold ${team200Won ? 'text-accent-light' : 'text-red-400'}`}>
-                {team200Won ? 'VICTORY' : 'DEFEAT'}
-              </h3>
-              <div className="text-sm text-neutral-light">
-                {team200Kills} kills • {formatGold(team200Gold)} gold
-              </div>
-            </div>
-            <div className="space-y-1">
-              {team200.map(p => renderPlayer(p, p.puuid === currentPuuid))}
-            </div>
-          </div>
-        </div>
+    <div className="bg-abyss-600 rounded-b-lg border-t border-abyss-700">
+      {/* Tab Navigation */}
+      <div className="flex border-b border-abyss-700">
+        <button
+          onClick={() => setSelectedTab('overview')}
+          className={clsx(
+            "px-6 py-3 font-semibold text-sm transition-all border-b-2",
+            selectedTab === 'overview'
+              ? "border-gold-light text-white bg-abyss-700/50"
+              : "border-transparent text-subtitle hover:text-white hover:bg-abyss-700/30"
+          )}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setSelectedTab('build')}
+          className={clsx(
+            "px-6 py-3 font-semibold text-sm transition-all border-b-2",
+            selectedTab === 'build'
+              ? "border-gold-light text-white bg-abyss-700/50"
+              : "border-transparent text-subtitle hover:text-white hover:bg-abyss-700/30"
+          )}
+        >
+          Build
+        </button>
       </div>
-    )
-  }
+
+      {/* Tab Content */}
+      <div className="p-4">
+        {selectedTab === 'overview' ? (
+          <div className="space-y-4">
+            {/* Team 100 */}
+            <div className={clsx(
+              "border-2 rounded-lg p-3",
+              team100Won 
+                ? "border-green-500/30 bg-green-900/10" 
+                : "border-red-500/30 bg-red-900/10"
+            )}>
+              <div className="flex justify-between items-center mb-2 pb-2 border-b border-abyss-700">
+                <h3 className={clsx(
+                  "font-bold text-sm",
+                  team100Won ? "text-green-400" : "text-red-400"
+                )}>
+                  {team100Won ? 'VICTORY' : 'DEFEAT'}
+                </h3>
+                <div className="text-xs text-subtitle">
+                  {team100Kills} kills • {formatGold(team100Gold)} gold
+                </div>
+              </div>
+              <div className="space-y-1">
+                {team100.map(p => renderPlayer(p, p.puuid === currentPuuid))}
+              </div>
+            </div>
+
+            {/* Team 200 */}
+            <div className={clsx(
+              "border-2 rounded-lg p-3",
+              team200Won 
+                ? "border-green-500/30 bg-green-900/10" 
+                : "border-red-500/30 bg-red-900/10"
+            )}>
+              <div className="flex justify-between items-center mb-2 pb-2 border-b border-abyss-700">
+                <h3 className={clsx(
+                  "font-bold text-sm",
+                  team200Won ? "text-green-400" : "text-red-400"
+                )}>
+                  {team200Won ? 'VICTORY' : 'DEFEAT'}
+                </h3>
+                <div className="text-xs text-subtitle">
+                  {team200Kills} kills • {formatGold(team200Gold)} gold
+                </div>
+              </div>
+              <div className="space-y-1">
+                {team200.map(p => renderPlayer(p, p.puuid === currentPuuid))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {currentPlayer && (
+              <>
+                {/* Item Timeline */}
+                <div className="bg-abyss-700 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-white mb-3">Item Build</h3>
+                  <div className="flex gap-2 items-center flex-wrap">
+                    {[currentPlayer.item0, currentPlayer.item1, currentPlayer.item2, currentPlayer.item3, currentPlayer.item4, currentPlayer.item5]
+                      .filter(itemId => itemId > 0)
+                      .map((itemId, idx) => (
+                        <div key={idx} className="relative group">
+                          <div className="w-12 h-12 rounded border-2 border-gold-dark/40 overflow-hidden bg-abyss-800 hover:border-gold-light transition-colors">
+                            <Image
+                              src={getItemImageUrl(itemId, ddragonVersion)}
+                              alt={`Item ${itemId}`}
+                              width={48}
+                              height={48}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          {/* Timeline info would go here if we had it */}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Runes */}
+                <div className="bg-abyss-700 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-white mb-3">Runes</h3>
+                  <div className="flex gap-6">
+                    {/* Primary Tree */}
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-gold-light mb-2">Primary</div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[currentPlayer.perks?.styles[0]?.selections[0]?.perk,
+                          currentPlayer.perks?.styles[0]?.selections[1]?.perk,
+                          currentPlayer.perks?.styles[0]?.selections[2]?.perk,
+                          currentPlayer.perks?.styles[0]?.selections[3]?.perk]
+                          .filter(Boolean)
+                          .map((runeId, idx) => {
+                            const runeInfo = (runesData as Record<string, any>)[String(runeId)]
+                            const runeIcon = runeInfo?.icon
+                            return (
+                              <Tooltip key={idx} id={runeId!} type="rune">
+                                <div className={clsx(
+                                  "w-12 h-12 rounded-full overflow-hidden border-2 transition-colors",
+                                  idx === 0 ? "border-gold-light bg-gold-dark/20" : "border-abyss-800 bg-abyss-800"
+                                )}>
+                                  {runeIcon && (
+                                    <Image
+                                      src={`https://ddragon.leagueoflegends.com/cdn/img/${runeIcon}`}
+                                      alt="Rune"
+                                      width={48}
+                                      height={48}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                </div>
+                              </Tooltip>
+                            )
+                          })}
+                      </div>
+                    </div>
+
+                    {/* Secondary Tree */}
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-subtitle mb-2">Secondary</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[currentPlayer.perks?.styles[1]?.selections[0]?.perk,
+                          currentPlayer.perks?.styles[1]?.selections[1]?.perk]
+                          .filter(Boolean)
+                          .map((runeId, idx) => {
+                            const runeInfo = (runesData as Record<string, any>)[String(runeId)]
+                            const runeIcon = runeInfo?.icon
+                            return (
+                              <Tooltip key={idx} id={runeId!} type="rune">
+                                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-abyss-800 bg-abyss-800">
+                                  {runeIcon && (
+                                    <Image
+                                      src={`https://ddragon.leagueoflegends.com/cdn/img/${runeIcon}`}
+                                      alt="Rune"
+                                      width={40}
+                                      height={40}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                </div>
+                              </Tooltip>
+                            )
+                          })}
+                      </div>
+                    </div>
+
+                    {/* Stat Shards */}
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-subtitle mb-2">Shards</div>
+                      <div className="flex gap-2">
+                        {[currentPlayer.perks?.statPerks?.offense,
+                          currentPlayer.perks?.statPerks?.flex,
+                          currentPlayer.perks?.statPerks?.defense]
+                          .filter(Boolean)
+                          .map((shardId, idx) => (
+                            <div key={idx} className="w-8 h-8 rounded bg-abyss-800 border border-abyss-900 flex items-center justify-center">
+                              <span className="text-[10px] text-subtitle">+</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

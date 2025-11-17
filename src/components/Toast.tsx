@@ -19,9 +19,9 @@ export default function Toast({ message, type = "success", onClose, duration = 5
   }, [duration, onClose])
 
   const isError = type === "error"
-  const borderColor = isError ? "border-[#E84057]" : "border-[#00a555]"
-  const iconColor = isError ? "text-text-muted" : "text-text-muted"
-  const bgColor = isError ? "bg-[#2a1a1d]" : "bg-[#1a2a20]"
+  const borderColor = isError ? "border-negative/80" : "border-accent-light/80"
+  const iconColor = isError ? "text-negative" : "text-accent-light"
+  const bgColor = isError ? "bg-abyss-700/80" : "bg-abyss-700/80"
 
   return (
     <div 

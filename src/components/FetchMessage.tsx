@@ -12,7 +12,7 @@ export default function FetchMessage({ job, region }: Props) {
   const [eta, setEta] = useState<number | null>(null)
   const hasStartedFetching = job.totalMatches > 0
   
-  console.log('✨ FetchMessage rendering with:', { hasStartedFetching, job })
+  console.log('FetchMessage rendering with:', { hasStartedFetching, job })
 
   // fetch eta when component mounts
   useEffect(() => {
@@ -36,10 +36,9 @@ export default function FetchMessage({ job, region }: Props) {
 
   return (
     <div className="mb-6 rounded-lg p-px bg-gradient-to-b from-gold-light to-gold-dark" style={{ minHeight: '80px' }}>
-      <div className="bg-abyss-700 rounded-[inherit] p-4">
+      <div className="bg-abyss-800 rounded-[inherit] p-4">
         <div className="flex items-center gap-4">
           <div className="relative w-10 h-10 flex-shrink-0">
-            <div className="absolute inset-0 border-3 border-abyss-400 rounded-full"></div>
             <div className="absolute inset-0 border-3 border-accent-light rounded-full animate-spin border-t-transparent"></div>
           </div>
 

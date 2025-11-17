@@ -34,6 +34,7 @@ interface Props {
   hasActiveJob: boolean
   onUpdateStarted: () => void
   lastUpdated: string | null
+  loading?: boolean
   selectedTab?: 'overview' | 'champions' | 'badges'
   onTabChange?: (tab: 'overview' | 'champions' | 'badges') => void
 }
@@ -52,6 +53,7 @@ export default function ProfileHeader({
   hasActiveJob,
   onUpdateStarted,
   lastUpdated,
+  loading = false,
   selectedTab = 'overview',
   onTabChange
 }: Props) {
@@ -121,7 +123,7 @@ export default function ProfileHeader({
               onUpdateStarted={onUpdateStarted}
             />
             <p className="text-xs text-text-muted">
-              Last updated: {lastUpdated ? getTimeAgo(lastUpdated) : 'Never'}
+              Last updated: {loading ? 'loading...' : lastUpdated ? getTimeAgo(lastUpdated) : 'Never'}
             </p>
           </div>
         </div>

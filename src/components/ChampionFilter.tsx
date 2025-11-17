@@ -73,7 +73,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
               {displayValue}
             </span>
           )}
-          <MagnifyingGlassIcon className="w-4 h-4 text-text-muted flex-shrink-0" />
+          <MagnifyingGlassIcon className="w-4 h-4 text-gold-light flex-shrink-0" />
         </div>
       </div>
 

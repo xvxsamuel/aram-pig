@@ -16,14 +16,14 @@ export default function Navbar() {
     <>
       {/* sidebar */}
       <aside 
-        className="fixed left-0 top-0 h-screen bg-abyss-500 z-50 transition-all duration-300"
+        className="fixed left-0 top-0 min-h-screen h-[120vh] bg-abyss-600 z-50 transition-all duration-300"
         style={{ width: sidebarHovered ? '240px' : '64px' }}
         onMouseEnter={() => setSidebarHovered(true)}
         onMouseLeave={() => setSidebarHovered(false)}
       >
         <div className="flex flex-col h-full">
           {/* logo section */}
-          <Link href="/" className="flex items-center p-4 hover:opacity-70 transition-opacity h-[64px]">
+          <Link href="/" className="flex items-center p-4 h-[64px]">
             <img src="/logo.svg" alt="ARAM PIG Logo" className="h-8 w-8 flex-shrink-0" />
             <img 
               src="/title-bar.svg" 

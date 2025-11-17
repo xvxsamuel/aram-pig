@@ -59,6 +59,11 @@
     "description": "Hitting a champion with 3 <b>separate</b> attacks or abilities in 3s deals bonus <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_AdaptiveDmg'>adaptive damage</lol-uikit-tooltipped-keyword>.",
     "icon": "perk-images/Styles/Domination/Electrocute/Electrocute.png"
   },
+  "8118": {
+    "name": "Deep Ward",
+    "description": "Stealth Wards and Totem Wards placed in the enemy jungle are considered Deep. All Deep wards are granted 1 bonus health, Deep Stealth Wards last 30-45 seconds longer, and Deep Totem Wards last 45-150 seconds longer. At level 9, wards placed in the river will also be considered Deep.",
+    "icon": "perk-images/Styles/Domination/DeepWard/DeepWard.png"
+  },
   "8120": {
     "name": "Ghost Poro",
     "description": "When your wards expire, they leave behind a Ghost Poro. The Ghost Poro grants vision until discovered. Gain permanent AD or AP, <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_Adaptive'>adaptive</lol-uikit-tooltipped-keyword> for each Ghost Poro and when your Ghost Poro spots an enemy champion, plus bonus upon completion.",
@@ -79,6 +84,11 @@
     "description": "<b>Unique</b> <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_Takedown'>takedowns</lol-uikit-tooltipped-keyword> grant additional gold the first time they are collected. ",
     "icon": "perk-images/Styles/Domination/TreasureHunter/TreasureHunter.png"
   },
+  "8134": {
+    "name": "Sixth Sense",
+    "description": "Upon moving near an un-tracked enemy ward, it is automatically tracked with a ward timer. At level 11, additionally reveals nearby enemy stealthed wards for 10 seconds upon being triggered. (250 second cooldown, 900 range)",
+    "icon": "perk-images/Styles/Domination/SixthSense/SixthSense.png"
+  },
   "8136": {
     "name": "Zombie Ward",
     "description": "<lol-uikit-tooltipped-keyword key='LinkTooltip_Description_Takedown'>Takedowns</lol-uikit-tooltipped-keyword> on enemy Wards cause friendly Zombie Wards to sprout from their corpses. Gain permanent AD or AP, <lol-uikit-tooltipped-keyword key='LinkTooltip_Description_Adaptive'>adaptive</lol-uikit-tooltipped-keyword> for each Zombie Ward spawned plus a bonus upon completion.",
@@ -93,6 +103,11 @@
     "name": "Taste of Blood",
     "description": "Heal when you damage an enemy champion.",
     "icon": "perk-images/Styles/Domination/TasteOfBlood/GreenTerror_TasteOfBlood.png"
+  },
+  "8140": {
+    "name": "Grisly Mementos",
+    "description": "Gain 6 trinket haste per Memento stack, up to 108 haste at maximum stacks. Earn a Memento stack whenever scoring a champion takedown, up to 18 stacks. In modes where wards are not available, each stack permanently grants 3 summoner spell haste instead, up to 54.",
+    "icon": "perk-images/Styles/Domination/GrislyMementos/GrislyMementos.png"
   },
   "8143": {
     "name": "Sudden Impact",
@@ -193,6 +208,11 @@
     "name": "Triple Tonic",
     "description": "Upon reaching level 3, gain an Elixir of Avarice.<br>Upon reaching level 6, gain an Elixir of Force.<br>Upon reaching level 9, gain an Elixir of Skill. ",
     "icon": "perk-images/Styles/Inspiration/PerfectTiming/AlchemistCabinet.png"
+  },
+  "8315": {
+    "name": "Axiom Arcanist",
+    "description": "Your ultimate has 12% increased damage (reduced to 8% for area of effect abilities), healing and shielding. Scoring an enemy champion takedown reduces your ultimate ability's current cooldown by 7%.",
+    "icon": "perk-images/Styles/Inspiration/AxiomArcanist/AxiomArcanist.png"
   },
   "8316": {
     "name": "Jack Of All Trades",

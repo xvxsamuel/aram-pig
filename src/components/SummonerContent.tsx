@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import ProfileHeader from "./ProfileHeader"
+import ProfileSkeleton from "./ProfileSkeleton"
 import PigScoreCard from "./PigScoreCard"
 import AramStatsCard from "./AramStatsCard"
 import MatchHistoryList from "./MatchHistoryList"
@@ -42,29 +43,29 @@ interface Props {
 
 export default function SummonerContent({
   summonerData,
-  matches,
-  wins,
-  totalGames,
-  totalKills,
-  totalDeaths,
-  totalAssists,
-  mostPlayedChampion,
-  longestWinStreak,
-  totalDamage,
-  totalGameDuration,
-  totalDoubleKills,
-  totalTripleKills,
-  totalQuadraKills,
-  totalPentaKills,
+  matches: initialMatches,
+  wins: initialWins,
+  totalGames: initialTotalGames,
+  totalKills: initialTotalKills,
+  totalDeaths: initialTotalDeaths,
+  totalAssists: initialTotalAssists,
+  mostPlayedChampion: initialMostPlayedChampion,
+  longestWinStreak: initialLongestWinStreak,
+  totalDamage: initialTotalDamage,
+  totalGameDuration: initialTotalGameDuration,
+  totalDoubleKills: initialTotalDoubleKills,
+  totalTripleKills: initialTotalTripleKills,
+  totalQuadraKills: initialTotalQuadraKills,
+  totalPentaKills: initialTotalPentaKills,
   region,
   name,
-  championImageUrl,
+  championImageUrl: initialChampionImageUrl,
   profileIconUrl,
   ddragonVersion,
   championNames,
-  lastUpdated,
-  averagePigScore,
-  pigScoreGames
+  lastUpdated: initialLastUpdated,
+  averagePigScore: initialAveragePigScore,
+  pigScoreGames: initialPigScoreGames
 }: Props) {
   const router = useRouter()
   const [selectedTab, setSelectedTab] = useState<'overview' | 'champions' | 'badges'>('overview')
@@ -74,6 +75,72 @@ export default function SummonerContent({
   const [toastMessage, setToastMessage] = useState<string>("Your profile is up to date!")
   const [toastType, setToastType] = useState<"success" | "error">("success")
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // state for client-side loaded data
+  const [loading, setLoading] = useState(initialTotalGames === 0)
+  const [matches, setMatches] = useState<MatchData[]>(initialMatches)
+  const [wins, setWins] = useState(initialWins)
+  const [totalGames, setTotalGames] = useState(initialTotalGames)
+  const [totalKills, setTotalKills] = useState(initialTotalKills)
+  const [totalDeaths, setTotalDeaths] = useState(initialTotalDeaths)
+  const [totalAssists, setTotalAssists] = useState(initialTotalAssists)
+  const [mostPlayedChampion, setMostPlayedChampion] = useState(initialMostPlayedChampion)
+  const [longestWinStreak, setLongestWinStreak] = useState(initialLongestWinStreak)
+  const [totalDamage, setTotalDamage] = useState(initialTotalDamage)
+  const [totalGameDuration, setTotalGameDuration] = useState(initialTotalGameDuration)
+  const [totalDoubleKills, setTotalDoubleKills] = useState(initialTotalDoubleKills)
+  const [totalTripleKills, setTotalTripleKills] = useState(initialTotalTripleKills)
+  const [totalQuadraKills, setTotalQuadraKills] = useState(initialTotalQuadraKills)
+  const [totalPentaKills, setTotalPentaKills] = useState(initialTotalPentaKills)
+  const [championImageUrl, setChampionImageUrl] = useState(initialChampionImageUrl)
+  const [lastUpdated, setLastUpdated] = useState(initialLastUpdated)
+  const [averagePigScore, setAveragePigScore] = useState(initialAveragePigScore)
+  const [pigScoreGames, setPigScoreGames] = useState(initialPigScoreGames)
+
+  // fetch stats client-side if not provided (totalGames === 0)
+  useEffect(() => {
+    if (initialTotalGames > 0) return // already have data
+    
+    async function fetchStats() {
+      try {
+        const response = await fetch(`/api/summoner-stats?puuid=${summonerData.account.puuid}`)
+        if (response.ok) {
+          const data = await response.json()
+          setMatches(data.matches)
+          setWins(data.wins)
+          setTotalGames(data.totalGames)
+          setTotalKills(data.totalKills)
+          setTotalDeaths(data.totalDeaths)
+          setTotalAssists(data.totalAssists)
+          setMostPlayedChampion(data.mostPlayedChampion)
+          setLongestWinStreak(data.longestWinStreak)
+          setTotalDamage(data.totalDamage)
+          setTotalGameDuration(data.totalGameDuration)
+          setTotalDoubleKills(data.totalDoubleKills)
+          setTotalTripleKills(data.totalTripleKills)
+          setTotalQuadraKills(data.totalQuadraKills)
+          setTotalPentaKills(data.totalPentaKills)
+          setLastUpdated(data.lastUpdated)
+          setAveragePigScore(data.averagePigScore)
+          setPigScoreGames(data.pigScoreGames)
+          
+          // fetch champion image if we have most played champion
+          if (data.mostPlayedChampion) {
+            const imgResponse = await fetch(`https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${data.mostPlayedChampion}_0.jpg`)
+            if (imgResponse.ok) {
+              setChampionImageUrl(imgResponse.url)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchStats()
+  }, [summonerData.account.puuid, initialTotalGames])
 
   // check for profile update flag on mount
   useEffect(() => {
@@ -132,6 +199,10 @@ export default function SummonerContent({
 
       if (data.hasActiveJob && data.job) {
         setJobProgress(data.job)
+      } else if (jobProgress && jobProgress.status !== 'completed' && jobProgress.status !== 'failed') {
+        // keep showing progress until explicitly completed/failed
+        // job might still be processing in background
+        return
       } else {
         // job completed - reload to show fresh data
         console.log("Job completed, reloading page")
@@ -156,9 +227,9 @@ export default function SummonerContent({
     }
   }, [summonerData.account.puuid, router])
 
-  // polling interval
+  // polling interval - only start polling once job has actually started (totalMatches > 0)
   useEffect(() => {
-    if (!jobProgress) {
+    if (!jobProgress || jobProgress.totalMatches === 0) {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current)
         pollIntervalRef.current = null
@@ -283,12 +354,12 @@ export default function SummonerContent({
   // memoize champions content
   const championsContent = useMemo(() => (
     <ChampionStatsList
-      matches={matches}
       puuid={summonerData.account.puuid}
       ddragonVersion={ddragonVersion}
       championNames={championNames}
+      profileIconUrl={profileIconUrl}
     />
-  ), [matches, summonerData.account.puuid, ddragonVersion, championNames])
+  ), [summonerData.account.puuid, ddragonVersion, championNames, profileIconUrl])
 
   return (
     <>
@@ -300,50 +371,125 @@ export default function SummonerContent({
         />
       )}
       
-      <ProfileHeader
-        profileIconId={summonerData.summoner.profileIconId}
-        gameName={summonerData.account.gameName}
-        tagLine={summonerData.account.tagLine}
-        summonerLevel={summonerData.summoner.summonerLevel}
-        mostPlayedChampion={mostPlayedChampion}
-        championImageUrl={championImageUrl}
-        profileIconUrl={profileIconUrl}
-        region={region}
-        name={name}
-        puuid={summonerData.account.puuid}
-        hasActiveJob={!!jobProgress}
-        onUpdateStarted={handleManualUpdate}
-        lastUpdated={lastUpdated}
-        selectedTab={selectedTab}
-        onTabChange={handleTabChange}
-      />
+      {loading ? (
+        <>
+          <ProfileHeader
+            profileIconId={summonerData.summoner.profileIconId}
+            gameName={summonerData.account.gameName}
+            tagLine={summonerData.account.tagLine}
+            summonerLevel={summonerData.summoner.summonerLevel}
+            mostPlayedChampion={mostPlayedChampion}
+            championImageUrl={championImageUrl}
+            profileIconUrl={profileIconUrl}
+            region={region}
+            name={name}
+            puuid={summonerData.account.puuid}
+            hasActiveJob={!!jobProgress}
+            onUpdateStarted={handleManualUpdate}
+            lastUpdated={lastUpdated}
+            loading={true}
+            selectedTab={selectedTab}
+            onTabChange={handleTabChange}
+          />
+          <div className="max-w-6xl mx-auto px-2 sm:px-8">
+            <div className="flex flex-col xl:flex-row gap-4 py-4">
+              <div className="flex flex-col gap-4 xl:w-80 w-full">
+                {/* pig score card shell */}
+                <div className="w-full">
+                  <section className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
+                    <div className="px-6 py-3">
+                      <h2 className="text-xl font-bold text-left mb-3">Personal Item Grade</h2>
+                      <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
+                      <div className="text-center min-h-[120px] flex items-center justify-center">
+                        <div className="relative w-10 h-10">
+                          <div className="absolute inset-0 border-3 border-accent-light rounded-full animate-spin border-t-transparent"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
 
-      <div className="">
-        <div className="max-w-6xl mx-auto px-2 sm:px-8">
-          {jobProgress && (
-            <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />
-          )}
+                {/* stats card shell */}
+                <div className="w-full">
+                  <section className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
+                    <div className="px-6 py-3">
+                      <h2 className="text-xl font-bold text-left mb-3">Stats</h2>
+                      <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
+                      <div className="min-h-[300px] flex items-center justify-center">
+                        <div className="relative w-10 h-10">
+                          <div className="absolute inset-0 border-3 border-accent-light rounded-full animate-spin border-t-transparent"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
 
-          {/* keep all rendered tabs in dom, hide with css */}
-          <div className={selectedTab === 'overview' ? '' : 'hidden'}>
-            {overviewContent}
-          </div>
-
-          {renderedTabs.has('champions') && (
-            <div className={selectedTab === 'champions' ? '' : 'hidden'}>
-              {championsContent}
-            </div>
-          )}
-
-          {renderedTabs.has('badges') && (
-            <div className={selectedTab === 'badges' ? '' : 'hidden'}>
-              <div className="py-8 text-center text-gray-400">
-                <p className="text-xl">badges view coming soon</p>
+              {/* match history shell */}
+              <div className="flex-1">
+                <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
+                  <div className="px-6 py-3">
+                    <h2 className="text-xl font-bold text-left mb-3">Match History</h2>
+                    <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
+                    <div className="min-h-[500px] flex items-center justify-center">
+                      <div className="relative w-12 h-12">
+                        <div className="absolute inset-0 border-4 border-accent-light rounded-full animate-spin border-t-transparent"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <ProfileHeader
+            profileIconId={summonerData.summoner.profileIconId}
+            gameName={summonerData.account.gameName}
+            tagLine={summonerData.account.tagLine}
+            summonerLevel={summonerData.summoner.summonerLevel}
+            mostPlayedChampion={mostPlayedChampion}
+            championImageUrl={championImageUrl}
+            profileIconUrl={profileIconUrl}
+            region={region}
+            name={name}
+            puuid={summonerData.account.puuid}
+            hasActiveJob={!!jobProgress}
+            onUpdateStarted={handleManualUpdate}
+            lastUpdated={lastUpdated}
+            selectedTab={selectedTab}
+            onTabChange={handleTabChange}
+          />
+
+          <div className="">
+            <div className="max-w-6xl mx-auto px-2 sm:px-8">
+              {jobProgress && (
+                <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />
+              )}
+
+              {/* keep all rendered tabs in dom, hide with css */}
+              <div className={selectedTab === 'overview' ? '' : 'hidden'}>
+                {overviewContent}
+              </div>
+
+              {renderedTabs.has('champions') && (
+                <div className={selectedTab === 'champions' ? '' : 'hidden'}>
+                  {championsContent}
+                </div>
+              )}
+
+              {renderedTabs.has('badges') && (
+                <div className={selectedTab === 'badges' ? '' : 'hidden'}>
+                  <div className="py-8 text-center text-gray-400">
+                    <p className="text-xl">badges view coming soon</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }

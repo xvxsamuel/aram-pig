@@ -96,10 +96,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
                   className="w-full mt-2 px-4 py-3 bg-gradient-to-t from-action-100 to-action-200 hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
                 >
                   {loading ? (
-                    <div className="relative w-5 h-5 flex-shrink-0">
-                      <div className="absolute inset-0 border-2 border-abyss-700 rounded-full"></div>
-                      <div className="absolute inset-0 border-2 border-gold-light rounded-full animate-spin border-t-transparent"></div>
-                    </div>
+                    <div className="w-5 h-5 border-2 border-white rounded-full animate-spin border-t-transparent" />
                   ) : (
                     <>
                       <span>Show More</span>

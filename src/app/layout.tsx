@@ -72,8 +72,7 @@ export default function RootLayout({
       <head>
         <link rel="preload" href="/bg.png" as="image" />
       </head>
-      <body className='min-h-screen antialiased font-light flex flex-col'>
-        <Navbar />
+      <body className='min-h-screen antialiased font-light flex flex-col bg-abyss-700 text-white'>
         <NextTopLoader
           color="#2299DD"
           height={3}
@@ -81,9 +80,10 @@ export default function RootLayout({
           crawl={true}
           speed={300}
           easing="ease"
-          zIndex={40}
+          zIndex={9999}
           shadow={false}
         />
+        <Navbar />
         <main className="flex-1" style={{ marginLeft: '64px' }}>
           {children}
         </main>

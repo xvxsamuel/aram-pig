@@ -6,35 +6,34 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
 });
 
-// riot api rate limits per region cluster
+// riot api rate limits per platform/region
+// per https://developer.riotgames.com/docs/lol#routing-values_platform-routing-values
+// each platform (br1, euw1, na1, etc.) has separate rate limits
+// regional endpoints (americas, europe, asia, sea) also have separate rate limits
 const SHORT_WINDOW = 1; // 1 second
 const SHORT_LIMIT = 20; // 20 requests per second
 const LONG_WINDOW = 120; // 2 minutes
 const LONG_LIMIT = 100; // 100 requests per 2 minutes
 
 // capacity allocation:
-// - overhead (summoner lookups, account data): 5 req/sec, 25 req/2min (browsing + job setup)
-// - priority queue (<=10 matches): 2 req/sec, 10 req/2min (fast small updates)
-// - batch queue (>10 matches): 12 req/sec, 60 req/2min (bulk fetching)
+// - overhead (summoner lookups, viewing profiles): 5 req/sec, 25 req/2min (browsing existing data)
+// - batch (all profile updates, scraper, bulk operations): 14 req/sec, 70 req/2min (main workload)
 // - buffer (safety margin): 1 req/sec, 5 req/2min (never used, prevents 429s)
 
 const OVERHEAD_SHORT = 5;
 const OVERHEAD_LONG = 25;
 
-const PRIORITY_SHORT = 2;
-const PRIORITY_LONG = 10;
+const BATCH_SHORT = 14;
+const BATCH_LONG = 70;
 
-const BATCH_SHORT = 12;
-const BATCH_LONG = 60;
-
-const BUFFER_SHORT = 1; // never use, keeps us safe from 429s
+const BUFFER_SHORT = 1; // never use
 const BUFFER_LONG = 5;
 
-export type RequestType = 'overhead' | 'priority' | 'batch';
+export type RequestType = 'overhead' | 'batch';
 
 interface RateLimitStatus {
   canProceed: boolean;
-  waitTime: number; // milliseconds to wait
+  waitTime: number; // ms
   shortCount: number;
   longCount: number;
   estimatedRequestsRemaining: number;
@@ -87,9 +86,13 @@ export async function checkRateLimit(region: string): Promise<RateLimitStatus> {
   }
 }
 
-export async function waitForRateLimit(region: string, requestType: RequestType = 'overhead'): Promise<void> {
-  const shortKey = `ratelimit:${region}:${requestType}:short`;
-  const longKey = `ratelimit:${region}:${requestType}:long`;
+// accepts either platform code (na1, euw1, etc.) or regional cluster (americas, europe, etc.)
+// maxWaitMs: if provided, will throw an error instead of waiting longer than this duration
+export async function waitForRateLimit(platformOrRegion: string, requestType: RequestType = 'overhead', maxWaitMs?: number): Promise<void> {
+  // each platform has its own rate limits per Riot API docs
+  // https://developer.riotgames.com/docs/lol#routing-values_platform-routing-values
+  const shortKey = `ratelimit:${platformOrRegion}:${requestType}:short`;
+  const longKey = `ratelimit:${platformOrRegion}:${requestType}:long`;
 
   // get limits based on request type
   let shortLimit: number;
@@ -100,10 +103,6 @@ export async function waitForRateLimit(region: string, requestType: RequestType 
       shortLimit = OVERHEAD_SHORT;
       longLimit = OVERHEAD_LONG;
       break;
-    case 'priority':
-      shortLimit = PRIORITY_SHORT;
-      longLimit = PRIORITY_LONG;
-      break;
     case 'batch':
       shortLimit = BATCH_SHORT;
       longLimit = BATCH_LONG;
@@ -111,7 +110,50 @@ export async function waitForRateLimit(region: string, requestType: RequestType 
   }
 
   try {
-    // increment counters for both windows
+    // check current counts BEFORE incrementing
+    const [currentShort, currentLong] = await Promise.all([
+      redis.get(shortKey).then(v => Number(v) || 0),
+      redis.get(longKey).then(v => Number(v) || 0),
+    ]);
+
+    // if we're at or over the limit, wait
+    let waitTime = 0;
+
+    if (currentShort >= shortLimit) {
+      const ttl = await redis.ttl(shortKey);
+      // if TTL is -1 (no expiry) or -2 (key doesn't exist), reset the key
+      if (ttl < 0) {
+        await redis.del(shortKey);
+      } else if (ttl > 0) {
+        waitTime = Math.max(waitTime, ttl * 1000);
+      }
+    }
+
+    if (currentLong >= longLimit) {
+      const ttl = await redis.ttl(longKey);
+      // if TTL is -1 (no expiry) or -2 (key doesn't exist), reset the key
+      if (ttl < 0) {
+        await redis.del(longKey);
+      } else if (ttl > 0) {
+        waitTime = Math.max(waitTime, ttl * 1000);
+      }
+    }
+
+    // wait if necessary
+    if (waitTime > 0) {
+      // check if wait time exceeds max wait
+      if (maxWaitMs !== undefined && waitTime > maxWaitMs) {
+        // silently skip - timeout exceeded is expected behavior for cron jobs
+        throw new Error('TIMEOUT_EXCEEDED');
+      }
+      
+      console.log(`Rate limit hit for ${platformOrRegion} (${requestType}), waiting ${waitTime}ms`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      // retry after waiting (pass through maxWaitMs)
+      return waitForRateLimit(platformOrRegion, requestType, maxWaitMs);
+    }
+
+    // NOW increment counters after checking limits
     const [shortCount, longCount] = await Promise.all([
       redis.incr(shortKey),
       redis.incr(longKey),
@@ -124,29 +166,8 @@ export async function waitForRateLimit(region: string, requestType: RequestType 
     if (longCount === 1) {
       await redis.expire(longKey, LONG_WINDOW);
     }
-
-    // check if limits exceeded
-    let waitTime = 0;
-
-    if (shortCount > shortLimit) {
-      const ttl = await redis.ttl(shortKey);
-      waitTime = Math.max(waitTime, ttl * 1000);
-    }
-
-    if (longCount > longLimit) {
-      const ttl = await redis.ttl(longKey);
-      waitTime = Math.max(waitTime, ttl * 1000);
-    }
-
-    // wait if necessary
-    if (waitTime > 0) {
-      console.log(`rate limit hit for ${region} (${requestType}), waiting ${waitTime}ms`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      // retry after waiting
-      return waitForRateLimit(region, requestType);
-    }
   } catch (error) {
-    console.error('redis rate limiter error:', error);
+    console.error('Redis rate limiter error:', error);
     // fallback: continue without rate limiting if redis fails
   }
 }

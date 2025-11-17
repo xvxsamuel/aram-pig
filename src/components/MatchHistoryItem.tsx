@@ -61,13 +61,13 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
         {/* main content */}
         <div
           className={clsx(
-            "border-l-[6px] flex-1",
+            "flex-1",
             isExpanded ? "rounded-tl-lg" : "rounded-l-lg",
             isRemake
-              ? "bg-[#3A3A3A] border-[#808080]"
+              ? "bg-[#3A3A3A]"
               : isWin 
-                ? "bg-[#28344E] border-[#5383E8]" 
-                : "bg-[#59343B] border-[#E84057]"
+                ? "bg-[#28344E]" 
+                : "bg-[#59343B]"
           )}
         >
           <div className="flex items-center px-4 py-3 min-h-[80px] gap-5">
@@ -96,21 +96,25 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             </div>
 
             <div className="flex items-center gap-1">
-              <div className="relative">
-                <div className="w-14 h-14 rounded-lg overflow-hidden bg-accent-dark border-2 border-gray-600">
-                  <Image
-                    src={getChampionImageUrl(participant.championName, ddragonVersion)}
-                    alt={participant.championName}
-                    width={56}
-                    height={56}
-                    className="w-full h-full scale-110 object-cover"
-                    unoptimized
-                  />
+              <Link href={`/champions/${participant.championName.toLowerCase()}`}>
+                <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg cursor-pointer">
+                  <div className="w-14 h-14 rounded-[inherit] overflow-hidden bg-accent-dark">
+                    <Image
+                      src={getChampionImageUrl(participant.championName, ddragonVersion)}
+                      alt={participant.championName}
+                      width={56}
+                      height={56}
+                      className="w-full h-full scale-110 object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded">
+                    <div className="bg-gray-800 rounded-[inherit] px-1 py-0.5 text-[10px] font-bold leading-none">
+                      {participant.champLevel}
+                    </div>
+                  </div>
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 bg-gray-800 border border-gray-600 rounded px-1 py-0.5 text-[10px] font-bold leading-none">
-                  {participant.champLevel}
-                </div>
-              </div>
+              </Link>
               <div className="flex flex-col gap-0.5">
                 <Tooltip id={participant.summoner1Id} type="summoner-spell">
                   <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">

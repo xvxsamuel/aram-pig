@@ -39,6 +39,7 @@ const KEYSTONE_IDS: Record<number, string> = {
 
 // calculate item penalty - heavily penalize suboptimal items (up to -40 points total)
 // only scores items that are in the top 5 meta choices
+// reads from aram_stats.items_by_slot JSONB
 async function calculateItemPenalty(
   participant: ParticipantData,
   championName: string,
@@ -49,35 +50,35 @@ async function calculateItemPenalty(
   const supabase = createAdminClient()
   let totalPenalty = 0
 
-  // get champion's optimal items
+  // get champion data with items
   const { data: championData } = await supabase
     .from('aram_stats')
-    .select('slot_1_items, slot_2_items, slot_3_items')
+    .select('items_by_slot')
     .eq('champion_name', championName.toLowerCase())
     .single()
 
-  if (!championData) return 0 // no penalty if no data
+  if (!championData?.items_by_slot) return 0
 
   // score each of first 3 items - HARSH penalties per item
   const items = [
-    { slot: 1, itemId: firstItem, slotData: championData.slot_1_items, weight: 1.2 }, // first item most important
-    { slot: 2, itemId: secondItem, slotData: championData.slot_2_items, weight: 1.0 },
-    { slot: 3, itemId: thirdItem, slotData: championData.slot_3_items, weight: 0.8 },
+    { slot: 1, itemId: firstItem, weight: 1.2 }, // first item most important
+    { slot: 2, itemId: secondItem, weight: 1.0 },
+    { slot: 3, itemId: thirdItem, weight: 0.8 },
   ]
 
-  for (const { itemId, slotData, weight } of items) {
-    if (!itemId || !slotData || !Array.isArray(slotData)) continue
+  for (const { slot, itemId, weight } of items) {
+    if (!itemId) continue
 
-    const optimalItems = slotData.slice(0, 5) // top 5 items for this slot
-    if (optimalItems.length === 0) continue
+    // get top 5 items for this slot
+    const itemStats = championData.items_by_slot[String(slot)]?.slice(0, 5) || []
+    if (itemStats.length === 0) continue
 
-    // items already sorted by winrate, first item = highest wr
-    const topItem = optimalItems[0]
-    const playerItemMatch = optimalItems.find((i: any) => i.id === itemId)
+    const topItem = itemStats[0]
+    const playerItemMatch = itemStats.find((i: any) => i.item_id === itemId)
 
     if (playerItemMatch) {
       // player bought item in top 5 - penalize exponentially based on winrate difference
-      const wrDiff = topItem.wr - playerItemMatch.wr
+      const wrDiff = topItem.winrate - playerItemMatch.winrate
       
       // only penalize if worse than best (wrDiff > 0)
       if (wrDiff > 0) {
@@ -98,6 +99,7 @@ async function calculateItemPenalty(
 }
 
 // calculate keystone penalty - harsh penalty for wrong rune (up to -20 points)
+// reads from aram_stats.keystones JSONB
 async function calculateKeystonePenalty(
   participant: ParticipantData,
   championName: string
@@ -109,26 +111,26 @@ async function calculateKeystonePenalty(
   if (!keystoneName) return 10
 
   const supabase = createAdminClient()
+  
+  // get champion data with keystones
   const { data: championData } = await supabase
     .from('aram_stats')
     .select('keystones')
     .eq('champion_name', championName.toLowerCase())
     .single()
 
-  if (!championData?.keystones || !Array.isArray(championData.keystones)) return 0
+  if (!championData?.keystones) return 0
 
-  const keystones = championData.keystones.filter((k: any) => k.id && k.wr)
-  if (keystones.length === 0) return 0
+  // get top 5 keystones
+  const keystoneStats = championData.keystones.slice(0, 5)
+  if (keystoneStats.length === 0) return 0
 
-  // keystones already sorted by winrate, first item = highest wr
-  const topKeystone = keystones[0]
-  
-  // match by id
-  const playerKeystone = keystones.find((k: any) => k.id === keystoneId)
+  const topKeystone = keystoneStats[0]
+  const playerKeystone = keystoneStats.find((k: any) => k.keystone_id === keystoneId)
 
   if (playerKeystone) {
     // -1.5 points per 1% winrate difference (softer)
-    const wrDiff = topKeystone.wr - playerKeystone.wr
+    const wrDiff = topKeystone.winrate - playerKeystone.winrate
     // only penalize if worse than best
     if (wrDiff > 0) {
       return wrDiff * 1.5

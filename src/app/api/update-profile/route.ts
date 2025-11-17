@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '../../../lib/supabase';
-import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline, extractItemPurchases } from '../../../lib/riot-api';
+import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline} from '../../../lib/riot-api';
 import type { RequestType } from '../../../lib/rate-limiter';
 import { PLATFORM_TO_REGIONAL, type PlatformCode } from '../../../lib/regions';
 import type { UpdateJob } from '../../../types/update-jobs';
 import { calculatePigScore } from '../../../lib/pig-score';
+import { extractAbilityOrder } from '../../../lib/ability-leveling';
+import { extractPatch, getPatchFromDate } from '../../../lib/patch-utils';
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
-async function fetchMatchIds(region: string, puuid: string, count?: number, requestType: RequestType = 'priority') {
+async function fetchMatchIds(region: string, puuid: string, count?: number, requestType: RequestType = 'batch') {
   const allMatchIds: string[] = [];
   const maxPerRequest = 100;
   let start = 0;
@@ -18,7 +20,6 @@ async function fetchMatchIds(region: string, puuid: string, count?: number, requ
     
     const batchCount = count ? Math.min(maxPerRequest, count - allMatchIds.length) : maxPerRequest;
     
-    // use appropriate request type based on queue
     const batchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchCount, start, requestType);
     
     if (batchIds.length === 0) break;
@@ -33,8 +34,7 @@ async function fetchMatchIds(region: string, puuid: string, count?: number, requ
   return allMatchIds;
 }
 
-async function fetchMatch(region: string, matchId: string, requestType: RequestType = 'priority') {
-  // use appropriate request type based on queue
+async function fetchMatch(region: string, matchId: string, requestType: RequestType = 'batch') {
   return await getMatchById(matchId, region as any, requestType);
 }
 
@@ -174,33 +174,33 @@ export async function POST(request: Request) {
       });
     }
 
+    // check for 5-minute cooldown
+    const { data: existingSummoner } = await supabase
+      .from('summoners')
+      .select('last_updated')
+      .eq('puuid', accountData.puuid)
+      .single();
+
+    if (existingSummoner?.last_updated) {
+      const lastUpdatedTime = new Date(existingSummoner.last_updated).getTime();
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      
+      if (lastUpdatedTime > fiveMinutesAgo) {
+        return NextResponse.json({
+          message: 'Profile updated recently, please wait',
+          recentlyUpdated: true,
+          newMatches: 0
+        });
+      }
+    }
+
     // use platform from request instead of hardcoded map
     const summonerData = await getSummonerByPuuid(accountData.puuid, platform as PlatformCode);
     if (!summonerData) {
       return NextResponse.json({ error: 'Summoner not found' }, { status: 404 });
     }
 
-    // check if recently updated (within last 5 minutes) BEFORE updating
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const { data: existingSummoner } = await supabase
-      .from('summoners')
-      .select('last_updated')
-      .eq('puuid', accountData.puuid)
-      .single();
-    
-    if (existingSummoner?.last_updated) {
-      const lastUpdated = new Date(existingSummoner.last_updated);
-      if (lastUpdated > fiveMinutesAgo) {
-        console.log('Profile recently updated, skipping fetch');
-        return NextResponse.json({
-          message: 'Profile is up to date',
-          newMatches: 0,
-          recentlyUpdated: true
-        });
-      }
-    }
-
-    // now update summoner data
+    // now update summoner data (but don't update last_updated yet - only after processing matches)
     const { error: summonerError } = await supabase
       .from('summoners')
       .upsert({
@@ -209,8 +209,7 @@ export async function POST(request: Request) {
         tag_line: accountData.tagLine,
         summoner_level: summonerData.summonerLevel,
         profile_icon_id: summonerData.profileIconId,
-        region: region,
-        last_updated: new Date().toISOString(),
+        region: platform, // store platform code (euw1, na1) not regional cluster
       });
 
     if (summonerError) {
@@ -256,10 +255,8 @@ export async function POST(request: Request) {
       });
     }
 
-    // determine request type based on match count
-    // <= 10 matches = priority queue (fast lane for small updates)
-    // > 10 matches = batch queue (bulk fetching with majority of capacity)
-    const requestType: RequestType = newMatchIds.length <= 10 ? 'priority' : 'batch';
+    // use batch queue for all profile updates
+    const requestType: RequestType = 'batch';
 
     // calculate initial eta (rough estimate)
     const apiCallsNeeded = newMatchIds.length + Math.ceil(newMatchIds.length / 100);
@@ -345,12 +342,19 @@ async function processMatchesInBackground(
           console.log(`  Skipping timeline fetch for old match (>30 days)`)
         }
 
+        // extract patch version (with API conversion 15.x -> 25.x)
+        const patchVersion = match.info.gameVersion 
+          ? extractPatch(match.info.gameVersion)
+          : getPatchFromDate(match.info.gameCreation)
+
         const { error: matchError } = await supabase
           .from('matches')
           .upsert({
             match_id: match.metadata.matchId,
             game_creation: match.info.gameCreation,
             game_duration: match.info.gameDuration,
+            patch: patchVersion,
+            source: 'user',
           });
 
         if (matchError) {
@@ -381,15 +385,9 @@ async function processMatchesInBackground(
         // prepare summoner match records with pig scores
         const summonerMatchRecords = await Promise.all(
           match.info.participants.map(async (p: any, index: number) => {
-            // extract item purchases from timeline if available
-            let firstItem, secondItem, thirdItem
-            if (timeline) {
-              const participantId = index + 1 // riot api uses 1-indexed participant ids
-              const purchases = extractItemPurchases(timeline, participantId)
-              firstItem = purchases[0]
-              secondItem = purchases[1]
-              thirdItem = purchases[2]
-            }
+            // extract ability leveling order from timeline
+            const participantId = index + 1 // participant IDs are 1-indexed
+            const abilityOrder = extractAbilityOrder(timeline, participantId)
 
             // calculate pig score
             let pigScore
@@ -398,7 +396,7 @@ async function processMatchesInBackground(
               if (p.gameEndedInEarlySurrender) {
                 pigScore = null
               } else {
-                pigScore = await calculatePigScore(p, match, firstItem, secondItem, thirdItem, fetchedMatches === 0)
+                pigScore = await calculatePigScore(p, match, fetchedMatches)
                 console.log(`  PIG score for ${p.championName}: ${pigScore}`)
               }
             } catch (err) {
@@ -442,9 +440,6 @@ async function processMatchesInBackground(
               item3: p.item3 || 0,
               item4: p.item4 || 0,
               item5: p.item5 || 0,
-              first_item: firstItem || null,
-              second_item: secondItem || null,
-              third_item: thirdItem || null,
               pig_score: pigScore,
               champ_level: p.champLevel || 0,
               team_id: p.teamId || 0,
@@ -461,6 +456,7 @@ async function processMatchesInBackground(
               stat_perk0: p.perks?.statPerks?.offense || 0,
               stat_perk1: p.perks?.statPerks?.flex || 0,
               stat_perk2: p.perks?.statPerks?.defense || 0,
+              ability_order: abilityOrder, // "Q W E Q Q R Q W Q W R W W E E R E E" or null
             }
           })
         )
@@ -510,9 +506,6 @@ async function processMatchesInBackground(
         .from('summoner_matches')
         .update({ 
           pig_score: null,
-          first_item: null,
-          second_item: null,
-          third_item: null
         })
         .eq('puuid', puuid)
         .in('match_id', oldMatchIds);

@@ -25,7 +25,7 @@ const REGIONAL_TO_PLATFORM_ID: Record<RegionalCluster, string> = {
   americas: 'americas',
   europe: 'europe',
   asia: 'asia',
-  sea: 'sea',
+  sea: 'asia',
 }
 
 const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, string> = {
@@ -84,6 +84,7 @@ export async function getAccountByRiotId(
   region: RegionalCluster,
   requestType: RequestType = 'overhead'
 ) {
+  // regional endpoints use regional cluster for rate limiting
   await waitForRateLimit(region, requestType);
   
   try {
@@ -108,8 +109,8 @@ export async function getSummonerByPuuid(
   platform: PlatformCode,
   requestType: RequestType = 'overhead'
 ) {
-  const region = PLATFORM_TO_REGIONAL[platform];
-  await waitForRateLimit(region, requestType);
+  // platform-specific endpoint - each platform has separate rate limits
+  await waitForRateLimit(platform, requestType);
   
   try {
     const summoner = await retryWithDelay(() =>
@@ -133,26 +134,36 @@ export async function getMatchIdsByPuuid(
   queue: number = 450,
   count: number = 20,
   start: number = 0,
-  requestType: RequestType = 'priority'
+  requestType: RequestType = 'batch',
+  startTime?: number,
+  endTime?: number
 ) {
+  // regional endpoint - use regional cluster for rate limiting
   await waitForRateLimit(region, requestType);
   
   const limitedCount = Math.min(count, 100)
+  const params: any = {
+    queue,
+    count: limitedCount,
+  }
+  
+  // add optional parameters if provided
+  if (start > 0) params.start = start
+  if (startTime) params.startTime = startTime
+  if (endTime) params.endTime = endTime
+  
   const matchIds = await retryWithDelay(() =>
     rAPI.matchV5.getIdsByPuuid({
       cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
       puuid,
-      params: {
-        queue,
-        count: limitedCount,
-        start,
-      },
+      params,
     })
   )
   return matchIds
 }
 
-export async function getMatchById(matchId: string, region: RegionalCluster, requestType: RequestType = 'priority') {
+export async function getMatchById(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
+  // regional endpoint - use regional cluster for rate limiting
   await waitForRateLimit(region, requestType);
   
   const match = await retryWithDelay(() =>
@@ -165,7 +176,8 @@ export async function getMatchById(matchId: string, region: RegionalCluster, req
 }
 
 // fetch match timeline for item purchase order
-export async function getMatchTimeline(matchId: string, region: RegionalCluster, requestType: RequestType = 'priority') {
+export async function getMatchTimeline(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
+  // regional endpoint - use regional cluster for rate limiting
   await waitForRateLimit(region, requestType);
   
   const timeline = await retryWithDelay(() =>
@@ -199,33 +211,6 @@ export interface TimelineEvent {
   timestamp: number
   participantId?: number
   itemId?: number
-  // other event fields...
-}
-
-import { isCompletedItem } from './tooltip-data'
-
-// extract first 3 item purchases from timeline
-export function extractItemPurchases(timeline: MatchTimeline, participantId: number): number[] {
-  const purchases: number[] = []
-  
-  for (const frame of timeline.info.frames) {
-    for (const event of frame.events) {
-      if (event.type === 'ITEM_PURCHASED' && 
-          event.participantId === participantId && 
-          event.itemId && 
-          isCompletedItem(event.itemId)) {
-        
-        purchases.push(event.itemId)
-        
-        // only need first 3 completed items
-        if (purchases.length >= 3) {
-          return purchases
-        }
-      }
-    }
-  }
-  
-  return purchases
 }
 
 export interface MatchData {
@@ -238,6 +223,7 @@ export interface MatchData {
     gameDuration: number
     gameEndTimestamp: number
     gameMode: string
+    gameVersion: string
     queueId: number
     participants: ParticipantData[]
   }
