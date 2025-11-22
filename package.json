@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "fetch-items": "tsx scripts/fetch-item-data.ts",
-    "scraper": "tsx scripts/continuous-scraper.ts"
+    "scraper": "tsx --import ./scripts/load-env.ts scripts/continuous-scraper.ts"
   },
   "dependencies": {
     "@fightmegg/riot-api": "^0.0.21",

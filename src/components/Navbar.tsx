@@ -4,13 +4,18 @@ import SearchBar from "./SearchBar"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { UserGroupIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import { UserGroupIcon, InformationCircleIcon, CubeIcon } from '@heroicons/react/24/outline'
 import Image from "next/image"
 
 export default function Navbar() {
   const pathname = usePathname()
   const isLandingPage = pathname === '/'
   const [sidebarHovered, setSidebarHovered] = useState(false)
+  
+  // Check if current page is active
+  const isChampionsActive = pathname?.startsWith('/champions')
+  const isItemsActive = pathname?.startsWith('/items')
+  const isAboutActive = pathname?.startsWith('/about')
   
   return (
     <>
@@ -45,13 +50,21 @@ export default function Navbar() {
           <nav className="flex flex-col gap-2 p-4">
             <Link 
               href="/champions" 
-              className="flex items-center gap-4 py-3 rounded-lg hover:bg-accent-light/20 transition-all group relative h-[40px]"
+              className={`flex items-center gap-4 py-3 rounded-lg transition-all group relative h-[40px] ${
+                isChampionsActive ? 'bg-accent-light/30' : 'hover:bg-accent-light/20'
+              }`}
             >
               <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[4px] top-[8px]">
-                <UserGroupIcon className="w-6 h-6 text-gold-light group-hover:text-accent-light transition-colors" />
+                <UserGroupIcon className={`w-6 h-6 transition-colors ${
+                  isChampionsActive ? 'text-accent-light' : 'text-gold-light group-hover:text-accent-light'
+                }`} />
               </div>
               <span 
-                className="font-semibold whitespace-nowrap transition-all duration-300 bg-gradient-to-b from-gold-light to-gold-dark bg-clip-text text-transparent group-hover:from-accent-light group-hover:to-accent-light"
+                className={`font-semibold whitespace-nowrap transition-all duration-300 bg-clip-text text-transparent ${
+                  isChampionsActive 
+                    ? 'bg-gradient-to-b from-accent-light to-accent-light' 
+                    : 'bg-gradient-to-b from-gold-light to-gold-dark group-hover:from-accent-light group-hover:to-accent-light'
+                }`}
                 style={{ 
                   opacity: sidebarHovered ? 1 : 0,
                   marginLeft: '42px',
@@ -63,14 +76,49 @@ export default function Navbar() {
             </Link>
             
             <Link 
-              href="/about" 
-              className="flex items-center gap-4 py-3 rounded-lg hover:bg-accent-light/20 transition-all group relative h-[40px]"
+              href="/items" 
+              className={`flex items-center gap-4 py-3 rounded-lg transition-all group relative h-[40px] ${
+                isItemsActive ? 'bg-accent-light/30' : 'hover:bg-accent-light/20'
+              }`}
             >
               <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[4px] top-[8px]">
-                <InformationCircleIcon className="w-6 h-6 text-gold-light group-hover:text-accent-light transition-colors" />
+                <CubeIcon className={`w-6 h-6 transition-colors ${
+                  isItemsActive ? 'text-accent-light' : 'text-gold-light group-hover:text-accent-light'
+                }`} />
               </div>
               <span 
-                className="font-semibold whitespace-nowrap transition-all duration-300 bg-gradient-to-b from-gold-light to-gold-dark bg-clip-text text-transparent group-hover:from-accent-light group-hover:to-accent-light"
+                className={`font-semibold whitespace-nowrap transition-all duration-300 bg-clip-text text-transparent ${
+                  isItemsActive 
+                    ? 'bg-gradient-to-b from-accent-light to-accent-light' 
+                    : 'bg-gradient-to-b from-gold-light to-gold-dark group-hover:from-accent-light group-hover:to-accent-light'
+                }`}
+                style={{ 
+                  opacity: sidebarHovered ? 1 : 0,
+                  marginLeft: '42px',
+                  paddingTop: '2px'
+                }}
+              >
+                Items
+              </span>
+            </Link>
+            
+            <Link 
+              href="/about" 
+              className={`flex items-center gap-4 py-3 rounded-lg transition-all group relative h-[40px] ${
+                isAboutActive ? 'bg-accent-light/30' : 'hover:bg-accent-light/20'
+              }`}
+            >
+              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[4px] top-[8px]">
+                <InformationCircleIcon className={`w-6 h-6 transition-colors ${
+                  isAboutActive ? 'text-accent-light' : 'text-gold-light group-hover:text-accent-light'
+                }`} />
+              </div>
+              <span 
+                className={`font-semibold whitespace-nowrap transition-all duration-300 bg-clip-text text-transparent ${
+                  isAboutActive 
+                    ? 'bg-gradient-to-b from-accent-light to-accent-light' 
+                    : 'bg-gradient-to-b from-gold-light to-gold-dark group-hover:from-accent-light group-hover:to-accent-light'
+                }`}
                 style={{ 
                   opacity: sidebarHovered ? 1 : 0,
                   marginLeft: '42px',

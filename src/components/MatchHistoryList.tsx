@@ -84,6 +84,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
                   puuid={puuid}
                   region={region}
                   ddragonVersion={ddragonVersion}
+                  championNames={championNames}
                 />
               ))}
             </div>

@@ -79,10 +79,5 @@ export function getTooltipData(id: number, type: 'item' | 'rune' | 'summoner-spe
   }
 }
 
-// legacy compatibility - keep getItemInfo for existing code
-export function getItemInfo(itemId: number): TooltipData | null {
-  // check items first, then runes (old behavior)
-  return itemMap.get(itemId) || runeMap.get(itemId) || null
-}
 
 export type { ItemType as TooltipType }

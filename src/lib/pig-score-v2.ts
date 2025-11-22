@@ -9,6 +9,7 @@ interface ParticipantData {
   total_damage_shielded_on_teammates: number
   time_ccing_others: number
   game_duration: number
+  deaths: number
   item0: number
   item1: number
   item2: number
@@ -19,26 +20,60 @@ interface ParticipantData {
   patch: string | null
 }
 
-// calculate pig score based on performance vs 30d champion averages
+// calculate pig score based on performance vs patch champion averages
 export async function calculatePigScore(participant: ParticipantData): Promise<number | null> {
   const supabase = createAdminClient()
   let score = 100 // start at perfect score
   
-  const championName = participant.championName.toLowerCase()
+  const championName = participant.championName
   const gameDurationMinutes = participant.game_duration / 60
+  
+  // Debug logging
+  if (gameDurationMinutes <= 0 || participant.time_ccing_others === undefined) {
+    console.log(`⚠ Invalid data for ${championName}:`, {
+      game_duration: participant.game_duration,
+      game_duration_minutes: gameDurationMinutes,
+      time_ccing_others: participant.time_ccing_others,
+      damage_to_champs: participant.damage_dealt_to_champions
+    })
+  }
   
   if (gameDurationMinutes <= 0) return null // invalid game duration
   
-  // get 30d champion averages
-  const { data: championAvg } = await supabase
-    .from('champion_stats_windowed')
-    .select('*')
+  // Try to get championStats for current patch first, fallback to any available patch
+  const { data: championStats, error: avgError } = await supabase
+    .from('champion_stats')
+    .select('data, patch')
     .eq('champion_name', championName)
-    .eq('window_days', 30)
-    .maybeSingle()
+    .order('patch', { ascending: false })
+    .limit(5) // Get recent patches
   
-  if (!championAvg || championAvg.games < 10) {
-    // not enough data for this champion, return null
+  if (avgError) {
+    console.error(`Error fetching champion stats for ${championName}:`, avgError)
+    return null
+  }
+  
+  if (!championStats || championStats.length === 0) {
+    console.log(`No champion stats found for ${championName}`)
+    return null
+  }
+  
+  // Find matching patch or use most recent
+  let selectedStats = championStats.find(s => s.patch === participant.patch)
+  if (!selectedStats) {
+    selectedStats = championStats[0] // Fallback to most recent patch
+    console.log(`No stats for patch ${participant.patch}, using ${selectedStats.patch}`)
+  }
+  
+  const championAvg = selectedStats.data?.championStats
+  if (!championAvg || !championAvg.sumGameDuration || championAvg.sumGameDuration === 0) {
+    console.log(`No championStats found for ${championName}`)
+    return null
+  }
+  
+  const totalGames = selectedStats.data.games || 0
+  if (totalGames < 10) {
+    console.log(`Not enough games for ${championName} (${totalGames} games, need 10+)`)
     return null
   }
   
@@ -50,33 +85,93 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     ccTimePerMin: participant.time_ccing_others / gameDurationMinutes,
   }
   
-  // champion averages (already per-game, need to convert to per-minute)
-  // note: avg_* columns in windowed view are per-game totals, not per-minute
-  // we need to estimate average game duration - use 18 minutes as ARAM average
-  const estimatedAvgGameDuration = 18
-  const championAvgPerMin = {
-    damageToChampionsPerMin: (championAvg.avg_damage_to_champions || 0) / estimatedAvgGameDuration,
-    totalDamagePerMin: (championAvg.avg_total_damage_dealt || 0) / estimatedAvgGameDuration,
-    healingShieldingPerMin: ((championAvg.avg_heals_on_teammates || 0) + (championAvg.avg_shielding_on_teammates || 0)) / estimatedAvgGameDuration,
-    ccTimePerMin: (championAvg.avg_time_cc_dealt || 0) / estimatedAvgGameDuration,
+  console.log(`📊 Raw player stats:`, {
+    damage_dealt_to_champions: participant.damage_dealt_to_champions,
+    total_damage_dealt: participant.total_damage_dealt,
+    total_heals_on_teammates: participant.total_heals_on_teammates,
+    total_damage_shielded_on_teammates: participant.total_damage_shielded_on_teammates,
+    time_ccing_others: participant.time_ccing_others,
+    game_duration: participant.game_duration
+  })
+  
+  // check if required stats are available (old matches may not have these)
+  if (!participant.total_damage_dealt || participant.total_damage_dealt === 0) {
+    console.log(`⚠️ Missing total_damage_dealt for ${championName} - cannot calculate pig score (old match)`)
+    return null
   }
   
-  // calculate performance penalties
-  score -= calculateStatPenalty(playerStats.damageToChampionsPerMin, championAvgPerMin.damageToChampionsPerMin, 20)
-  score -= calculateStatPenalty(playerStats.totalDamagePerMin, championAvgPerMin.totalDamagePerMin, 20)
-  score -= calculateStatPenalty(playerStats.healingShieldingPerMin, championAvgPerMin.healingShieldingPerMin, 20)
-  score -= calculateStatPenalty(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, 20)
+  // champion averages (convert sums to per-game averages, then to per-minute)
+  const avgGameDurationMinutes = (championAvg.sumGameDuration / totalGames) / 60
+  const championAvgPerMin = {
+    damageToChampionsPerMin: (championAvg.sumDamageToChampions / totalGames) / avgGameDurationMinutes,
+    totalDamagePerMin: (championAvg.sumTotalDamage / totalGames) / avgGameDurationMinutes,
+    healingShieldingPerMin: ((championAvg.sumHealing + championAvg.sumShielding) / totalGames) / avgGameDurationMinutes,
+    ccTimePerMin: (championAvg.sumCCTime / totalGames) / avgGameDurationMinutes,
+  }
+  
+  // calculate performance penalties (skip if champion average is null/0)
+  const penalties: { [key: string]: number } = {}
+  
+  if (championAvgPerMin.damageToChampionsPerMin > 0) {
+    const penalty = calculateStatPenalty(playerStats.damageToChampionsPerMin, championAvgPerMin.damageToChampionsPerMin, 20)
+    penalties['Damage to Champions'] = penalty
+    score -= penalty
+  }
+  if (championAvgPerMin.totalDamagePerMin > 0) {
+    const penalty = calculateStatPenalty(playerStats.totalDamagePerMin, championAvgPerMin.totalDamagePerMin, 20)
+    penalties['Total Damage'] = penalty
+    score -= penalty
+  }
+  if (championAvgPerMin.healingShieldingPerMin > 0) {
+    const penalty = calculateStatPenalty(playerStats.healingShieldingPerMin, championAvgPerMin.healingShieldingPerMin, 20)
+    penalties['Healing/Shielding'] = penalty
+    score -= penalty
+  }
+  if (championAvgPerMin.ccTimePerMin > 0) {
+    const penalty = calculateStatPenalty(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, 20)
+    penalties['CC Time'] = penalty
+    score -= penalty
+  }
   
   // calculate item build penalty
   const itemPenalty = await calculateItemPenalty(participant, championName)
+  penalties['Items'] = itemPenalty
   score -= itemPenalty
   
   // calculate keystone penalty
   const keystonePenalty = await calculateKeystonePenalty(participant, championName)
+  penalties['Keystone'] = keystonePenalty
   score -= keystonePenalty
   
+  // calculate deaths per minute penalty
+  const deathsPenalty = calculateDeathsPerMinutePenalty(participant.deaths, gameDurationMinutes)
+  penalties['Deaths/Min'] = deathsPenalty
+  score -= deathsPenalty
+  
   // clamp score between 0 and 100
-  return Math.max(0, Math.min(100, Math.round(score)))
+  const finalScore = Math.max(0, Math.min(100, Math.round(score)))
+  
+  // detailed logging
+  console.log(`\n🐷 PIG SCORE for ${championName}:`)
+  console.log(`  Starting Score: 100`)
+  console.log(`  Player Stats (per min):`, {
+    dmg: playerStats.damageToChampionsPerMin.toFixed(1),
+    totalDmg: playerStats.totalDamagePerMin.toFixed(1),
+    heal: playerStats.healingShieldingPerMin.toFixed(1),
+    cc: playerStats.ccTimePerMin.toFixed(1),
+    deaths: participant.deaths,
+    deathsPerMin: (participant.deaths / gameDurationMinutes).toFixed(2)
+  })
+  console.log(`  Champion Avg (per min):`, {
+    dmg: championAvgPerMin.damageToChampionsPerMin.toFixed(1),
+    totalDmg: championAvgPerMin.totalDamagePerMin.toFixed(1),
+    heal: championAvgPerMin.healingShieldingPerMin.toFixed(1),
+    cc: championAvgPerMin.ccTimePerMin.toFixed(1)
+  })
+  console.log(`  Penalties:`, penalties)
+  console.log(`  Final Score: ${finalScore}\n`)
+  
+  return finalScore
 }
 
 // calculate penalty for a single stat based on performance vs average
@@ -114,7 +209,7 @@ async function calculateItemPenalty(participant: ParticipantData, championName: 
   
   // get total games for this champion to calculate pickrate
   const { data: championData } = await supabase
-    .from('champion_stats_by_patch')
+    .from('champion_stats_incremental')
     .select('games')
     .eq('champion_name', championName)
     .eq('patch', participant.patch)
@@ -224,4 +319,40 @@ async function calculateKeystonePenalty(participant: ParticipantData, championNa
   const penaltyAmount = Math.min(10, priorityDiff / 20)
   
   return penaltyAmount
+}
+
+// calculate deaths per minute penalty
+// optimal range: 0.5-0.7 deaths/min (no penalty)
+// penalty for too many deaths (playing too aggressive/careless)
+// higher penalty for too few deaths (not engaging enough, hurting team)
+function calculateDeathsPerMinutePenalty(deaths: number, gameDurationMinutes: number): number {
+  if (gameDurationMinutes <= 0) return 0
+  
+  const deathsPerMin = deaths / gameDurationMinutes
+  
+  // optimal range: 0.5-0.7 deaths/min
+  if (deathsPerMin >= 0.5 && deathsPerMin <= 0.7) return 0
+  
+  // too few deaths (more severe penalty - not engaging)
+  if (deathsPerMin < 0.5) {
+    const deficit = 0.5 - deathsPerMin
+    // 0.4 deaths/min: -3 points
+    // 0.3 deaths/min: -6 points
+    // 0.2 deaths/min: -9 points
+    // 0.1 deaths/min: -12 points
+    // 0.0 deaths/min: -15 points
+    return Math.min(15, deficit * 30)
+  }
+  
+  // too many deaths (less severe penalty - at least engaging)
+  if (deathsPerMin > 0.7) {
+    const excess = deathsPerMin - 0.7
+    // 0.8 deaths/min: -2 points
+    // 0.9 deaths/min: -4 points
+    // 1.0 deaths/min: -6 points
+    // 1.2 deaths/min: -10 points
+    return Math.min(10, excess * 20)
+  }
+  
+  return 0
 }

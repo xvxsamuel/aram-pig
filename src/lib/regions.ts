@@ -1,38 +1,48 @@
 export type RegionalCluster = 'europe' | 'americas' | 'asia' | 'sea'
+export type PlatformCode = 'na1' | 'br1' | 'la1' | 'la2' | 'kr' | 'jp1' | 'eun1' | 'euw1' | 'ru' | 'tr1' | 'me1' | 'oc1' | 'sg2' | 'tw2' | 'vn2'
 
-export const REGIONS = [
-  { code: 'euw1', label: 'EUW', regional: 'europe' as RegionalCluster, tag: 'EUW' },
-  { code: 'eun1', label: 'EUNE', regional: 'europe' as RegionalCluster, tag: 'EUNE' },
-  { code: 'na1', label: 'NA', regional: 'americas' as RegionalCluster, tag: 'NA1' },
-  { code: 'br1', label: 'BR', regional: 'americas' as RegionalCluster, tag: 'BR1' },
-  { code: 'oc1', label: 'OCE', regional: 'americas' as RegionalCluster, tag: 'OC' },
-  { code: 'la1', label: 'LAN', regional: 'americas' as RegionalCluster, tag: 'LAN' },
-  { code: 'la2', label: 'LAS', regional: 'americas' as RegionalCluster, tag: 'LAS' },
-  { code: 'kr', label: 'KR', regional: 'asia' as RegionalCluster, tag: 'KR1' },
-  { code: 'jp1', label: 'JP', regional: 'asia' as RegionalCluster, tag: 'JP1' },
-  { code: 'sg2', label: 'SEA', regional: 'sea' as RegionalCluster, tag: 'SG2' },
-  { code: 'tw2', label: 'TW', regional: 'sea' as RegionalCluster, tag: 'TW2' },
-  { code: 'vn2', label: 'VN', regional: 'sea' as RegionalCluster, tag: 'VN2' },
-  { code: 'tr1', label: 'TR', regional: 'europe' as RegionalCluster, tag: 'TR1' },
-  { code: 'ru', label: 'RU', regional: 'europe' as RegionalCluster, tag: 'RU1' },
-  { code: 'me1', label: 'MENA', regional: 'sea' as RegionalCluster, tag: 'ME1' },
-] as const
+const PLATFORM_DATA: Record<PlatformCode, { label: string; regional: RegionalCluster; tag: string }> = {
+  na1: { label: 'NA', regional: 'americas', tag: 'NA1' },
+  br1: { label: 'BR', regional: 'americas', tag: 'BR1' },
+  la1: { label: 'LAN', regional: 'americas', tag: 'LAN' },
+  la2: { label: 'LAS', regional: 'americas', tag: 'LAS' },
+  kr: { label: 'KR', regional: 'asia', tag: 'KR1' },
+  jp1: { label: 'JP', regional: 'asia', tag: 'JP1' },
+  eun1: { label: 'EUNE', regional: 'europe', tag: 'EUNE' },
+  euw1: { label: 'EUW', regional: 'europe', tag: 'EUW' },
+  ru: { label: 'RU', regional: 'europe', tag: 'RU1' },
+  tr1: { label: 'TR', regional: 'europe', tag: 'TR1' },
+  me1: { label: 'MENA', regional: 'europe', tag: 'ME1' },
+  oc1: { label: 'OCE', regional: 'sea', tag: 'OC' },
+  sg2: { label: 'SEA', regional: 'sea', tag: 'SG2' },
+  tw2: { label: 'TW', regional: 'sea', tag: 'TW2' },
+  vn2: { label: 'VN', regional: 'sea', tag: 'VN2' },
+}
 
-export type PlatformCode = typeof REGIONS[number]['code']
+// region selector array don't use for others
+export const REGIONS = Object.entries(PLATFORM_DATA).map(([code, data]) => ({
+  code: code as PlatformCode,
+  label: data.label,
+  regional: data.regional,
+  tag: data.tag
+}))
 
-export const PLATFORM_TO_REGIONAL: Record<PlatformCode, RegionalCluster> =
-  REGIONS.reduce((acc, r) => { acc[r.code] = r.regional; return acc }, {} as Record<PlatformCode, RegionalCluster>)
+export const PLATFORM_TO_REGIONAL: Record<PlatformCode, RegionalCluster> = 
+  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [k, v.regional])) as Record<PlatformCode, RegionalCluster>
 
-export const PLATFORM_TO_LABEL: Record<PlatformCode, string> =
-  REGIONS.reduce((acc, r) => { acc[r.code] = r.label; return acc }, {} as Record<PlatformCode, string>)
+export const PLATFORM_TO_LABEL: Record<PlatformCode, string> = 
+  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [k, v.label])) as Record<PlatformCode, string>
 
 export const LABEL_TO_PLATFORM: Record<string, PlatformCode> =
-  REGIONS.reduce((acc, r) => { acc[r.label] = r.code; return acc }, {} as Record<string, PlatformCode>)
+  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [v.label, k])) as Record<string, PlatformCode>
 
 export const LABEL_TO_TAG: Record<string, string> =
-  REGIONS.reduce((acc, r) => { acc[r.label] = r.tag; return acc }, {} as Record<string, string>)
+  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [v.label, v.tag])) as Record<string, string>
 
-export const REGION_OPTIONS = REGIONS.map(r => ({ value: r.code as PlatformCode, label: r.label }))
+export const REGION_OPTIONS = Object.entries(PLATFORM_DATA).map(([code, data]) => ({ 
+  value: code as PlatformCode, 
+  label: data.label 
+}))
 
 export function getDefaultTag(regionLabel: string): string {
   return LABEL_TO_TAG[regionLabel.toUpperCase()] || regionLabel.toUpperCase()

@@ -64,11 +64,9 @@ export function extractAbilityOrder(
   // sort by timestamp to ensure correct order
   skillLevelUps.sort((a, b) => a.timestamp - b.timestamp)
 
-  // take first 18 level-ups (levels 1-18)
-  const abilityOrder = skillLevelUps.slice(0, 18).map(levelUp => levelUp.skillSlot)
-
-  // if we don't have exactly 18 level-ups, game probably ended early or data is incomplete
-  if (abilityOrder.length !== 18) {
+  // we just need to see which abilities were leveled and in what order
+  // no minimum level requirement - any data is useful
+  if (skillLevelUps.length === 0) {
     return null
   }
 
@@ -80,7 +78,7 @@ export function extractAbilityOrder(
     4: 'R'
   }
 
-  return abilityOrder.map(slot => abilityMap[slot] || '?').join(' ')
+  return skillLevelUps.map(levelUp => abilityMap[levelUp.skillSlot] || '?').join(' ')
 }
 
 /**

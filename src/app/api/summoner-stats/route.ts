@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    console.log(`[summoner-stats] Fetching stats for puuid: ${puuid}`)
+    
     // get basic summoner info
     const { data: summonerRecord } = await supabase
       .from("summoners")
@@ -18,64 +20,60 @@ export async function GET(request: NextRequest) {
       .eq("puuid", puuid)
       .single()
 
+    console.log(`[summoner-stats] Found summoner record:`, summonerRecord ? 'yes' : 'no')
+
     const lastUpdated = summonerRecord?.last_updated || null
 
-    // get lightweight match stats from summoner_matches
+    // get lightweight match stats from summoner_matches (with JSONB)
     const { data: allMatchStats, error: statsError } = await supabase
       .from("summoner_matches")
-      .select("match_id, champion_name, kills, deaths, assists, win, damage_dealt_to_champions, total_minions_killed, game_duration, game_ended_in_early_surrender, double_kills, triple_kills, quadra_kills, penta_kills, pig_score")
+      .select("match_id, champion_name, win, match_data")
       .eq("puuid", puuid)
       .order("match_id", { ascending: false })
 
+    console.log(`[summoner-stats] Query result:`, {
+      error: statsError?.message,
+      dataLength: allMatchStats?.length,
+      firstMatchId: allMatchStats?.[0]?.match_id
+    })
+    console.log(`[summoner-stats] Found ${allMatchStats?.length || 0} matches for puuid ${puuid.substring(0, 20)}...`)
+
     if (statsError || !allMatchStats) {
+      console.error('[summoner-stats] Error fetching stats:', statsError)
       return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
     }
 
     const matchIds = allMatchStats.map(m => m.match_id)
     
+    // Get game durations from matches table
+    const { data: matchesData } = await supabase
+      .from("matches")
+      .select("match_id, game_duration, game_creation")
+      .in("match_id", matchIds)
+    
+    const matchDurationMap = new Map(matchesData?.map(m => [m.match_id, m.game_duration]) || [])
+    const matchDateMap = new Map(matchesData?.map(m => [m.match_id, m.game_creation]) || [])
+    
     // filter out remakes from stats calculation
-    const validMatches = allMatchStats.filter(m => !m.game_ended_in_early_surrender)
+    const validMatches = allMatchStats.filter(m => !m.match_data?.isRemake)
     
     const totalGames = validMatches.length
     const wins = validMatches.filter(m => m.win).length
-    const totalKills = validMatches.reduce((sum, m) => sum + m.kills, 0)
-    const totalDeaths = validMatches.reduce((sum, m) => sum + m.deaths, 0)
-    const totalAssists = validMatches.reduce((sum, m) => sum + m.assists, 0)
-    const totalDamage = validMatches.reduce((sum, m) => sum + (m.damage_dealt_to_champions || 0), 0)
-    const totalGameDuration = validMatches.reduce((sum, m) => sum + (m.game_duration || 0), 0)
-    const totalDoubleKills = validMatches.reduce((sum, m) => sum + (m.double_kills || 0), 0)
-    const totalTripleKills = validMatches.reduce((sum, m) => sum + (m.triple_kills || 0), 0)
-    const totalQuadraKills = validMatches.reduce((sum, m) => sum + (m.quadra_kills || 0), 0)
-    const totalPentaKills = validMatches.reduce((sum, m) => sum + (m.penta_kills || 0), 0)
+    const totalKills = validMatches.reduce((sum, m) => sum + (m.match_data?.kills || 0), 0)
+    const totalDeaths = validMatches.reduce((sum, m) => sum + (m.match_data?.deaths || 0), 0)
+    const totalAssists = validMatches.reduce((sum, m) => sum + (m.match_data?.assists || 0), 0)
+    const totalDamage = validMatches.reduce((sum, m) => sum + (m.match_data?.stats?.damage || 0), 0)
+    const totalGameDuration = validMatches.reduce((sum, m) => sum + (matchDurationMap.get(m.match_id) || 0), 0)
+    const totalDoubleKills = validMatches.reduce((sum, m) => sum + (m.match_data?.stats?.doubleKills || 0), 0)
+    const totalTripleKills = validMatches.reduce((sum, m) => sum + (m.match_data?.stats?.tripleKills || 0), 0)
+    const totalQuadraKills = validMatches.reduce((sum, m) => sum + (m.match_data?.stats?.quadraKills || 0), 0)
+    const totalPentaKills = validMatches.reduce((sum, m) => sum + (m.match_data?.stats?.pentaKills || 0), 0)
 
-    // calculate average pig score (only from games with pig scores, last 30 days)
+    // calculate average pig score (calculated on-demand, not stored)
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
-    const matchesWithPigScore = validMatches.filter(m => m.pig_score !== null && m.pig_score !== undefined)
     
     let averagePigScore: number | null = null
     let pigScoreGames = 0
-    
-    if (matchesWithPigScore.length > 0) {
-      const pigScoreMatchIds = matchesWithPigScore.map(m => m.match_id)
-      const { data: matchDates } = await supabase
-        .from("matches")
-        .select("match_id, game_creation")
-        .in("match_id", pigScoreMatchIds)
-      
-      if (matchDates) {
-        const matchDateMap = new Map(matchDates.map(m => [m.match_id, m.game_creation]))
-        const recentMatchesWithPigScore = matchesWithPigScore.filter(m => {
-          const matchDate = matchDateMap.get(m.match_id)
-          return matchDate && matchDate >= thirtyDaysAgo
-        })
-        
-        if (recentMatchesWithPigScore.length > 0) {
-          const totalPigScore = recentMatchesWithPigScore.reduce((sum, m) => sum + (m.pig_score || 0), 0)
-          averagePigScore = totalPigScore / recentMatchesWithPigScore.length
-          pigScoreGames = recentMatchesWithPigScore.length
-        }
-      }
-    }
 
     // find most played champion
     const championCounts: { [key: string]: number } = {}
@@ -106,13 +104,15 @@ export async function GET(request: NextRequest) {
       
       const { data: matchRecords } = await supabase
         .from("matches")
-        .select("match_id, game_creation, game_duration")
+        .select("match_id, game_creation, game_duration, patch")
         .in("match_id", displayMatchIds)
 
       const { data: participants } = await supabase
         .from("summoner_matches")
         .select("*")
         .in("match_id", displayMatchIds)
+
+      console.log(`[summoner-stats] Fetched ${matchRecords?.length || 0} match records and ${participants?.length || 0} participants for display`)
 
       if (matchRecords && participants) {
         matches = displayMatchIds.map(matchId => {
@@ -134,58 +134,63 @@ export async function GET(request: NextRequest) {
               queueId: 450,
               participants: matchParticipants.map(p => ({
                 puuid: p.puuid,
-                summonerName: p.summoner_name || "",
+                summonerName: "",
                 riotIdGameName: p.riot_id_game_name || "",
                 riotIdTagline: p.riot_id_tagline || "",
                 championName: p.champion_name,
                 championId: 0,
-                teamId: p.team_id || 100,
+                teamId: p.match_data?.teamId || 100,
                 win: p.win,
-                gameEndedInEarlySurrender: p.game_ended_in_early_surrender || false,
-                kills: p.kills,
-                deaths: p.deaths,
-                assists: p.assists,
-                champLevel: p.champ_level || 18,
-                totalDamageDealtToChampions: p.damage_dealt_to_champions || 0,
-                totalDamageDealt: p.total_damage_dealt || 0,
-                totalDamageTaken: p.total_damage_taken || 0,
-                goldEarned: p.gold_earned || 0,
-                totalMinionsKilled: p.total_minions_killed || 0,
+                gameEndedInEarlySurrender: p.match_data?.isRemake || false,
+                kills: p.match_data?.kills || 0,
+                deaths: p.match_data?.deaths || 0,
+                assists: p.match_data?.assists || 0,
+                champLevel: p.match_data?.level || 18,
+                totalDamageDealtToChampions: p.match_data?.stats?.damage || 0,
+                totalDamageDealt: 0,
+                totalDamageTaken: 0,
+                goldEarned: p.match_data?.stats?.gold || 0,
+                totalMinionsKilled: p.match_data?.stats?.cs || 0,
                 neutralMinionsKilled: 0,
-                summoner1Id: p.summoner1_id || 0,
-                summoner2Id: p.summoner2_id || 0,
-                item0: p.item0 || 0,
-                item1: p.item1 || 0,
-                item2: p.item2 || 0,
-                item3: p.item3 || 0,
-                item4: p.item4 || 0,
-                item5: p.item5 || 0,
-                item6: p.item6 || 0,
+                summoner1Id: p.match_data?.spells?.[0] || 0,
+                summoner2Id: p.match_data?.spells?.[1] || 0,
+                item0: p.match_data?.items?.[0] || 0,
+                item1: p.match_data?.items?.[1] || 0,
+                item2: p.match_data?.items?.[2] || 0,
+                item3: p.match_data?.items?.[3] || 0,
+                item4: p.match_data?.items?.[4] || 0,
+                item5: p.match_data?.items?.[5] || 0,
+                item6: 0,
                 perks: {
+                  statPerks: {
+                    offense: p.match_data?.runes?.statPerks?.[0] || 0,
+                    flex: p.match_data?.runes?.statPerks?.[1] || 0,
+                    defense: p.match_data?.runes?.statPerks?.[2] || 0
+                  },
                   styles: [
                     {
-                      style: p.perk_primary_style || 0,
+                      style: p.match_data?.runes?.primary?.style || 0,
                       selections: [
-                        { perk: p.perk0 || 0 },
-                        { perk: p.perk1 || 0 },
-                        { perk: p.perk2 || 0 },
-                        { perk: p.perk3 || 0 }
+                        { perk: p.match_data?.runes?.primary?.perks?.[0] || 0 },
+                        { perk: p.match_data?.runes?.primary?.perks?.[1] || 0 },
+                        { perk: p.match_data?.runes?.primary?.perks?.[2] || 0 },
+                        { perk: p.match_data?.runes?.primary?.perks?.[3] || 0 }
                       ]
                     },
                     {
-                      style: p.perk_sub_style || 0,
+                      style: p.match_data?.runes?.secondary?.style || 0,
                       selections: [
-                        { perk: p.perk4 || 0 },
-                        { perk: p.perk5 || 0 }
+                        { perk: p.match_data?.runes?.secondary?.perks?.[0] || 0 },
+                        { perk: p.match_data?.runes?.secondary?.perks?.[1] || 0 }
                       ]
                     }
                   ]
                 },
-                doubleKills: p.double_kills || 0,
-                tripleKills: p.triple_kills || 0,
-                quadraKills: p.quadra_kills || 0,
-                pentaKills: p.penta_kills || 0,
-                pigScore: p.pig_score
+                doubleKills: p.match_data?.stats?.doubleKills || 0,
+                tripleKills: p.match_data?.stats?.tripleKills || 0,
+                quadraKills: p.match_data?.stats?.quadraKills || 0,
+                pentaKills: p.match_data?.stats?.pentaKills || 0,
+                pigScore: p.match_data?.pigScore ?? null
               }))
             }
           }

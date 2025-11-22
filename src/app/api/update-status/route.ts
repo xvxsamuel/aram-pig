@@ -4,31 +4,32 @@ import type { UpdateJobProgress } from "../../../types/update-jobs"
 
 // cleanup stale jobs
 async function cleanupStaleJobs(supabase: any) {
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString()
   
-  // cleanup jobs older than 15 minutes
+  // cleanup jobs older than 30 minutes (allows for large match histories)
   await supabase
     .from("update_jobs")
     .update({
       status: "failed",
-      error_message: "job timed out after 15 minutes",
+      error_message: "job timed out after 30 minutes",
       completed_at: new Date().toISOString()
     })
     .in("status", ["pending", "processing"])
-    .lt("started_at", fifteenMinutesAgo)
+    .lt("started_at", thirtyMinutesAgo)
   
-  // also cleanup processing jobs with no recent progress (likely orphaned by server restart)
+  // cleanup processing jobs with no progress update in 10 minutes (likely orphaned by server restart)
+  // this is safe because we update progress every 3 matches (~3-6 seconds)
   await supabase
     .from("update_jobs")
     .update({
       status: "failed",
-      error_message: "job stalled - no progress in 5 minutes",
+      error_message: "job stalled - no progress in 10 minutes (likely server restart)",
       completed_at: new Date().toISOString()
     })
     .eq("status", "processing")
-    .lt("updated_at", fiveMinutesAgo)
+    .lt("updated_at", tenMinutesAgo)
   
   // delete completed/failed jobs older than 2 minutes (prevents refresh loops)
   await supabase

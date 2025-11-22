@@ -4,11 +4,17 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getChampionImageUrl } from '../lib/ddragon-client'
-import { getChampionDisplayName, getSortedChampionNames } from '../lib/champion-names'
+import { getChampionDisplayName, getSortedChampionNames, getChampionUrlName } from '../lib/champion-names'
 import { getWinrateColor } from '../lib/winrate-colors'
 
 type SortKey = 'games' | 'winrate' | 'kda' | 'damage' | 'pigScore'
 type SortDirection = 'asc' | 'desc'
+
+// helper to format numbers without trailing .0
+const formatStat = (num: number, decimals: number = 1): string => {
+  const rounded = Number(num.toFixed(decimals))
+  return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(decimals)
+}
 
 interface ChampionStats {
   championName: string
@@ -273,7 +279,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
               {/* kda */}
               <div className="w-[120px] text-center">
                 <div className="text-gray-300">
-                  <span className="text-white">{(aggregateStats.kills / aggregateStats.games).toFixed(1)}</span> / {(aggregateStats.deaths / aggregateStats.games).toFixed(1)} / <span className="text-white">{(aggregateStats.assists / aggregateStats.games).toFixed(1)}</span>
+                  <span className="text-white">{formatStat(aggregateStats.kills / aggregateStats.games)}</span> / {formatStat(aggregateStats.deaths / aggregateStats.games)} / <span className="text-white">{formatStat(aggregateStats.assists / aggregateStats.games)}</span>
                 </div>
                 <div className={`text-xs ${
                   aggregateStats.deaths > 0 && ((aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths) >= 3 
@@ -281,8 +287,8 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                     : 'text-gray-400'
                 }`}>
                   {aggregateStats.deaths > 0 
-                    ? ((aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths).toFixed(2)
-                    : (aggregateStats.kills + aggregateStats.assists).toFixed(2)
+                    ? formatStat((aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths, 2)
+                    : formatStat(aggregateStats.kills + aggregateStats.assists, 2)
                   } KDA
                 </div>
               </div>
@@ -340,7 +346,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                   {isLoading ? (
                     <div className="w-12 h-12 bg-abyss-500 rounded-xl"></div>
                   ) : (
-                    <Link href={`/champions/${stats.championName.toLowerCase()}`}>
+                    <Link href={`/champions/${getChampionUrlName(stats.championName, championNames)}`}>
                       <div className="w-12 h-12 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-xl cursor-pointer">
                         <div className="w-full h-full rounded-[inherit] overflow-hidden bg-accent-dark">
                           <Image
@@ -416,10 +422,10 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                   ) : (
                     <>
                       <div className="text-gray-300">
-                        <span className="text-white">{(stats.kills / stats.games).toFixed(1)}</span> / {(stats.deaths / stats.games).toFixed(1)} / <span className="text-white">{(stats.assists / stats.games).toFixed(1)}</span>
+                        <span className="text-white">{formatStat(stats.kills / stats.games)}</span> / {formatStat(stats.deaths / stats.games)} / <span className="text-white">{formatStat(stats.assists / stats.games)}</span>
                       </div>
                       <div className={`text-xs ${parseFloat(kda) >= 3 ? 'text-gold-light' : 'text-gray-400'}`}>
-                        {kda} KDA
+                        {formatStat(parseFloat(kda), 2)} KDA
                       </div>
                     </>
                   )}

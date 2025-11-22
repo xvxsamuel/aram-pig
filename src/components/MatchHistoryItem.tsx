@@ -13,6 +13,7 @@ import {
   getRuneImageUrl,
   getRuneStyleImageUrl,
 } from '../lib/ddragon-client'
+import { getChampionUrlName } from '../lib/champion-names'
 import MatchDetails from './MatchDetails'
 import Tooltip from './Tooltip'
 
@@ -21,9 +22,10 @@ interface Props {
   puuid: string
   region: string
   ddragonVersion: string
+  championNames: Record<string, string>
 }
 
-export default function MatchHistoryItem({ match, puuid, region, ddragonVersion }: Props) {
+export default function MatchHistoryItem({ match, puuid, region, ddragonVersion, championNames }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const participant = match.info.participants.find((p) => p.puuid === puuid)
@@ -96,7 +98,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
             </div>
 
             <div className="flex items-center gap-1">
-              <Link href={`/champions/${participant.championName.toLowerCase()}`}>
+              <Link href={`/champions/${getChampionUrlName(participant.championName, championNames)}`}>
                 <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg cursor-pointer">
                   <div className="w-14 h-14 rounded-[inherit] overflow-hidden bg-accent-dark">
                     <Image
@@ -185,7 +187,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion 
                 participant.item4,
                 participant.item5,
               ].map((itemId, idx) => (
-                <Tooltip key={idx} id={itemId} type="item" ddragonVersion={ddragonVersion}>
+                <Tooltip key={idx} id={itemId} type="item">
                   <div className="w-7.5 h-7.5 rounded overflow-hidden bg-gray-800 border border-gray-700">
                     {itemId > 0 && (
                       <Image

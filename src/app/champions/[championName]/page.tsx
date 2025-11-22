@@ -4,23 +4,34 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase'
 import { getChampionImageUrl } from '@/lib/ddragon-client'
-import { fetchChampionNames, getChampionDisplayName } from '@/lib/champion-names'
+import { fetchChampionNames, getChampionDisplayName, getApiNameFromUrl } from '@/lib/champion-names'
+import { getLatestPatches } from '@/lib/riot-patches'
 import { getWinrateColor } from '@/lib/winrate-colors'
-import clsx from 'clsx'
+import { getLatestVersion } from '@/lib/ddragon-client'
 import ChampionDetailTabs from '@/components/ChampionDetailTabs'
-import PatchSelector from '@/components/PatchSelector'
+import ChampionFilters from '@/components/ChampionFilters'
 
 export const revalidate = 0 // disable cache for patch filter to work
 
 interface Props {
   params: Promise<{ championName: string }>
-  searchParams: Promise<{ patch?: string }>
+  searchParams: Promise<{ patch?: string; filter?: string }>
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { championName } = await params
-  const championNames = await fetchChampionNames('14.23.1')
-  const displayName = getChampionDisplayName(championName, championNames)
+  const ddragonVersion = await getLatestVersion()
+  const championNames = await fetchChampionNames(ddragonVersion)
+  const apiName = getApiNameFromUrl(championName, championNames)
+  
+  if (!apiName) {
+    return {
+      title: 'Champion Not Found | ARAM PIG',
+      description: 'Champion statistics not available',
+    }
+  }
+  
+  const displayName = getChampionDisplayName(apiName, championNames)
   
   // Capitalize first letter of each word
   const capitalizedName = displayName
@@ -48,179 +59,206 @@ interface KeystoneStat {
 
 export default async function ChampionDetailPage({ params, searchParams }: Props) {
   const { championName } = await params
-  const { patch: selectedPatch } = await searchParams
+  const { patch: selectedPatch, filter = 'patch' } = await searchParams
   const supabase = createAdminClient()
-  const ddragonVersion = '14.23.1'
+  const ddragonVersion = await getLatestVersion()
   
-  // Get available patches from database
-  const { data: patchData } = await supabase
-    .from('matches')
-    .select('patch')
-    .not('patch', 'is', null)
-    .order('game_creation', { ascending: false })
-    .limit(1000)
+  // Get latest 3 patches from Riot API
+  const availablePatches = await getLatestPatches()
   
-  const uniquePatches = [...new Set((patchData || []).map(m => m.patch).filter(Boolean))]
-  const availablePatches = uniquePatches.slice(0, 3) // Last 3 patches
+  // Determine time filter based on filter parameter
+  let timeFilter: number | null = null
+  let currentPatch: string | null = null
   
-  // Default to current patch if no filter specified
-  const currentPatch = selectedPatch || (availablePatches.length > 0 ? availablePatches[0] : null)
+  if (filter === 'patch') {
+    // Use selected patch from URL, or fall back to first available patch
+    currentPatch = selectedPatch || (availablePatches.length > 0 ? availablePatches[0] : null)
+  } else if (filter === '7' || filter === '30') {
+    const days = parseInt(filter)
+    timeFilter = Date.now() - (days * 24 * 60 * 60 * 1000)
+  }
   
   const championNames = await fetchChampionNames(ddragonVersion)
-  
-  // convert URL to API name - URL can be display name (wukong) or API name (aatrox)
-  const urlNormalized = championName.toLowerCase().replace(/[^a-z0-9]/g, '')
-  
-  // first, try to match against display names
-  let apiName: string | null = null
-  for (const [api, display] of Object.entries(championNames)) {
-    if (display.toLowerCase().replace(/[^a-z0-9]/g, '') === urlNormalized) {
-      apiName = api
-      break
-    }
-  }
-  
-  // if not found, try matching API names directly
-  if (!apiName) {
-    for (const api of Object.keys(championNames)) {
-      if (api.toLowerCase() === urlNormalized) {
-        apiName = api
-        break
-      }
-    }
-  }
+  const apiName = getApiNameFromUrl(championName, championNames)
   
   if (!apiName) {
     console.error(`Could not find champion for URL: ${championName}`)
     notFound()
   }
 
-  // Query patch-specific champion stats
-  let championData
+  // Query champion stats from new JSONB structure
+  let championData: any = null
   let totalGames = 0
+  let championStatsData: any = null
   
   if (currentPatch) {
+    // Patch-specific stats from champion_stats table
     const { data: patchStats, error: patchError } = await supabase
-      .from('champion_stats_by_patch')
-      .select('champion_name, games, wins, last_game_time')
+      .from('champion_stats')
+      .select('champion_name, patch, data, last_updated')
       .eq('champion_name', apiName)
       .eq('patch', currentPatch)
-      .single()
+      .maybeSingle()
     
     if (patchError) {
       console.error(`Patch stats error for ${apiName}:`, patchError)
       notFound()
     }
     
-    championData = patchStats ? {
-      champion_name: patchStats.champion_name,
-      overall_winrate: patchStats.games > 0 ? (patchStats.wins / patchStats.games) * 100 : 0,
-      games_analyzed: patchStats.games,
-      wins: patchStats.wins,
-      last_calculated_at: new Date(patchStats.last_game_time).toISOString()
-    } : null
-  } else {
-    // Fall back to all-time stats if no patch
-    const { data: allTimeStats, error: championError } = await supabase
-      .from('aram_stats')
-      .select('champion_name, overall_winrate, games_analyzed, wins, last_calculated_at')
-      .eq('champion_name', apiName)
-      .single()
-
-    if (championError) {
-      console.error(`Database error for ${apiName}:`, championError)
-      notFound()
+    if (!patchStats || !patchStats.data) {
+      championData = null
+    } else {
+      const data = patchStats.data as any
+      championStatsData = data
+      championData = {
+        champion_name: patchStats.champion_name,
+        overall_winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
+        games_analyzed: data.games || 0,
+        wins: data.wins || 0,
+        last_calculated_at: patchStats.last_updated || new Date().toISOString()
+      }
     }
-    
-    championData = allTimeStats
-  }
-  
-  if (!championData) {
-    console.error(`No data found for ${apiName}`)
-    notFound()
+  } else if (timeFilter) {
+    // Time filter not supported with JSONB structure - fall back to showing no data
+    championData = null
+  } else {
+    // All-time stats not supported - fall back to showing no data
+    championData = null
   }
 
   const displayName = championNames[apiName] || apiName
+  
+  // empty state
+  if (!championData) {
+    return (
+      <main className="min-h-screen bg-accent-darker text-white">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          {/* champion header */}
+          <div className="bg-abyss-600 rounded-lg p-6 mb-6">
+            <div className="flex items-center gap-6">
+              <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
+                <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+                  <Image
+                    src={getChampionImageUrl(apiName, ddragonVersion)}
+                    alt={displayName}
+                    width={96}
+                    height={96}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h1 className="text-4xl font-bold mb-2">{displayName}</h1>
+                    <div className="text-subtitle">No data available</div>
+                  </div>
+                  
+                  {/* patch & date range filters */}
+                  <ChampionFilters availablePatches={availablePatches} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* empty state */}
+          <div className="bg-abyss-600 rounded-lg p-12 text-center">
+            <p className="text-2xl text-subtitle mb-2">No statistics available yet</p>
+            <p className="text-sm text-text-muted">
+              {filter === 'patch' && currentPatch
+                ? `No matches found for ${displayName} on patch ${currentPatch}. Try selecting a different patch.`
+                : `No matches found for ${displayName}. Data will appear once matches are scraped.`}
+            </p>
+          </div>
+        </div>
+      </main>
+    )
+  }
+  
   totalGames = championData.games_analyzed
 
-  // query item stats from materialized view
-  const itemQuery = currentPatch
-    ? supabase
-        .from('item_stats_by_patch')
-        .select('item_id, slot, games, wins, winrate')
-        .eq('champion_name', apiName)
-        .eq('patch', currentPatch)
-    : supabase
-        .from('item_stats_by_patch')
-        .select('item_id, slot, games, wins, winrate')
-        .eq('champion_name', apiName)
-  
-  const { data: itemData, error: itemError } = await itemQuery
-
-  if (itemError) {
-    console.error(`Item stats error for ${apiName}:`, itemError)
-  }
-
-  // check if item is boots
+  // Load items data to check item types
   const itemsDataImport = await import('@/data/items.json')
+  const itemsData = itemsDataImport.default as Record<string, any>
+  
+  // Helper functions
   const isBootsItem = (itemId: number): boolean => {
-    const item = (itemsDataImport.default as Record<string, any>)[itemId.toString()]
-    return item?.itemType === 'boots'
+    return itemsData[itemId.toString()]?.itemType === 'boots'
   }
   
-  // check if item is finished (legendary or boots)
   const isFinishedItem = (itemId: number): boolean => {
-    const item = (itemsDataImport.default as Record<string, any>)[itemId.toString()]
+    const item = itemsData[itemId.toString()]
     if (!item) return false
     const type = item.itemType
     return type === 'legendary' || type === 'boots'
   }
 
-  // separate boots from regular items and group by slot
-  const itemsBySlot: Record<number, Array<ItemStat & { winrate: number; pickrate: number }>> = {}
-  const bootsMap: Map<number, { games: number; wins: number }> = new Map()
-  let totalGamesWithBoots = 0
-  let winsWithBoots = 0
-  
-  if (itemData) {
-    itemData.forEach((item) => {
-      // skip component items - only show finished items
-      if (!isFinishedItem(item.item_id)) {
-        return
-      }
-      
-      if (isBootsItem(item.item_id)) {
-        // aggregate boots across all slots
-        const existing = bootsMap.get(item.item_id) || { games: 0, wins: 0 }
-        bootsMap.set(item.item_id, {
-          games: existing.games + item.games,
-          wins: existing.wins + item.wins
-        })
-        totalGamesWithBoots += item.games
-        winsWithBoots += item.wins
-      } else {
-        // regular items stay separated by slot
-        const statItem = {
-          item_id: item.item_id,
-          games: item.games,
-          wins: item.wins,
-          winrate: item.winrate, // already calculated in materialized view
-          pickrate: totalGames > 0 ? (item.games / totalGames) * 100 : 0,
-        }
-        
-        if (!itemsBySlot[item.slot]) {
-          itemsBySlot[item.slot] = []
-        }
-        itemsBySlot[item.slot].push(statItem)
-      }
-    })
-    
-    // sort each slot by pickrate descending
-    Object.keys(itemsBySlot).forEach((slot) => {
-      itemsBySlot[parseInt(slot)].sort((a, b) => b.pickrate - a.pickrate)
-    })
+  // Parse JSONB data structure
+  const itemsBySlot: Record<number, Array<ItemStat & { winrate: number; pickrate: number }>> = {
+    0: [], 1: [], 2: [], 3: [], 4: [], 5: []
   }
   
+  // Extract items by slot from JSONB (slots 1-6 in data, map to 0-5 in UI)
+  if (championStatsData?.items) {
+    for (let slot = 1; slot <= 6; slot++) {
+      const slotData = championStatsData.items[slot.toString()]
+      if (slotData && typeof slotData === 'object') {
+        const items = Object.entries(slotData)
+          .map(([itemId, stats]: [string, any]) => ({
+            item_id: parseInt(itemId),
+            games: stats.games || 0,
+            wins: stats.wins || 0,
+            winrate: stats.games > 0 ? (stats.wins / stats.games) * 100 : 0,
+            pickrate: totalGames > 0 ? (stats.games / totalGames) * 100 : 0,
+          }))
+          .filter(item => isFinishedItem(item.item_id))
+          .sort((a, b) => b.pickrate - a.pickrate)
+        
+        itemsBySlot[slot - 1] = items
+      }
+    }
+  }
+
+  // Extract starter items from JSONB
+  const starterItems = championStatsData?.starting 
+    ? Object.entries(championStatsData.starting)
+        .map(([starterBuild, stats]: [string, any]) => ({
+          starter_build: starterBuild,
+          items: starterBuild.split(',').map((id: string) => parseInt(id)),
+          games: stats.games || 0,
+          wins: stats.wins || 0,
+          winrate: stats.games > 0 ? (stats.wins / stats.games) * 100 : 0,
+          pickrate: totalGames > 0 ? (stats.games / totalGames) * 100 : 0,
+        }))
+        .sort((a, b) => b.pickrate - a.pickrate)
+    : []
+  
+  // Extract boots stats - aggregate across all slots
+  const bootsMap: Map<number, { games: number; wins: number }> = new Map()
+  let totalBootsGames = 0
+  let totalBootsWins = 0
+  
+  if (championStatsData?.items) {
+    for (let slot = 1; slot <= 6; slot++) {
+      const slotData = championStatsData.items[slot.toString()]
+      if (slotData && typeof slotData === 'object') {
+        Object.entries(slotData).forEach(([itemId, stats]: [string, any]) => {
+          const id = parseInt(itemId)
+          if (isBootsItem(id)) {
+            const existing = bootsMap.get(id) || { games: 0, wins: 0 }
+            bootsMap.set(id, {
+              games: existing.games + (stats.games || 0),
+              wins: existing.wins + (stats.wins || 0)
+            })
+            totalBootsGames += stats.games || 0
+            totalBootsWins += stats.wins || 0
+          }
+        })
+      }
+    }
+  }
+
   // convert boots map to array with stats
   const bootsItems = Array.from(bootsMap.entries())
     .map(([item_id, data]) => ({
@@ -232,10 +270,10 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
     }))
   
   // calculate "no boots" stats
-  const noBootsGames = totalGames - totalGamesWithBoots
-  const noBootsWins = championData.wins - winsWithBoots
+  const noBootsGames = totalGames - totalBootsGames
+  const noBootsWins = championData.wins - totalBootsWins
   const noBootsItem = noBootsGames > 0 ? {
-    item_id: -1, // special ID for no boots
+    item_id: -2, // special ID for no boots (different from -1 which is "any boots")
     games: noBootsGames,
     wins: noBootsWins,
     winrate: (noBootsWins / noBootsGames) * 100,
@@ -248,91 +286,129 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
   }
   bootsItems.sort((a, b) => b.pickrate - a.pickrate)
   
-  // query rune stats from materialized view
-  const runeQuery = currentPatch
-    ? supabase
-        .from('rune_stats_by_patch')
-        .select('rune_id, slot, games, wins, winrate')
-        .eq('champion_name', apiName)
-        .eq('patch', currentPatch)
-    : supabase
-        .from('rune_stats_by_patch')
-        .select('rune_id, slot, games, wins, winrate')
-        .eq('champion_name', apiName)
-  
-  const { data: runeDataRaw, error: runeError } = await runeQuery
-
-  if (runeError) {
-    console.error(`Rune stats error for ${apiName}:`, runeError)
-  }
-
-  // convert to slot-based structure with pickrate
+  // Extract rune stats from JSONB
+  // Slots 0-3: All runes from primary tree (keystone + 3 others)
+  // Slots 4-5: Two runes from secondary tree
   const runeStats: Record<number, Array<{ rune_id: number; games: number; wins: number; winrate: number; pickrate: number }>> = {
     0: [], 1: [], 2: [], 3: [], 4: [], 5: []
   }
   
-  runeDataRaw?.forEach(rune => {
-    runeStats[rune.slot].push({
-      rune_id: rune.rune_id,
-      games: rune.games,
-      wins: rune.wins,
-      winrate: rune.winrate,
-      pickrate: totalGames > 0 ? (rune.games / totalGames) * 100 : 0
-    })
-  })
+  // Slots 0-3: All primary tree runes from runes.primary
+  if (championStatsData?.runes?.primary) {
+    const allPrimaryRunes = Object.entries(championStatsData.runes.primary)
+      .map(([runeId, stats]: [string, any]) => ({
+        rune_id: parseInt(runeId),
+        games: stats.games || 0,
+        wins: stats.wins || 0,
+        winrate: stats.games > 0 ? (stats.wins / stats.games) * 100 : 0,
+        pickrate: totalGames > 0 ? (stats.games / totalGames) * 100 : 0
+      }))
+      .sort((a, b) => b.pickrate - a.pickrate)
+    
+    // Distribute across slots 0-3 (all primary runes show in all slots for now)
+    // In reality, slot 0 is keystones only, slots 1-3 are the other primary runes
+    // But we can't distinguish them in aggregated data, so show all in each slot
+    runeStats[0] = allPrimaryRunes
+    runeStats[1] = allPrimaryRunes  
+    runeStats[2] = allPrimaryRunes
+    runeStats[3] = allPrimaryRunes
+  }
   
-  // sort each slot by pickrate
-  for (let slot = 0; slot < 6; slot++) {
-    runeStats[slot].sort((a, b) => b.pickrate - a.pickrate)
+  // Slots 4-5: Secondary runes
+  if (championStatsData?.runes?.secondary) {
+    const secondaryRunes = Object.entries(championStatsData.runes.secondary)
+      .map(([runeId, stats]: [string, any]) => ({
+        rune_id: parseInt(runeId),
+        games: stats.games || 0,
+        wins: stats.wins || 0,
+        winrate: stats.games > 0 ? (stats.wins / stats.games) * 100 : 0,
+        pickrate: totalGames > 0 ? (stats.games / totalGames) * 100 : 0
+      }))
+      .sort((a, b) => b.pickrate - a.pickrate)
+    
+    // Split into two slots (4 and 5)
+    runeStats[4] = secondaryRunes
+    runeStats[5] = secondaryRunes
   }
 
-  // query ability leveling order from summoner_matches (patch-filtered)
-  // note: ability stats don't have a materialized view yet, so using raw data with join
-  const abilityQuery = currentPatch
-    ? supabase
-        .from('summoner_matches')
-        .select('ability_order, win, matches!inner(patch)')
-        .eq('champion_name', apiName)
-        .eq('matches.patch', currentPatch)
-        .not('ability_order', 'is', null)
-    : supabase
-        .from('summoner_matches')
-        .select('ability_order, win')
-        .eq('champion_name', apiName)
-        .not('ability_order', 'is', null)
+  // Extract ability leveling from JSONB
+  const abilityLevelingStats = championStatsData?.skills
+    ? Object.entries(championStatsData.skills)
+        .map(([ability_order, stats]: [string, any]) => ({
+          ability_order,
+          games: stats.games || 0,
+          wins: stats.wins || 0,
+          winrate: stats.games > 0 ? (stats.wins / stats.games) * 100 : 0,
+          pickrate: totalGames > 0 ? (stats.games / totalGames) * 100 : 0
+        }))
+        .sort((a, b) => b.pickrate - a.pickrate)
+        .slice(0, 5)
+    : []
+
+  // Extract summoner spell stats from JSONB
+  const summonerSpellStats = championStatsData?.spells
+    ? Object.entries(championStatsData.spells)
+        .map(([spell_key, stats]: [string, any]) => {
+          // Parse spell key like "4_32" into spell IDs
+          const spellIds = spell_key.split('_').map(id => parseInt(id))
+          return {
+            spell1_id: spellIds[0],
+            spell2_id: spellIds[1],
+            games: stats.games || 0,
+            wins: stats.wins || 0,
+            winrate: stats.games > 0 ? (stats.wins / stats.games) * 100 : 0,
+            pickrate: totalGames > 0 ? (stats.games / totalGames) * 100 : 0
+          }
+        })
+        .sort((a, b) => b.pickrate - a.pickrate)
+    : []
+
+  // Extract core build combinations from JSONB
+  console.log('[DEBUG] championStatsData.core:', championStatsData?.core ? Object.keys(championStatsData.core).length + ' combinations' : 'null/undefined')
   
-  const { data: abilityData, error: abilityError } = await abilityQuery
-
-  if (abilityError) {
-    console.error(`Ability leveling error for ${apiName}:`, abilityError)
-  }
-
-  console.log(`[${apiName}] Ability data count:`, abilityData?.length || 0)
-
-  // aggregate ability leveling patterns
-  const abilityOrderMap: Map<string, { games: number; wins: number }> = new Map()
+  const allBuildData = championStatsData?.core
+    ? Object.entries(championStatsData.core)
+        .map(([comboKey, comboData]: [string, any]) => {
+          // Parse combo key like "10010_3161_6610" into item IDs
+          const normalizedItems = comboKey.split('_').map(id => parseInt(id))
+          
+          // Extract actual boots from the combo's item data
+          const actualBoots: number[] = []
+          if (comboData.items && typeof comboData.items === 'object') {
+            Object.keys(comboData.items).forEach(itemId => {
+              const id = parseInt(itemId)
+              if (isBootsItem(id)) {
+                actualBoots.push(id)
+              }
+            })
+          }
+          
+          // Extract item stats for this combo
+          const comboItemStats: Record<number, { games: number; wins: number }> = {}
+          if (comboData.items && typeof comboData.items === 'object') {
+            Object.entries(comboData.items).forEach(([itemId, stats]: [string, any]) => {
+              comboItemStats[parseInt(itemId)] = {
+                games: stats.games || 0,
+                wins: stats.wins || 0
+              }
+            })
+          }
+          
+          return {
+            normalizedItems,
+            actualBoots,
+            games: comboData.games || 0,
+            wins: comboData.wins || 0,
+            itemStats: comboItemStats
+          }
+        })
+        .sort((a, b) => b.games - a.games)
+    : []
   
-  abilityData?.forEach(match => {
-    const orderString = match.ability_order!
-    const existing = abilityOrderMap.get(orderString) || { games: 0, wins: 0 }
-    abilityOrderMap.set(orderString, {
-      games: existing.games + 1,
-      wins: existing.wins + (match.win ? 1 : 0)
-    })
-  })
+  console.log('[DEBUG] allBuildData length:', allBuildData.length)
 
-  const abilityLevelingStats = Array.from(abilityOrderMap.entries())
-    .map(([ability_order, data]) => ({
-      ability_order,
-      games: data.games,
-      wins: data.wins,
-      winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
-      pickrate: totalGames > 0 ? (data.games / totalGames) * 100 : 0
-    }))
-    .sort((a, b) => b.pickrate - a.pickrate)
-    .slice(0, 5) // Top 5 most popular leveling orders
-
-  console.log(`[${apiName}] Ability leveling stats:`, abilityLevelingStats.length, 'patterns found')
+  // For backwards compatibility with build order filtering (if still needed)
+  const buildOrders: string[] = []
 
   // for backwards compatibility, extract keystone stats (slot 0)
   const keystoneStats = runeStats[0].map(r => ({
@@ -346,24 +422,20 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
   return (
     <main className="min-h-screen bg-accent-darker text-white">
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* back button */}
-        <Link href="/champions" className="inline-flex items-center gap-2 text-gold-light hover:text-gold-dark mb-6 transition-colors">
-          <span>←</span>
-          <span>Back to Tier List</span>
-        </Link>
-
         {/* champion header */}
-        <div className="bg-abyss-600 rounded-lg p-6 mb-6">
+        <div className="bg-abyss-600 rounded-lg p-6 mb-6 border border-gold-dark/40">
           <div className="flex items-center gap-6">
-            <div className="w-24 h-24 rounded-lg overflow-hidden border-2 border-gold-light">
-              <Image
-                src={getChampionImageUrl(apiName, ddragonVersion)}
-                alt={displayName}
-                width={96}
-                height={96}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
+            <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
+              <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+                <Image
+                  src={getChampionImageUrl(apiName, ddragonVersion)}
+                  alt={displayName}
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              </div>
             </div>
             <div className="flex-1">
               <div className="flex items-start justify-between">
@@ -385,22 +457,25 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
                     Last updated: {new Date(championData.last_calculated_at).toLocaleDateString()}
                   </div>
                 </div>
-                
-                {/* Patch Filter Dropdown */}
-                <PatchSelector availablePatches={availablePatches} currentPatch={currentPatch} />
+                <ChampionFilters availablePatches={availablePatches} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabbed content with Items and Runes */}
-        <div className="bg-abyss-600 rounded-lg p-6">
+        <div className="bg-abyss-600 rounded-lg p-6 border border-gold-dark/40">
           <ChampionDetailTabs
             itemsBySlot={itemsBySlot}
             bootsItems={bootsItems}
+            starterItems={starterItems}
             runeStats={runeStats}
             abilityLevelingStats={abilityLevelingStats}
+            summonerSpellStats={summonerSpellStats}
             ddragonVersion={ddragonVersion}
+            totalGames={totalGames}
+            buildOrders={buildOrders}
+            allBuildData={allBuildData}
           />
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { RiotAPI, RiotAPITypes, PlatformId, DDragon } from "@fightmegg/riot-api"
 import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "./regions"
-import { waitForRateLimit, type RequestType } from "./rate-limiter"
+import { waitForRateLimit, type RequestType } from './rate-limiter'
+import { getLatestVersion } from './ddragon-client'
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY
 
@@ -12,20 +13,22 @@ const rAPI = new RiotAPI(RIOT_API_KEY!)
 const ddragon = new DDragon()
 
 // version
-let latestVersion: string | null = null
 
-async function getLatestVersion(): Promise<string> {
-  if (!latestVersion) {
-    latestVersion = await rAPI.ddragon.versions.latest()
-  }
-  return latestVersion
-}
 
+// account-v1 endpoints, interchangable but split for rate limits
 const REGIONAL_TO_PLATFORM_ID: Record<RegionalCluster, string> = {
   americas: 'americas',
   europe: 'europe',
   asia: 'asia',
-  sea: 'asia',
+  sea: 'europe',
+}
+
+// match-v5 endpoints
+const REGIONAL_TO_MATCH_ROUTING: Record<RegionalCluster, string> = {
+  americas: 'americas',
+  europe: 'europe',
+  asia: 'asia',
+  sea: 'sea',
 }
 
 const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, string> = {
@@ -62,7 +65,7 @@ async function retryWithDelay<T>(
         throw error
       }
       
-      const isJobConflict = error?.message?.includes('A job with the same id already exists')
+      const isJobConflict = error?.message?.includes('A job with the same ID already exists')
       const isLastAttempt = attempt === maxRetries - 1
       
       if (isJobConflict && !isLastAttempt) {
@@ -75,7 +78,7 @@ async function retryWithDelay<T>(
     }
   }
   
-  throw new Error('max retries reached')
+  throw new Error('Max retries reached')
 }
 
 export async function getAccountByRiotId(
@@ -147,14 +150,13 @@ export async function getMatchIdsByPuuid(
     count: limitedCount,
   }
   
-  // add optional parameters if provided
   if (start > 0) params.start = start
   if (startTime) params.startTime = startTime
   if (endTime) params.endTime = endTime
   
   const matchIds = await retryWithDelay(() =>
     rAPI.matchV5.getIdsByPuuid({
-      cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
+      cluster: REGIONAL_TO_MATCH_ROUTING[region] as any,
       puuid,
       params,
     })
@@ -163,12 +165,12 @@ export async function getMatchIdsByPuuid(
 }
 
 export async function getMatchById(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
-  // regional endpoint - use regional cluster for rate limiting
+  // regional endpoint
   await waitForRateLimit(region, requestType);
   
   const match = await retryWithDelay(() =>
     rAPI.matchV5.getMatchById({
-      cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
+      cluster: REGIONAL_TO_MATCH_ROUTING[region] as any,
       matchId,
     })
   )
@@ -177,12 +179,23 @@ export async function getMatchById(matchId: string, region: RegionalCluster, req
 
 // fetch match timeline for item purchase order
 export async function getMatchTimeline(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
-  // regional endpoint - use regional cluster for rate limiting
+  // regional endpoint
   await waitForRateLimit(region, requestType);
   
   const timeline = await retryWithDelay(() =>
     rAPI.matchV5.getMatchTimelineById({
-      cluster: REGIONAL_TO_PLATFORM_ID[region] as any,
+      cluster: REGIONAL_TO_MATCH_ROUTING[region] as any,
+      matchId,
+    })
+  )
+  return timeline as unknown as MatchTimeline
+}
+
+// internal version that doesn't wait for rate limit (already waited at match level)
+export async function getMatchTimelineNoWait(matchId: string, region: RegionalCluster) {
+  const timeline = await retryWithDelay(() =>
+    rAPI.matchV5.getMatchTimelineById({
+      cluster: REGIONAL_TO_MATCH_ROUTING[region] as any,
       matchId,
     })
   )
@@ -216,7 +229,7 @@ export interface TimelineEvent {
 export interface MatchData {
   metadata: {
     matchId: string
-    participants: string[] // array of PUUIDs not summoner names
+    participants: string[] // array of PUUIDs !!!! not summoner names
   }
   info: {
     gameCreation: number
@@ -244,6 +257,10 @@ export interface ParticipantData {
   assists: number
   champLevel: number
   totalDamageDealtToChampions: number
+  totalDamageDealt?: number
+  totalHealsOnTeammates?: number
+  totalDamageShieldedOnTeammates?: number
+  timeCCingOthers?: number
   totalTimeSpentDead?: number
   goldEarned: number
   totalMinionsKilled: number
@@ -324,4 +341,4 @@ export async function getProfileIconUrl(iconId: number): Promise<string> {
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${iconId}.png`
 }
 
-export { ddragon, getLatestVersion }
+export { ddragon }

@@ -4,13 +4,12 @@ import { useState, useRef, useEffect, useMemo, memo } from 'react'
 import Image from 'next/image'
 import { getTooltipData, type TooltipType } from '../lib/tooltip-data'
 import { cleanWikiMarkup } from '../lib/wiki-markup-simple'
-import { getItemImageUrl } from '../lib/ddragon-client'
+import { getItemImageUrl, getLatestVersion } from '../lib/ddragon-client'
 
 interface TooltipProps {
   id: number
   type?: 'item' | 'rune' | 'summoner-spell'
   children: React.ReactNode
-  ddragonVersion?: string
 }
 
 const KEYWORD_ICON_MAP = new Map<string, string>([
@@ -236,14 +235,19 @@ function formatDescription(desc: string, isRune: boolean = false): React.ReactNo
 const TooltipContent = memo(({ 
   tooltipData, 
   actualId, 
-  type, 
-  ddragonVersion 
+  type 
 }: { 
   tooltipData: any
   actualId: number
   type: 'item' | 'rune' | 'summoner-spell'
-  ddragonVersion: string 
 }) => {
+  // get cached ddragon version
+  const [ddragonVersion, setDdragonVersion] = useState<string>('15.23.1')
+  
+  useEffect(() => {
+    getLatestVersion().then(setDdragonVersion)
+  }, [])
+  
   // memoize formatted description
   const formattedDescription = useMemo(
     () => formatDescription(tooltipData.description, type === 'rune'),
@@ -330,7 +334,7 @@ const TooltipContent = memo(({
 TooltipContent.displayName = 'TooltipContent'
 
 // main tooltip component
-export default function Tooltip({ id, type = 'item', children, ddragonVersion = '15.20.1' }: TooltipProps) {
+export default function Tooltip({ id, type = 'item', children }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const triggerRef = useRef<HTMLDivElement>(null)
@@ -396,7 +400,6 @@ export default function Tooltip({ id, type = 'item', children, ddragonVersion = 
             tooltipData={tooltipData}
             actualId={actualId}
             type={type}
-            ddragonVersion={ddragonVersion}
           />
           <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
             <div className="border-8 border-transparent border-t-gold-dark" />

@@ -2,7 +2,8 @@ import { notFound } from "next/navigation"
 import { LABEL_TO_PLATFORM, getDefaultTag } from "../../../lib/regions"
 import SummonerContent from "../../../components/SummonerContent"
 import SummonerNotFound from "../../../components/SummonerNotFound"
-import { getSummonerByRiotId, getProfileIconUrl, getLatestVersion } from "../../../lib/riot-api"
+import { getSummonerByRiotId, getProfileIconUrl } from "../../../lib/riot-api"
+import { getLatestVersion, getChampionImageUrl } from "../../../lib/ddragon-client"
 import { supabase } from "../../../lib/supabase"
 import { fetchChampionNames } from "../../../lib/champion-names"
 import type { Metadata } from 'next'
@@ -110,6 +111,31 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
       
       try {
         summonerData = await getSummonerByRiotId(gameName, tagLine, platformCode)
+        
+        // cache the summoner data after fetching from API
+        if (summonerData) {
+          console.log('Caching summoner data...')
+          const { error: cacheError } = await supabase
+            .from('summoners')
+            .upsert({
+              puuid: summonerData.account.puuid,
+              game_name: summonerData.account.gameName,
+              tag_line: summonerData.account.tagLine,
+              summoner_level: summonerData.summoner.summonerLevel,
+              profile_icon_id: summonerData.summoner.profileIconId,
+              region: platformCode,
+              last_updated: null, // Don't set timestamp on initial cache - only when matches are fetched
+            }, {
+              onConflict: 'puuid',
+              ignoreDuplicates: false
+            })
+          
+          if (cacheError) {
+            console.error('Failed to cache summoner:', cacheError)
+          } else {
+            console.log('✓ Summoner cached successfully')
+          }
+        }
       } catch (apiError: any) {
         console.error("Riot API error:", apiError)
         // let summonerData remain null, will check for alternatives below

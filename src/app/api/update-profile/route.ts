@@ -7,6 +7,8 @@ import type { UpdateJob } from '../../../types/update-jobs';
 import { calculatePigScore } from '../../../lib/pig-score-v2';
 import { extractAbilityOrder } from '../../../lib/ability-leveling';
 import { extractPatch, getPatchFromDate } from '../../../lib/patch-utils';
+import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../../../lib/item-purchases';
+import { extractItemPurchases } from '../../../lib/item-purchase-history';
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
@@ -40,30 +42,31 @@ async function fetchMatch(region: string, matchId: string, requestType: RequestT
 
 // cleanup stale jobs before starting new one
 async function cleanupStaleJobs(supabase: any) {
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   
-  // cleanup jobs older than 15 minutes
+  // cleanup jobs older than 30 minutes (allows for large match histories)
   await supabase
     .from('update_jobs')
     .update({
       status: 'failed',
-      error_message: 'job timed out after 15 minutes',
+      error_message: 'job timed out after 30 minutes',
       completed_at: new Date().toISOString()
     })
     .in('status', ['pending', 'processing'])
-    .lt('started_at', fifteenMinutesAgo);
+    .lt('started_at', thirtyMinutesAgo);
   
-  // also cleanup processing jobs with no recent progress (likely orphaned by server restart)
+  // cleanup processing jobs with no progress update in 10 minutes (likely orphaned by server restart)
+  // this is safe because we update progress every 3 matches (~3-6 seconds)
   await supabase
     .from('update_jobs')
     .update({
       status: 'failed',
-      error_message: 'job stalled - no progress in 5 minutes',
+      error_message: 'job stalled - no progress in 10 minutes (likely server restart)',
       completed_at: new Date().toISOString()
     })
     .eq('status', 'processing')
-    .lt('updated_at', fiveMinutesAgo);
+    .lt('updated_at', tenMinutesAgo);
 }
 
 // check for existing active job
@@ -105,15 +108,19 @@ async function createJob(supabase: any, puuid: string, totalMatches: number, eta
 // update job progress with dynamic eta
 async function updateJobProgress(supabase: any, jobId: string, fetchedMatches: number, elapsedMs: number, totalMatches: number) {
   // calculate dynamic eta based on actual fetch time
+  // use exponential moving average to smooth out variance
   const avgTimePerMatch = elapsedMs / fetchedMatches;
   const remainingMatches = totalMatches - fetchedMatches;
-  const etaSeconds = Math.ceil((avgTimePerMatch * remainingMatches) / 1000);
+  
+  // add 10% buffer for variance and final processing
+  const etaSeconds = Math.ceil((avgTimePerMatch * remainingMatches * 1.1) / 1000);
   
   await supabase
     .from('update_jobs')
     .update({ 
       fetched_matches: fetchedMatches,
-      eta_seconds: etaSeconds 
+      eta_seconds: etaSeconds,
+      updated_at: new Date().toISOString() // manually update timestamp to prevent stale job cleanup
     })
     .eq('id', jobId);
 }
@@ -231,36 +238,37 @@ export async function POST(request: Request) {
 
     console.log(`Found ${existingMatchIds.size} existing matches for puuid ${accountData.puuid}`)
 
-    // only fetch from riot api if we have existing matches (to compare)
-    // for new profiles, we need to fetch anyway
-    const hasExistingMatches = existingMatchIds.size > 0;
-
-    const matchIds = await fetchMatchIds(region, accountData.puuid);
+    // Quick check: fetch just the most recent match ID to see if there are any new matches
+    console.log('Quick check: fetching most recent match ID...')
+    const quickCheckIds = await fetchMatchIds(region, accountData.puuid, 1, 'overhead');
+    
+    if (quickCheckIds.length > 0 && existingMatchIds.has(quickCheckIds[0])) {
+      console.log('No new matches found (most recent match already in database)')
+      
+      return NextResponse.json({ 
+        success: true, 
+        newMatches: 0,
+        message: 'Profile is already up to date'
+      });
+    }
+    
+    console.log('New matches detected, fetching full match history...')
+    const matchIds = await fetchMatchIds(region, accountData.puuid, undefined, 'batch');
+    
     console.log(`Fetched ${matchIds.length} total match IDs from Riot API`)
     
     const newMatchIds = matchIds.filter((id: string) => !existingMatchIds.has(id));
     console.log(`Found ${newMatchIds.length} new matches to process`)
 
-    if (newMatchIds.length === 0 && hasExistingMatches) {
-      // update last_updated timestamp
-      await supabase
-        .from('summoners')
-        .update({ last_updated: new Date().toISOString() })
-        .eq('puuid', accountData.puuid);
-        
-      console.log('No new matches found - profile is up to date')
-      return NextResponse.json({
-        message: 'Profile is up to date',
-        newMatches: 0,
-      });
-    }
-
     // use batch queue for all profile updates
     const requestType: RequestType = 'batch';
 
-    // calculate initial eta (rough estimate)
-    const apiCallsNeeded = newMatchIds.length + Math.ceil(newMatchIds.length / 100);
-    const etaSeconds = Math.ceil(apiCallsNeeded / 15);
+    // calculate initial eta based on actual batch queue limits
+    // batch queue: 14 req/sec, 70 req/2min -> effective ~0.58 req/sec sustained
+    // each match needs 1 api call, plus timeline fetch (if available)
+    // timeline is fetched after match data, so roughly 2x the api calls
+    const apiCallsNeeded = newMatchIds.length * 2; // match + timeline
+    const etaSeconds = Math.ceil(apiCallsNeeded * 1.2); // ~1.2 sec per api call (conservative estimate)
 
     // create job
     jobId = await createJob(supabase, accountData.puuid, newMatchIds.length, etaSeconds);
@@ -314,13 +322,165 @@ async function processMatchesInBackground(
   puuid: string
 ) {
   const startTime = Date.now();
-  const updateProgressInterval = 5;
+  const updateProgressInterval = 3; // update every 3 matches to keep updated_at fresh
   let fetchedMatches = 0;
 
   try {
     for (const matchId of newMatchIds) {
       try {
-        console.log(`Fetching match ${fetchedMatches + 1}/${newMatchIds.length}: ${matchId}`)
+        // Check if match already exists in database (from scraper)
+        const { data: existingMatch } = await supabase
+          .from('matches')
+          .select('match_id, game_creation, game_duration, patch')
+          .eq('match_id', matchId)
+          .maybeSingle()
+        
+        if (existingMatch) {
+          // Match exists! Fetch match data to insert all 10 players (not just user)
+          console.log(`Match ${matchId} already in DB, fetching to add participant records...`)
+          const match = await fetchMatch(region, matchId, requestType);
+          
+          // Check if match is older than 30 days for timeline
+          const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+          const isOlderThan30Days = existingMatch.game_creation < thirtyDaysAgo;
+          
+          // Fetch timeline for recent matches
+          let timeline = null
+          if (!isOlderThan30Days) {
+            try {
+              timeline = await getMatchTimeline(matchId, region as any, requestType)
+            } catch (err) {
+              console.log(`  Could not fetch timeline for ${matchId}`)
+            }
+          }
+          
+          // Prepare records for ALL participants (same as new match logic)
+          const summonerMatchRecords = await Promise.all(
+            match.info.participants.map(async (p: any, index: number) => {
+              const participantId = index + 1
+              const isTrackedUser = p.puuid === puuid
+              
+              // Extract timeline data for ALL players
+              let abilityOrder = null
+              let buildOrderStr = null
+              let firstBuyStr = null
+              let itemPurchasesStr = null
+              
+              if (!isOlderThan30Days && timeline) {
+                abilityOrder = extractAbilityOrder(timeline, participantId)
+                const buildOrder = extractBuildOrder(timeline, participantId)
+                const firstBuy = extractFirstBuy(timeline, participantId)
+                const itemPurchases = extractItemPurchases(timeline, participantId)
+                buildOrderStr = buildOrder.length > 0 ? formatBuildOrder(buildOrder) : null
+                firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
+                itemPurchasesStr = itemPurchases.length > 0 ? JSON.stringify(itemPurchases) : null
+              }
+              
+              // Calculate pig score only for tracked user
+              let pigScore = null
+              if (isTrackedUser && !isOlderThan30Days && !p.gameEndedInEarlySurrender) {
+                try {
+                  pigScore = await calculatePigScore({
+                    championName: p.championName,
+                    damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
+                    total_damage_dealt: p.totalDamageDealt || 0,
+                    total_heals_on_teammates: p.totalHealsOnTeammates || 0,
+                    total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
+                    time_ccing_others: p.timeCCingOthers || 0,
+                    game_duration: match.info.gameDuration || 0,
+                    deaths: p.deaths,
+                    item0: p.item0 || 0,
+                    item1: p.item1,
+                    item2: p.item2,
+                    item3: p.item3,
+                    item4: p.item4,
+                    item5: p.item5,
+                    perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
+                    patch: existingMatch.patch,
+                  })
+                } catch (err) {
+                  console.error(`  Failed to calculate PIG score:`, err)
+                }
+              }
+              
+              return {
+                puuid: p.puuid,
+                match_id: matchId,
+                champion_name: p.championName,
+                riot_id_game_name: p.riotIdGameName || '',
+                riot_id_tagline: p.riotIdTagline || '',
+                kills: p.kills,
+                deaths: p.deaths,
+                assists: p.assists,
+                win: p.win,
+                game_ended_in_early_surrender: p.gameEndedInEarlySurrender || false,
+                damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
+                total_damage_dealt: p.totalDamageDealt || 0,
+                time_ccing_others: p.timeCCingOthers || 0,
+                total_minions_killed: p.totalMinionsKilled || 0,
+                gold_earned: p.goldEarned || 0,
+                total_heals_on_teammates: p.totalHealsOnTeammates || 0,
+                total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
+                double_kills: p.doubleKills || 0,
+                triple_kills: p.tripleKills || 0,
+                quadra_kills: p.quadraKills || 0,
+                penta_kills: p.pentaKills || 0,
+                item0: p.item0 || 0,
+                item1: p.item1 || 0,
+                item2: p.item2 || 0,
+                item3: p.item3 || 0,
+                item4: p.item4 || 0,
+                item5: p.item5 || 0,
+                pig_score: pigScore,
+                game_creation: existingMatch.game_creation,
+                champ_level: p.champLevel || 0,
+                team_id: p.teamId || 0,
+                summoner1_id: p.summoner1Id || 0,
+                summoner2_id: p.summoner2Id || 0,
+                perk_primary_style: p.perks?.styles?.[0]?.style || 0,
+                perk_sub_style: p.perks?.styles?.[1]?.style || 0,
+                perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
+                perk1: p.perks?.styles?.[0]?.selections?.[1]?.perk || 0,
+                perk2: p.perks?.styles?.[0]?.selections?.[2]?.perk || 0,
+                perk3: p.perks?.styles?.[0]?.selections?.[3]?.perk || 0,
+                perk4: p.perks?.styles?.[1]?.selections?.[0]?.perk || 0,
+                perk5: p.perks?.styles?.[1]?.selections?.[1]?.perk || 0,
+                stat_perk0: p.perks?.statPerks?.offense || 0,
+                stat_perk1: p.perks?.statPerks?.flex || 0,
+                stat_perk2: p.perks?.statPerks?.defense || 0,
+                ability_order: abilityOrder,
+                build_order: buildOrderStr,
+                first_buy: firstBuyStr,
+                item_purchases: itemPurchasesStr,
+              }
+            })
+          )
+          
+          // Insert all participant records
+          const { error: insertError } = await supabase
+            .from('summoner_matches')
+            .insert(summonerMatchRecords)
+          
+          if (insertError) {
+            if (insertError.code === '23505') {
+              console.log(`  Some/all records already exist for match ${matchId}`)
+            } else {
+              console.error(`  Error inserting participant records:`, insertError)
+            }
+          } else {
+            console.log(`  ✓ Added ${summonerMatchRecords.length} participant records to existing match ${matchId}`)
+          }
+          
+          fetchedMatches++;
+          if (fetchedMatches % updateProgressInterval === 0 || fetchedMatches === newMatchIds.length) {
+            const elapsedMs = Date.now() - startTime;
+            await updateJobProgress(supabase, jobId, fetchedMatches, elapsedMs, newMatchIds.length);
+          }
+          continue;
+        }
+        
+        // Match doesn't exist, fetch full match data
+        console.log(`Fetching new match ${fetchedMatches + 1}/${newMatchIds.length}: ${matchId}`)
         const match = await fetchMatch(region, matchId, requestType);
 
         // check if match is older than 30 days - if so, skip timeline fetch and pig score calculation
@@ -334,6 +494,7 @@ async function processMatchesInBackground(
           try {
             timeline = await getMatchTimeline(matchId, region as any, requestType)
             console.log(`  Fetched timeline for match ${fetchedMatches + 1}`)
+            console.log(`  Timeline has ${timeline?.info?.frames?.length || 0} frames`)
           } catch (err) {
             console.error(`  Failed to fetch timeline:`, err)
             // continue without timeline - pig score will use final items instead
@@ -354,7 +515,6 @@ async function processMatchesInBackground(
             game_creation: match.info.gameCreation,
             game_duration: match.info.gameDuration,
             patch: patchVersion,
-            source: 'user',
           });
 
         if (matchError) {
@@ -362,49 +522,48 @@ async function processMatchesInBackground(
           continue;
         }
 
-        // cache all participants with their riot ids for faster lookups
-        const participantData = match.info.participants.map((p: any) => ({
-          puuid: p.puuid,
-          game_name: p.riotIdGameName || null,
-          tag_line: p.riotIdTagLine || null,
-          summoner_level: p.summonerLevel || null,
-          profile_icon_id: p.profileIcon || null,
-        }));
-        
-        const { error: summonersError } = await supabase
-          .from('summoners')
-          .upsert(participantData, { 
-            onConflict: 'puuid',
-            ignoreDuplicates: false // update cache fields if we have newer data
-          });
+        console.log(`Match ${matchId} stored in matches table, preparing participant records...`)
 
-        if (summonersError) {
-          console.error('Summoners insert error:', summonersError);
-        }
-
-        // prepare summoner match records with pig scores
-        const summonerMatchRecords = await Promise.all(
-          match.info.participants.map(async (p: any, index: number) => {
-            // extract ability leveling order from timeline
+        try {
+          // prepare summoner match records (only calculate PIG for tracked user, lazy load for others)
+          const summonerMatchRecords = await Promise.all(
+            match.info.participants.map(async (p: any, index: number) => {
             const participantId = index + 1 // participant IDs are 1-indexed
-            const abilityOrder = extractAbilityOrder(timeline, participantId)
+            const isTrackedUser = p.puuid === puuid // only the user being updated
+            
+            // extract timeline data for ALL players in recent matches (like scraper does)
+            let abilityOrder = null
+            let buildOrderStr = null
+            let firstBuyStr = null
+            let itemPurchases = []
+            
+            if (!isOlderThan30Days && timeline) {
+              abilityOrder = extractAbilityOrder(timeline, participantId)
+              const buildOrder = extractBuildOrder(timeline, participantId)
+              const firstBuy = extractFirstBuy(timeline, participantId)
+              itemPurchases = extractItemPurchases(timeline, participantId)
+              buildOrderStr = buildOrder.length > 0 ? formatBuildOrder(buildOrder) : null
+              firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
+              
+              if (isTrackedUser) {
+                console.log(`    ${p.championName} (tracked, P${participantId}): build_order=${buildOrderStr || 'NULL'}, first_buy=${firstBuyStr || 'NULL'}`)
+              }
+            }
 
-            // calculate pig score
-            let pigScore
-            try {
-              // skip pig score calculation for remakes
-              if (p.gameEndedInEarlySurrender) {
-                pigScore = null
-              } else {
+            // only calculate pig score for tracked user in recent matches
+            let pigScore = null
+            if (isTrackedUser && !isOlderThan30Days && !p.gameEndedInEarlySurrender) {
+              try {
                 pigScore = await calculatePigScore({
                   championName: p.championName,
-                  damage_dealt_to_champions: p.totalDamageDealtToChampions,
+                  damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
                   total_damage_dealt: p.totalDamageDealt || 0,
                   total_heals_on_teammates: p.totalHealsOnTeammates || 0,
                   total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
                   time_ccing_others: p.timeCCingOthers || 0,
-                  game_duration: match.info.gameDuration,
-                  item0: p.item0,
+                  game_duration: match.info.gameDuration || 0,
+                  deaths: p.deaths,
+                  item0: p.item0 || 0,
                   item1: p.item1,
                   item2: p.item2,
                   item3: p.item3,
@@ -413,85 +572,104 @@ async function processMatchesInBackground(
                   perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
                   patch: patchVersion,
                 })
-                console.log(`  PIG score for ${p.championName}: ${pigScore}`)
+              } catch (err) {
+                console.error(`  Failed to calculate PIG score:`, err)
+                pigScore = null
               }
-            } catch (err) {
-              console.error(`  Failed to calculate PIG score:`, err)
-              pigScore = null
             }
 
             return {
               puuid: p.puuid,
               match_id: match.metadata.matchId,
               champion_name: p.championName,
-              summoner_name: p.summonerName || '',
               riot_id_game_name: p.riotIdGameName || '',
               riot_id_tagline: p.riotIdTagline || '',
-              kills: p.kills,
-              deaths: p.deaths,
-              assists: p.assists,
               win: p.win,
-              game_ended_in_early_surrender: p.gameEndedInEarlySurrender || false,
-              damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
-              damage_dealt_total: p.totalDamageDealt || 0,
-              damage_dealt_to_objectives: p.damageDealtToObjectives || 0,
-              damage_taken: p.totalDamageTaken || 0,
-              game_duration: match.info.gameDuration || 0,
-              time_ccing_others: p.timeCCingOthers || 0,
-              total_time_spent_dead: p.totalTimeSpentDead || 0,
-              total_minions_killed: p.totalMinionsKilled || 0,
-              gold_earned: p.goldEarned || 0,
-              damage_per_minute: p.challenges?.damagePerMinute || 
-                (match.info.gameDuration > 0 ? ((p.totalDamageDealtToChampions || 0) / match.info.gameDuration) * 60 : 0),
-              total_heals_on_teammates: p.totalHealsOnTeammates || 0,
-              total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
-              total_time_cc_dealt: p.totalTimeCCDealt || 0,
-              double_kills: p.doubleKills || 0,
-              triple_kills: p.tripleKills || 0,
-              quadra_kills: p.quadraKills || 0,
-              penta_kills: p.pentaKills || 0,
-              item0: p.item0 || 0,
-              item1: p.item1 || 0,
-              item2: p.item2 || 0,
-              item3: p.item3 || 0,
-              item4: p.item4 || 0,
-              item5: p.item5 || 0,
-              pig_score: pigScore,
-              champ_level: p.champLevel || 0,
-              team_id: p.teamId || 0,
-              summoner1_id: p.summoner1Id || 0,
-              summoner2_id: p.summoner2Id || 0,
-              perk_primary_style: p.perks?.styles?.[0]?.style || 0,
-              perk_sub_style: p.perks?.styles?.[1]?.style || 0,
-              perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
-              perk1: p.perks?.styles?.[0]?.selections?.[1]?.perk || 0,
-              perk2: p.perks?.styles?.[0]?.selections?.[2]?.perk || 0,
-              perk3: p.perks?.styles?.[0]?.selections?.[3]?.perk || 0,
-              perk4: p.perks?.styles?.[1]?.selections?.[0]?.perk || 0,
-              perk5: p.perks?.styles?.[1]?.selections?.[1]?.perk || 0,
-              stat_perk0: p.perks?.statPerks?.offense || 0,
-              stat_perk1: p.perks?.statPerks?.flex || 0,
-              stat_perk2: p.perks?.statPerks?.defense || 0,
-              ability_order: abilityOrder, // "Q W E Q Q R Q W Q W R W W E E R E E" or null
+              game_creation: match.info.gameCreation,
+              patch: patchVersion,
+              match_data: {
+                kills: p.kills,
+                deaths: p.deaths,
+                assists: p.assists,
+                level: p.champLevel || 0,
+                teamId: p.teamId || 0,
+                isRemake: p.gameEndedInEarlySurrender || false,
+                
+                stats: {
+                  damage: p.totalDamageDealtToChampions || 0,
+                  gold: p.goldEarned || 0,
+                  cs: p.totalMinionsKilled || 0,
+                  doubleKills: p.doubleKills || 0,
+                  tripleKills: p.tripleKills || 0,
+                  quadraKills: p.quadraKills || 0,
+                  pentaKills: p.pentaKills || 0,
+                  totalDamageDealt: p.totalDamageDealt || 0,
+                  timeCCingOthers: p.timeCCingOthers || 0,
+                  totalHealsOnTeammates: p.totalHealsOnTeammates || 0,
+                  totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0
+                },
+                
+                items: [p.item0 || 0, p.item1 || 0, p.item2 || 0, p.item3 || 0, p.item4 || 0, p.item5 || 0],
+                
+                spells: [p.summoner1Id || 0, p.summoner2Id || 0],
+                
+                runes: {
+                  primary: {
+                    style: p.perks?.styles?.[0]?.style || 0,
+                    perks: [
+                      p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
+                      p.perks?.styles?.[0]?.selections?.[1]?.perk || 0,
+                      p.perks?.styles?.[0]?.selections?.[2]?.perk || 0,
+                      p.perks?.styles?.[0]?.selections?.[3]?.perk || 0
+                    ]
+                  },
+                  secondary: {
+                    style: p.perks?.styles?.[1]?.style || 0,
+                    perks: [
+                      p.perks?.styles?.[1]?.selections?.[0]?.perk || 0,
+                      p.perks?.styles?.[1]?.selections?.[1]?.perk || 0
+                    ]
+                  },
+                  statPerks: [
+                    p.perks?.statPerks?.offense || 0,
+                    p.perks?.statPerks?.flex || 0,
+                    p.perks?.statPerks?.defense || 0
+                  ]
+                },
+                
+                pigScore: pigScore,
+                abilityOrder: abilityOrder,
+                buildOrder: buildOrderStr,
+                firstBuy: firstBuyStr,
+                itemPurchases: itemPurchases.length > 0 ? itemPurchases : null
+              }
             }
           })
         )
 
+        console.log(`Attempting to insert ${summonerMatchRecords.length} records into summoner_matches for match ${matchId}`)
+        console.log(`  First record puuid: ${summonerMatchRecords[0]?.puuid.substring(0, 30)}...`)
         const { error: junctionError } = await supabase
           .from('summoner_matches')
           .insert(summonerMatchRecords)
-          .select();
 
-        if (junctionError && junctionError.code !== '23505') {
-          // ignore duplicate key errors (23505), log others
-          console.error('Junction table insert error:', junctionError);
-        } else if (!junctionError) {
-          console.log(`Inserted ${summonerMatchRecords.length} summoner_match records for match ${matchId}`)
+        if (junctionError) {
+          // Ignore duplicate key errors (match already processed for this user)
+          if (junctionError.code === '23505') {
+            console.log(`  Match ${matchId} already exists in summoner_matches, skipping`)
+          } else {
+            console.error('Junction table insert error:', junctionError);
+          }
+        } else {
+          console.log(`✓ Inserted ${summonerMatchRecords.length} summoner_match records for match ${matchId}`)
+        }
+        
+        } catch (recordError) {
+          console.error(`Failed to prepare/insert summoner_match records for ${matchId}:`, recordError)
+          continue;
         }
 
-        fetchedMatches++;
-
-        // update progress every N matches
+        fetchedMatches++;        // update progress every N matches
         if (fetchedMatches % updateProgressInterval === 0 || fetchedMatches === newMatchIds.length) {
           const elapsedMs = Date.now() - startTime;
           await updateJobProgress(supabase, jobId, fetchedMatches, elapsedMs, newMatchIds.length);
@@ -508,30 +686,6 @@ async function processMatchesInBackground(
       .from('summoners')
       .update({ last_updated: new Date().toISOString() })
       .eq('puuid', puuid);
-
-    // clear pig scores for matches older than 30 days
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    const { data: oldMatches } = await supabase
-      .from('matches')
-      .select('match_id')
-      .lt('game_creation', thirtyDaysAgo);
-    
-    if (oldMatches && oldMatches.length > 0) {
-      const oldMatchIds = oldMatches.map((m: any) => m.match_id);
-      const { error: clearError } = await supabase
-        .from('summoner_matches')
-        .update({ 
-          pig_score: null,
-        })
-        .eq('puuid', puuid)
-        .in('match_id', oldMatchIds);
-      
-      if (!clearError) {
-        console.log(`Cleared PIG scores for ${oldMatches.length} old matches (>30 days)`);
-      } else {
-        console.error('Error clearing old PIG scores:', clearError);
-      }
-    }
 
     // mark job as completed
     await completeJob(supabase, jobId);

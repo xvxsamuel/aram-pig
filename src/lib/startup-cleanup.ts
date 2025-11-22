@@ -39,6 +39,6 @@ export function initializeCleanup() {
   console.log('Initializing automated tasks...')
   
   cleanupOrphanedJobs()
-  
+
   console.log('Initialization complete')
 }

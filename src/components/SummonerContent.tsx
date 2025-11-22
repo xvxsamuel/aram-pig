@@ -106,6 +106,11 @@ export default function SummonerContent({
         const response = await fetch(`/api/summoner-stats?puuid=${summonerData.account.puuid}`)
         if (response.ok) {
           const data = await response.json()
+          console.log('Fetched summoner stats:', {
+            matchesCount: data.matches?.length,
+            totalGames: data.totalGames,
+            averagePigScore: data.averagePigScore
+          })
           setMatches(data.matches)
           setWins(data.wins)
           setTotalGames(data.totalGames)
@@ -141,6 +146,36 @@ export default function SummonerContent({
     
     fetchStats()
   }, [summonerData.account.puuid, initialTotalGames])
+
+  // Calculate missing pig scores for recent matches
+  useEffect(() => {
+    // Skip if flag is disabled
+    const recalculateEnabled = process.env.NEXT_PUBLIC_RECALCULATE_PIG_SCORES === 'true'
+    if (!recalculateEnabled || matches.length === 0) return
+    
+    async function calculateMissingPigScores() {
+      try {
+        // Check first few matches to see if they need pig score calculation
+        const recentMatches = matches.slice(0, 20) // Check last 20 matches
+        
+        for (const match of recentMatches) {
+          // Always recalculate when flag is enabled (removed the skip check)
+          await fetch('/api/calculate-pig-score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              matchId: (match as any).match_id,
+              puuid: summonerData.account.puuid
+            })
+          })
+        }
+      } catch (error) {
+        console.error('Failed to calculate missing pig scores:', error)
+      }
+    }
+    
+    calculateMissingPigScores()
+  }, [matches, summonerData.account.puuid])
 
   // check for profile update flag on mount
   useEffect(() => {
@@ -197,25 +232,37 @@ export default function SummonerContent({
       const data = await response.json()
       console.log("Poll response:", data)
 
-      if (data.hasActiveJob && data.job) {
+      // if we have job data (active or recently completed), update state
+      if (data.job) {
         setJobProgress(data.job)
-      } else if (jobProgress && jobProgress.status !== 'completed' && jobProgress.status !== 'failed') {
-        // keep showing progress until explicitly completed/failed
-        // job might still be processing in background
+        
+        // if job is completed or failed, reload after showing final state
+        if (data.job.status === 'completed' || data.job.status === 'failed') {
+          console.log("Job finished, reloading in 2 seconds to show fresh data")
+          
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current)
+            pollIntervalRef.current = null
+          }
+          
+          // wait 2 seconds to show completion state, then reload
+          setTimeout(() => {
+            sessionStorage.setItem('profileUpdated', 'true')
+            window.location.reload()
+          }, 2000)
+        }
+      } else if (!data.hasActiveJob && !jobProgress) {
+        // no job exists and we weren't tracking one - nothing to do
         return
-      } else {
-        // job completed - reload to show fresh data
-        console.log("Job completed, reloading page")
+      } else if (!data.hasActiveJob && jobProgress) {
+        // job disappeared (cleaned up) but we were tracking it - reload
+        console.log("Job was cleaned up, reloading page")
         setJobProgress(null)
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current)
           pollIntervalRef.current = null
         }
-        
-        // set flag in sessionStorage to show toast after reload
         sessionStorage.setItem('profileUpdated', 'true')
-        
-        // reload immediately to show updated data
         window.location.reload()
       }
     } catch (error: any) {
@@ -282,9 +329,9 @@ export default function SummonerContent({
         })
       })
 
+      const result = await updateResponse.json()
+      
       if (updateResponse.ok) {
-        const result = await updateResponse.json()
-        
         // check if profile was recently updated (5 min cd from server)
         if (result.recentlyUpdated) {
           setJobProgress(null)
@@ -306,12 +353,18 @@ export default function SummonerContent({
         // poll for real job data
         setTimeout(() => pollJobStatus(), 500)
       } else {
-        // clear placeholder if failed
+        // handle error response from server
         setJobProgress(null)
+        setToastMessage(result.error || "Error updating profile")
+        setToastType("error")
+        setShowToast(true)
       }
     } catch (error) {
       console.error("Update failed:", error)
       setJobProgress(null)
+      setToastMessage("Error updating profile")
+      setToastType("error")
+      setShowToast(true)
     }
   }
 

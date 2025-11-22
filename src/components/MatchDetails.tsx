@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { MatchData } from "../lib/riot-api"
 import Image from "next/image"
 import Link from "next/link"
@@ -18,9 +18,60 @@ interface Props {
   isRemake: boolean
 }
 
+interface ItemTimelineEvent {
+  timestamp: number
+  type: 'ITEM_PURCHASED' | 'ITEM_SOLD' | 'ITEM_UNDO'
+  itemId: number
+}
+
+interface ParticipantDetails {
+  puuid: string
+  build_order: string | null
+  first_buy: string | null
+  pig_score: number | null
+  item_timeline: ItemTimelineEvent[]
+  loading: boolean
+}
+
 export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin, isRemake }: Props) {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'build'>('overview')
+  const [participantDetails, setParticipantDetails] = useState<Map<string, ParticipantDetails>>(new Map())
+  const [calculatingPigScores, setCalculatingPigScores] = useState(false)
+  const [pigScores, setPigScores] = useState<Record<string, number>>({})
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
+
+  // Calculate pig scores for all participants when component mounts
+  useEffect(() => {
+    // Skip if flag is disabled
+    const recalculateEnabled = process.env.NEXT_PUBLIC_RECALCULATE_PIG_SCORES === 'true'
+    if (!recalculateEnabled) return
+    
+    const calculatePigScores = async () => {
+      setCalculatingPigScores(true)
+      try {
+        const response = await fetch('/api/calculate-pig-score', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matchId: match.metadata.matchId })
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log('Calculated pig scores for match:', data)
+          // Update pig scores state
+          if (data.results) {
+            setPigScores(data.results)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to calculate pig scores:', error)
+      } finally {
+        setCalculatingPigScores(false)
+      }
+    }
+    
+    calculatePigScores()
+  }, [match.metadata.matchId])
 
   // separate teams
   const team100 = match.info.participants.filter(p => p.teamId === 100)
@@ -37,6 +88,63 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
 
   const formatGold = (gold: number) => `${(gold / 1000).toFixed(1)}k`
   const formatDamage = (dmg: number) => `${(dmg / 1000).toFixed(0)}k`
+
+  // Lazy load participant details (timeline + PIG score)
+  const loadParticipantDetails = async (puuid: string) => {
+    // Skip if already loading or loaded
+    if (participantDetails.has(puuid)) return
+    
+    // Mark as loading
+    setParticipantDetails(prev => new Map(prev).set(puuid, {
+      puuid,
+      build_order: null,
+      first_buy: null,
+      pig_score: null,
+      item_timeline: [],
+      loading: true
+    }))
+    
+    try {
+      const response = await fetch('/api/match-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matchId: match.metadata.matchId,
+          puuid,
+          region: region.toUpperCase()
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setParticipantDetails(prev => new Map(prev).set(puuid, {
+          puuid,
+          build_order: data.build_order,
+          first_buy: data.first_buy,
+          pig_score: data.pig_score,
+          item_timeline: data.item_timeline || [],
+          loading: false
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to load participant details:', error)
+      setParticipantDetails(prev => new Map(prev).set(puuid, {
+        puuid,
+        build_order: null,
+        first_buy: null,
+        pig_score: null,
+        item_timeline: [],
+        loading: false
+      }))
+    }
+  }
+  
+  // Load details for current player when switching to build tab
+  useEffect(() => {
+    if (selectedTab === 'build' && currentPlayer) {
+      loadParticipantDetails(currentPlayer.puuid)
+    }
+  }, [selectedTab, match.metadata.matchId])
 
   const renderPlayer = (p: any, isCurrentPlayer: boolean) => {
     const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
@@ -87,19 +195,38 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         </Link>
 
         {/* pig score */}
-        {p.pigScore !== null && p.pigScore !== undefined && (
-          <div className="flex flex-col items-center w-10 flex-shrink-0">
-            <div className={clsx(
-              "text-xs font-bold leading-tight",
-              p.pigScore >= 50 ? "text-accent-light" : "text-negative"
-            )}>
-              {p.pigScore.toFixed(0)}
-            </div>
-            <div className="text-[9px] text-gray-400 leading-tight">
-              PIG
-            </div>
-          </div>
-        )}
+        {(() => {
+          const details = participantDetails.get(p.puuid)
+          // Use pigScores state if available, then fall back to p.pigScore, then details
+          const pigScore = pigScores[p.puuid] ?? p.pigScore ?? details?.pig_score
+          const isLoading = details?.loading && !pigScore
+          
+          if (isLoading) {
+            return (
+              <div className="flex flex-col items-center w-10 flex-shrink-0">
+                <div className="w-4 h-4 border-2 border-accent-light/30 border-t-accent-light rounded-full animate-spin"></div>
+              </div>
+            )
+          }
+          
+          if (pigScore !== null && pigScore !== undefined) {
+            return (
+              <div className="flex flex-col items-center w-10 flex-shrink-0">
+                <div className={clsx(
+                  "text-xs font-bold leading-tight",
+                  pigScore >= 50 ? "text-accent-light" : "text-negative"
+                )}>
+                  {pigScore.toFixed(0)}
+                </div>
+                <div className="text-[9px] text-gray-400 leading-tight">
+                  PIG
+                </div>
+              </div>
+            )
+          }
+          
+          return null
+        })()}
 
         {/* damage */}
         <div className="flex flex-col items-center w-12 flex-shrink-0">
@@ -242,25 +369,69 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
               <>
                 {/* Item Timeline */}
                 <div className="bg-abyss-700 rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-white mb-3">Item Build</h3>
-                  <div className="flex gap-2 items-center flex-wrap">
-                    {[currentPlayer.item0, currentPlayer.item1, currentPlayer.item2, currentPlayer.item3, currentPlayer.item4, currentPlayer.item5]
-                      .filter(itemId => itemId > 0)
-                      .map((itemId, idx) => (
-                        <div key={idx} className="relative group">
-                          <div className="w-12 h-12 rounded border-2 border-gold-dark/40 overflow-hidden bg-abyss-800 hover:border-gold-light transition-colors">
-                            <Image
-                              src={getItemImageUrl(itemId, ddragonVersion)}
-                              alt={`Item ${itemId}`}
-                              width={48}
-                              height={48}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          {/* Timeline info would go here if we had it */}
+                  <h3 className="text-sm font-bold text-white mb-3">Item Timeline</h3>
+                  {(() => {
+                    const details = participantDetails.get(currentPlayer.puuid)
+                    if (details?.loading) {
+                      return <div className="text-xs text-subtitle">Loading timeline...</div>
+                    }
+                    if (!details?.item_timeline || details.item_timeline.length === 0) {
+                      return (
+                        <div className="flex gap-2 items-center flex-wrap">
+                          {[currentPlayer.item0, currentPlayer.item1, currentPlayer.item2, currentPlayer.item3, currentPlayer.item4, currentPlayer.item5]
+                            .filter(itemId => itemId > 0)
+                            .map((itemId, idx) => (
+                              <div key={idx} className="relative group">
+                                <div className="w-12 h-12 rounded border-2 border-gold-dark/40 overflow-hidden bg-abyss-800">
+                                  <Image
+                                    src={getItemImageUrl(itemId, ddragonVersion)}
+                                    alt={`Item ${itemId}`}
+                                    width={48}
+                                    height={48}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              </div>
+                            ))}
                         </div>
-                      ))}
-                  </div>
+                      )
+                    }
+                    
+                    const formatTime = (ms: number) => {
+                      const minutes = Math.floor(ms / 60000)
+                      const seconds = Math.floor((ms % 60000) / 1000)
+                      return `${minutes}:${seconds.toString().padStart(2, '0')}`
+                    }
+                    
+                    return (
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {details.item_timeline.map((event, idx) => (
+                          <div key={idx} className="flex items-center gap-3 text-xs">
+                            <span className="text-subtitle font-mono w-12">{formatTime(event.timestamp)}</span>
+                            <div className="w-8 h-8 rounded border border-abyss-800 overflow-hidden bg-abyss-900">
+                              <Image
+                                src={getItemImageUrl(event.itemId, ddragonVersion)}
+                                alt={`Item ${event.itemId}`}
+                                width={32}
+                                height={32}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <span className={clsx(
+                              "font-medium",
+                              event.type === 'ITEM_PURCHASED' && "text-green-400",
+                              event.type === 'ITEM_SOLD' && "text-red-400",
+                              event.type === 'ITEM_UNDO' && "text-yellow-400"
+                            )}>
+                              {event.type === 'ITEM_PURCHASED' && 'Purchased'}
+                              {event.type === 'ITEM_SOLD' && 'Sold'}
+                              {event.type === 'ITEM_UNDO' && 'Undo'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* Runes */}

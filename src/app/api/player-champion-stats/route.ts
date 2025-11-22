@@ -14,14 +14,16 @@ export async function GET(request: Request) {
     // get all match stats for this player (excluding remakes)
     const { data: matchStats, error } = await supabase
       .from('summoner_matches')
-      .select('champion_name, win, kills, deaths, assists, damage_dealt_to_champions, pig_score, game_ended_in_early_surrender')
+      .select('champion_name, win, match_data')
       .eq('puuid', puuid)
-      .eq('game_ended_in_early_surrender', false)
       .order('match_id', { ascending: false })
     
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+    
+    // filter out remakes
+    const validMatches = matchStats?.filter(m => !m.match_data?.isRemake) || []
     
     // aggregate by champion
     const championStats = new Map<string, {
@@ -34,28 +36,28 @@ export async function GET(request: Request) {
       pigScores: number[]
     }>()
     
-    matchStats?.forEach(match => {
+    validMatches.forEach(match => {
       const existing = championStats.get(match.champion_name)
       
       if (existing) {
         existing.games++
         existing.wins += match.win ? 1 : 0
-        existing.kills += match.kills
-        existing.deaths += match.deaths
-        existing.assists += match.assists
-        existing.totalDamage += match.damage_dealt_to_champions || 0
-        if (match.pig_score !== null && match.pig_score !== undefined) {
-          existing.pigScores.push(match.pig_score)
+        existing.kills += match.match_data?.kills || 0
+        existing.deaths += match.match_data?.deaths || 0
+        existing.assists += match.match_data?.assists || 0
+        existing.totalDamage += match.match_data?.stats?.damage || 0
+        if (match.match_data?.pigScore !== null && match.match_data?.pigScore !== undefined) {
+          existing.pigScores.push(match.match_data.pigScore)
         }
       } else {
         championStats.set(match.champion_name, {
           games: 1,
           wins: match.win ? 1 : 0,
-          kills: match.kills,
-          deaths: match.deaths,
-          assists: match.assists,
-          totalDamage: match.damage_dealt_to_champions || 0,
-          pigScores: match.pig_score !== null && match.pig_score !== undefined ? [match.pig_score] : []
+          kills: match.match_data?.kills || 0,
+          deaths: match.match_data?.deaths || 0,
+          assists: match.match_data?.assists || 0,
+          totalDamage: match.match_data?.stats?.damage || 0,
+          pigScores: match.match_data?.pigScore !== null && match.match_data?.pigScore !== undefined ? [match.match_data.pigScore] : []
         })
       }
     })

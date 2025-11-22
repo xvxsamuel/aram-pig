@@ -3,7 +3,7 @@
 import { createAdminClient } from './supabase'
 import { getMatchById, getMatchIdsByPuuid } from './riot-api'
 import { waitForRateLimit } from './rate-limiter'
-import { REGIONS, type RegionalCluster } from './regions'
+import { PLATFORM_TO_REGIONAL, type RegionalCluster, type PlatformCode } from './regions'
 import { storeMatchData } from './match-storage'
 
 interface RegionQueue {
@@ -66,15 +66,11 @@ async function seedQueues(): Promise<void> {
   summoners.forEach(s => {
     if (!s.puuid || !s.region) return
     
-    // find which regional cluster this summoner belongs to
-    const region = s.region.toUpperCase()
-    const regionInfo = REGIONS.find(r => 
-      r.code === s.region.toLowerCase() || 
-      r.label === region
-    )
+    const platformCode = s.region.toLowerCase() as PlatformCode
+    const regionalCluster = PLATFORM_TO_REGIONAL[platformCode]
     
-    if (regionInfo) {
-      state.queues[regionInfo.regional].puuids.add(s.puuid)
+    if (regionalCluster) {
+      state.queues[regionalCluster].puuids.add(s.puuid)
     }
   })
   
@@ -135,14 +131,11 @@ async function reseedQueues(): Promise<void> {
   summoners.forEach(s => {
     if (!s.puuid || !s.region) return
     
-    const region = s.region.toUpperCase()
-    const regionInfo = REGIONS.find(r => 
-      r.code === s.region.toLowerCase() || 
-      r.label === region
-    )
+    const platformCode = s.region.toLowerCase() as PlatformCode
+    const regionalCluster = PLATFORM_TO_REGIONAL[platformCode]
     
-    if (regionInfo) {
-      const queue = state.queues[regionInfo.regional]
+    if (regionalCluster) {
+      const queue = state.queues[regionalCluster]
       // don't check processed set - always re-add summoners to check for new matches
       if (!queue.puuids.has(s.puuid)) {
         queue.puuids.add(s.puuid)

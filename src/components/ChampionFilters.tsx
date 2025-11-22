@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 
 interface ChampionFiltersProps {
@@ -10,10 +10,43 @@ interface ChampionFiltersProps {
 export default function ChampionFilters({ availablePatches }: ChampionFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const currentFilter = searchParams.get('filter') || (availablePatches.length > 0 ? 'patch' : '30')
-  const currentPatch = searchParams.get('patch') || (availablePatches.length > 0 ? availablePatches[0] : null)
+  const pathname = usePathname()
+  
+  // load from localStorage or URL params
+  const [currentFilter, setCurrentFilter] = useState<string>('')
+  const [currentPatch, setCurrentPatch] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // initialize from localStorage or defaults
+  useEffect(() => {
+    const savedFilter = localStorage.getItem('championFilter')
+    const savedPatch = localStorage.getItem('championPatch')
+    
+    const urlFilter = searchParams.get('filter')
+    const urlPatch = searchParams.get('patch')
+    
+    // Only support patch filtering now
+    const filter = 'patch'
+    const patch = urlPatch || savedPatch || (availablePatches.length > 0 ? availablePatches[0] : null)
+    
+    setCurrentFilter(filter)
+    setCurrentPatch(patch)
+    
+    // save to localStorage
+    localStorage.setItem('championFilter', 'patch')
+    if (patch) localStorage.setItem('championPatch', patch)
+    
+    // if URL params are missing, update URL with defaults
+    if (!urlFilter || !urlPatch) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('filter', 'patch')
+      if (patch) {
+        params.set('patch', patch)
+      }
+      router.replace(`${pathname}?${params.toString()}`)
+    }
+  }, [searchParams, availablePatches, pathname, router])
 
   // close dropdown when clicking outside
   useEffect(() => {
@@ -26,28 +59,24 @@ export default function ChampionFilters({ availablePatches }: ChampionFiltersPro
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleFilterChange = (type: 'patch' | 'days', value?: string) => {
+  const handleFilterChange = (patch: string) => {
     const params = new URLSearchParams(searchParams.toString())
     
-    if (type === 'patch' && value) {
-      params.set('filter', 'patch')
-      params.set('patch', value)
-    } else if (type === 'days' && value) {
-      params.set('filter', value)
-      params.delete('patch')
-    }
+    params.set('filter', 'patch')
+    params.set('patch', patch)
+    localStorage.setItem('championFilter', 'patch')
+    localStorage.setItem('championPatch', patch)
+    setCurrentFilter('patch')
+    setCurrentPatch(patch)
     
-    router.push(`/champions?${params.toString()}`)
+    // stay on current page (champions list or detail)
+    router.push(`${pathname}?${params.toString()}`)
     setIsOpen(false)
   }
 
   // get current display label
   const getDisplayLabel = () => {
-    if (currentFilter === 'patch' && currentPatch) return `Patch ${currentPatch}`
-    if (currentFilter === '7') return 'Last 7 Days'
-    if (currentFilter === '30') return 'Last 30 Days'
-    if (currentFilter === '60') return 'Last 60 Days'
-    return `Patch ${currentPatch}`
+    return currentPatch ? `Patch ${currentPatch}` : 'Select Patch'
   }
 
   return (
@@ -72,18 +101,18 @@ export default function ChampionFilters({ availablePatches }: ChampionFiltersPro
 
         {isOpen && (
           <div className="absolute top-full left-0 mt-2 w-full sm:w-auto min-w-[200px] bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-10 overflow-hidden">
-            {/* by patch section */}
-            {availablePatches.length > 0 && (
+            {/* patch selection */}
+            {availablePatches.length > 0 ? (
               <>
                 <div className="px-4 py-2 text-xs font-semibold text-gold-light uppercase tracking-wider bg-abyss-800">
-                  By Patch
+                  Select Patch
                 </div>
                 {availablePatches.map(patch => (
                   <button
                     key={patch}
-                    onClick={() => handleFilterChange('patch', patch)}
+                    onClick={() => handleFilterChange(patch)}
                     className={`w-full px-4 py-2 text-left hover:bg-accent-light/20 transition-colors text-sm ${
-                      currentFilter === 'patch' && currentPatch === patch
+                      currentPatch === patch
                         ? 'bg-accent-light/20 text-accent-light'
                         : 'text-white'
                     }`}
@@ -92,36 +121,11 @@ export default function ChampionFilters({ availablePatches }: ChampionFiltersPro
                   </button>
                 ))}
               </>
+            ) : (
+              <div className="px-4 py-3 text-sm text-subtitle">
+                No patches available
+              </div>
             )}
-
-            {/* by timeframe section */}
-            <div className="px-4 py-2 text-xs font-semibold text-gold-light uppercase tracking-wider bg-abyss-800">
-              By Timeframe
-            </div>
-            <button
-              onClick={() => handleFilterChange('days', '7')}
-              className={`w-full px-4 py-2 text-left hover:bg-accent-light/20 transition-colors text-sm ${
-                currentFilter === '7' ? 'bg-accent-light/20 text-accent-light' : 'text-white'
-              }`}
-            >
-              Last 7 Days
-            </button>
-            <button
-              onClick={() => handleFilterChange('days', '30')}
-              className={`w-full px-4 py-2 text-left hover:bg-accent-light/20 transition-colors text-sm ${
-                currentFilter === '30' ? 'bg-accent-light/20 text-accent-light' : 'text-white'
-              }`}
-            >
-              Last 30 Days
-            </button>
-            <button
-              onClick={() => handleFilterChange('days', '60')}
-              className={`w-full px-4 py-2 text-left hover:bg-accent-light/20 transition-colors text-sm ${
-                currentFilter === '60' ? 'bg-accent-light/20 text-accent-light' : 'text-white'
-              }`}
-            >
-              Last 60 Days
-            </button>
           </div>
         )}
       </div>

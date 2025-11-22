@@ -1,5 +1,23 @@
 // client helpers
 
+let latestVersion: string | null = null
+
+export async function getLatestVersion(): Promise<string> {
+  if (!latestVersion) {
+    // fetch directly from DDragon API instead of using RiotAPI
+    const response = await fetch('https://ddragon.leagueoflegends.com/api/versions.json')
+    const versions = await response.json()
+    latestVersion = versions[0]
+    console.log(`DDragon version loaded: ${latestVersion}`)
+  }
+  return latestVersion!
+}
+
+// preload version on startup
+export async function preloadDDragonVersion(): Promise<void> {
+  await getLatestVersion()
+}
+
 // normalize champion names for ddragon urls
 function normalizeChampionName(championName: string): string {
   // special cases where api name differs from ddragon id

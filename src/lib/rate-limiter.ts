@@ -1,35 +1,33 @@
 import { Redis } from '@upstash/redis';
 
-// initialize redis client with supabase redis credentials
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-});
+// redis off by default
+const USE_REDIS = process.env.USE_REDIS_RATE_LIMIT === 'true';
 
-// riot api rate limits per platform/region
-// per https://developer.riotgames.com/docs/lol#routing-values_platform-routing-values
-// each platform (br1, euw1, na1, etc.) has separate rate limits
-// regional endpoints (americas, europe, asia, sea) also have separate rate limits
-const SHORT_WINDOW = 1; // 1 second
-const SHORT_LIMIT = 20; // 20 requests per second
-const LONG_WINDOW = 120; // 2 minutes
-const LONG_LIMIT = 100; // 100 requests per 2 minutes
+const redis = USE_REDIS ? new Redis({
+  url: (process.env.UPSTASH_REDIS_REST_URL || '').replace(/^["']|["']$/g, ''),
+  token: (process.env.UPSTASH_REDIS_REST_TOKEN || '').replace(/^["']|["']$/g, ''),
+}) : null;
 
-// capacity allocation:
-// - overhead (summoner lookups, viewing profiles): 5 req/sec, 25 req/2min (browsing existing data)
-// - batch (all profile updates, scraper, bulk operations): 14 req/sec, 70 req/2min (main workload)
-// - buffer (safety margin): 1 req/sec, 5 req/2min (never used, prevents 429s)
+if (!USE_REDIS) {
+  console.log('Using in-memory rate limiting')
+} else {
+  console.log('Using Redis for distributed rate limiting')
+}
 
-const OVERHEAD_SHORT = 5;
-const OVERHEAD_LONG = 25;
+// fallback defaults
+const SHORT_WINDOW = 1; //secs
+const SHORT_LIMIT = 20; // requests
+const LONG_WINDOW = 120;
+const LONG_LIMIT = 100;
 
-const BATCH_SHORT = 14;
-const BATCH_LONG = 70;
-
-const BUFFER_SHORT = 1; // never use
-const BUFFER_LONG = 5;
+// reserve small capacity for profile refreshes
+const RESERVED_OVERHEAD_SHORT = 2;
+const RESERVED_OVERHEAD_LONG = 10;
 
 export type RequestType = 'overhead' | 'batch';
+
+// in-memory rate limiting
+const memoryLimits = new Map<string, { short: number; long: number; shortExpiry: number; longExpiry: number }>();
 
 interface RateLimitStatus {
   canProceed: boolean;
@@ -40,6 +38,18 @@ interface RateLimitStatus {
 }
 
 export async function checkRateLimit(region: string): Promise<RateLimitStatus> {
+  // use in-memory if redis is disabled
+  if (!redis) {
+    const limits = memoryLimits.get(region) || { short: 0, long: 0, shortExpiry: Date.now(), longExpiry: Date.now() };
+    return {
+      canProceed: limits.short < SHORT_LIMIT && limits.long < LONG_LIMIT,
+      waitTime: 0,
+      shortCount: limits.short,
+      longCount: limits.long,
+      estimatedRequestsRemaining: Math.min(SHORT_LIMIT - limits.short, LONG_LIMIT - limits.long),
+    };
+  }
+
   const shortKey = `ratelimit:${region}:short`;
   const longKey = `ratelimit:${region}:long`;
 
@@ -86,88 +96,182 @@ export async function checkRateLimit(region: string): Promise<RateLimitStatus> {
   }
 }
 
-// accepts either platform code (na1, euw1, etc.) or regional cluster (americas, europe, etc.)
-// maxWaitMs: if provided, will throw an error instead of waiting longer than this duration
+
 export async function waitForRateLimit(platformOrRegion: string, requestType: RequestType = 'overhead', maxWaitMs?: number): Promise<void> {
-  // each platform has its own rate limits per Riot API docs
-  // https://developer.riotgames.com/docs/lol#routing-values_platform-routing-values
-  const shortKey = `ratelimit:${platformOrRegion}:${requestType}:short`;
-  const longKey = `ratelimit:${platformOrRegion}:${requestType}:long`;
-
-  // get limits based on request type
-  let shortLimit: number;
-  let longLimit: number;
-
-  switch (requestType) {
-    case 'overhead':
-      shortLimit = OVERHEAD_SHORT;
-      longLimit = OVERHEAD_LONG;
-      break;
-    case 'batch':
-      shortLimit = BATCH_SHORT;
-      longLimit = BATCH_LONG;
-      break;
+  if (!redis) {
+    return waitForRateLimitMemory(platformOrRegion, requestType, maxWaitMs);
   }
+  
+  return waitForRateLimitRedis(platformOrRegion, requestType, maxWaitMs);
+}
+
+// redis rate limiting
+async function waitForRateLimitRedis(platformOrRegion: string, requestType: RequestType, maxWaitMs?: number): Promise<void> {
+  if (!redis) {
+    throw new Error('Redis is not initialized');
+  }
+  
+  const shortKey = `ratelimit:${platformOrRegion}:short`;
+  const longKey = `ratelimit:${platformOrRegion}:long`;
 
   try {
-    // check current counts BEFORE incrementing
-    const [currentShort, currentLong] = await Promise.all([
-      redis.get(shortKey).then(v => Number(v) || 0),
-      redis.get(longKey).then(v => Number(v) || 0),
-    ]);
+    // use pipelined Redis commands to reduce round trips
+    const pipeline = redis.pipeline();
+    pipeline.get(shortKey);
+    pipeline.get(longKey);
+    const results = await pipeline.exec();
+    
+    const currentShort = Number(results[0] || 0);
+    const currentLong = Number(results[1] || 0);
 
-    // if we're at or over the limit, wait
+    // calculate effective limits based on request type
+    let effectiveShortLimit = SHORT_LIMIT;
+    let effectiveLongLimit = LONG_LIMIT;
+    
+    if (requestType === 'batch') {
+      // batch requests cannot use reserved capacity
+      effectiveShortLimit = SHORT_LIMIT - RESERVED_OVERHEAD_SHORT;
+      effectiveLongLimit = LONG_LIMIT - RESERVED_OVERHEAD_LONG;
+    }
+    // overhead requests can use full capacity (including reserved)
+
+    // check if we need to wait
     let waitTime = 0;
 
-    if (currentShort >= shortLimit) {
+    if (currentShort >= effectiveShortLimit) {
       const ttl = await redis.ttl(shortKey);
-      // if TTL is -1 (no expiry) or -2 (key doesn't exist), reset the key
-      if (ttl < 0) {
-        await redis.del(shortKey);
-      } else if (ttl > 0) {
+      if (ttl > 0) {
         waitTime = Math.max(waitTime, ttl * 1000);
+      } else if (ttl < 0) {
+        await redis.del(shortKey);
       }
     }
 
-    if (currentLong >= longLimit) {
+    if (currentLong >= effectiveLongLimit) {
       const ttl = await redis.ttl(longKey);
-      // if TTL is -1 (no expiry) or -2 (key doesn't exist), reset the key
-      if (ttl < 0) {
-        await redis.del(longKey);
-      } else if (ttl > 0) {
+      if (ttl > 0) {
         waitTime = Math.max(waitTime, ttl * 1000);
+      } else if (ttl < 0) {
+        await redis.del(longKey);
       }
     }
 
     // wait if necessary
     if (waitTime > 0) {
-      // check if wait time exceeds max wait
       if (maxWaitMs !== undefined && waitTime > maxWaitMs) {
-        // silently skip - timeout exceeded is expected behavior for cron jobs
         throw new Error('TIMEOUT_EXCEEDED');
       }
       
       console.log(`Rate limit hit for ${platformOrRegion} (${requestType}), waiting ${waitTime}ms`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
-      // retry after waiting (pass through maxWaitMs)
-      return waitForRateLimit(platformOrRegion, requestType, maxWaitMs);
+      return waitForRateLimitRedis(platformOrRegion, requestType, maxWaitMs);
     }
 
-    // NOW increment counters after checking limits
-    const [shortCount, longCount] = await Promise.all([
-      redis.incr(shortKey),
-      redis.incr(longKey),
-    ]);
+    // increment counters using pipeline for atomicity and speed
+    const incrPipeline = redis.pipeline();
+    incrPipeline.incr(shortKey);
+    incrPipeline.incr(longKey);
+    const incrResults = await incrPipeline.exec();
+    
+    const shortCount = Number(incrResults[0]);
+    const longCount = Number(incrResults[1]);
 
-    // set expiry on first request
-    if (shortCount === 1) {
-      await redis.expire(shortKey, SHORT_WINDOW);
-    }
-    if (longCount === 1) {
-      await redis.expire(longKey, LONG_WINDOW);
+    // set expiry on first request (use pipeline for efficiency)
+    if (shortCount === 1 || longCount === 1) {
+      const expirePipeline = redis.pipeline();
+      if (shortCount === 1) {
+        expirePipeline.expire(shortKey, SHORT_WINDOW);
+      }
+      if (longCount === 1) {
+        expirePipeline.expire(longKey, LONG_WINDOW);
+      }
+      await expirePipeline.exec();
     }
   } catch (error) {
     console.error('Redis rate limiter error:', error);
     // fallback: continue without rate limiting if redis fails
+  }
+}
+
+// In-memory rate limiting (for local scraper - no Redis costs)
+// Use a lock to prevent race conditions with parallel requests
+const rateLimitLocks = new Map<string, Promise<void>>();
+
+async function waitForRateLimitMemory(platformOrRegion: string, requestType: RequestType = 'overhead', maxWaitMs?: number): Promise<void> {
+  // Wait for any existing lock for this region
+  while (rateLimitLocks.has(platformOrRegion)) {
+    await rateLimitLocks.get(platformOrRegion);
+  }
+  
+  // Create our lock
+  let releaseLock: () => void;
+  const lockPromise = new Promise<void>(resolve => { releaseLock = resolve; });
+  rateLimitLocks.set(platformOrRegion, lockPromise);
+  
+  try {
+    const now = Date.now();
+    
+    // Get or initialize limits for this region
+    let limits = memoryLimits.get(platformOrRegion);
+    if (!limits) {
+      limits = { short: 0, long: 0, shortExpiry: now, longExpiry: now };
+      memoryLimits.set(platformOrRegion, limits);
+    }
+    
+    // Reset counters if windows have expired
+    if (now >= limits.shortExpiry) {
+      limits.short = 0;
+      limits.shortExpiry = now + (SHORT_WINDOW * 1000);
+    }
+    if (now >= limits.longExpiry) {
+      limits.long = 0;
+      limits.longExpiry = now + (LONG_WINDOW * 1000);
+    }
+    
+    // Calculate effective limits based on request type
+    let effectiveShortLimit = SHORT_LIMIT;
+    let effectiveLongLimit = LONG_LIMIT;
+    
+    if (requestType === 'batch') {
+      effectiveShortLimit = SHORT_LIMIT - RESERVED_OVERHEAD_SHORT;
+      effectiveLongLimit = LONG_LIMIT - RESERVED_OVERHEAD_LONG;
+    }
+    
+    // Check if we need to wait
+    let waitTime = 0;
+    
+    if (limits.short >= effectiveShortLimit) {
+      waitTime = Math.max(waitTime, limits.shortExpiry - now);
+    }
+    
+    if (limits.long >= effectiveLongLimit) {
+      waitTime = Math.max(waitTime, limits.longExpiry - now);
+    }
+    
+    // Wait if necessary (release lock first so others can also wait)
+    if (waitTime > 0) {
+      if (maxWaitMs !== undefined && waitTime > maxWaitMs) {
+        throw new Error('TIMEOUT_EXCEEDED');
+      }
+      
+      // Only log if waiting more than 1 second to reduce spam
+      if (waitTime > 1000) {
+        console.log(`Rate limit hit for ${platformOrRegion} (${requestType}), waiting ${(waitTime/1000).toFixed(1)}s`);
+      }
+      
+      rateLimitLocks.delete(platformOrRegion);
+      releaseLock!();
+      
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      return waitForRateLimitMemory(platformOrRegion, requestType, maxWaitMs);
+    }
+    
+    // Increment counters atomically
+    limits.short++;
+    limits.long++;
+  } finally {
+    // Always release the lock
+    rateLimitLocks.delete(platformOrRegion);
+    releaseLock!();
   }
 }

@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { getMatchIdsByPuuid } from '../../../lib/riot-api';
 import { createAdminClient } from '../../../lib/supabase';
 
-const RIOT_API_KEY = process.env.RIOT_API_KEY;
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();

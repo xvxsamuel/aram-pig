@@ -41,6 +41,31 @@ export function getChampionDisplayName(apiName: string, championNames: Record<st
   return championNames[apiName] || apiName
 }
 
+export function getChampionUrlName(apiName: string, championNames: Record<string, string>): string {
+  const displayName = championNames[apiName] || apiName
+  return displayName.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+export function getApiNameFromUrl(urlName: string, championNames: Record<string, string>): string | null {
+  const urlNormalized = urlName.toLowerCase().replace(/[^a-z0-9]/g, '')
+  
+  // first, try to match against display names
+  for (const [api, display] of Object.entries(championNames)) {
+    if (display.toLowerCase().replace(/[^a-z0-9]/g, '') === urlNormalized) {
+      return api
+    }
+  }
+  
+  // if not found, try matching API names directly
+  for (const api of Object.keys(championNames)) {
+    if (api.toLowerCase() === urlNormalized) {
+      return api
+    }
+  }
+  
+  return null
+}
+
 export function getSortedChampionNames(championNames: Record<string, string>): string[] {
   return Object.keys(championNames).sort((a, b) => {
     const displayA = championNames[a] || a

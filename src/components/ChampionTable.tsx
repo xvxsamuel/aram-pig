@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getChampionImageUrl } from '@/lib/ddragon-client'
-import { getChampionDisplayName } from '@/lib/champion-names'
+import { getChampionDisplayName, getChampionUrlName } from '@/lib/champion-names'
 import { getWinrateColor } from '@/lib/winrate-colors'
 import clsx from 'clsx'
 
@@ -21,19 +21,34 @@ interface Props {
   champions: ChampionStats[]
   ddragonVersion: string
   championNames: Record<string, string>
+  totalChampions: number
+  filter: string
+  patch?: string
 }
 
-export default function ChampionTable({ champions, ddragonVersion, championNames }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey>('winrate')
+export default function ChampionTable({ champions, ddragonVersion, championNames, totalChampions, filter, patch }: Props) {
+  const [allChampions, setAllChampions] = useState<ChampionStats[]>(champions)
+
+  // Update when champions prop changes
+  useEffect(() => {
+    setAllChampions(champions)
+  }, [champions])
+
+  const [sortKey, setSortKey] = useState<SortKey | null>(null) // null means use server sort
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   const totalGames = useMemo(() => {
-    return champions.reduce((sum, c) => sum + c.games_analyzed, 0)
-  }, [champions])
+    return allChampions.reduce((sum, c) => sum + c.games_analyzed, 0)
+  }, [allChampions])
 
   // sorted champions
   const sortedChampions = useMemo(() => {
-    return [...champions].sort((a, b) => {
+    // pre-sorted by wr in server
+    if (sortKey === null) {
+      return allChampions
+    }
+    
+    return [...allChampions].sort((a, b) => {
       let comparison = 0
 
       switch (sortKey) {
@@ -61,7 +76,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
 
       return sortDirection === 'asc' ? comparison : -comparison
     })
-  }, [champions, sortKey, sortDirection])
+  }, [allChampions, sortKey, sortDirection, totalGames, championNames])
 
   // handle column click
   const handleSort = (key: SortKey) => {
@@ -69,7 +84,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
       if (sortDirection === 'desc') {
         setSortDirection('asc')
       } else {
-        // reset to default
+        // default
         setSortKey('winrate')
         setSortDirection('desc')
       }
@@ -79,38 +94,25 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
     }
   }
 
-  // get border element for sort indicator
-  const getSortIndicator = (key: SortKey) => {
-    if (sortKey !== key) return null
-    const borderClass = sortDirection === 'desc' ? 'bottom-0' : 'top-0'
-    return <span className={`absolute ${borderClass} left-1/2 -translate-x-1/2 h-0.5 bg-accent-light`} style={{ width: 'max-content' }} />
-  }
-
   return (
     <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
       {/* table header */}
-      <div className="grid grid-cols-[80px_80px_1fr_120px_120px_120px] gap-4 px-4 border-b border-abyss-700 bg-abyss-700 text-sm text-text-muted">
-        <button
-          onClick={() => handleSort('rank')}
-          className="text-center hover:text-white transition-colors cursor-pointer relative py-4"
-        >
-          Rank
-          {sortKey === 'rank' && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-1/2 -translate-x-1/2 w-[40px] h-0.5 bg-accent-light`} />}
-        </button>
+      <div className="grid grid-cols-[80px_80px_1fr_120px_120px_120px] gap-4 px-4 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
+        <div className="text-center transition-colors relative py-4">Rank</div>
         <div className="py-4"></div>
         <button
           onClick={() => handleSort('champion')}
-          className="hover:text-white transition-colors cursor-pointer text-left relative py-4"
+          className="text-center hover:text-white transition-colors cursor-pointer relative py-4"
         >
           Champion
-          {sortKey === 'champion' && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-0 w-[70px] h-0.5 bg-accent-light`} />}
+          {sortKey === 'champion' && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-1/2 -translate-x-1/2 w-[80px] h-0.5 bg-accent-light`} />}
         </button>
         <button
           onClick={() => handleSort('winrate')}
           className="text-center hover:text-white transition-colors cursor-pointer relative py-4"
         >
           Win Rate
-          {sortKey === 'winrate' && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-1/2 -translate-x-1/2 w-[60px] h-0.5 bg-accent-light`} />}
+          {(sortKey === 'winrate' || sortKey === null) && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-1/2 -translate-x-1/2 w-[60px] h-0.5 bg-accent-light`} />}
         </button>
         <button
           onClick={() => handleSort('pickrate')}
@@ -135,8 +137,8 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
           
           return (
             <Link
-              key={champion.champion_name}
-              href={`/champions/${champion.champion_name.toLowerCase()}`}
+              key={`${champion.champion_name}-${index}`}
+              href={`/champions/${getChampionUrlName(champion.champion_name, championNames)}`}
               className="grid grid-cols-[80px_80px_1fr_120px_120px_120px] gap-4 p-4 border-b border-abyss-800 hover:bg-abyss-700 transition-colors group"
             >
               {/* rank */}
@@ -169,7 +171,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
                   className="text-lg font-bold"
                   style={{ color: getWinrateColor(champion.overall_winrate) }}
                 >
-                  {champion.overall_winrate.toFixed(2)}%
+                  {Number(champion.overall_winrate).toFixed(2).replace(/\.?0+$/, '')}%
                 </span>
               </div>
               
