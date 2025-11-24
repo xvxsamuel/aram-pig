@@ -8,7 +8,7 @@ import { calculatePigScore } from '../../../lib/pig-score-v2';
 import { extractAbilityOrder } from '../../../lib/ability-leveling';
 import { extractPatch, getPatchFromDate } from '../../../lib/patch-utils';
 import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../../../lib/item-purchases';
-import { extractItemPurchases } from '../../../lib/item-purchase-history';
+import { extractItemPurchases, type ItemPurchaseEvent } from '../../../lib/item-purchase-history';
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
@@ -535,7 +535,7 @@ async function processMatchesInBackground(
             let abilityOrder = null
             let buildOrderStr = null
             let firstBuyStr = null
-            let itemPurchases = []
+            let itemPurchases: ItemPurchaseEvent[] = []
             
             if (!isOlderThan30Days && timeline) {
               abilityOrder = extractAbilityOrder(timeline, participantId)
