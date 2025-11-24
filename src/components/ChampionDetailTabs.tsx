@@ -86,7 +86,7 @@ interface Props {
 
 export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterItems, runeStats, abilityLevelingStats, summonerSpellStats, ddragonVersion, totalGames, buildOrders, allBuildData }: Props) {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
-  const [selectedCombo, setSelectedCombo] = useState<number | null>(null)
+  const [selectedCombo, setSelectedCombo] = useState<number>(0)
 
   console.log('ChampionDetailTabs: allBuildData length:', allBuildData?.length, 'selectedCombo:', selectedCombo)
 
@@ -306,7 +306,7 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
               {itemCombinations.map((combo, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setSelectedCombo(selectedCombo === idx ? null : idx)}
+                  onClick={() => setSelectedCombo(idx)}
                   className={clsx(
                     'w-full text-left p-3 rounded transition-colors',
                     selectedCombo === idx
@@ -372,7 +372,7 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
           {/* Items Section - shows build order when combo selected, otherwise shows all items */}
           <div className="bg-abyss-700 rounded-lg p-6">
             <h3 className="text-2xl font-bold mb-4">Items</h3>
-            {selectedCombo !== null && itemCombinations[selectedCombo] ? (
+            {itemCombinations[selectedCombo] ? (
               <div>
                 <div className="text-sm text-subtitle mb-6">
                   Showing most common items built in each slot with this combination ({itemCombinations[selectedCombo].estimatedGames.toLocaleString()} games)
@@ -447,99 +447,11 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
                 </div>
               </div>
             ) : (
-              <div>
-                <div className="text-sm text-subtitle mb-6">
-                  Select a combination to see the recommended build order
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                  {[1, 2, 3, 4, 5, 6].map((slotNum) => {
-                    const slotIdx = slotNum - 1
-                    const items = itemsBySlot[slotIdx] || []
-                    
-                    return (
-                      <div key={slotNum}>
-                        <div className="text-center text-2xl font-bold mb-3 text-white">
-                          {slotNum}
-                        </div>
-                        <div className="space-y-2">
-                          {items && items.length > 0 ? (
-                            items.slice(0, 6).map((item) => (
-                              <div key={item.item_id} className="text-center">
-                                <Tooltip id={item.item_id} type="item">
-                                  <div className="w-12 h-12 rounded bg-abyss-800 overflow-hidden mx-auto mb-1 hover:border-accent-light transition-colors cursor-pointer border border-gray-700">
-                                    {item.item_id === -1 ? (
-                                      <div className="w-full h-full flex items-center justify-center">
-                                        <span className="text-xl text-gray-500">∅</span>
-                                      </div>
-                                    ) : (
-                                      <Image
-                                        src={getItemImageUrl(item.item_id, ddragonVersion)}
-                                        alt=""
-                                        width={48}
-                                        height={48}
-                                        className="w-full h-full object-cover"
-                                        unoptimized
-                                      />
-                                    )}
-                                  </div>
-                                </Tooltip>
-                                <div className="text-xs">
-                                  <div className="font-bold" style={{ color: getWinrateColor(item.winrate) }}>
-                                    {item.winrate.toFixed(1)}%
-                                  </div>
-                                  <div className="text-subtitle">{item.games.toLocaleString()}</div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center text-sm text-abyss-200">No data</div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+              <div className="text-center text-subtitle py-12">
+                No item combinations available
               </div>
             )}
           </div>
-
-          {/* Boots Section */}
-          {bootsItems.length > 0 && (
-            <div className="bg-abyss-700 rounded-lg p-6">
-              <h3 className="text-2xl font-bold mb-6">Boots</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {bootsItems.map((boot) => (
-                  <div key={boot.item_id} className="flex flex-col items-center gap-2 p-3 bg-abyss-800 rounded-lg">
-                    {boot.item_id === -1 || boot.item_id === -2 ? (
-                      <div className="w-12 h-12 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
-                        <span className="text-2xl text-gray-500">∅</span>
-                      </div>
-                    ) : (
-                      <Tooltip id={boot.item_id} type="item">
-                        <div className="w-12 h-12 rounded bg-abyss-900 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
-                          <Image
-                            src={getItemImageUrl(boot.item_id, ddragonVersion)}
-                            alt=""
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      </Tooltip>
-                    )}
-                    <div className="text-xs text-center">
-                      <div className="font-bold" style={{ color: getWinrateColor(boot.winrate) }}>
-                        {boot.winrate.toFixed(1)}%
-                      </div>
-                      <div className="text-subtitle">{boot.pickrate.toFixed(1)}% pick</div>
-                      <div className="text-subtitle text-[10px]">{boot.games} games</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Starting Items, Spells, Level Order Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
