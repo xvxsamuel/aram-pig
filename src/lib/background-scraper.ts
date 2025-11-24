@@ -255,7 +255,7 @@ async function processBatch(region: RegionalCluster): Promise<number> {
           })
           
           // store match with 'scraper' source
-          const success = await storeMatchData(matchData, region, 'scraper')
+          const success = await storeMatchData(matchData, region)
           if (success) {
             stored++
           }
