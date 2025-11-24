@@ -154,7 +154,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
                     alt={champion.champion_name}
                     width={48}
                     height={48}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover scale-110"
                     unoptimized
                   />
                 </div>

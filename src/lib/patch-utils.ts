@@ -1,5 +1,5 @@
 // utility to extract patch version from gameVersion string
-// Riot API returns version 15.x for 2025, but actual patches are 25.x
+// Riot API returns version 15.x for 2025, but actual patche names are 25.x
 
 export const patchSchedule = [
   { patch: '25.1', start: new Date('2025-01-09').getTime() },
@@ -42,8 +42,6 @@ export function extractPatch(gameVersion: string): string {
   const parts = gameVersion.split('.')
   const apiPatch = parts.slice(0, 2).join('.')
   
-  // API returns 15.x for 2025, but actual patches are 25.x
-  // Convert 15.x to 25.x for year 2025
   if (apiPatch.startsWith('15.')) {
     return '25.' + apiPatch.split('.')[1]
   }

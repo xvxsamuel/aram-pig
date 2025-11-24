@@ -147,6 +147,12 @@ export async function storeMatchData(
       return type === 'legendary' || type === 'boots'
     }
     
+    // normalize boot IDs to 10010 (matches SQL normalize_boot_id behavior)
+    const BOOT_IDS = [1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158]
+    const normalizeBootId = (itemId: number): number => {
+      return BOOT_IDS.includes(itemId) ? 10010 : itemId
+    }
+    
     // Track ability orders, first buys, and build orders for champion stats RPC
     const participantAbilityOrders: (string | null)[] = []
     const participantFirstBuys: (string | null)[] = []
@@ -223,7 +229,9 @@ export async function storeMatchData(
             totalDamageShieldedOnTeammates: (p as any).totalDamageShieldedOnTeammates || 0
           },
           
-          items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5],
+          // filter to only finished items (legendary/boots) for champion stats
+          items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
+            .filter(id => id > 0 && isFinishedItem(id)),
           
           spells: [p.summoner1Id, p.summoner2Id],
           
@@ -303,10 +311,19 @@ export async function storeMatchData(
       // Extract skill order abbreviation (e.g., "qew" for Q>E>W max order)
       const skillOrder = abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : null
       
-      // Ensure items array has exactly 6 elements
-      const itemsArray = Array.isArray(p.match_data?.items) 
-        ? p.match_data.items.slice(0, 6).concat(Array(6).fill(0)).slice(0, 6)
-        : [0, 0, 0, 0, 0, 0]
+      // Use build order from timeline (purchase sequence) for champion stats
+      // If no build order, fall back to final items array
+      const itemsForStats = buildOrderStr 
+        ? buildOrderStr.split(',').map(id => parseInt(id, 10))
+        : (Array.isArray(p.match_data?.items) && p.match_data.items.length > 0 ? p.match_data.items : [])
+      
+      // Debug logging
+      if (i === 0) { // Only log first participant to avoid spam
+        console.log(`DEBUG: Champion ${p.champion_name}`)
+        console.log(`  buildOrderStr: ${buildOrderStr}`)
+        console.log(`  itemsForStats: ${JSON.stringify(itemsForStats)}`)
+        console.log(`  p.match_data.items: ${JSON.stringify(p.match_data?.items)}`)
+      }
       
       // Validate runes structure
       const runes = p.match_data?.runes || { primary: { style: 0, perks: [0, 0, 0, 0] }, secondary: { style: 0, perks: [0, 0] }, statPerks: [0, 0, 0] }
@@ -317,7 +334,7 @@ export async function storeMatchData(
         p_champion_name: p.champion_name,
         p_patch: patchVersion,
         p_win: p.win ? 1 : 0,
-        p_items: JSON.stringify(itemsArray),
+        p_items: JSON.stringify(itemsForStats),
         p_first_buy: firstBuyStr || '',
         p_keystone_id: runes.primary.perks[0] || 0,
         p_rune1: runes.primary.perks[1] || 0,
@@ -346,8 +363,8 @@ export async function storeMatchData(
         console.error('error updating champion stats:', statsError)
         console.error('Problematic data:', {
           champion: p.champion_name,
-          items: itemsArray,
-          itemsString: `{${itemsArray.join(',')}}`,
+          items: itemsForStats,
+          itemsString: JSON.stringify(itemsForStats),
           match_data: p.match_data
         })
         // Continue processing other players even if one fails

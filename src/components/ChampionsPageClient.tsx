@@ -28,7 +28,7 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
 
   useEffect(() => {
-    // Only fetch if we have both filter and patch params
+    // only fetch if we have both filter and patch params
     if (!filter || !patch) {
       setLoading(true)
       return
@@ -36,11 +36,11 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
 
     const fetchData = async () => {
       setLoading(true)
-      setChampions([]) // Clear old data immediately
+      setChampions([]) // clear old data immediately
       try {
         const params = new URLSearchParams({
           offset: '0',
-          limit: '200', // Load all champions at once with indexed db
+          limit: '200', // load all champions at once with indexed db
           filter: filter,
         })
         if (patch) params.set('patch', patch)
@@ -63,9 +63,9 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
     }
 
     fetchData()
-  }, [filter, patch]) // Removed loader and dataKey from dependencies
+  }, [filter, patch])
 
-  // Calculate time since last update
+  // calculate time since last update
   let timeAgo = 'Unknown'
   if (lastUpdated) {
     const now = Date.now()
@@ -88,10 +88,10 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-12 py-8">
         {/* header */}
         <div className="mb-6">
-          <h1 className="text-4xl font-bold mb-2">ARAM Champion Statistics</h1>
+          <h2 className="text-4xl font-bold mb-2">ARAM Champion Statistics</h2>
           <p className="text-subtitle">
             {totalMatches.toLocaleString()} matches analyzed • Last updated {timeAgo}
           </p>

@@ -55,7 +55,20 @@ interface PreCalculatedCombo {
   actualBoots: number[]
   games: number
   wins: number
-  itemStats: Record<number, { games: number; wins: number }>
+  itemStats: Record<number, { 
+    positions: Record<number, { games: number; wins: number }>
+  }>
+  runes?: {
+    primary?: Record<string, { games: number; wins: number }>
+    secondary?: Record<string, { games: number; wins: number }>
+    tertiary?: {
+      offense?: Record<string, { games: number; wins: number }>
+      flex?: Record<string, { games: number; wins: number }>
+      defense?: Record<string, { games: number; wins: number }>
+    }
+  }
+  spells?: Record<string, { games: number; wins: number }>
+  starting?: Record<string, { games: number; wins: number }>
 }
 
 interface Props {
@@ -77,7 +90,7 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
 
   console.log('ChampionDetailTabs: allBuildData length:', allBuildData?.length, 'selectedCombo:', selectedCombo)
 
-  // Transform pre-calculated combinations into display format
+  // transform pre-calculated combinations into display format with build order and accompanying items
   const itemCombinations = (() => {
     if (!allBuildData || allBuildData.length === 0) {
       return []
@@ -89,14 +102,41 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
     
     const combinations = allBuildData
       .map((combo, idx) => {
-        // Create item stats for each normalized item
-        const itemStats = combo.normalizedItems.map(itemId => {
-          if (itemId === 10010) {
-            // 10010 is the normalized boots placeholder
+        // derive build order from position data: for each combo item, find which slot it appears in most
+        const buildOrder: Array<{ itemId: number; preferredSlot: number; games: number }> = []
+        
+        combo.normalizedItems.forEach(itemId => {
+          const itemStats = combo.itemStats[itemId]
+          if (!itemStats || !itemStats.positions) {
+            // fallback: no position data, just use order from combo key
+            buildOrder.push({ itemId, preferredSlot: buildOrder.length + 1, games: 0 })
+            return
+          }
+          
+          // find which slot this item appears in most frequently
+          let maxSlot = 1
+          let maxGames = 0
+          Object.entries(itemStats.positions).forEach(([slot, stats]) => {
+            if (stats.games > maxGames) {
+              maxGames = stats.games
+              maxSlot = parseInt(slot)
+            }
+          })
+          
+          buildOrder.push({ itemId, preferredSlot: maxSlot, games: maxGames })
+        })
+        
+        // sort by preferred slot to get purchase order
+        buildOrder.sort((a, b) => a.preferredSlot - b.preferredSlot)
+        
+        // create item stats in the derived build order
+        const itemStats = buildOrder.map(({ itemId }) => {
+          if (itemId === 99999) {
+            // boots placeholder: aggregate all actual boot items
             const totalBootsGames = bootsItems.reduce((sum, b) => sum + b.games, 0)
             const totalBootsWins = bootsItems.reduce((sum, b) => sum + b.wins, 0)
             return {
-              item_id: 10010,
+              item_id: 99999,
               games: totalBootsGames,
               wins: totalBootsWins,
               winrate: totalBootsGames > 0 ? (totalBootsWins / totalBootsGames) * 100 : 0,
@@ -104,7 +144,6 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
             }
           }
           
-          // Find item stats from itemsBySlot
           for (const slotItems of Object.values(itemsBySlot)) {
             const found = slotItems.find(i => i.item_id === itemId)
             if (found) return found
@@ -115,7 +154,6 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
           return null
         }).filter(Boolean) as ItemStat[]
         
-        // Skip if we couldn't find all items
         if (itemStats.length !== combo.normalizedItems.length) {
           if (idx === 0) {
             console.log('[DEBUG] Skipping combo, itemStats length:', itemStats.length, 'normalizedItems length:', combo.normalizedItems.length)
@@ -123,25 +161,57 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
           return null
         }
         
-        // Get actual boot items with their stats
+        // get actual boot items with their stats
         const actualBootItems = combo.actualBoots
           .map(bootId => bootsItems.find(b => b.item_id === bootId))
           .filter(Boolean) as ItemStat[]
+        
+        // derive accompanying items: items that appear in slots not occupied by the combo
+        const comboSlots = new Set(buildOrder.map(b => b.preferredSlot))
+        const accompanyingItems: Array<{ item_id: number; slot: number; games: number; wins: number }> = []
+        
+        // look at all items in the combo's itemStats to find non-combo items
+        Object.entries(combo.itemStats).forEach(([itemIdStr, itemData]) => {
+          const itemId = parseInt(itemIdStr)
+          
+          // skip if this item is part of the combo
+          if (combo.normalizedItems.includes(itemId)) return
+          
+          // for non-combo items, find which slot they appear in most
+          if (itemData.positions) {
+            Object.entries(itemData.positions).forEach(([slot, stats]) => {
+              const slotNum = parseInt(slot)
+              // only include items in slots not occupied by combo items
+              if (!comboSlots.has(slotNum)) {
+                accompanyingItems.push({
+                  item_id: itemId,
+                  slot: slotNum,
+                  games: stats.games,
+                  wins: stats.wins
+                })
+              }
+            })
+          }
+        })
+        
+        // sort accompanying items by frequency
+        accompanyingItems.sort((a, b) => b.games - a.games)
         
         const avgWinrate = combo.games > 0 ? (combo.wins / combo.games) * 100 : 0
         const pickrate = totalGames > 0 ? (combo.games / totalGames) * 100 : 0
         
         if (idx === 0) {
-          console.log('[DEBUG] Created combo with games:', combo.games, 'avgWinrate:', avgWinrate, 'pickrate:', pickrate)
+          console.log('[DEBUG] Created combo with games:', combo.games, 'avgWinrate:', avgWinrate, 'buildOrder:', buildOrder.map(b => b.itemId), 'accompanying:', accompanyingItems.length)
         }
         
         return {
           items: itemStats,
-          hasBoots: combo.normalizedItems.includes(10010),
+          hasBoots: combo.normalizedItems.includes(99999),
           actualBootItems: actualBootItems,
           estimatedGames: combo.games,
           avgWinrate,
-          buildOrder: [0, 1, 2],
+          buildOrder: buildOrder.map(b => b.preferredSlot),
+          accompanyingItems: accompanyingItems.slice(0, 10), // top 10 accompanying items
           pickrate
         }
       })
@@ -152,13 +222,14 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
         estimatedGames: number
         avgWinrate: number
         buildOrder: number[]
+        accompanyingItems: Array<{ item_id: number; slot: number; games: number; wins: number }>
         pickrate: number
       }>
     
     console.log('[DEBUG] After mapping, combinations length:', combinations.length)
     console.log('[DEBUG] First combo estimatedGames:', combinations[0]?.estimatedGames)
     
-    // Sort by games and take top 5 with at least 2 games
+    // sort by games and take top 5 with at least 2 games
     return combinations
       .filter(c => c.estimatedGames >= 2)
       .sort((a, b) => b.estimatedGames - a.estimatedGames)
@@ -245,7 +316,7 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
                 >
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     {/* Show non-boot items */}
-                    {combo.items.filter(item => item.item_id !== 10010).map((item, position) => (
+                    {combo.items.filter(item => item.item_id !== 99999).map((item, position) => (
                       <div key={position} className="flex items-center gap-1">
                         {position > 0 && <span className="text-gray-600 text-xs">+</span>}
                         <Tooltip id={item.item_id} type="item">
@@ -298,91 +369,177 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
 
         {/* Main Content Area */}
         <div className="col-span-12 lg:col-span-9 xl:col-span-9 space-y-6">
-          {/* Items Section - 6 numbered slots like aramstats.lol */}
+          {/* Items Section - shows build order when combo selected, otherwise shows all items */}
           <div className="bg-abyss-700 rounded-lg p-6">
-            <h3 className="text-2xl font-bold mb-6">Items</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((slotNum) => {
-                const slotIdx = slotNum - 1
-                let items = itemsBySlot[slotIdx] || []
-                
-                // When a combo is selected, filter to only show items from that specific combination
-                if (selectedCombo !== null && itemCombinations[selectedCombo]) {
-                  const selectedCombination = allBuildData[selectedCombo]
-                  if (selectedCombination && selectedCombination.itemStats) {
-                    // Only show items that appear in this combination's stats
-                    items = items
-                      .filter(item => selectedCombination.itemStats[item.item_id])
-                      .map(item => {
-                        const comboItemStat = selectedCombination.itemStats[item.item_id]
-                        return {
-                          ...item,
-                          games: comboItemStat.games,
-                          wins: comboItemStat.wins,
-                          winrate: comboItemStat.games > 0 ? (comboItemStat.wins / comboItemStat.games) * 100 : 0,
-                          pickrate: selectedCombination.games > 0 
-                            ? (comboItemStat.games / selectedCombination.games) * 100 
-                            : 0
+            <h3 className="text-2xl font-bold mb-4">Items</h3>
+            {selectedCombo !== null && itemCombinations[selectedCombo] ? (
+              <div>
+                <div className="text-sm text-subtitle mb-6">
+                  Showing most common items built in each slot with this combination ({itemCombinations[selectedCombo].estimatedGames.toLocaleString()} games)
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((slotNum) => {
+                    const slotIdx = slotNum - 1
+                    
+                    // get combo object to access all itemStats with positions
+                    const combo = allBuildData[selectedCombo]
+                    const itemsInSlot: Array<{ itemId: number; games: number; winrate: number }> = []
+                    
+                    // iterate through ALL items in the combo's itemStats (not just the 3 core items)
+                    if (combo?.itemStats) {
+                      Object.entries(combo.itemStats).forEach(([itemIdStr, itemData]) => {
+                        const itemId = parseInt(itemIdStr)
+                        
+                        // check if this item appears in this slot
+                        if (itemData.positions?.[slotNum]) {
+                          const posData = itemData.positions[slotNum]
+                          itemsInSlot.push({
+                            itemId: itemId,
+                            games: posData.games,
+                            winrate: posData.games > 0 ? (posData.wins / posData.games) * 100 : 0
+                          })
                         }
                       })
-                      .sort((a, b) => b.pickrate - a.pickrate)
-                  }
-                }
-                
-                // Get combo item IDs for highlighting
-                const comboItemIds = selectedCombo !== null && itemCombinations[selectedCombo]
-                  ? itemCombinations[selectedCombo].items.map(item => item.item_id)
-                  : []
-                
-                return (
-                  <div key={slotNum}>
-                    <div className="text-center text-2xl font-bold mb-3 text-white">
-                      {slotNum}
-                    </div>
-                    <div className="space-y-2">
-                      {items && items.length > 0 ? (
-                        items.slice(0, 6).map((item) => {
-                          const isInCombo = comboItemIds.length > 0 && comboItemIds.includes(item.item_id)
-                          return (
-                            <div key={item.item_id} className="text-center">
-                              <Tooltip id={item.item_id} type="item">
-                                <div className={`w-12 h-12 rounded bg-abyss-800 overflow-hidden mx-auto mb-1 hover:border-accent-light transition-colors cursor-pointer ${
-                                  isInCombo ? 'border-2 border-accent-light ring-2 ring-accent-light/30' : 'border border-gray-700'
-                                }`}>
-                                  {item.item_id === -1 ? (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <span className="text-xl text-gray-500">∅</span>
-                                    </div>
-                                  ) : (
+                    }
+                    
+                    // sort by games and take top 3
+                    itemsInSlot.sort((a, b) => b.games - a.games)
+                    const top3 = itemsInSlot.slice(0, 3)
+                    
+                    return (
+                      <div key={slotNum}>
+                        <div className="text-center text-xl font-bold mb-3 text-white">
+                          {slotNum}
+                        </div>
+                        <div className="space-y-2">
+                          {top3.length > 0 ? (
+                            top3.map((itemData, idx) => (
+                              <div key={idx} className="text-center">
+                                <Tooltip id={itemData.itemId} type="item">
+                                  <div className="w-12 h-12 mx-auto rounded bg-abyss-800 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer mb-1">
                                     <Image
-                                      src={getItemImageUrl(item.item_id, ddragonVersion)}
+                                      src={getItemImageUrl(itemData.itemId, ddragonVersion)}
                                       alt=""
                                       width={48}
                                       height={48}
                                       className="w-full h-full object-cover"
                                       unoptimized
                                     />
-                                  )}
+                                  </div>
+                                </Tooltip>
+                                <div className="flex gap-2 text-xs justify-center">
+                                  <span className="font-bold" style={{ color: getWinrateColor(itemData.winrate) }}>
+                                    {itemData.winrate.toFixed(1)}%
+                                  </span>
+                                  <span className="text-subtitle">{itemData.games}</span>
                                 </div>
-                              </Tooltip>
-                              <div className="text-xs">
-                                <div className="font-bold" style={{ color: getWinrateColor(item.winrate) }}>
-                                  {item.winrate.toFixed(1)}%
-                                </div>
-                                <div className="text-subtitle">{item.games.toLocaleString()}</div>
                               </div>
+                            ))
+                          ) : (
+                            <div className="text-center text-xs text-gray-600 py-2">
+                              No items
                             </div>
-                          )
-                        })
-                      ) : (
-                        <div className="text-center text-sm text-abyss-200">No data</div>
-                      )}
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="text-sm text-subtitle mb-6">
+                  Select a combination to see the recommended build order
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((slotNum) => {
+                    const slotIdx = slotNum - 1
+                    const items = itemsBySlot[slotIdx] || []
+                    
+                    return (
+                      <div key={slotNum}>
+                        <div className="text-center text-2xl font-bold mb-3 text-white">
+                          {slotNum}
+                        </div>
+                        <div className="space-y-2">
+                          {items && items.length > 0 ? (
+                            items.slice(0, 6).map((item) => (
+                              <div key={item.item_id} className="text-center">
+                                <Tooltip id={item.item_id} type="item">
+                                  <div className="w-12 h-12 rounded bg-abyss-800 overflow-hidden mx-auto mb-1 hover:border-accent-light transition-colors cursor-pointer border border-gray-700">
+                                    {item.item_id === -1 ? (
+                                      <div className="w-full h-full flex items-center justify-center">
+                                        <span className="text-xl text-gray-500">∅</span>
+                                      </div>
+                                    ) : (
+                                      <Image
+                                        src={getItemImageUrl(item.item_id, ddragonVersion)}
+                                        alt=""
+                                        width={48}
+                                        height={48}
+                                        className="w-full h-full object-cover"
+                                        unoptimized
+                                      />
+                                    )}
+                                  </div>
+                                </Tooltip>
+                                <div className="text-xs">
+                                  <div className="font-bold" style={{ color: getWinrateColor(item.winrate) }}>
+                                    {item.winrate.toFixed(1)}%
+                                  </div>
+                                  <div className="text-subtitle">{item.games.toLocaleString()}</div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center text-sm text-abyss-200">No data</div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Boots Section */}
+          {bootsItems.length > 0 && (
+            <div className="bg-abyss-700 rounded-lg p-6">
+              <h3 className="text-2xl font-bold mb-6">Boots</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {bootsItems.map((boot) => (
+                  <div key={boot.item_id} className="flex flex-col items-center gap-2 p-3 bg-abyss-800 rounded-lg">
+                    {boot.item_id === -1 || boot.item_id === -2 ? (
+                      <div className="w-12 h-12 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                        <span className="text-2xl text-gray-500">∅</span>
+                      </div>
+                    ) : (
+                      <Tooltip id={boot.item_id} type="item">
+                        <div className="w-12 h-12 rounded bg-abyss-900 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
+                          <Image
+                            src={getItemImageUrl(boot.item_id, ddragonVersion)}
+                            alt=""
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      </Tooltip>
+                    )}
+                    <div className="text-xs text-center">
+                      <div className="font-bold" style={{ color: getWinrateColor(boot.winrate) }}>
+                        {boot.winrate.toFixed(1)}%
+                      </div>
+                      <div className="text-subtitle">{boot.pickrate.toFixed(1)}% pick</div>
+                      <div className="text-subtitle text-[10px]">{boot.games} games</div>
                     </div>
                   </div>
-                )
-              })}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Starting Items, Spells, Level Order Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

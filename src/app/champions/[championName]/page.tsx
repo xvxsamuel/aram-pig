@@ -110,6 +110,10 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
     } else {
       const data = patchStats.data as any
       championStatsData = data
+      console.log(`Champion ${apiName} data keys:`, Object.keys(data))
+      console.log(`Has items?`, !!data.items)
+      console.log(`Has runes?`, !!data.runes)
+      console.log(`Has core?`, !!data.core)
       championData = {
         champion_name: patchStats.champion_name,
         overall_winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
@@ -143,7 +147,7 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
                     alt={displayName}
                     width={96}
                     height={96}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover scale-110"
                     unoptimized
                   />
                 </div>
@@ -345,11 +349,11 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
         .slice(0, 5)
     : []
 
-  // Extract summoner spell stats from JSONB
+  // extract summoner spell stats from JSONB
   const summonerSpellStats = championStatsData?.spells
     ? Object.entries(championStatsData.spells)
         .map(([spell_key, stats]: [string, any]) => {
-          // Parse spell key like "4_32" into spell IDs
+          // parse spell key like "4_32" into spell IDs
           const spellIds = spell_key.split('_').map(id => parseInt(id))
           return {
             spell1_id: spellIds[0],
@@ -363,16 +367,16 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
         .sort((a, b) => b.pickrate - a.pickrate)
     : []
 
-  // Extract core build combinations from JSONB
+  // extract core build combinations from JSONB
   console.log('[DEBUG] championStatsData.core:', championStatsData?.core ? Object.keys(championStatsData.core).length + ' combinations' : 'null/undefined')
   
   const allBuildData = championStatsData?.core
     ? Object.entries(championStatsData.core)
         .map(([comboKey, comboData]: [string, any]) => {
-          // Parse combo key like "10010_3161_6610" into item IDs
+          // parse combo key like "10010_3161_6610" into item IDs
           const normalizedItems = comboKey.split('_').map(id => parseInt(id))
           
-          // Extract actual boots from the combo's item data
+          // extract actual boots from the combo's item data
           const actualBoots: number[] = []
           if (comboData.items && typeof comboData.items === 'object') {
             Object.keys(comboData.items).forEach(itemId => {
@@ -383,14 +387,29 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
             })
           }
           
-          // Extract item stats for this combo
-          const comboItemStats: Record<number, { games: number; wins: number }> = {}
+          // extract item stats with position data for this combo
+          // structure: items -> {item_id} -> {slot} -> {games, wins}
+          const comboItemStats: Record<number, { 
+            positions: Record<number, { games: number; wins: number }>
+          }> = {}
+          
           if (comboData.items && typeof comboData.items === 'object') {
             Object.entries(comboData.items).forEach(([itemId, stats]: [string, any]) => {
-              comboItemStats[parseInt(itemId)] = {
-                games: stats.games || 0,
-                wins: stats.wins || 0
-              }
+              const positions: Record<number, { games: number; wins: number }> = {}
+              
+              // each item has slots as direct children (not nested under 'positions')
+              Object.entries(stats).forEach(([key, slotStats]: [string, any]) => {
+                const slotNum = parseInt(key)
+                // only process numeric keys (slots 1-6), skip 'games'/'wins' if present
+                if (!isNaN(slotNum) && slotNum >= 1 && slotNum <= 6 && typeof slotStats === 'object') {
+                  positions[slotNum] = {
+                    games: slotStats.games || 0,
+                    wins: slotStats.wins || 0
+                  }
+                }
+              })
+              
+              comboItemStats[parseInt(itemId)] = { positions }
             })
           }
           
@@ -399,7 +418,10 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
             actualBoots,
             games: comboData.games || 0,
             wins: comboData.wins || 0,
-            itemStats: comboItemStats
+            itemStats: comboItemStats,
+            runes: comboData.runes || undefined,
+            spells: comboData.spells || undefined,
+            starting: comboData.starting || undefined
           }
         })
         .sort((a, b) => b.games - a.games)
@@ -421,7 +443,7 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-12 py-8">
         {/* champion header */}
         <div className="bg-abyss-600 rounded-lg p-6 mb-6 border border-gold-dark/40">
           <div className="flex items-center gap-6">
@@ -432,7 +454,7 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
                   alt={displayName}
                   width={96}
                   height={96}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover scale-110"
                   unoptimized
                 />
               </div>

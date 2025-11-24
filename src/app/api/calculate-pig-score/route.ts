@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       )
     }
     
-    // Get latest 3 patches to determine if match is recent enough
+    // get latest 3 patches to determine if match is recent enough
     const latestPatches = await getLatestPatches()
     const last3Patches = latestPatches.slice(0, 3)
     

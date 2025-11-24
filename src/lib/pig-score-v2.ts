@@ -28,9 +28,9 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   const championName = participant.championName
   const gameDurationMinutes = participant.game_duration / 60
   
-  // Debug logging
+  // debug logging
   if (gameDurationMinutes <= 0 || participant.time_ccing_others === undefined) {
-    console.log(`⚠ Invalid data for ${championName}:`, {
+    console.log(`Invalid data for ${championName}:`, {
       game_duration: participant.game_duration,
       game_duration_minutes: gameDurationMinutes,
       time_ccing_others: participant.time_ccing_others,
@@ -46,7 +46,7 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     .select('data, patch')
     .eq('champion_name', championName)
     .order('patch', { ascending: false })
-    .limit(5) // Get recent patches
+    .limit(5) // get recent patches
   
   if (avgError) {
     console.error(`Error fetching champion stats for ${championName}:`, avgError)
@@ -85,7 +85,7 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     ccTimePerMin: participant.time_ccing_others / gameDurationMinutes,
   }
   
-  console.log(`📊 Raw player stats:`, {
+  console.log(`Raw player stats:`, {
     damage_dealt_to_champions: participant.damage_dealt_to_champions,
     total_damage_dealt: participant.total_damage_dealt,
     total_heals_on_teammates: participant.total_heals_on_teammates,
@@ -96,7 +96,7 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   
   // check if required stats are available (old matches may not have these)
   if (!participant.total_damage_dealt || participant.total_damage_dealt === 0) {
-    console.log(`⚠️ Missing total_damage_dealt for ${championName} - cannot calculate pig score (old match)`)
+    console.log(`Missing total_damage_dealt for ${championName} - cannot calculate pig score (old match)`)
     return null
   }
   
@@ -152,7 +152,7 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   const finalScore = Math.max(0, Math.min(100, Math.round(score)))
   
   // detailed logging
-  console.log(`\n🐷 PIG SCORE for ${championName}:`)
+  console.log(`\nPIG SCORE for ${championName}:`)
   console.log(`  Starting Score: 100`)
   console.log(`  Player Stats (per min):`, {
     dmg: playerStats.damageToChampionsPerMin.toFixed(1),

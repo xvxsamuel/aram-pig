@@ -5,7 +5,7 @@ import type { MatchData } from "../lib/riot-api"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
-import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl } from "../lib/ddragon-client"
+import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl } from "../lib/ddragon-client"
 import Tooltip from "./Tooltip"
 import runesData from "@/data/runes.json"
 
@@ -34,15 +34,15 @@ interface ParticipantDetails {
 }
 
 export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin, isRemake }: Props) {
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'build'>('overview')
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
   const [participantDetails, setParticipantDetails] = useState<Map<string, ParticipantDetails>>(new Map())
   const [calculatingPigScores, setCalculatingPigScores] = useState(false)
   const [pigScores, setPigScores] = useState<Record<string, number>>({})
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
 
-  // Calculate pig scores for all participants when component mounts
+  // calculate pig scores for all participants when component mounts
   useEffect(() => {
-    // Skip if flag is disabled
+    // skip if flag is disabled
     const recalculateEnabled = process.env.NEXT_PUBLIC_RECALCULATE_PIG_SCORES === 'true'
     if (!recalculateEnabled) return
     
@@ -58,7 +58,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         if (response.ok) {
           const data = await response.json()
           console.log('Calculated pig scores for match:', data)
-          // Update pig scores state
+          // update pig scores state
           if (data.results) {
             setPigScores(data.results)
           }
@@ -87,14 +87,50 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const team200Kills = team200.reduce((sum, p) => sum + p.kills, 0)
 
   const formatGold = (gold: number) => `${(gold / 1000).toFixed(1)}k`
-  const formatDamage = (dmg: number) => `${(dmg / 1000).toFixed(0)}k`
+  const formatDamage = (dmg: number) => new Intl.NumberFormat('en-US').format(dmg)
+
+  // Calculate max values for bars
+  const allParticipants = match.info.participants
+  const maxDamageDealt = Math.max(...allParticipants.map(p => p.totalDamageDealtToChampions || 0))
+  const maxDamageTaken = Math.max(...allParticipants.map(p => (p as any).totalDamageTaken || 0))
+
+  // Calculate ranks based on pig score
+  const sortedByScore = [...allParticipants].sort((a, b) => {
+    const scoreA = pigScores[a.puuid] ?? a.pigScore ?? 0
+    const scoreB = pigScores[b.puuid] ?? b.pigScore ?? 0
+    return scoreB - scoreA
+  })
+
+  const getRankInfo = (puuid: string, teamId: number) => {
+    const score = pigScores[puuid] ?? allParticipants.find(p => p.puuid === puuid)?.pigScore ?? 0
+    const rankIndex = sortedByScore.findIndex(p => p.puuid === puuid)
+    const rank = rankIndex + 1
+    
+    const winningTeamId = allParticipants.find(p => p.win)?.teamId
+    const isWinningTeam = teamId === winningTeamId
+    
+    const teamPlayers = allParticipants.filter(p => p.teamId === teamId)
+    const highestInTeam = teamPlayers.reduce((prev, current) => {
+        const prevScore = pigScores[prev.puuid] ?? prev.pigScore ?? 0
+        const currScore = pigScores[current.puuid] ?? current.pigScore ?? 0
+        return currScore > prevScore ? current : prev
+    })
+    
+    let badge = null
+    if (highestInTeam.puuid === puuid) {
+        if (isWinningTeam) badge = "MVP"
+        else badge = "ACE"
+    }
+    
+    return { rank, badge, score }
+  }
 
   // Lazy load participant details (timeline + PIG score)
   const loadParticipantDetails = async (puuid: string) => {
-    // Skip if already loading or loaded
+    // skip if already loading or loaded
     if (participantDetails.has(puuid)) return
     
-    // Mark as loading
+    // m  ark as loading
     setParticipantDetails(prev => new Map(prev).set(puuid, {
       puuid,
       build_order: null,
@@ -139,163 +175,196 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
     }
   }
   
-  // Load details for current player when switching to build tab
+  // load details for current player when switching to build tab
   useEffect(() => {
     if (selectedTab === 'build' && currentPlayer) {
       loadParticipantDetails(currentPlayer.puuid)
     }
   }, [selectedTab, match.metadata.matchId])
 
-  const renderPlayer = (p: any, isCurrentPlayer: boolean) => {
+  const renderPlayerRow = (p: any, isCurrentPlayer: boolean) => {
     const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
     const kda = p.deaths === 0 ? "Perfect" : ((p.kills + p.assists) / p.deaths).toFixed(2)
     const dpm = ((p.totalDamageDealtToChampions || 0) / (match.info.gameDuration / 60)).toFixed(0)
     const playerName = p.riotIdGameName || p.summonerName
-    const playerTag = p.riotIdTagline || "EUW"
+    const playerTag = p.riotIdTagline || ""
     const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
     
+    const { rank, badge, score } = getRankInfo(p.puuid, p.teamId)
+    const teamTotalKills = p.teamId === 100 ? team100Kills : team200Kills
+    const killParticipation = teamTotalKills > 0 ? Math.round(((p.kills + p.assists) / teamTotalKills) * 100) : 0
+    
+    const damageDealtPct = maxDamageDealt > 0 ? (p.totalDamageDealtToChampions / maxDamageDealt) * 100 : 0
+    const damageTakenPct = maxDamageTaken > 0 ? (p.totalDamageTaken / maxDamageTaken) * 100 : 0
+
+    const csPerMin = (p.totalMinionsKilled / (match.info.gameDuration / 60)).toFixed(1)
+
     return (
-      <div
-        key={p.puuid}
+      <tr 
+        key={p.puuid} 
         className={clsx(
-          "flex items-center gap-3 py-1 px-2 rounded text-xs",
-          isCurrentPlayer && "bg-gold-dark/10 ring-1 ring-gold-light/20"
+          "border-b border-abyss-700/50 hover:bg-abyss-700/30 transition-colors",
+          isCurrentPlayer && "bg-gold-dark/5"
         )}
       >
-        {/* champion icon + level */}
-        <div className="relative flex-shrink-0">
-          <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded">
-            <div className="w-8 h-8 rounded-[inherit] overflow-hidden bg-accent-dark">
-              <Image
-                src={getChampionImageUrl(p.championName, ddragonVersion)}
-                alt={p.championName}
-                width={32}
-                height={32}
-                className="w-full h-full scale-110 object-cover"
-              />
-            </div>
-          </div>
-          <div className="absolute -bottom-0.5 -right-0.5 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded">
-            <div className="bg-gray-800 rounded-[inherit] px-0.5 text-[9px] font-bold leading-none">
-              {p.champLevel}
-            </div>
-          </div>
-        </div>
-
-        {/* name - clickable */}
-        <Link 
-          href={profileUrl}
-          className={clsx(
-            "flex-1 min-w-0 font-medium truncate hover:text-gold-light transition-colors text-base",
-            isCurrentPlayer ? "text-gold-light" : "text-white"
-          )}
-        >
-          {playerName}
-          {p.riotIdTagline && <span className="text-text-muted">#{p.riotIdTagline}</span>}
-        </Link>
-
-        {/* pig score */}
-        {(() => {
-          const details = participantDetails.get(p.puuid)
-          // Use pigScores state if available, then fall back to p.pigScore, then details
-          const pigScore = pigScores[p.puuid] ?? p.pigScore ?? details?.pig_score
-          const isLoading = details?.loading && !pigScore
-          
-          if (isLoading) {
-            return (
-              <div className="flex flex-col items-center w-10 flex-shrink-0">
-                <div className="w-4 h-4 border-2 border-accent-light/30 border-t-accent-light rounded-full animate-spin"></div>
-              </div>
-            )
-          }
-          
-          if (pigScore !== null && pigScore !== undefined) {
-            return (
-              <div className="flex flex-col items-center w-10 flex-shrink-0">
-                <div className={clsx(
-                  "text-xs font-bold leading-tight",
-                  pigScore >= 50 ? "text-accent-light" : "text-negative"
-                )}>
-                  {pigScore.toFixed(0)}
-                </div>
-                <div className="text-[9px] text-gray-400 leading-tight">
-                  PIG
-                </div>
-              </div>
-            )
-          }
-          
-          return null
-        })()}
-
-        {/* damage */}
-        <div className="flex flex-col items-center w-12 flex-shrink-0">
-          <div className="text-xs text-white font-medium leading-tight">
-            {formatDamage(p.totalDamageDealtToChampions || 0)}
-          </div>
-          <div className="text-[9px] text-gray-400 leading-tight">
-            {dpm} DPM
-          </div>
-        </div>
-
-        {/* kda */}
-        <div className="flex flex-col items-center w-12 flex-shrink-0">
-          <div className="text-xs text-white font-medium leading-tight flex items-baseline gap-0.5">
-            <span>{p.kills}</span>
-            <span className="text-gray-500">/</span>
-            <span className="text-negative">{p.deaths}</span>
-            <span className="text-gray-500">/</span>
-            <span>{p.assists}</span>
-          </div>
-          <div className="text-[9px] text-gray-400 leading-tight">
-            {kda} KDA
-          </div>
-        </div>
-
-        {/* gold */}
-        <div className="flex flex-col items-center w-12 flex-shrink-0">
-          <div className="text-xs text-white font-medium leading-tight">
-            {formatGold(p.goldEarned)}
-          </div>
-          <div className="text-[9px] text-gray-400 leading-tight">
-            {p.totalMinionsKilled} CS
-          </div>
-        </div>
-
-        {/* items */}
-        <div className="flex gap-0.5">
-          {items.map((item, idx) => (
-            <div
-              key={idx}
-              className="w-7 h-7 rounded bg-gray-800 border border-gray-700 overflow-hidden"
-            >
-              {item > 0 && (
+        {/* champion & info */}
+        <td className="py-3 pl-2">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800">
                 <Image
-                  src={getItemImageUrl(item, ddragonVersion)}
-                  alt={`Item ${item}`}
-                  width={28}
-                  height={28}
-                  className="w-full h-full object-cover"
+                  src={getChampionImageUrl(p.championName, ddragonVersion)}
+                  alt={p.championName}
+                  width={32}
+                  height={32}
+                  className="w-full h-full scale-110 object-cover"
                 />
-              )}
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-abyss-900 rounded-full w-4 h-4 flex items-center justify-center text-[9px] border border-abyss-700">
+                {p.champLevel}
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
+            
+            <div className="flex gap-1">
+              <div className="flex flex-col gap-0.5">
+                <div className="w-4 h-4 rounded overflow-hidden bg-abyss-800">
+                  <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="Summoner 1" width={16} height={16} />
+                </div>
+                <div className="w-4 h-4 rounded overflow-hidden bg-abyss-800">
+                  <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="Summoner 2" width={16} height={16} />
+                </div>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="w-4 h-4 rounded-full overflow-hidden bg-abyss-800">
+                  <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="Keystone" width={16} height={16} />
+                </div>
+                <div className="w-4 h-4 rounded-full overflow-hidden bg-abyss-800">
+                  <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="Secondary" width={16} height={16} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col min-w-0">
+              <Link 
+                href={profileUrl}
+                className={clsx(
+                  "text-xs font-bold truncate hover:underline",
+                  isCurrentPlayer ? "text-gold-light" : "text-white"
+                )}
+              >
+                {playerName}
+              </Link>
+            </div>
+          </div>
+        </td>
+
+        {/* PIG */}
+        <td className="py-3 text-center">
+          <div className="flex flex-col items-center justify-center">
+            <span className={clsx(
+              "text-sm font-bold",
+              score < 50 ? "text-negative" : "text-accent-light"
+            )}>
+              {score.toFixed(1)}
+            </span>
+            {badge ? (
+              <span className={clsx(
+                "text-[10px] px-1.5 rounded-full font-bold",
+                badge === "MVP" ? "bg-yellow-500/20 text-yellow-400" : "bg-purple-500/20 text-purple-400"
+              )}>
+                {badge}
+              </span>
+            ) : (
+              <span className="text-[10px] text-gray-500">{rank}th</span>
+            )}
+          </div>
+        </td>
+
+        {/* KDA */}
+        <td className="py-3 text-center">
+          <div className="flex flex-col items-center">
+            <div className="text-xs text-gray-300">
+              {p.kills}/{p.deaths}/{p.assists} <span className="text-gray-500">({killParticipation}%)</span>
+            </div>
+            <div className={clsx(
+              "text-[10px] font-bold",
+              Number(kda) >= 4 ? "text-yellow-400" : Number(kda) >= 3 ? "text-blue-400" : "text-gray-500"
+            )}>
+              {kda}:1
+            </div>
+          </div>
+        </td>
+
+        {/* Damage */}
+        <td className="py-3 text-center w-32 px-4">
+          <div className="flex flex-col gap-2 justify-center h-full">
+            <div className="flex flex-col gap-0.5 text-[10px]">
+              <span className="text-negative text-center leading-none">{formatDamage(p.totalDamageDealtToChampions)}</span>
+              <div className="h-2 bg-abyss-800 rounded-full overflow-hidden w-full">
+                <div className="h-full bg-negative" style={{ width: `${damageDealtPct}%` }}></div>
+              </div>
+            </div>
+          </div>
+        </td>
+
+        {/* CS */}
+        <td className="py-3 text-center">
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-gray-300">{p.totalMinionsKilled}</span>
+            <span className="text-[10px] text-gray-500">{csPerMin}/m</span>
+          </div>
+        </td>
+
+        {/* Items */}
+        <td className="py-3 pl-4">
+          <div className="flex gap-0.5">
+            {items.map((item, idx) => (
+              <div
+                key={idx}
+                className={clsx(
+                  "w-7 h-7 rounded bg-abyss-800 border border-abyss-700 overflow-hidden",
+                  idx === 6 && "rounded-full" // trinket
+                )}
+              >
+                {item > 0 && (
+                  <Image
+                    src={getItemImageUrl(item, ddragonVersion)}
+                    alt={`Item ${item}`}
+                    width={28}
+                    height={28}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </td>
+      </tr>
     )
   }
 
+  const isPlayerInTeam100 = team100.some(p => p.puuid === currentPuuid)
+  const teamsToRender = isPlayerInTeam100 
+    ? [
+        { players: team100, won: team100Won, name: 'Blue Team', isFirst: true },
+        { players: team200, won: team200Won, name: 'Red Team', isFirst: false }
+      ]
+    : [
+        { players: team200, won: team200Won, name: 'Red Team', isFirst: true },
+        { players: team100, won: team100Won, name: 'Blue Team', isFirst: false }
+      ]
+
   return (
     <div className="bg-abyss-600 rounded-b-lg border-t border-abyss-700">
-      {/* Tab Navigation */}
+      {/* tab navigation */}
       <div className="flex border-b border-abyss-700">
         <button
           onClick={() => setSelectedTab('overview')}
           className={clsx(
-            "px-6 py-3 font-semibold text-sm transition-all border-b-2",
+            "flex-1 px-6 py-3 font-semibold text-sm transition-all border-b-2",
             selectedTab === 'overview'
-              ? "border-gold-light text-white bg-abyss-700/50"
-              : "border-transparent text-subtitle hover:text-white hover:bg-abyss-700/30"
+              ? "border-accent-light text-white bg-abyss-700/50"
+              : "border-transparent text-text-muted hover:text-white"
           )}
         >
           Overview
@@ -303,71 +372,64 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         <button
           onClick={() => setSelectedTab('build')}
           className={clsx(
-            "px-6 py-3 font-semibold text-sm transition-all border-b-2",
+            "flex-1 px-6 py-3 font-semibold text-sm transition-all border-b-2",
             selectedTab === 'build'
-              ? "border-gold-light text-white bg-abyss-700/50"
-              : "border-transparent text-subtitle hover:text-white hover:bg-abyss-700/30"
+              ? "border-accent-light text-white bg-abyss-700/50"
+              : "border-transparent text-text-muted hover:text-white"
           )}
         >
           Build
         </button>
+        <button
+          onClick={() => setSelectedTab('performance')}
+          className={clsx(
+            "flex-1 px-6 py-3 font-semibold text-sm transition-all border-b-2",
+            selectedTab === 'performance'
+              ? "border-accent-light text-white bg-abyss-700/50"
+              : "border-transparent text-text-muted hover:text-white"
+          )}
+        >
+          Performance
+        </button>
       </div>
 
       {/* Tab Content */}
-      <div className="p-4">
+      <div className="p-0">
         {selectedTab === 'overview' ? (
-          <div className="space-y-4">
-            {/* Team 100 */}
-            <div className={clsx(
-              "border-2 rounded-lg p-3",
-              team100Won 
-                ? "border-green-500/30 bg-green-900/10" 
-                : "border-red-500/30 bg-red-900/10"
-            )}>
-              <div className="flex justify-between items-center mb-2 pb-2 border-b border-abyss-700">
-                <h3 className={clsx(
-                  "font-bold text-sm",
-                  team100Won ? "text-green-400" : "text-red-400"
-                )}>
-                  {team100Won ? 'VICTORY' : 'DEFEAT'}
-                </h3>
-                <div className="text-xs text-subtitle">
-                  {team100Kills} kills • {formatGold(team100Gold)} gold
-                </div>
+          <div className="flex flex-col">
+            {teamsToRender.map((team) => (
+              <div 
+                key={team.name}
+                className={clsx(
+                  team.isFirst && "border-b border-abyss-700",
+                  team.won ? "bg-[#28344E]" : "bg-[#59343B]"
+                )}
+              >
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-abyss-700/50 text-xs text-gray-400">
+                    <tr>
+                      <th className="py-2 pl-2 font-bold">
+                        <span className={team.won ? "text-accent-light" : "text-negative"}>{team.won ? 'Victory' : 'Defeat'}</span> <span className="text-text-muted font-normal">({team.name})</span>
+                      </th>
+                      <th className="py-2 text-center font-normal">PIG</th>
+                      <th className="py-2 text-center font-normal">KDA</th>
+                      <th className="py-2 text-center font-normal">Damage</th>
+                      <th className="py-2 text-center font-normal">CS</th>
+                      <th className="py-2 pl-4 font-normal">Items</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {team.players.map(p => renderPlayerRow(p, p.puuid === currentPuuid))}
+                  </tbody>
+                </table>
               </div>
-              <div className="space-y-1">
-                {team100.map(p => renderPlayer(p, p.puuid === currentPuuid))}
-              </div>
-            </div>
-
-            {/* Team 200 */}
-            <div className={clsx(
-              "border-2 rounded-lg p-3",
-              team200Won 
-                ? "border-green-500/30 bg-green-900/10" 
-                : "border-red-500/30 bg-red-900/10"
-            )}>
-              <div className="flex justify-between items-center mb-2 pb-2 border-b border-abyss-700">
-                <h3 className={clsx(
-                  "font-bold text-sm",
-                  team200Won ? "text-green-400" : "text-red-400"
-                )}>
-                  {team200Won ? 'VICTORY' : 'DEFEAT'}
-                </h3>
-                <div className="text-xs text-subtitle">
-                  {team200Kills} kills • {formatGold(team200Gold)} gold
-                </div>
-              </div>
-              <div className="space-y-1">
-                {team200.map(p => renderPlayer(p, p.puuid === currentPuuid))}
-              </div>
-            </div>
+            ))}
           </div>
-        ) : (
-          <div className="space-y-6">
+        ) : selectedTab === 'build' ? (
+          <div className="p-4 space-y-6">
             {currentPlayer && (
               <>
-                {/* Item Timeline */}
+                {/* item Timeline */}
                 <div className="bg-abyss-700 rounded-lg p-4">
                   <h3 className="text-sm font-bold text-white mb-3">Item Timeline</h3>
                   {(() => {
@@ -434,11 +496,11 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   })()}
                 </div>
 
-                {/* Runes */}
+                {/* runes */}
                 <div className="bg-abyss-700 rounded-lg p-4">
                   <h3 className="text-sm font-bold text-white mb-3">Runes</h3>
                   <div className="flex gap-6">
-                    {/* Primary Tree */}
+                    {/* primary Tree */}
                     <div className="flex-1">
                       <div className="text-xs font-semibold text-gold-light mb-2">Primary</div>
                       <div className="grid grid-cols-4 gap-2">
@@ -520,6 +582,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                 </div>
               </>
             )}
+          </div>
+        ) : (
+          <div className="p-4 min-h-[200px] flex items-center justify-center text-gray-500">
+            Performance stats coming soon
           </div>
         )}
       </div>

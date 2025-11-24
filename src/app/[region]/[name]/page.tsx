@@ -197,7 +197,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
   return (
     <main className="min-h-screen bg-abyss-700 text-white">
-      <div className={`max-w-7xl mx-auto px-4 ${error ? 'py-4' : 'pb-8'}`}>
+      <div className={`max-w-6xl mx-auto px-4 ${error ? 'py-4' : 'pb-8'}`}>
         {error && !error.startsWith('wrong-region:') && (
           <div className="bg-red-900/20 border border-red-500/50 rounded-2xl p-6 mb-6">
             <p className="text-negative text-lg">{error}</p>

@@ -23,18 +23,23 @@ export async function GET(request: NextRequest) {
         .eq('patch', patch)
       
       // Fetch champions sorted by winrate in database
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('champion_stats')
-        .select('champion_name, games, wins, last_updated')
+        .select('champion_name, games, wins, last_updated', { count: 'exact' })
         .eq('patch', patch)
         .gte('games', 1)
         .order('wins', { ascending: false })
         .order('games', { ascending: false })
         .range(offset, offset + limit - 1)
       
-      if (error) throw error
+      if (error) {
+        console.error('Database error:', error)
+        throw error
+      }
       
-      totalCount = data?.length || 0
+      console.log(`Found ${data?.length || 0} champions for patch ${patch} (total: ${count})`)
+      
+      totalCount = count || 0
       
       // Transform data and calculate winrate on client
       champions = (data || []).map(row => {

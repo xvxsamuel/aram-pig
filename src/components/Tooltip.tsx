@@ -255,7 +255,7 @@ const TooltipContent = memo(({
   )
   
   return (
-    <div className="bg-[#1a1a1a] border border-gold-dark/40 rounded-lg p-3 shadow-xl w-80">
+    <div className="bg-[#1a1a1a] border border-gold-dark/40 rounded-lg p-3 shadow-xl w-80 text-left">
       {/* header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">

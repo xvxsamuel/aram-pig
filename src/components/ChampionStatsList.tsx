@@ -354,7 +354,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                             alt={stats.championName}
                             width={48}
                             height={48}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover scale-110"
                             unoptimized
                           />
                         </div>
