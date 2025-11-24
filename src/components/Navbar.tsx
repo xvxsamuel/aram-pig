@@ -4,7 +4,7 @@ import SearchBar from "./SearchBar"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { UserGroupIcon, InformationCircleIcon, CubeIcon } from '@heroicons/react/24/outline'
+import { UserGroupIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import Image from "next/image"
 
 export default function Navbar() {
@@ -14,7 +14,6 @@ export default function Navbar() {
   
   // Check if current page is active
   const isChampionsActive = pathname?.startsWith('/champions')
-  const isItemsActive = pathname?.startsWith('/items')
   const isAboutActive = pathname?.startsWith('/about')
   
   return (
@@ -72,33 +71,6 @@ export default function Navbar() {
                 }}
               >
                 Champions
-              </span>
-            </Link>
-            
-            <Link 
-              href="/items" 
-              className={`flex items-center gap-4 py-3 rounded-lg transition-all group relative h-[40px] ${
-                isItemsActive ? 'bg-accent-light/30' : 'hover:bg-accent-light/20'
-              }`}
-            >
-              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[4px] top-[8px]">
-                <CubeIcon className={`w-6 h-6 transition-colors ${
-                  isItemsActive ? 'text-accent-light' : 'text-gold-light group-hover:text-accent-light'
-                }`} />
-              </div>
-              <span 
-                className={`font-semibold whitespace-nowrap transition-all duration-300 bg-clip-text text-transparent ${
-                  isItemsActive 
-                    ? 'bg-gradient-to-b from-accent-light to-accent-light' 
-                    : 'bg-gradient-to-b from-gold-light to-gold-dark group-hover:from-accent-light group-hover:to-accent-light'
-                }`}
-                style={{ 
-                  opacity: sidebarHovered ? 1 : 0,
-                  marginLeft: '42px',
-                  paddingTop: '2px'
-                }}
-              >
-                Items
               </span>
             </Link>
             
