@@ -623,7 +623,7 @@ async function processMatchesInBackground(
                 const buildOrder = extractBuildOrder(timeline, participantId)
                 const firstBuy = extractFirstBuy(timeline, participantId)
                 buildOrderForStats = buildOrder.filter(id => isFinishedItem(id)).slice(0, 6)
-                firstBuyForStats = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : ''
+                firstBuyForStats = (firstBuy.length > 0 ? formatFirstBuy(firstBuy) : '') ?? ''
               }
               
               const skillOrder = abilityOrderStr ? extractSkillOrderAbbreviation(abilityOrderStr) : ''
@@ -887,7 +887,7 @@ async function processMatchesInBackground(
                 const buildOrder = extractBuildOrder(timeline, participantId)
                 const firstBuy = extractFirstBuy(timeline, participantId)
                 buildOrderForStats = buildOrder.filter(id => isFinishedItem(id)).slice(0, 6)
-                firstBuyForStats = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : ''
+                firstBuyForStats = (firstBuy.length > 0 ? formatFirstBuy(firstBuy) : '') ?? ''
               }
             
               const skillOrder = abilityOrderStr ? extractSkillOrderAbbreviation(abilityOrderStr) : ''
