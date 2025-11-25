@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
+.github/instructions
 .next
 next-env.d.ts
 dist
