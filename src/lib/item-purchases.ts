@@ -3,13 +3,44 @@
 
 import { extractItemPurchases } from './item-purchase-history'
 import type { MatchTimeline } from './riot-api'
+import itemsData from '../data/items.json'
+
+// type for items.json structure
+interface ItemData {
+  name: string
+  totalCost: number
+  [key: string]: unknown
+}
+
+const items = itemsData as Record<string, ItemData>
+
+// ARAM starting gold is 1400
+const ARAM_STARTING_GOLD = 1400
+
+// Time window for starter items (30 seconds from first purchase)
+const STARTER_TIME_WINDOW = 30000
+
+// Hard cap at 1 minute after game start
+const MAX_STARTER_TIME = 60000
 
 /**
- * Extract first buy (items purchased up to 1400 gold within 20 seconds of first purchase)
- * Uses extractItemPurchases to handle undos/sells correctly
+ * Get item cost from items.json
+ * Returns 0 for unknown items (free items like Poro-Snax)
+ */
+function getItemCost(itemId: number): number {
+  const item = items[String(itemId)]
+  return item?.totalCost ?? 0
+}
+
+/**
+ * Extract first buy (items purchased at game start in ARAM)
+ * In ARAM, players start with 1400 gold
+ * We capture items purchased within 30 seconds of first buy AND within 1 minute of game start
+ * AND until total cost exceeds starting gold budget
+ * Accounts for undos and sells via extractItemPurchases
  * @param timeline - Match timeline data from Riot API
  * @param participantId - Participant ID (1-10)
- * @returns Array of item IDs purchased within 1400 gold budget and 20s window, or empty array if unavailable
+ * @returns Array of item IDs purchased at game start, or empty array if unavailable
  */
 export function extractFirstBuy(
   timeline: MatchTimeline | null | undefined,
@@ -17,55 +48,30 @@ export function extractFirstBuy(
 ): number[] {
   if (!timeline) return []
   
-  // item costs for calculating starter budget
-  const itemCosts: Record<number, number> = {
-    1001: 300, 1004: 300, 1006: 400, 1011: 350, 1028: 400, 1029: 300, 1031: 300, 1036: 350,
-    1037: 1300, 1038: 875, 1042: 400, 1043: 350, 1052: 350, 1053: 350, 1054: 350, 1055: 350,
-    1056: 350, 1057: 350, 1058: 350, 2003: 50, 2031: 150, 2033: 0, 2052: 0, 3044: 0,
-    3051: 800, 3057: 800, 3058: 800, 3070: 150, 3071: 800, 3076: 800, 3077: 800,
-    3082: 800, 3083: 800, 3086: 800, 3089: 850, 3091: 800, 3108: 800, 3113: 800,
-    3114: 800, 3115: 800, 3117: 800, 3133: 800, 3134: 800, 3135: 800, 3145: 800,
-    3152: 800, 3155: 800, 3156: 800, 3158: 800, 3161: 800, 3165: 800, 3177: 800,
-    3179: 800, 3181: 800, 3184: 800, 3190: 800, 3193: 800
-  }
-  
-  const MAX_STARTING_GOLD = 1400
-  const MAX_TIME_WINDOW = 20000 // 20 seconds after first purchase
-  
-  // use the same undo-filtering logic as build orders
+  // use extractItemPurchases which handles undos and sells correctly
   const allPurchases = extractItemPurchases(timeline, participantId)
   
-  // find first purchase timestamp
-  let firstPurchaseTime: number | null = null
-  for (const purchase of allPurchases) {
-    if (purchase.action === 'buy') {
-      firstPurchaseTime = purchase.timestamp
-      break
-    }
-  }
+  // find first purchase timestamp for time window
+  const firstPurchaseTime = allPurchases.find(p => p.action === 'buy')?.timestamp ?? 0
+  const cutoffTime = Math.min(firstPurchaseTime + STARTER_TIME_WINDOW, MAX_STARTER_TIME)
   
-  if (firstPurchaseTime === null) return []
-  
-  const cutoffTime = firstPurchaseTime + MAX_TIME_WINDOW
-  
-  // collect items until we hit 1400 gold budget or time cutoff
+  // collect items until we exceed gold budget OR time window
   const firstBuyItems: number[] = []
-  let totalCost = 0
+  let totalGold = 0
   
   for (const purchase of allPurchases) {
     if (purchase.action !== 'buy') continue
     
-    // stop if purchase is after cutoff time
+    // stop if outside time window
     if (purchase.timestamp > cutoffTime) break
     
-    const itemCost = itemCosts[purchase.itemId] || 0
-    const newTotal = totalCost + itemCost
+    const itemCost = getItemCost(purchase.itemId)
     
-    // stop if adding this item would exceed starting gold
-    if (newTotal > MAX_STARTING_GOLD) break
+    // if adding this item would exceed budget, stop
+    if (totalGold + itemCost > ARAM_STARTING_GOLD) break
     
     firstBuyItems.push(purchase.itemId)
-    totalCost = newTotal
+    totalGold += itemCost
   }
   
   return firstBuyItems

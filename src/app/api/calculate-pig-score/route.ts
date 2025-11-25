@@ -1,7 +1,33 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '../../../lib/supabase'
 import { calculatePigScore } from '../../../lib/pig-score-v2'
-import { getLatestPatches } from '../../../lib/riot-patches'
+
+// extract skill max order from ability order string (e.g., "Q W E Q W R Q W Q W R W W E E R E E" -> "qwe")
+function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefined): string | undefined {
+  if (!abilityOrder) return undefined
+  
+  const abilities = abilityOrder.split(' ')
+  const counts = { Q: 0, W: 0, E: 0, R: 0 }
+  const maxOrder: string[] = []
+  
+  for (const ability of abilities) {
+    if (ability in counts) {
+      counts[ability as keyof typeof counts]++
+      if (ability !== 'R' && counts[ability as keyof typeof counts] === 5) {
+        maxOrder.push(ability.toLowerCase())
+      }
+    }
+  }
+  
+  const result = maxOrder.join('')
+  if (result.length < 2) return undefined
+  if (result.length === 2) {
+    const abilities = ['q', 'w', 'e']
+    const missing = abilities.find(a => !result.includes(a))
+    return missing ? result + missing : result
+  }
+  return result
+}
 
 export async function POST(request: Request) {
   try {
@@ -31,7 +57,7 @@ export async function POST(request: Request) {
       )
     }
     
-    // Check if already has pig score
+    // Always return cached pig score if it exists
     if (participantData.match_data?.pigScore !== null && participantData.match_data?.pigScore !== undefined) {
       return NextResponse.json({ 
         pigScore: participantData.match_data.pigScore,
@@ -39,10 +65,10 @@ export async function POST(request: Request) {
       })
     }
     
-    // Get game_duration from matches table
+    // Get match record for game_duration and game_creation
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
-      .select('game_duration')
+      .select('game_duration, game_creation')
       .eq('match_id', matchId)
       .single()
     
@@ -53,14 +79,13 @@ export async function POST(request: Request) {
       )
     }
     
-    // get latest 3 patches to determine if match is recent enough
-    const latestPatches = await getLatestPatches()
-    const last3Patches = latestPatches.slice(0, 3)
-    
-    if (!last3Patches.includes(participantData.patch)) {
+    // Only calculate pig scores for matches within 30 days
+    // Timeline data (needed for ability order, build order) is only available for 30 days
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+    if (matchRecord.game_creation < thirtyDaysAgo) {
       return NextResponse.json({ 
         pigScore: null,
-        reason: 'Match is older than last 3 patches' 
+        reason: 'Match older than 30 days - timeline data not available'
       })
     }
     
@@ -81,7 +106,12 @@ export async function POST(request: Request) {
       item4: participantData.match_data.items?.[4] || 0,
       item5: participantData.match_data.items?.[5] || 0,
       perk0: participantData.match_data.runes?.primary?.perks?.[0] || 0,
-      patch: participantData.patch
+      patch: participantData.patch,
+      // new fields
+      spell1: participantData.match_data.spells?.[0] || 0,
+      spell2: participantData.match_data.spells?.[1] || 0,
+      skillOrder: extractSkillOrderFromAbilityOrder(participantData.match_data.abilityOrder),
+      buildOrder: participantData.match_data.buildOrder || undefined
     })
     
     // Store the calculated pig score
@@ -136,10 +166,10 @@ export async function PUT(request: Request) {
       )
     }
     
-    // Get game_duration from matches table
+    // Get game_duration and game_creation from matches table
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
-      .select('game_duration')
+      .select('game_duration, game_creation')
       .eq('match_id', matchId)
       .single()
     
@@ -150,22 +180,22 @@ export async function PUT(request: Request) {
       )
     }
     
-    // Get latest 3 patches
-    const latestPatches = await getLatestPatches()
-    const last3Patches = latestPatches.slice(0, 3)
+    // Check if match is older than 30 days
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+    const isOlderThan30Days = matchRecord.game_creation < thirtyDaysAgo
     
     const results: Record<string, number | null> = {}
     const updates: Array<{ puuid: string; pigScore: number }> = []
     
     for (const participant of participants) {
-      // Skip if already has pig score
+      // Always return cached pig score if it exists
       if (participant.match_data?.pigScore !== null && participant.match_data?.pigScore !== undefined) {
         results[participant.puuid] = participant.match_data.pigScore
         continue
       }
       
-      // Skip if match is too old
-      if (!last3Patches.includes(participant.patch)) {
+      // Skip calculation for old matches - timeline data not available
+      if (isOlderThan30Days) {
         results[participant.puuid] = null
         continue
       }
@@ -187,7 +217,12 @@ export async function PUT(request: Request) {
         item4: participant.match_data.items?.[4] || 0,
         item5: participant.match_data.items?.[5] || 0,
         perk0: participant.match_data.runes?.primary?.perks?.[0] || 0,
-        patch: participant.patch
+        patch: participant.patch,
+        // new fields
+        spell1: participant.match_data.spells?.[0] || 0,
+        spell2: participant.match_data.spells?.[1] || 0,
+        skillOrder: extractSkillOrderFromAbilityOrder(participant.match_data.abilityOrder),
+        buildOrder: participant.match_data.buildOrder || undefined
       })
       
       results[participant.puuid] = pigScore

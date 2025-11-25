@@ -1,63 +1,66 @@
-// Process timeline into purchase/sell history, filtering out undos
+// Process timeline into purchase history, filtering out undos and sells
 import type { MatchTimeline } from './riot-api'
 
 export interface ItemPurchaseEvent {
   itemId: number
   timestamp: number
-  action: 'buy' | 'sell'
+  action: 'buy'
 }
 
 /**
- * Extract item purchase history from timeline, accounting for undos and sales
- * Returns chronological list of buy/sell events
+ * Extract item purchase history from timeline, accounting for undos and sells
+ * - ITEM_UNDO: happens immediately after purchase, skip both
+ * - ITEM_SOLD: happens later in game, removes item from purchase list
+ * Returns chronological list of buy events that weren't undone or sold
  */
 export function extractItemPurchases(timeline: MatchTimeline, participantId: number): ItemPurchaseEvent[] {
   if (!timeline?.info?.frames) return []
   
-  const purchases: ItemPurchaseEvent[] = []
-  const eventQueue: Array<{ type: string; itemId: number; timestamp: number; index: number }> = []
+  const allEvents: Array<{ type: string; itemId: number; timestamp: number }> = []
   
-  // Collect all item events for this participant
+  // Collect all item events for this participant in order
   for (const frame of timeline.info.frames) {
     const events = frame.events || []
-    for (let i = 0; i < events.length; i++) {
-      const event = events[i]
+    for (const event of events) {
       if (event.participantId !== participantId) continue
       if (!event.itemId) continue // skip events without itemId
       
       if (event.type === 'ITEM_PURCHASED' || event.type === 'ITEM_SOLD' || event.type === 'ITEM_UNDO') {
-        eventQueue.push({
+        allEvents.push({
           type: event.type,
           itemId: event.itemId,
-          timestamp: event.timestamp,
-          index: eventQueue.length
+          timestamp: event.timestamp
         })
       }
     }
   }
   
-  // Process events, filtering out undos
-  const processedIndices = new Set<number>()
+  // First pass: handle immediate undos (skip purchase+undo pairs)
+  const afterUndos: Array<{ type: string; itemId: number; timestamp: number }> = []
+  let i = 0
   
-  for (let i = 0; i < eventQueue.length; i++) {
-    if (processedIndices.has(i)) continue
+  while (i < allEvents.length) {
+    const event = allEvents[i]
     
-    const event = eventQueue[i]
-    
-    // Check if next event is an undo of this purchase/sale
-    if (i + 1 < eventQueue.length) {
-      const nextEvent = eventQueue[i + 1]
+    // Check if next event is an immediate undo of this purchase
+    if (event.type === 'ITEM_PURCHASED' && i + 1 < allEvents.length) {
+      const nextEvent = allEvents[i + 1]
       
       // If next event is UNDO and matches this item, skip both
       if (nextEvent.type === 'ITEM_UNDO' && nextEvent.itemId === event.itemId) {
-        // Undo detected - skip both this event and the undo
-        processedIndices.add(i)
-        processedIndices.add(i + 1)
+        i += 2 // skip both events
         continue
       }
     }
     
-    // Add non-undone purchases and sales
+    afterUndos.push(event)
+    i++
+  }
+  
+  // Second pass: build purchase list, removing sold items
+  const purchases: ItemPurchaseEvent[] = []
+  
+  for (const event of afterUndos) {
     if (event.type === 'ITEM_PURCHASED') {
       purchases.push({
         itemId: event.itemId,
@@ -65,42 +68,22 @@ export function extractItemPurchases(timeline: MatchTimeline, participantId: num
         action: 'buy'
       })
     } else if (event.type === 'ITEM_SOLD') {
-      purchases.push({
-        itemId: event.itemId,
-        timestamp: event.timestamp,
-        action: 'sell'
-      })
+      // Remove the most recent purchase of this item (player sold it)
+      for (let j = purchases.length - 1; j >= 0; j--) {
+        if (purchases[j].itemId === event.itemId) {
+          purchases.splice(j, 1)
+          break
+        }
+      }
     }
-    
-    processedIndices.add(i)
   }
   
   return purchases
 }
 
 /**
- * Get net items owned at end of game (buys minus sells)
+ * Get list of items from purchases (simple extraction since sells are already filtered)
  */
 export function getFinalItems(purchases: ItemPurchaseEvent[]): number[] {
-  const inventory = new Map<number, number>() // itemId -> count
-  
-  for (const purchase of purchases) {
-    const current = inventory.get(purchase.itemId) || 0
-    
-    if (purchase.action === 'buy') {
-      inventory.set(purchase.itemId, current + 1)
-    } else if (purchase.action === 'sell') {
-      inventory.set(purchase.itemId, Math.max(0, current - 1))
-    }
-  }
-  
-  // Return items with count > 0
-  const items: number[] = []
-  for (const [itemId, count] of inventory.entries()) {
-    for (let i = 0; i < count; i++) {
-      items.push(itemId)
-    }
-  }
-  
-  return items
+  return purchases.map(p => p.itemId)
 }

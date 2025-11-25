@@ -33,45 +33,93 @@ interface ParticipantDetails {
   loading: boolean
 }
 
+interface PigScoreBreakdown {
+  finalScore: number
+  playerStats: {
+    damageToChampionsPerMin: number
+    totalDamagePerMin: number
+    healingShieldingPerMin: number
+    ccTimePerMin: number
+    deathsPerMin: number
+  }
+  championAvgStats: {
+    damageToChampionsPerMin: number
+    totalDamagePerMin: number
+    healingShieldingPerMin: number
+    ccTimePerMin: number
+  }
+  penalties: {
+    name: string
+    penalty: number
+    maxPenalty: number
+    playerValue?: number
+    avgValue?: number
+    percentOfAvg?: number
+  }[]
+  totalGames: number
+  patch: string
+}
+
 export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin, isRemake }: Props) {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
   const [participantDetails, setParticipantDetails] = useState<Map<string, ParticipantDetails>>(new Map())
-  const [calculatingPigScores, setCalculatingPigScores] = useState(false)
-  const [pigScores, setPigScores] = useState<Record<string, number>>({})
+  const [pigScores, setPigScores] = useState<Record<string, number | null>>({})
+  const [loadingPigScores, setLoadingPigScores] = useState(false)
+  const [pigScoresFetched, setPigScoresFetched] = useState(false)
+  const [pigScoreBreakdown, setPigScoreBreakdown] = useState<PigScoreBreakdown | null>(null)
+  const [loadingBreakdown, setLoadingBreakdown] = useState(false)
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
+  
+  // check if match is within 30 days
+  const isWithin30Days = (Date.now() - match.info.gameCreation) < (30 * 24 * 60 * 60 * 1000)
 
-  // calculate pig scores for all participants when component mounts
+  // calculate pig scores for all players when component mounts (for recent matches)
   useEffect(() => {
-    // skip if flag is disabled
-    const recalculateEnabled = process.env.NEXT_PUBLIC_RECALCULATE_PIG_SCORES === 'true'
-    if (!recalculateEnabled) return
+    if (!isWithin30Days || pigScoresFetched) return
     
-    const calculatePigScores = async () => {
-      setCalculatingPigScores(true)
-      try {
-        const response = await fetch('/api/calculate-pig-score', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ matchId: match.metadata.matchId })
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          console.log('Calculated pig scores for match:', data)
-          // update pig scores state
-          if (data.results) {
-            setPigScores(data.results)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to calculate pig scores:', error)
-      } finally {
-        setCalculatingPigScores(false)
-      }
+    // check if we already have all pig scores from match data
+    const allHavePigScores = match.info.participants.every(p => 
+      p.pigScore !== null && p.pigScore !== undefined
+    )
+    if (allHavePigScores) {
+      setPigScoresFetched(true)
+      return
     }
     
-    calculatePigScores()
-  }, [match.metadata.matchId])
+    setLoadingPigScores(true)
+    setPigScoresFetched(true) // mark as fetched to prevent re-runs
+    
+    // use PUT endpoint to calculate pig scores for all participants
+    fetch('/api/calculate-pig-score', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ matchId: match.metadata.matchId })
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.results) {
+          setPigScores(data.results)
+        }
+      })
+      .catch(err => console.error('Failed to calculate pig scores:', err))
+      .finally(() => setLoadingPigScores(false))
+  }, [match.metadata.matchId, match.info.participants, match.info.gameCreation, isWithin30Days, pigScoresFetched])
+
+  // fetch pig score breakdown when performance tab is selected
+  useEffect(() => {
+    if (selectedTab === 'performance' && !pigScoreBreakdown && !loadingBreakdown) {
+      setLoadingBreakdown(true)
+      fetch(`/api/pig-score-breakdown?matchId=${match.metadata.matchId}&puuid=${currentPuuid}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && !data.error) {
+            setPigScoreBreakdown(data)
+          }
+        })
+        .catch(err => console.error('Failed to fetch pig score breakdown:', err))
+        .finally(() => setLoadingBreakdown(false))
+    }
+  }, [selectedTab, match.metadata.matchId, currentPuuid, pigScoreBreakdown, loadingBreakdown])
 
   // separate teams
   const team100 = match.info.participants.filter(p => p.teamId === 100)
@@ -93,33 +141,56 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const allParticipants = match.info.participants
   const maxDamageDealt = Math.max(...allParticipants.map(p => p.totalDamageDealtToChampions || 0))
   const maxDamageTaken = Math.max(...allParticipants.map(p => (p as any).totalDamageTaken || 0))
+  
+  // Check if any participant has a pig score (only show PIG column if within 30 days OR scores exist OR loading)
+  const hasPigScores = isWithin30Days || loadingPigScores || allParticipants.some(p => 
+    (pigScores[p.puuid] ?? p.pigScore) !== null && (pigScores[p.puuid] ?? p.pigScore) !== undefined
+  )
+  
+  // Check if ALL participants have pig scores (for MVP/ACE display)
+  const allHavePigScores = allParticipants.every(p => {
+    const score = pigScores[p.puuid] ?? p.pigScore
+    return score !== null && score !== undefined
+  })
+
+  // Helper to get pig score for a participant (returns null if not available)
+  const getPigScore = (puuid: string): number | null => {
+    const fromState = pigScores[puuid]
+    if (fromState !== undefined) return fromState
+    const fromMatch = allParticipants.find(p => p.puuid === puuid)?.pigScore
+    if (fromMatch !== null && fromMatch !== undefined) return fromMatch
+    return null
+  }
 
   // Calculate ranks based on pig score
   const sortedByScore = [...allParticipants].sort((a, b) => {
-    const scoreA = pigScores[a.puuid] ?? a.pigScore ?? 0
-    const scoreB = pigScores[b.puuid] ?? b.pigScore ?? 0
+    const scoreA = getPigScore(a.puuid) ?? 0
+    const scoreB = getPigScore(b.puuid) ?? 0
     return scoreB - scoreA
   })
 
   const getRankInfo = (puuid: string, teamId: number) => {
-    const score = pigScores[puuid] ?? allParticipants.find(p => p.puuid === puuid)?.pigScore ?? 0
+    const score = getPigScore(puuid)
     const rankIndex = sortedByScore.findIndex(p => p.puuid === puuid)
     const rank = rankIndex + 1
     
-    const winningTeamId = allParticipants.find(p => p.win)?.teamId
-    const isWinningTeam = teamId === winningTeamId
-    
-    const teamPlayers = allParticipants.filter(p => p.teamId === teamId)
-    const highestInTeam = teamPlayers.reduce((prev, current) => {
-        const prevScore = pigScores[prev.puuid] ?? prev.pigScore ?? 0
-        const currScore = pigScores[current.puuid] ?? current.pigScore ?? 0
-        return currScore > prevScore ? current : prev
-    })
-    
+    // Only show MVP/ACE if all players have pig scores
     let badge = null
-    if (highestInTeam.puuid === puuid) {
-        if (isWinningTeam) badge = "MVP"
-        else badge = "ACE"
+    if (allHavePigScores && score !== null) {
+      const winningTeamId = allParticipants.find(p => p.win)?.teamId
+      const isWinningTeam = teamId === winningTeamId
+      
+      const teamPlayers = allParticipants.filter(p => p.teamId === teamId)
+      const highestInTeam = teamPlayers.reduce((prev, current) => {
+          const prevScore = getPigScore(prev.puuid) ?? 0
+          const currScore = getPigScore(current.puuid) ?? 0
+          return currScore > prevScore ? current : prev
+      })
+      
+      if (highestInTeam.puuid === puuid) {
+          if (isWinningTeam) badge = "MVP"
+          else badge = "ACE"
+      }
     }
     
     return { rank, badge, score }
@@ -203,8 +274,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
       <tr 
         key={p.puuid} 
         className={clsx(
-          "border-b border-abyss-700/50 hover:bg-abyss-700/30 transition-colors",
-          isCurrentPlayer && "bg-gold-dark/5"
+          "",
+          isCurrentPlayer && "bg-gold-dark/40"
         )}
       >
         {/* champion & info */}
@@ -220,7 +291,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   className="w-full h-full scale-110 object-cover"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-abyss-900 rounded-full w-4 h-4 flex items-center justify-center text-[9px] border border-abyss-700">
+              <div className="absolute -bottom-1 -right-1 bg-abyss-900 rounded-[6px] w-4 h-4 flex items-center justify-center text-[9px] border bg-abyss-700 border-gold-dark">
                 {p.champLevel}
               </div>
             </div>
@@ -248,7 +319,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
               <Link 
                 href={profileUrl}
                 className={clsx(
-                  "text-xs font-bold truncate hover:underline",
+                  "text-xs truncate hover:underline",
                   isCurrentPlayer ? "text-gold-light" : "text-white"
                 )}
               >
@@ -258,27 +329,37 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           </div>
         </td>
 
-        {/* PIG */}
-        <td className="py-3 text-center">
-          <div className="flex flex-col items-center justify-center">
-            <span className={clsx(
-              "text-sm font-bold",
-              score < 50 ? "text-negative" : "text-accent-light"
-            )}>
-              {score.toFixed(1)}
-            </span>
-            {badge ? (
-              <span className={clsx(
-                "text-[10px] px-1.5 rounded-full font-bold",
-                badge === "MVP" ? "bg-yellow-500/20 text-yellow-400" : "bg-purple-500/20 text-purple-400"
-              )}>
-                {badge}
-              </span>
+        {/* PIG - only show if any participant has pig scores */}
+        {hasPigScores && (
+          <td className="py-3 text-center">
+            {score !== null ? (
+              <div className="flex flex-col items-center justify-center">
+                <span className={clsx(
+                  "text-sm font-bold",
+                  score < 50 ? "text-negative" : "text-accent-light"
+                )}>
+                  {score.toFixed(1)}
+                </span>
+                {badge ? (
+                  <span className={clsx(
+                    "text-[10px] px-1.5 rounded-full font-bold",
+                    badge === "MVP" ? "bg-yellow-500/20 text-yellow-400" : "bg-purple-500/20 text-purple-400"
+                  )}>
+                    {badge}
+                  </span>
+                ) : allHavePigScores ? (
+                  <span className="text-[10px] text-gray-500">{rank}th</span>
+                ) : null}
+              </div>
+            ) : loadingPigScores ? (
+              <div className="flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-gray-600 border-t-gold-light rounded-full animate-spin"></div>
+              </div>
             ) : (
-              <span className="text-[10px] text-gray-500">{rank}th</span>
+              <span className="text-sm text-gray-500">-</span>
             )}
-          </div>
-        </td>
+          </td>
+        )}
 
         {/* KDA */}
         <td className="py-3 text-center">
@@ -298,9 +379,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         {/* Damage */}
         <td className="py-3 text-center w-32 px-4">
           <div className="flex flex-col gap-2 justify-center h-full">
-            <div className="flex flex-col gap-0.5 text-[10px]">
+            <div className="flex flex-col gap-1.5 text-[12px]">
               <span className="text-negative text-center leading-none">{formatDamage(p.totalDamageDealtToChampions)}</span>
-              <div className="h-2 bg-abyss-800 rounded-full overflow-hidden w-full">
+              <div className="h-3 bg-abyss-800 rounded-sm overflow-hidden w-full">
                 <div className="h-full bg-negative" style={{ width: `${damageDealtPct}%` }}></div>
               </div>
             </div>
@@ -311,7 +392,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         <td className="py-3 text-center">
           <div className="flex flex-col items-center">
             <span className="text-xs text-gray-300">{p.totalMinionsKilled}</span>
-            <span className="text-[10px] text-gray-500">{csPerMin}/m</span>
+            <span className="text-[10px] text-text-muted">{csPerMin}/m</span>
           </div>
         </td>
 
@@ -380,17 +461,19 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         >
           Build
         </button>
-        <button
-          onClick={() => setSelectedTab('performance')}
-          className={clsx(
-            "flex-1 px-6 py-3 font-semibold text-sm transition-all border-b-2",
-            selectedTab === 'performance'
-              ? "border-accent-light text-white bg-abyss-700/50"
-              : "border-transparent text-text-muted hover:text-white"
-          )}
-        >
-          Performance
-        </button>
+        {hasPigScores && (
+          <button
+            onClick={() => setSelectedTab('performance')}
+            className={clsx(
+              "flex-1 px-6 py-3 font-semibold text-sm transition-all border-b-2",
+              selectedTab === 'performance'
+                ? "border-accent-light text-white bg-abyss-700/50"
+                : "border-transparent text-text-muted hover:text-white"
+            )}
+          >
+            Performance
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -411,7 +494,11 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                       <th className="py-2 pl-2 font-bold">
                         <span className={team.won ? "text-accent-light" : "text-negative"}>{team.won ? 'Victory' : 'Defeat'}</span> <span className="text-text-muted font-normal">({team.name})</span>
                       </th>
-                      <th className="py-2 text-center font-normal">PIG</th>
+                      {hasPigScores && (
+                        <th className="py-2 text-center font-normal">
+                          PIG
+                        </th>
+                      )}
                       <th className="py-2 text-center font-normal">KDA</th>
                       <th className="py-2 text-center font-normal">Damage</th>
                       <th className="py-2 text-center font-normal">CS</th>
@@ -481,8 +568,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                             </div>
                             <span className={clsx(
                               "font-medium",
-                              event.type === 'ITEM_PURCHASED' && "text-green-400",
-                              event.type === 'ITEM_SOLD' && "text-red-400",
+                              event.type === 'ITEM_PURCHASED' && "text-accent-light",
+                              event.type === 'ITEM_SOLD' && "text-negative",
                               event.type === 'ITEM_UNDO' && "text-yellow-400"
                             )}>
                               {event.type === 'ITEM_PURCHASED' && 'Purchased'}
@@ -584,8 +671,211 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
             )}
           </div>
         ) : (
-          <div className="p-4 min-h-[200px] flex items-center justify-center text-gray-500">
-            Performance stats coming soon
+          <div className="p-4 space-y-4">
+            {loadingBreakdown ? (
+              <div className="min-h-[200px] flex items-center justify-center text-text-muted">
+                Loading performance breakdown...
+              </div>
+            ) : !pigScoreBreakdown ? (
+              <div className="min-h-[200px] flex items-center justify-center text-text-muted">
+                Performance data not available for this match
+              </div>
+            ) : (
+              <>
+                {/* PIG Score Summary */}
+                <div className="bg-abyss-700 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-white">PIG Score Breakdown</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold"><h2>{pigScoreBreakdown.finalScore}</h2></span>
+                      <span className="text-xs text-subtitle">/ 100</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-subtitle mb-4">
+                    Based on {pigScoreBreakdown.totalGames.toLocaleString()} games on patch {pigScoreBreakdown.patch}
+                  </div>
+                  
+                  {/* Penalties Grid */}
+                  <div className="space-y-2">
+                    {pigScoreBreakdown.penalties.map((p, idx) => {
+                      const isGood = p.penalty === 0
+                      const isBad = p.penalty >= p.maxPenalty * 0.5
+                      const isModerate = !isGood && !isBad
+                      
+                      return (
+                        <div key={idx} className="flex items-center gap-3">
+                          {/* Status indicator */}
+                          <div className={clsx(
+                            "w-2 h-2 rounded-full flex-shrink-0",
+                            isGood && "bg-accent-light",
+                            isModerate && "bg-yellow-500",
+                            isBad && "bg-negative"
+                          )} />
+                          
+                          {/* Stat name */}
+                          <span className="text-xs text-white w-32 flex-shrink-0">{p.name}</span>
+                          
+                          {/* Progress bar */}
+                          <div className="flex-1 h-2 bg-abyss-900 rounded-full overflow-hidden">
+                            <div 
+                              className={clsx(
+                                "h-full rounded-full transition-all",
+                                isGood && "bg-accent-light",
+                                isModerate && "bg-yellow-500",
+                                isBad && "bg-negative"
+                              )}
+                              style={{ width: `${Math.max(5, 100 - (p.penalty / p.maxPenalty) * 100)}%` }}
+                            />
+                          </div>
+                          
+                          {/* Penalty value */}
+                          <span className={clsx(
+                            "text-xs font-mono w-12 text-right",
+                            isGood && "text-accent-light",
+                            isModerate && "text-yellow-400",
+                            isBad && "text-negative"
+                          )}>
+                            {p.penalty === 0 ? 'MAX' : `-${p.penalty.toFixed(1)}`}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Detailed Stats Comparison */}
+                <div className="bg-abyss-700 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-white mb-4">Stats vs Champion Average</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Damage to Champions */}
+                    <div className="bg-abyss-800 rounded p-3">
+                      <div className="text-xs text-subtitle mb-1">Damage to Champions /min</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold text-white">
+                          {pigScoreBreakdown.playerStats.damageToChampionsPerMin.toFixed(0)}
+                        </span>
+                        <span className="text-xs text-subtitle">
+                          vs {pigScoreBreakdown.championAvgStats.damageToChampionsPerMin.toFixed(0)} avg
+                        </span>
+                      </div>
+                      {(() => {
+                        const p = pigScoreBreakdown.penalties.find(p => p.name === 'Damage to Champions')
+                        if (!p?.percentOfAvg) return null
+                        return (
+                          <div className={clsx(
+                            "text-xs mt-1",
+                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-yellow-400" : "text-negative"
+                          )}>
+                            {p.percentOfAvg.toFixed(0)}% of average
+                          </div>
+                        )
+                      })()}
+                    </div>
+                    
+                    {/* Total Damage */}
+                    <div className="bg-abyss-800 rounded p-3">
+                      <div className="text-xs text-subtitle mb-1">Total Damage /min</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold text-white">
+                          {pigScoreBreakdown.playerStats.totalDamagePerMin.toFixed(0)}
+                        </span>
+                        <span className="text-xs text-subtitle">
+                          vs {pigScoreBreakdown.championAvgStats.totalDamagePerMin.toFixed(0)} avg
+                        </span>
+                      </div>
+                      {(() => {
+                        const p = pigScoreBreakdown.penalties.find(p => p.name === 'Total Damage')
+                        if (!p?.percentOfAvg) return null
+                        return (
+                          <div className={clsx(
+                            "text-xs mt-1",
+                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-yellow-400" : "text-negative"
+                          )}>
+                            {p.percentOfAvg.toFixed(0)}% of average
+                          </div>
+                        )
+                      })()}
+                    </div>
+                    
+                    {/* Healing/Shielding */}
+                    <div className="bg-abyss-800 rounded p-3">
+                      <div className="text-xs text-subtitle mb-1">Healing + Shielding /min</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold text-white">
+                          {pigScoreBreakdown.playerStats.healingShieldingPerMin.toFixed(0)}
+                        </span>
+                        <span className="text-xs text-subtitle">
+                          vs {pigScoreBreakdown.championAvgStats.healingShieldingPerMin.toFixed(0)} avg
+                        </span>
+                      </div>
+                      {(() => {
+                        const p = pigScoreBreakdown.penalties.find(p => p.name === 'Healing/Shielding')
+                        if (!p?.percentOfAvg) return null
+                        return (
+                          <div className={clsx(
+                            "text-xs mt-1",
+                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-yellow-400" : "text-negative"
+                          )}>
+                            {p.percentOfAvg.toFixed(0)}% of average
+                          </div>
+                        )
+                      })()}
+                    </div>
+                    
+                    {/* CC Time */}
+                    <div className="bg-abyss-800 rounded p-3">
+                      <div className="text-xs text-subtitle mb-1">CC Time /min</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold text-white">
+                          {pigScoreBreakdown.playerStats.ccTimePerMin.toFixed(1)}s
+                        </span>
+                        <span className="text-xs text-subtitle">
+                          vs {pigScoreBreakdown.championAvgStats.ccTimePerMin.toFixed(1)}s avg
+                        </span>
+                      </div>
+                      {(() => {
+                        const p = pigScoreBreakdown.penalties.find(p => p.name === 'CC Time')
+                        if (!p?.percentOfAvg) return null
+                        return (
+                          <div className={clsx(
+                            "text-xs mt-1",
+                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-yellow-400" : "text-negative"
+                          )}>
+                            {p.percentOfAvg.toFixed(0)}% of average
+                          </div>
+                        )
+                      })()}
+                    </div>
+                    
+                    {/* Deaths per Min */}
+                    <div className="bg-abyss-800 rounded p-3 col-span-2">
+                      <div className="text-xs text-subtitle mb-1">Deaths per Minute</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-bold text-white">
+                          {pigScoreBreakdown.playerStats.deathsPerMin.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-subtitle">
+                          (optimal: 0.5-0.7)
+                        </span>
+                      </div>
+                      {(() => {
+                        const dpm = pigScoreBreakdown.playerStats.deathsPerMin
+                        const isOptimal = dpm >= 0.5 && dpm <= 0.7
+                        const isTooFew = dpm < 0.5
+                        return (
+                          <div className={clsx(
+                            "text-xs mt-1",
+                            isOptimal ? "text-accent-light" : isTooFew ? "text-yellow-400" : "text-negative"
+                          )}>
+                            {isOptimal ? 'Optimal engagement' : isTooFew ? 'Could engage more' : 'Too many deaths'}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { getLatestVersion } from '@/lib/ddragon-client'
 import { fetchChampionNames } from '@/lib/champion-names'
-import { getLatestPatches } from '@/lib/riot-patches'
+import { getLatestPatches } from '@/lib/patch-utils'
 import ChampionsPageClient from '@/components/ChampionsPageClient'
 
 export const metadata: Metadata = {

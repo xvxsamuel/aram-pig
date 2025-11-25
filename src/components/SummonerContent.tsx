@@ -147,36 +147,6 @@ export default function SummonerContent({
     fetchStats()
   }, [summonerData.account.puuid, initialTotalGames])
 
-  // Calculate missing pig scores for recent matches
-  useEffect(() => {
-    // Skip if flag is disabled
-    const recalculateEnabled = process.env.NEXT_PUBLIC_RECALCULATE_PIG_SCORES === 'true'
-    if (!recalculateEnabled || matches.length === 0) return
-    
-    async function calculateMissingPigScores() {
-      try {
-        // Check first few matches to see if they need pig score calculation
-        const recentMatches = matches.slice(0, 20) // Check last 20 matches
-        
-        for (const match of recentMatches) {
-          // Always recalculate when flag is enabled (removed the skip check)
-          await fetch('/api/calculate-pig-score', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              matchId: (match as any).match_id,
-              puuid: summonerData.account.puuid
-            })
-          })
-        }
-      } catch (error) {
-        console.error('Failed to calculate missing pig scores:', error)
-      }
-    }
-    
-    calculateMissingPigScores()
-  }, [matches, summonerData.account.puuid])
-
   // check for profile update flag on mount
   useEffect(() => {
     const wasUpdated = sessionStorage.getItem('profileUpdated')

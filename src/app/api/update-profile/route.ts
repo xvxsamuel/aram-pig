@@ -6,9 +6,45 @@ import { PLATFORM_TO_REGIONAL, type PlatformCode } from '../../../lib/regions';
 import type { UpdateJob } from '../../../types/update-jobs';
 import { calculatePigScore } from '../../../lib/pig-score-v2';
 import { extractAbilityOrder } from '../../../lib/ability-leveling';
-import { extractPatch, getPatchFromDate } from '../../../lib/patch-utils';
+import { extractPatch, getPatchFromDate, isPatchAccepted } from '../../../lib/patch-utils';
 import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../../../lib/item-purchases';
 import { extractItemPurchases, type ItemPurchaseEvent } from '../../../lib/item-purchase-history';
+import itemsData from '../../../data/items.json';
+
+// helper to check if item is a finished item (legendary or boots)
+const isFinishedItem = (itemId: number): boolean => {
+  const item = (itemsData as Record<string, any>)[itemId.toString()]
+  if (!item) return false
+  const type = item.itemType
+  return type === 'legendary' || type === 'boots'
+}
+
+// helper to extract skill max order abbreviation (e.g., "qwe" for Q>W>E)
+function extractSkillOrderAbbreviation(abilityOrder: string): string {
+  if (!abilityOrder || abilityOrder.length === 0) return ''
+  
+  const abilities = abilityOrder.split(' ')
+  const counts = { Q: 0, W: 0, E: 0, R: 0 }
+  const maxOrder: string[] = []
+  
+  for (const ability of abilities) {
+    if (ability in counts) {
+      counts[ability as keyof typeof counts]++
+      if (ability !== 'R' && counts[ability as keyof typeof counts] === 5) {
+        maxOrder.push(ability.toLowerCase())
+      }
+    }
+  }
+  
+  const result = maxOrder.join('')
+  if (result.length === 1) return ''
+  if (result.length === 2) {
+    const abilitiesList = ['q', 'w', 'e']
+    const missing = abilitiesList.find(a => !result.includes(a))
+    return missing ? result + missing : result
+  }
+  return result
+}
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
@@ -148,6 +184,99 @@ async function failJob(supabase: any, jobId: string, errorMessage: string) {
     .eq('id', jobId);
 }
 
+// check and calculate missing pig scores for recent matches (within 30 days)
+async function calculateMissingPigScores(supabase: any, puuid: string) {
+  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+  
+  // get recent matches for this user that don't have pig scores
+  const { data: recentMatches, error: fetchError } = await supabase
+    .from('summoner_matches')
+    .select('match_id, puuid, match_data, patch, champion_name')
+    .eq('puuid', puuid)
+    .order('match_id', { ascending: false })
+    .limit(30)
+  
+  if (fetchError || !recentMatches) {
+    console.error('Error fetching recent matches for pig score calculation:', fetchError)
+    return 0
+  }
+  
+  // filter to matches within 30 days that are missing pig scores and not remakes
+  const matchesNeedingPigScore = recentMatches.filter((m: any) => {
+    const hasPigScore = m.match_data?.pigScore !== null && m.match_data?.pigScore !== undefined
+    const isRemake = m.match_data?.isRemake === true
+    return !hasPigScore && !isRemake
+  })
+  
+  if (matchesNeedingPigScore.length === 0) {
+    console.log('All recent matches have pig scores')
+    return 0
+  }
+  
+  console.log(`Calculating pig scores for ${matchesNeedingPigScore.length} matches...`)
+  
+  let calculated = 0
+  for (const match of matchesNeedingPigScore) {
+    try {
+      // get game_creation from matches table to check if within 30 days
+      const { data: matchRecord } = await supabase
+        .from('matches')
+        .select('game_duration, game_creation')
+        .eq('match_id', match.match_id)
+        .single()
+      
+      if (!matchRecord || matchRecord.game_creation < thirtyDaysAgo) {
+        continue // skip old matches
+      }
+      
+      // calculate pig score
+      const pigScore = await calculatePigScore({
+        championName: match.champion_name,
+        damage_dealt_to_champions: match.match_data.stats?.damage || 0,
+        total_damage_dealt: match.match_data.stats?.totalDamageDealt || 0,
+        total_heals_on_teammates: match.match_data.stats?.totalHealsOnTeammates || 0,
+        total_damage_shielded_on_teammates: match.match_data.stats?.totalDamageShieldedOnTeammates || 0,
+        time_ccing_others: match.match_data.stats?.timeCCingOthers || 0,
+        game_duration: matchRecord.game_duration || 0,
+        deaths: match.match_data.deaths || 0,
+        item0: match.match_data.items?.[0] || 0,
+        item1: match.match_data.items?.[1] || 0,
+        item2: match.match_data.items?.[2] || 0,
+        item3: match.match_data.items?.[3] || 0,
+        item4: match.match_data.items?.[4] || 0,
+        item5: match.match_data.items?.[5] || 0,
+        perk0: match.match_data.runes?.primary?.perks?.[0] || 0,
+        patch: match.patch,
+        spell1: match.match_data.spells?.[0] || 0,
+        spell2: match.match_data.spells?.[1] || 0,
+        skillOrder: extractSkillOrderAbbreviation(match.match_data.abilityOrder || ''),
+        buildOrder: match.match_data.buildOrder || undefined
+      })
+      
+      if (pigScore !== null) {
+        // update the match_data with pig score
+        const updatedMatchData = {
+          ...match.match_data,
+          pigScore
+        }
+        
+        await supabase
+          .from('summoner_matches')
+          .update({ match_data: updatedMatchData })
+          .eq('match_id', match.match_id)
+          .eq('puuid', match.puuid)
+        
+        calculated++
+      }
+    } catch (err) {
+      console.error(`Failed to calculate pig score for ${match.match_id}:`, err)
+    }
+  }
+  
+  console.log(`Calculated ${calculated} pig scores`)
+  return calculated
+}
+
 export async function POST(request: Request) {
   let jobId: string | null = null;
   try {
@@ -245,10 +374,17 @@ export async function POST(request: Request) {
     if (quickCheckIds.length > 0 && existingMatchIds.has(quickCheckIds[0])) {
       console.log('No new matches found (most recent match already in database)')
       
+      // still check for missing pig scores before returning
+      console.log('Checking for missing pig scores...')
+      const pigScoresCalculated = await calculateMissingPigScores(supabase, accountData.puuid)
+      
       return NextResponse.json({ 
         success: true, 
         newMatches: 0,
-        message: 'Profile is already up to date'
+        pigScoresCalculated,
+        message: pigScoresCalculated > 0 
+          ? `Profile is up to date, calculated ${pigScoresCalculated} pig scores`
+          : 'Profile is already up to date'
       });
     }
     
@@ -469,6 +605,75 @@ async function processMatchesInBackground(
             }
           } else {
             console.log(`  ✓ Added ${summonerMatchRecords.length} participant records to existing match ${matchId}`)
+            
+            // Call increment_champion_stats for ALL participants (like scraper does)
+            // Only for patches in the accepted list (latest 3 patches)
+            if (await isPatchAccepted(existingMatch.patch)) {
+              for (let idx = 0; idx < match.info.participants.length; idx++) {
+                const participant = match.info.participants[idx]
+                const participantId = idx + 1
+              
+                // Extract timeline data for stats
+                let abilityOrderStr = null
+                let buildOrderForStats: number[] = []
+                let firstBuyForStats = ''
+              
+                if (!isOlderThan30Days && timeline) {
+                  abilityOrderStr = extractAbilityOrder(timeline, participantId)
+                const buildOrder = extractBuildOrder(timeline, participantId)
+                const firstBuy = extractFirstBuy(timeline, participantId)
+                buildOrderForStats = buildOrder.filter(id => isFinishedItem(id)).slice(0, 6)
+                firstBuyForStats = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : ''
+              }
+              
+              const skillOrder = abilityOrderStr ? extractSkillOrderAbbreviation(abilityOrderStr) : ''
+              
+              // Get items - use build order if available, otherwise filter final items to finished only
+              const itemsForStats = buildOrderForStats.length > 0 
+                ? buildOrderForStats
+                : [participant.item0, participant.item1, participant.item2, participant.item3, participant.item4, participant.item5]
+                    .filter(id => id > 0 && isFinishedItem(id))
+              
+              const runes = {
+                primary: { style: participant.perks?.styles?.[0]?.style || 0, perks: participant.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0,0,0,0] },
+                secondary: { style: participant.perks?.styles?.[1]?.style || 0, perks: participant.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0,0] },
+                statPerks: [participant.perks?.statPerks?.offense || 0, participant.perks?.statPerks?.flex || 0, participant.perks?.statPerks?.defense || 0]
+              }
+              
+              const { error: statsError } = await supabase.rpc('increment_champion_stats', {
+                p_champion_name: participant.championName,
+                p_patch: existingMatch.patch,
+                p_win: participant.win ? 1 : 0,
+                p_items: JSON.stringify(itemsForStats),
+                p_first_buy: firstBuyForStats,
+                p_keystone_id: runes.primary.perks[0] || 0,
+                p_rune1: runes.primary.perks[1] || 0,
+                p_rune2: runes.primary.perks[2] || 0,
+                p_rune3: runes.primary.perks[3] || 0,
+                p_rune4: runes.secondary.perks[0] || 0,
+                p_rune5: runes.secondary.perks[1] || 0,
+                p_rune_tree_primary: runes.primary.style,
+                p_rune_tree_secondary: runes.secondary.style,
+                p_stat_perk0: runes.statPerks[0],
+                p_stat_perk1: runes.statPerks[1],
+                p_stat_perk2: runes.statPerks[2],
+                p_spell1_id: participant.summoner1Id || 0,
+                p_spell2_id: participant.summoner2Id || 0,
+                p_skill_order: skillOrder,
+                p_damage_to_champions: participant.totalDamageDealtToChampions || 0,
+                p_total_damage: participant.totalDamageDealt || 0,
+                p_healing: participant.totalHealsOnTeammates || 0,
+                p_shielding: participant.totalDamageShieldedOnTeammates || 0,
+                p_cc_time: participant.timeCCingOthers || 0,
+                p_game_duration: match.info.gameDuration || 0,
+                p_deaths: participant.deaths || 0
+              })
+              
+              if (statsError) {
+                console.error(`  Error updating champion stats for ${participant.championName}:`, statsError)
+              }
+              }
+            } // end isPatchAccepted check
           }
           
           fetchedMatches++;
@@ -609,7 +814,9 @@ async function processMatchesInBackground(
                   totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0
                 },
                 
-                items: [p.item0 || 0, p.item1 || 0, p.item2 || 0, p.item3 || 0, p.item4 || 0, p.item5 || 0],
+                // filter to only finished items (legendary/boots) for champion stats consistency
+                items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
+                  .filter(id => id > 0 && isFinishedItem(id)),
                 
                 spells: [p.summoner1Id || 0, p.summoner2Id || 0],
                 
@@ -662,6 +869,75 @@ async function processMatchesInBackground(
           }
         } else {
           console.log(`✓ Inserted ${summonerMatchRecords.length} summoner_match records for match ${matchId}`)
+          
+          // Call increment_champion_stats for ALL participants (like scraper does)
+          // Only for patches in the accepted list (latest 3 patches)
+          if (await isPatchAccepted(patchVersion)) {
+            for (let idx = 0; idx < match.info.participants.length; idx++) {
+              const participant = match.info.participants[idx]
+              const participantId = idx + 1
+            
+              // Extract timeline data for stats
+              let abilityOrderStr = null
+              let buildOrderForStats: number[] = []
+              let firstBuyForStats = ''
+            
+              if (!isOlderThan30Days && timeline) {
+                abilityOrderStr = extractAbilityOrder(timeline, participantId)
+                const buildOrder = extractBuildOrder(timeline, participantId)
+                const firstBuy = extractFirstBuy(timeline, participantId)
+                buildOrderForStats = buildOrder.filter(id => isFinishedItem(id)).slice(0, 6)
+                firstBuyForStats = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : ''
+              }
+            
+              const skillOrder = abilityOrderStr ? extractSkillOrderAbbreviation(abilityOrderStr) : ''
+            
+              // Get items - use build order if available, otherwise filter final items to finished only
+              const itemsForStats = buildOrderForStats.length > 0 
+                ? buildOrderForStats
+                : [participant.item0, participant.item1, participant.item2, participant.item3, participant.item4, participant.item5]
+                    .filter(id => id > 0 && isFinishedItem(id))
+            
+              const runes = {
+                primary: { style: participant.perks?.styles?.[0]?.style || 0, perks: participant.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0,0,0,0] },
+                secondary: { style: participant.perks?.styles?.[1]?.style || 0, perks: participant.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0,0] },
+                statPerks: [participant.perks?.statPerks?.offense || 0, participant.perks?.statPerks?.flex || 0, participant.perks?.statPerks?.defense || 0]
+              }
+            
+              const { error: statsError } = await supabase.rpc('increment_champion_stats', {
+                p_champion_name: participant.championName,
+                p_patch: patchVersion,
+                p_win: participant.win ? 1 : 0,
+                p_items: JSON.stringify(itemsForStats),
+                p_first_buy: firstBuyForStats,
+              p_keystone_id: runes.primary.perks[0] || 0,
+              p_rune1: runes.primary.perks[1] || 0,
+              p_rune2: runes.primary.perks[2] || 0,
+              p_rune3: runes.primary.perks[3] || 0,
+              p_rune4: runes.secondary.perks[0] || 0,
+              p_rune5: runes.secondary.perks[1] || 0,
+              p_rune_tree_primary: runes.primary.style,
+              p_rune_tree_secondary: runes.secondary.style,
+              p_stat_perk0: runes.statPerks[0],
+              p_stat_perk1: runes.statPerks[1],
+              p_stat_perk2: runes.statPerks[2],
+              p_spell1_id: participant.summoner1Id || 0,
+              p_spell2_id: participant.summoner2Id || 0,
+              p_skill_order: skillOrder,
+              p_damage_to_champions: participant.totalDamageDealtToChampions || 0,
+              p_total_damage: participant.totalDamageDealt || 0,
+              p_healing: participant.totalHealsOnTeammates || 0,
+              p_shielding: participant.totalDamageShieldedOnTeammates || 0,
+              p_cc_time: participant.timeCCingOthers || 0,
+              p_game_duration: match.info.gameDuration || 0,
+              p_deaths: participant.deaths || 0
+            })
+            
+            if (statsError) {
+              console.error(`  Error updating champion stats for ${participant.championName}:`, statsError)
+            }
+            }
+          } // end isPatchAccepted check
         }
         
         } catch (recordError) {
@@ -687,9 +963,13 @@ async function processMatchesInBackground(
       .update({ last_updated: new Date().toISOString() })
       .eq('puuid', puuid);
 
+    // calculate any missing pig scores for recent matches before completing
+    console.log('Checking for missing pig scores...')
+    const pigScoresCalculated = await calculateMissingPigScores(supabase, puuid)
+    
     // mark job as completed
     await completeJob(supabase, jobId);
-    console.log(`Job ${jobId} completed - fetched ${fetchedMatches} matches`)
+    console.log(`Job ${jobId} completed - fetched ${fetchedMatches} matches, calculated ${pigScoresCalculated} pig scores`)
   } catch (error: any) {
     console.error('Background processing error:', error);
     await failJob(supabase, jobId, error.message || 'unknown error');

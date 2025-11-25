@@ -1,0 +1,83 @@
+name: Match Scraper
+
+on:
+  # run every 4 hours
+  schedule:
+    - cron: '0 */4 * * *'
+  # allow manual trigger
+  workflow_dispatch:
+    inputs:
+      reset_state:
+        description: 'Reset scraper state before running'
+        required: false
+        default: 'false'
+        type: boolean
+      duration_minutes:
+        description: 'How long to run the scraper (minutes)'
+        required: false
+        default: '55'
+        type: string
+
+env:
+  RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download scraper state
+        uses: actions/cache@v4
+        with:
+          path: scripts/scraper-state.json
+          key: scraper-state-${{ github.run_id }}
+          restore-keys: |
+            scraper-state-
+
+      - name: Reset scraper state (if requested)
+        if: ${{ github.event.inputs.reset_state == 'true' }}
+        run: rm -f scripts/scraper-state.json
+
+      - name: Run scraper
+        run: |
+          # set duration (default 55 minutes to stay within github actions limit)
+          DURATION=${{ github.event.inputs.duration_minutes || '55' }}
+          echo "Running scraper for ${DURATION} minutes..."
+          
+          # run scraper with timeout
+          timeout ${DURATION}m npm run scraper || true
+        env:
+          NODE_ENV: production
+
+      - name: Upload scraper state
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: scripts/scraper-state.json
+          key: scraper-state-${{ github.run_id }}
+
+      - name: Report status
+        if: always()
+        run: |
+          if [ -f scripts/scraper-state.json ]; then
+            echo "Scraper state saved successfully"
+            cat scripts/scraper-state.json | head -100
+          else
+            echo "No scraper state file found"
+          fi

@@ -18,6 +18,11 @@ interface ParticipantData {
   item5: number
   perk0: number // keystone
   patch: string | null
+  // new fields from scraper
+  spell1?: number
+  spell2?: number
+  skillOrder?: string // e.g., "qew" or "qwe" 
+  buildOrder?: string // comma-separated item IDs in purchase order
 }
 
 // calculate pig score based on performance vs patch champion averages
@@ -46,7 +51,7 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     .select('data, patch')
     .eq('champion_name', championName)
     .order('patch', { ascending: false })
-    .limit(5) // get recent patches
+    .limit(10) // get recent patches for fallback
   
   if (avgError) {
     console.error(`Error fetching champion stats for ${championName}:`, avgError)
@@ -58,11 +63,20 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     return null
   }
   
-  // Find matching patch or use most recent
-  let selectedStats = championStats.find(s => s.patch === participant.patch)
+  // Find matching patch with 100+ games, or fallback to any patch with 100+ games
+  let selectedStats = championStats.find(s => s.patch === participant.patch && (s.data?.games || 0) >= 100)
   if (!selectedStats) {
-    selectedStats = championStats[0] // Fallback to most recent patch
-    console.log(`No stats for patch ${participant.patch}, using ${selectedStats.patch}`)
+    // fallback to any patch with sufficient games
+    selectedStats = championStats.find(s => (s.data?.games || 0) >= 100)
+    if (selectedStats) {
+      console.log(`No sufficient stats for patch ${participant.patch}, using ${selectedStats.patch} (${selectedStats.data?.games} games)`)
+    }
+  }
+  
+  if (!selectedStats) {
+    const bestAvailable = championStats[0]
+    console.log(`Not enough games for ${championName} on any patch (best: ${bestAvailable?.data?.games || 0} games, need 100+)`)
+    return null
   }
   
   const championAvg = selectedStats.data?.championStats
@@ -72,11 +86,7 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   }
   
   const totalGames = selectedStats.data.games || 0
-  if (totalGames < 10) {
-    console.log(`Not enough games for ${championName} (${totalGames} games, need 10+)`)
-    return null
-  }
-  
+
   // calculate player's per-minute stats
   const playerStats = {
     damageToChampionsPerMin: participant.damage_dealt_to_champions / gameDurationMinutes,
@@ -122,12 +132,15 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     penalties['Total Damage'] = penalty
     score -= penalty
   }
-  if (championAvgPerMin.healingShieldingPerMin > 0) {
+  // only penalize healing/shielding if champion actually heals/shields significantly (500+/min average)
+  // this avoids penalizing non-healers for not healing
+  if (championAvgPerMin.healingShieldingPerMin >= 500) {
     const penalty = calculateStatPenalty(playerStats.healingShieldingPerMin, championAvgPerMin.healingShieldingPerMin, 20)
     penalties['Healing/Shielding'] = penalty
     score -= penalty
   }
-  if (championAvgPerMin.ccTimePerMin > 0) {
+  // only penalize CC if champion has meaningful CC (3+ seconds/min average)
+  if (championAvgPerMin.ccTimePerMin >= 3) {
     const penalty = calculateStatPenalty(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, 20)
     penalties['CC Time'] = penalty
     score -= penalty
@@ -142,6 +155,21 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   const keystonePenalty = await calculateKeystonePenalty(participant, championName)
   penalties['Keystone'] = keystonePenalty
   score -= keystonePenalty
+  
+  // calculate summoner spells penalty
+  const spellsPenalty = await calculateSpellsPenalty(participant, championName)
+  penalties['Spells'] = spellsPenalty
+  score -= spellsPenalty
+  
+  // calculate skill order penalty
+  const skillOrderPenalty = await calculateSkillOrderPenalty(participant, championName)
+  penalties['Skill Order'] = skillOrderPenalty
+  score -= skillOrderPenalty
+  
+  // calculate build order penalty
+  const buildOrderPenalty = await calculateBuildOrderPenalty(participant, championName)
+  penalties['Build Order'] = buildOrderPenalty
+  score -= buildOrderPenalty
   
   // calculate deaths per minute penalty
   const deathsPenalty = calculateDeathsPerMinutePenalty(participant.deaths, gameDurationMinutes)
@@ -355,4 +383,364 @@ function calculateDeathsPerMinutePenalty(deaths: number, gameDurationMinutes: nu
   }
   
   return 0
+}
+
+// calculate summoner spells penalty by comparing to meta spell combinations
+async function calculateSpellsPenalty(participant: ParticipantData, championName: string): Promise<number> {
+  if (!participant.patch || !participant.spell1 || !participant.spell2) return 0
+  
+  const supabase = createAdminClient()
+  
+  // get champion stats with spells data
+  const { data: championStats } = await supabase
+    .from('champion_stats')
+    .select('data')
+    .eq('champion_name', championName)
+    .eq('patch', participant.patch)
+    .maybeSingle()
+  
+  if (!championStats?.data?.spells) return 0
+  
+  const spellsObj = championStats.data.spells as Record<string, { games: number; wins: number }>
+  const spellsEntries = Object.entries(spellsObj)
+  if (spellsEntries.length === 0) return 0
+  
+  // normalize player's spells to match format (sorted by id)
+  const playerSpells = [participant.spell1, participant.spell2].sort((a, b) => a - b)
+  const playerKey = `${playerSpells[0]}_${playerSpells[1]}`
+  
+  // calculate winrates for all spell combos
+  const spellsWithWinrate = spellsEntries
+    .map(([key, value]) => ({
+      key,
+      games: value.games,
+      wins: value.wins,
+      winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0
+    }))
+    .filter(s => s.games >= 30) // minimum sample size
+    .sort((a, b) => b.winrate - a.winrate)
+  
+  if (spellsWithWinrate.length === 0) return 0
+  
+  // check if player's combo is in top 3
+  const top3 = spellsWithWinrate.slice(0, 3)
+  const playerSpellCombo = spellsWithWinrate.find(s => s.key === playerKey)
+  
+  if (!playerSpellCombo) {
+    // not in dataset, small penalty
+    return 2
+  }
+  
+  const isInTop3 = top3.some(s => s.key === playerKey)
+  if (isInTop3) return 0
+  
+  // penalty based on winrate difference
+  const topWinrate = top3[0].winrate
+  const winrateDiff = topWinrate - playerSpellCombo.winrate
+  return Math.min(5, winrateDiff / 10) // max 5 points penalty
+}
+
+// calculate skill max order penalty (e.g., qew vs qwe)
+async function calculateSkillOrderPenalty(participant: ParticipantData, championName: string): Promise<number> {
+  if (!participant.patch || !participant.skillOrder) return 0
+  
+  const supabase = createAdminClient()
+  
+  // get champion stats with skills data
+  const { data: championStats } = await supabase
+    .from('champion_stats')
+    .select('data')
+    .eq('champion_name', championName)
+    .eq('patch', participant.patch)
+    .maybeSingle()
+  
+  if (!championStats?.data?.skills) return 0
+  
+  const skillsObj = championStats.data.skills as Record<string, { games: number; wins: number }>
+  const skillsEntries = Object.entries(skillsObj)
+  if (skillsEntries.length === 0) return 0
+  
+  // calculate winrates
+  const skillsWithWinrate = skillsEntries
+    .map(([key, value]) => ({
+      key,
+      games: value.games,
+      wins: value.wins,
+      winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0
+    }))
+    .filter(s => s.games >= 20) // minimum sample size
+    .sort((a, b) => b.winrate - a.winrate)
+  
+  if (skillsWithWinrate.length === 0) return 0
+  
+  // check if player's skill order is in top 2
+  const top2 = skillsWithWinrate.slice(0, 2)
+  const playerSkillOrder = skillsWithWinrate.find(s => s.key === participant.skillOrder)
+  
+  if (!playerSkillOrder) {
+    // very unusual skill order, moderate penalty
+    return 5
+  }
+  
+  const isInTop2 = top2.some(s => s.key === participant.skillOrder)
+  if (isInTop2) return 0
+  
+  // penalty based on winrate difference
+  const topWinrate = top2[0].winrate
+  const winrateDiff = topWinrate - playerSkillOrder.winrate
+  return Math.min(8, winrateDiff / 5) // max 8 points penalty
+}
+
+// calculate build order penalty (item purchase sequence)
+// compares first 3 items built against meta item combinations
+async function calculateBuildOrderPenalty(participant: ParticipantData, championName: string): Promise<number> {
+  if (!participant.patch || !participant.buildOrder) return 0
+  
+  const supabase = createAdminClient()
+  
+  // get champion stats with core item combinations
+  const { data: championStats } = await supabase
+    .from('champion_stats')
+    .select('data')
+    .eq('champion_name', championName)
+    .eq('patch', participant.patch)
+    .maybeSingle()
+  
+  if (!championStats?.data?.core) return 0
+  
+  const coreData = championStats.data.core as Record<string, { games: number; wins: number }>
+  if (Object.keys(coreData).length === 0) return 0
+  
+  // parse player's build order (first 3 items)
+  const playerItems = participant.buildOrder.split(',').map(id => parseInt(id, 10)).slice(0, 3)
+  if (playerItems.length < 3) return 0 // not enough items to evaluate
+  
+  // normalize boots to 10010 for comparison
+  const BOOT_IDS = [1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158]
+  const normalizeItem = (id: number) => BOOT_IDS.includes(id) ? 10010 : id
+  
+  const normalizedPlayerItems = playerItems.map(normalizeItem).sort((a, b) => a - b)
+  const playerKey = normalizedPlayerItems.join('_')
+  
+  // calculate winrates for all combinations
+  const combosWithWinrate = Object.entries(coreData)
+    .map(([key, data]) => ({
+      key,
+      games: data.games,
+      wins: data.wins,
+      winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0
+    }))
+    .filter(c => c.games >= 20)
+    .sort((a, b) => b.winrate - a.winrate)
+  
+  if (combosWithWinrate.length === 0) return 0
+  
+  // check if player's combination is in top 5
+  const top5 = combosWithWinrate.slice(0, 5)
+  const playerCombo = combosWithWinrate.find(c => c.key === playerKey)
+  
+  if (!playerCombo) {
+    // unusual build, moderate penalty
+    return 5
+  }
+  
+  const isInTop5 = top5.some(c => c.key === playerKey)
+  if (isInTop5) return 0
+  
+  // penalty based on winrate difference
+  const topWinrate = top5[0].winrate
+  const winrateDiff = topWinrate - playerCombo.winrate
+  return Math.min(8, winrateDiff / 5) // max 8 points penalty
+}
+
+// detailed breakdown of pig score calculation
+export interface PigScoreBreakdown {
+  finalScore: number
+  playerStats: {
+    damageToChampionsPerMin: number
+    totalDamagePerMin: number
+    healingShieldingPerMin: number
+    ccTimePerMin: number
+    deathsPerMin: number
+  }
+  championAvgStats: {
+    damageToChampionsPerMin: number
+    totalDamagePerMin: number
+    healingShieldingPerMin: number
+    ccTimePerMin: number
+  }
+  penalties: {
+    name: string
+    penalty: number
+    maxPenalty: number
+    playerValue?: number
+    avgValue?: number
+    percentOfAvg?: number
+  }[]
+  totalGames: number
+  patch: string
+}
+
+// calculate pig score with full breakdown for UI display
+export async function calculatePigScoreWithBreakdown(participant: ParticipantData): Promise<PigScoreBreakdown | null> {
+  const supabase = createAdminClient()
+  let score = 100
+  
+  const championName = participant.championName
+  const gameDurationMinutes = participant.game_duration / 60
+  
+  if (gameDurationMinutes <= 0) return null
+  
+  // get champion stats
+  const { data: championStats, error: avgError } = await supabase
+    .from('champion_stats')
+    .select('data, patch')
+    .eq('champion_name', championName)
+    .order('patch', { ascending: false })
+    .limit(10) // get recent patches for fallback
+  
+  if (avgError || !championStats || championStats.length === 0) return null
+  
+  // Find matching patch with 100+ games, or fallback to any patch with 100+ games
+  let selectedStats = championStats.find(s => s.patch === participant.patch && (s.data?.games || 0) >= 100)
+  if (!selectedStats) {
+    // fallback to any patch with sufficient games
+    selectedStats = championStats.find(s => (s.data?.games || 0) >= 100)
+  }
+  
+  if (!selectedStats) return null
+  
+  const championAvg = selectedStats.data?.championStats
+  if (!championAvg || !championAvg.sumGameDuration || championAvg.sumGameDuration === 0) return null
+  
+  const totalGames = selectedStats.data.games || 0
+  
+  // calculate player's per-minute stats
+  const playerStats = {
+    damageToChampionsPerMin: participant.damage_dealt_to_champions / gameDurationMinutes,
+    totalDamagePerMin: participant.total_damage_dealt / gameDurationMinutes,
+    healingShieldingPerMin: (participant.total_heals_on_teammates + participant.total_damage_shielded_on_teammates) / gameDurationMinutes,
+    ccTimePerMin: participant.time_ccing_others / gameDurationMinutes,
+    deathsPerMin: participant.deaths / gameDurationMinutes
+  }
+  
+  // check if required stats are available
+  if (!participant.total_damage_dealt || participant.total_damage_dealt === 0) return null
+  
+  // champion averages
+  const avgGameDurationMinutes = (championAvg.sumGameDuration / totalGames) / 60
+  const championAvgPerMin = {
+    damageToChampionsPerMin: (championAvg.sumDamageToChampions / totalGames) / avgGameDurationMinutes,
+    totalDamagePerMin: (championAvg.sumTotalDamage / totalGames) / avgGameDurationMinutes,
+    healingShieldingPerMin: ((championAvg.sumHealing + championAvg.sumShielding) / totalGames) / avgGameDurationMinutes,
+    ccTimePerMin: (championAvg.sumCCTime / totalGames) / avgGameDurationMinutes,
+  }
+  
+  const penalties: PigScoreBreakdown['penalties'] = []
+  
+  // damage to champions penalty
+  if (championAvgPerMin.damageToChampionsPerMin > 0) {
+    const penalty = calculateStatPenalty(playerStats.damageToChampionsPerMin, championAvgPerMin.damageToChampionsPerMin, 20)
+    const percentOfAvg = (playerStats.damageToChampionsPerMin / championAvgPerMin.damageToChampionsPerMin) * 100
+    penalties.push({
+      name: 'Damage to Champions',
+      penalty,
+      maxPenalty: 20,
+      playerValue: playerStats.damageToChampionsPerMin,
+      avgValue: championAvgPerMin.damageToChampionsPerMin,
+      percentOfAvg
+    })
+    score -= penalty
+  }
+  
+  // total damage penalty
+  if (championAvgPerMin.totalDamagePerMin > 0) {
+    const penalty = calculateStatPenalty(playerStats.totalDamagePerMin, championAvgPerMin.totalDamagePerMin, 20)
+    const percentOfAvg = (playerStats.totalDamagePerMin / championAvgPerMin.totalDamagePerMin) * 100
+    penalties.push({
+      name: 'Total Damage',
+      penalty,
+      maxPenalty: 20,
+      playerValue: playerStats.totalDamagePerMin,
+      avgValue: championAvgPerMin.totalDamagePerMin,
+      percentOfAvg
+    })
+    score -= penalty
+  }
+  
+  // healing/shielding penalty - only for champions that actually heal/shield (500+/min average)
+  if (championAvgPerMin.healingShieldingPerMin >= 500) {
+    const penalty = calculateStatPenalty(playerStats.healingShieldingPerMin, championAvgPerMin.healingShieldingPerMin, 20)
+    const percentOfAvg = (playerStats.healingShieldingPerMin / championAvgPerMin.healingShieldingPerMin) * 100
+    penalties.push({
+      name: 'Healing/Shielding',
+      penalty,
+      maxPenalty: 20,
+      playerValue: playerStats.healingShieldingPerMin,
+      avgValue: championAvgPerMin.healingShieldingPerMin,
+      percentOfAvg
+    })
+    score -= penalty
+  }
+  
+  // cc time penalty - only for champions with meaningful CC (3+s/min average)
+  if (championAvgPerMin.ccTimePerMin >= 3) {
+    const penalty = calculateStatPenalty(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, 20)
+    const percentOfAvg = (playerStats.ccTimePerMin / championAvgPerMin.ccTimePerMin) * 100
+    penalties.push({
+      name: 'CC Time',
+      penalty,
+      maxPenalty: 20,
+      playerValue: playerStats.ccTimePerMin,
+      avgValue: championAvgPerMin.ccTimePerMin,
+      percentOfAvg
+    })
+    score -= penalty
+  }
+  
+  // item penalty
+  const itemPenalty = await calculateItemPenalty(participant, championName)
+  penalties.push({ name: 'Items', penalty: itemPenalty, maxPenalty: 10 })
+  score -= itemPenalty
+  
+  // keystone penalty
+  const keystonePenalty = await calculateKeystonePenalty(participant, championName)
+  penalties.push({ name: 'Keystone', penalty: keystonePenalty, maxPenalty: 10 })
+  score -= keystonePenalty
+  
+  // spells penalty
+  const spellsPenalty = await calculateSpellsPenalty(participant, championName)
+  penalties.push({ name: 'Spells', penalty: spellsPenalty, maxPenalty: 5 })
+  score -= spellsPenalty
+  
+  // skill order penalty
+  const skillOrderPenalty = await calculateSkillOrderPenalty(participant, championName)
+  penalties.push({ name: 'Skill Order', penalty: skillOrderPenalty, maxPenalty: 8 })
+  score -= skillOrderPenalty
+  
+  // build order penalty
+  const buildOrderPenalty = await calculateBuildOrderPenalty(participant, championName)
+  penalties.push({ name: 'Build Order', penalty: buildOrderPenalty, maxPenalty: 8 })
+  score -= buildOrderPenalty
+  
+  // deaths per minute penalty
+  const deathsPenalty = calculateDeathsPerMinutePenalty(participant.deaths, gameDurationMinutes)
+  penalties.push({ 
+    name: 'Deaths/Min', 
+    penalty: deathsPenalty, 
+    maxPenalty: 15,
+    playerValue: playerStats.deathsPerMin
+  })
+  score -= deathsPenalty
+  
+  const finalScore = Math.max(0, Math.min(100, Math.round(score)))
+  
+  return {
+    finalScore,
+    playerStats,
+    championAvgStats: championAvgPerMin,
+    penalties,
+    totalGames,
+    patch: selectedStats.patch
+  }
 }
