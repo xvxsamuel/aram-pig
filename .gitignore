@@ -28,5 +28,8 @@ dist-ssr
 next-env.d.ts
 dist
 supabase
-scripts
 docs
+
+# scraper state files (not the scripts themselves)
+scripts/scraper-state.json
+scripts/match-cache.json
