@@ -42,13 +42,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download scraper state
-        uses: actions/cache@v4
+      - name: Restore scraper state from cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             scripts/scraper-state.json
             scripts/match-cache.json
-          key: scraper-state-${{ github.run_id }}
+          key: scraper-state-latest
           restore-keys: |
             scraper-state-
 
@@ -67,14 +67,22 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Upload scraper state
+      - name: Delete old cache
+        if: always()
+        continue-on-error: true
+        run: |
+          gh cache delete scraper-state-latest || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save scraper state to cache
         uses: actions/cache/save@v4
         if: always()
         with:
           path: |
             scripts/scraper-state.json
             scripts/match-cache.json
-          key: scraper-state-${{ github.run_id }}
+          key: scraper-state-latest
 
       - name: Report status
         if: always()
@@ -92,7 +100,4 @@ jobs:
             echo "=== match-cache.json: $MATCH_COUNT known matches ==="
           else
             echo "No match cache file found"
-          fi
-          else
-            echo "No scraper state file found"
           fi
