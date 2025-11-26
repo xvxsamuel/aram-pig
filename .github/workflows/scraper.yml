@@ -7,11 +7,22 @@ on:
   # allow manual trigger
   workflow_dispatch:
     inputs:
+      reset_state:
+        description: 'Reset scraper state before running'
+        required: false
+        default: 'false'
+        type: boolean
       duration_minutes:
         description: 'How long to run the scraper (minutes)'
         required: false
-        default: '50'
+        default: '55'
         type: string
+
+env:
+  RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
 
 jobs:
   scrape:
@@ -19,53 +30,105 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Run scraper via API
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore scraper state from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            scripts/scraper-state.json
+            scripts/match-cache.json
+          key: scraper-state-latest
+          restore-keys: |
+            scraper-state-
+
+      - name: Reset scraper state (if requested)
+        if: ${{ github.event.inputs.reset_state == 'true' }}
+        run: rm -f scripts/scraper-state.json scripts/match-cache.json
+
+      - name: Show initial state
         run: |
-          DURATION=${{ github.event.inputs.duration_minutes || '50' }}
           echo "========================================"
-          echo "Starting scraper API call"
+          echo "Scraper State Before Run"
           echo "========================================"
-          echo "URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}/api/scraper"
-          echo "Duration: ${DURATION} minutes"
+          if [ -f scripts/scraper-state.json ]; then
+            echo "State file exists:"
+            cat scripts/scraper-state.json | jq '.stacks | to_entries | map({region: .key, stack_size: (.value | length)})' 2>/dev/null || echo "Could not parse state"
+          else
+            echo "No state file - will start fresh with default seeds"
+          fi
+          echo "========================================"
+
+      - name: Run scraper
+        run: |
+          DURATION=${{ github.event.inputs.duration_minutes || '55' }}
+          echo "========================================"
+          echo "Starting scraper for ${DURATION} minutes"
           echo "Time: $(date -u)"
           echo "========================================"
           
-          # Make the API call with verbose output
-          RESPONSE=$(curl -s -L -w "\n%{http_code}" -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -d "{\"duration_minutes\": ${DURATION}}" \
-            "${{ secrets.NEXT_PUBLIC_SITE_URL }}/api/scraper" \
-            --max-time 3600)
+          # Run scraper with timeout
+          timeout ${DURATION}m npm run scraper || EXIT_CODE=$?
           
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          
-          echo ""
-          echo "========================================"
-          echo "API Response"
-          echo "========================================"
-          echo "HTTP Status: $HTTP_CODE"
-          echo "Response Body:"
-          echo "$BODY" | jq '.' 2>/dev/null || echo "$BODY"
-          echo "========================================"
-          
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo ""
-            echo "❌ Scraper API returned error (HTTP $HTTP_CODE)"
-            exit 1
+          if [ "${EXIT_CODE:-0}" -eq 124 ]; then
+            echo "Scraper stopped by timeout (expected behavior)"
+          elif [ "${EXIT_CODE:-0}" -ne 0 ]; then
+            echo "Scraper exited with code $EXIT_CODE"
           fi
           
-          # Extract and display key metrics
-          echo ""
           echo "========================================"
-          echo "Scraper Results Summary"
+          echo "Scraper finished at $(date -u)"
           echo "========================================"
-          MATCHES=$(echo "$BODY" | jq -r '.matches_stored // "N/A"')
-          DURATION_SEC=$(echo "$BODY" | jq -r '.duration_seconds // "N/A"')
-          echo "✅ Matches stored: $MATCHES"
-          echo "⏱️  Duration: ${DURATION_SEC}s"
+
+      - name: Delete old cache
+        if: always()
+        continue-on-error: true
+        run: gh cache delete scraper-state-latest || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save scraper state to cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            scripts/scraper-state.json
+            scripts/match-cache.json
+          key: scraper-state-latest
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "========================================"
+          echo "Scraper State After Run"
+          echo "========================================"
+          if [ -f scripts/scraper-state.json ]; then
+            echo "State file saved successfully"
+            echo ""
+            echo "Stack sizes by region:"
+            cat scripts/scraper-state.json | jq '.stacks | to_entries | map({region: .key, stack_size: (.value | length)})' 2>/dev/null || echo "Could not parse"
+            echo ""
+            echo "Visited counts by region:"
+            cat scripts/scraper-state.json | jq '.visited | to_entries | map({region: .key, visited: (.value | length)})' 2>/dev/null || echo "Could not parse"
+          else
+            echo "⚠️ No scraper state file found"
+          fi
+          
           echo ""
-          echo "Results by region:"
-          echo "$BODY" | jq -r '.results_by_region // {}' 2>/dev/null || echo "N/A"
+          if [ -f scripts/match-cache.json ]; then
+            MATCH_COUNT=$(cat scripts/match-cache.json | jq 'length' 2>/dev/null || echo "0")
+            echo "✅ Match cache: $MATCH_COUNT known matches"
+          else
+            echo "⚠️ No match cache file found"
+          fi
           echo "========================================"
