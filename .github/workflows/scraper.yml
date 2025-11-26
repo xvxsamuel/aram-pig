@@ -1,9 +1,9 @@
 name: Match Scraper
 
 on:
-  # run every 4 hours
+  # run every 12 hours (2x per day = ~2700 min/month with 45min runs)
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '0 */12 * * *'
   # allow manual trigger
   workflow_dispatch:
     inputs:
@@ -15,7 +15,7 @@ on:
       duration_minutes:
         description: 'How long to run the scraper (minutes)'
         required: false
-        default: '55'
+        default: '45'
         type: string
 
 env:
@@ -23,9 +23,28 @@ env:
   NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
   NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
   SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+  SCRAPER_THROTTLE: '50'
 
 jobs:
+  check-pause:
+    runs-on: ubuntu-latest
+    outputs:
+      paused: ${{ steps.check.outputs.paused }}
+    steps:
+      - name: Check if scraper is paused
+        id: check
+        run: |
+          if [ "${{ secrets.SCRAPER_PAUSED }}" = "true" ]; then
+            echo "Scraper is PAUSED (set SCRAPER_PAUSED secret to 'false' to resume)"
+            echo "paused=true" >> $GITHUB_OUTPUT
+          else
+            echo "Scraper is active"
+            echo "paused=false" >> $GITHUB_OUTPUT
+          fi
+
   scrape:
+    needs: check-pause
+    if: needs.check-pause.outputs.paused != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -70,10 +89,13 @@ jobs:
           echo "========================================"
 
       - name: Run scraper
+        env:
+          SCRAPER_THROTTLE: ${{ env.SCRAPER_THROTTLE }}
         run: |
           DURATION=${{ github.event.inputs.duration_minutes || '55' }}
           echo "========================================"
           echo "Starting scraper for ${DURATION} minutes"
+          echo "Throttle: ${SCRAPER_THROTTLE}% of rate limit"
           echo "Time: $(date -u)"
           echo "========================================"
           
@@ -91,7 +113,7 @@ jobs:
           echo "========================================"
 
       - name: Delete old cache
-        if: always()
+        if: always() && hashFiles('scripts/scraper-state.json') != ''
         continue-on-error: true
         run: gh cache delete scraper-state-latest || true
         env:
@@ -99,7 +121,7 @@ jobs:
 
       - name: Save scraper state to cache
         uses: actions/cache/save@v4
-        if: always()
+        if: always() && hashFiles('scripts/scraper-state.json') != ''
         with:
           path: |
             scripts/scraper-state.json

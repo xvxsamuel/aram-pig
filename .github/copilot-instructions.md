@@ -61,7 +61,7 @@ npm run lint         # eslint check
 ```
 
 ## github actions workflows
-- **scraper.yml**: runs every 4 hours to collect match data; can be triggered manually with `reset_state` and `duration_minutes` inputs
+- **scraper.yml**: runs every 12 hours to collect match data; can be triggered manually with `reset_state` and `duration_minutes` inputs; uses only 50% of rate limit by default
 - **fetch-items.yml**: runs weekly (Monday 6am UTC) to update static riot data; creates PR if changes detected
 - **cleanup-stats.yml**: runs daily at 3am UTC to delete champion_stats for patches older than latest 3
 
@@ -72,6 +72,20 @@ required secrets for workflows:
 - `SUPABASE_SECRET_KEY`
 - `CRON_SECRET` (for cleanup-stats)
 - `NEXT_PUBLIC_SITE_URL` (for cleanup-stats)
+
+optional secrets:
+- `SCRAPER_PAUSED`: set to `true` to pause automatic scraping (for manual local scraping)
+
+## scraper throttling
+the scraper uses `SCRAPER_THROTTLE` env var (0-100) to limit rate limit usage:
+- github actions uses 50% by default (50 req/2min instead of 90)
+- local scraping uses 100% by default (full rate limit)
+- this leaves capacity for website users to refresh profiles
+
+to pause github actions scraper for manual scraping:
+1. go to repo settings -> secrets and variables -> actions
+2. add secret `SCRAPER_PAUSED` with value `true`
+3. remove or set to `false` to resume
 
 ## data flow
 1. scraper fetches matches from riot api (respecting rate limits)

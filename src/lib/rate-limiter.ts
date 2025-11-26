@@ -20,6 +20,16 @@ const SHORT_LIMIT = 20; // requests
 const LONG_WINDOW = 120;
 const LONG_LIMIT = 100;
 
+// throttle percentage (0-100) - use only this percentage of rate limit
+// CI/GitHub Actions sets SCRAPER_THROTTLE=50 to leave room for website users
+// local scraping uses 100% by default (no env var set)
+const THROTTLE_PERCENT = Math.min(100, Math.max(10, parseInt(process.env.SCRAPER_THROTTLE || '100', 10)));
+const THROTTLED_LONG_LIMIT = Math.floor(LONG_LIMIT * THROTTLE_PERCENT / 100);
+
+if (THROTTLE_PERCENT < 100) {
+  console.log(`Rate limit throttled to ${THROTTLE_PERCENT}% (${THROTTLED_LONG_LIMIT}/${LONG_LIMIT} requests per 2min)`)
+}
+
 // reserve small capacity for profile refreshes
 const RESERVED_OVERHEAD_SHORT = 2;
 const RESERVED_OVERHEAD_LONG = 10;
@@ -129,9 +139,9 @@ async function waitForRateLimitRedis(platformOrRegion: string, requestType: Requ
     let effectiveLongLimit = LONG_LIMIT;
     
     if (requestType === 'batch') {
-      // batch requests cannot use reserved capacity
+      // batch requests cannot use reserved capacity and are throttled
       effectiveShortLimit = SHORT_LIMIT - RESERVED_OVERHEAD_SHORT;
-      effectiveLongLimit = LONG_LIMIT - RESERVED_OVERHEAD_LONG;
+      effectiveLongLimit = Math.min(THROTTLED_LONG_LIMIT, LONG_LIMIT - RESERVED_OVERHEAD_LONG);
     }
     // overhead requests can use full capacity (including reserved)
 
@@ -234,7 +244,7 @@ async function waitForRateLimitMemory(platformOrRegion: string, requestType: Req
     
     if (requestType === 'batch') {
       effectiveShortLimit = SHORT_LIMIT - RESERVED_OVERHEAD_SHORT;
-      effectiveLongLimit = LONG_LIMIT - RESERVED_OVERHEAD_LONG;
+      effectiveLongLimit = Math.min(THROTTLED_LONG_LIMIT, LONG_LIMIT - RESERVED_OVERHEAD_LONG);
     }
     
     // Check if we need to wait
