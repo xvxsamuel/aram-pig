@@ -1,12 +1,114 @@
 // shared utility for storing match data to database
+// used by: continuous-scraper.ts (batch mode), future github actions scraper (batch mode)
+// update-profile API route uses its own direct RPC calls for organic user updates
 import { createAdminClient } from './supabase'
 import type { MatchData } from './riot-api'
 import type { RegionalCluster } from './regions'
 import { getMatchTimelineNoWait } from './riot-api'
 import { extractAbilityOrder } from './ability-leveling'
-import { extractPatch, getPatchFromDate } from './patch-utils'
+import { extractPatch, getPatchFromDate, isPatchAccepted } from './patch-utils'
 import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from './item-purchases'
 import { extractItemPurchases } from './item-purchase-history'
+import { StatsAggregator, type ParticipantStatsInput } from './stats-aggregator'
+
+// ============================================================================
+// STATS AGGREGATOR - module-level state for batch processing
+// ============================================================================
+// When batchStats=true, stats are aggregated in-memory by champion+patch.
+// Call flushAggregatedStats() to send aggregated stats to DB.
+// This reduces DB CPU load significantly by combining stats before DB calls.
+// Example: 1000 participants from 100 matches → ~80-100 DB calls instead of 1000
+
+const statsAggregator = new StatsAggregator()
+
+/** Get current number of participants aggregated (before DB flush) */
+export function getStatsBufferCount(): number {
+  return statsAggregator.getParticipantCount()
+}
+
+/** Get current number of unique champion+patch combinations */
+export function getAggregatedChampionCount(): number {
+  return statsAggregator.getChampionPatchCount()
+}
+
+// Mutex to prevent concurrent flushes
+let flushInProgress = false
+
+/** Flush all aggregated stats to database. Returns count of champion+patch combos flushed. */
+export async function flushAggregatedStats(): Promise<{ success: boolean; count: number; error?: string }> {
+  // Prevent concurrent flushes
+  if (flushInProgress) {
+    return { success: true, count: 0 } // skip, another flush is in progress
+  }
+  
+  const aggregatedStats = statsAggregator.getAggregatedStats()
+  
+  if (aggregatedStats.length === 0) {
+    return { success: true, count: 0 }
+  }
+  
+  flushInProgress = true
+  
+  try {
+    const participantCount = statsAggregator.getParticipantCount()
+    console.log(`[DB] Flushing ${aggregatedStats.length} champion+patch combos (${participantCount} participants)...`)
+    
+    const supabase = createAdminClient()
+    
+    // Process in small batches to avoid statement timeout
+    // Each batch is a separate transaction
+    const BATCH_SIZE = 10 // 10 champions at a time
+    let totalFlushed = 0
+    let failedBatches = 0
+    
+    for (let i = 0; i < aggregatedStats.length; i += BATCH_SIZE) {
+      const batch = aggregatedStats.slice(i, i + BATCH_SIZE)
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1
+      const totalBatches = Math.ceil(aggregatedStats.length / BATCH_SIZE)
+      
+      // transform batch stats to match RPC expected format
+      const statsArray = batch.map(stats => ({
+        champion_name: stats.champion_name,
+        patch: stats.patch,
+        data: JSON.stringify(stats.data)
+      }))
+      
+      const { data, error } = await supabase.rpc('upsert_aggregated_champion_stats_batch', {
+        p_stats_array: statsArray
+      })
+      
+      if (error) {
+        console.log(`[DB] Batch ${batchNum}/${totalBatches} failed: ${error.message}`)
+        failedBatches++
+        // continue with next batch instead of failing completely
+        continue
+      }
+      
+      totalFlushed += data || batch.length
+    }
+    
+    // Clear aggregator - even if some batches failed, clear to avoid infinite retry loops
+    // The failed data is lost but we'll collect more
+    statsAggregator.clear()
+    
+    if (failedBatches > 0) {
+      console.log(`[DB] Flushed ${totalFlushed}/${aggregatedStats.length} combos (${failedBatches} batches failed)`)
+    } else {
+      console.log(`[DB] Flushed ${totalFlushed} champion+patch combos`)
+    }
+    
+    return { success: totalFlushed > 0, count: totalFlushed }
+  } finally {
+    flushInProgress = false
+  }
+}
+
+// legacy alias for backward compatibility
+export const flushStatsBatch = flushAggregatedStats
+
+// ============================================================================
+// PUUID CACHE
+// ============================================================================
 
 // Cache tracked PUUIDs to avoid repeated DB queries
 let trackedPuuidsCache: Set<string> | null = null
@@ -104,12 +206,30 @@ export interface ParticipantStatsData {
   deaths: number
 }
 
+/**
+ * Store match data to database.
+ * 
+ * @param matchData - Match data from Riot API
+ * @param region - Regional cluster for timeline fetch
+ * @param skipTimeline - Skip timeline fetch (faster but no ability order/build order)
+ * @param batchStats - If true, buffer stats for batch flush instead of immediate RPC
+ *                     Use flushStatsBatch() to send buffered stats to DB
+ * 
+ * Modes:
+ * - batchStats=false (default): Calls increment_champion_stats RPC immediately for each participant
+ * - batchStats=true: Adds stats to internal buffer, call flushStatsBatch() when ready
+ * 
+ * Used by:
+ * - continuous-scraper.ts: batchStats=true for bulk operations
+ * - future github actions scraper: batchStats=true
+ * - update-profile API: Uses its own direct RPC calls (not this function)
+ */
 export async function storeMatchData(
   matchData: MatchData,
   region?: RegionalCluster,
-  skipTimeline: boolean = false, // Fetch timeline by default for full data
-  skipStatsUpdate: boolean = false // If true, don't call RPC - return stats for batching
-): Promise<{ success: boolean; stats?: ParticipantStatsData[] }> {
+  skipTimeline: boolean = false,
+  batchStats: boolean = false
+): Promise<{ success: boolean }> {
   const supabase = createAdminClient()
   
   try {
@@ -134,13 +254,13 @@ export async function storeMatchData(
     let timeline = null
     if (region && !skipTimeline) {
       try {
-        console.log(`  Fetching timeline for ${matchData.metadata.matchId}...`)
+        // console.log(`Fetching timeline for ${matchData.metadata.matchId}...`) // too verbose
         timeline = await getMatchTimelineNoWait(matchData.metadata.matchId, region)
-        console.log(`  Timeline fetched successfully`)
+        // console.log(`Timeline fetched`) // too verbose
       } catch (error: any) {
         // silently skip timeline if unavailable (ability_order will be null)
         if (error?.status !== 404) {
-          console.log(`could not fetch timeline for ${matchData.metadata.matchId}:`, error?.message || error)
+          console.log(`Could not fetch timeline for ${matchData.metadata.matchId}:`, error?.message || error)
         }
       }
     }
@@ -165,7 +285,7 @@ export async function storeMatchData(
     }
 
     // store participant data (pig scores calculated separately from this dataset)
-    console.log(`  Preparing participant rows...`)
+    // console.log(`[DB] Preparing participant rows...`) // too verbose
     
     // Load items data once for all participants
     const itemsDataImport = await import('@/data/items.json')
@@ -293,7 +413,7 @@ export async function storeMatchData(
       }
     })
 
-    console.log(`  Inserting ${participantRows.length} participant rows to database...`)
+    // console.log(`[DB] Inserting ${participantRows.length} participant rows...`) // too verbose
     
     // Get list of tracked players (cached)
     const trackedPuuids = await getTrackedPuuids()
@@ -379,50 +499,60 @@ export async function storeMatchData(
       })
     }
     
-    // If skipStatsUpdate is true, return stats for batch processing
-    if (skipStatsUpdate) {
-      console.log(`  Stored match ${matchData.metadata.matchId} (stats deferred for batching)`)
-      return { success: true, stats: statsData }
-    }
+    // Only process stats for accepted patches (latest 3)
+    const patchAccepted = await isPatchAccepted(patchVersion)
     
-    // Otherwise, update champion_stats immediately via RPC (legacy behavior)
-    for (const stats of statsData) {
-      const { error: statsError } = await supabase.rpc('increment_champion_stats', {
-        p_champion_name: stats.champion_name,
-        p_patch: stats.patch,
-        p_win: stats.win ? 1 : 0,
-        p_items: JSON.stringify(stats.items),
-        p_first_buy: stats.first_buy || '',
-        p_keystone_id: stats.keystone_id,
-        p_rune1: stats.rune1,
-        p_rune2: stats.rune2,
-        p_rune3: stats.rune3,
-        p_rune4: stats.rune4,
-        p_rune5: stats.rune5,
-        p_rune_tree_primary: stats.rune_tree_primary,
-        p_rune_tree_secondary: stats.rune_tree_secondary,
-        p_stat_perk0: stats.stat_perk0,
-        p_stat_perk1: stats.stat_perk1,
-        p_stat_perk2: stats.stat_perk2,
-        p_spell1_id: stats.spell1_id,
-        p_spell2_id: stats.spell2_id,
-        p_skill_order: stats.skill_order || '',
-        p_damage_to_champions: stats.damage_to_champions,
-        p_total_damage: stats.total_damage,
-        p_healing: stats.healing,
-        p_shielding: stats.shielding,
-        p_cc_time: stats.cc_time,
-        p_game_duration: stats.game_duration,
-        p_deaths: stats.deaths
-      }).select()
-      
-      if (statsError) {
-        console.error('error updating champion stats:', statsError)
-        // Continue processing other players even if one fails
+    if (patchAccepted) {
+      if (batchStats) {
+        // Add to aggregator for batch processing later
+        // Aggregator combines stats by champion+patch to reduce DB calls
+        for (const stats of statsData) {
+          // statsData already matches ParticipantStatsInput interface (snake_case)
+          statsAggregator.add(stats)
+        }
+        console.log(`[STATS] Stored ${matchData.metadata.matchId} (+${statsData.length} participants, buffer: ${getStatsBufferCount()}, ${getAggregatedChampionCount()} champions)`)
+      } else {
+        // Immediate RPC calls (legacy behavior for non-batch mode)
+        for (const stats of statsData) {
+          const { error: statsError } = await supabase.rpc('increment_champion_stats', {
+            p_champion_name: stats.champion_name,
+            p_patch: stats.patch,
+            p_win: stats.win ? 1 : 0,
+            p_items: JSON.stringify(stats.items),
+            p_first_buy: stats.first_buy || '',
+            p_keystone_id: stats.keystone_id,
+            p_rune1: stats.rune1,
+            p_rune2: stats.rune2,
+            p_rune3: stats.rune3,
+            p_rune4: stats.rune4,
+            p_rune5: stats.rune5,
+            p_rune_tree_primary: stats.rune_tree_primary,
+            p_rune_tree_secondary: stats.rune_tree_secondary,
+            p_stat_perk0: stats.stat_perk0,
+            p_stat_perk1: stats.stat_perk1,
+            p_stat_perk2: stats.stat_perk2,
+            p_spell1_id: stats.spell1_id,
+            p_spell2_id: stats.spell2_id,
+            p_skill_order: stats.skill_order || '',
+            p_damage_to_champions: stats.damage_to_champions,
+            p_total_damage: stats.total_damage,
+            p_healing: stats.healing,
+            p_shielding: stats.shielding,
+            p_cc_time: stats.cc_time,
+            p_game_duration: stats.game_duration,
+            p_deaths: stats.deaths
+          })
+          
+          if (statsError) {
+            console.error('error updating champion stats:', statsError)
+          }
+        }
+        console.log(`[STATS] Stored ${matchData.metadata.matchId} (${trackedRows.length} tracked, ${participantRows.length - trackedRows.length} anonymous)`)
       }
+    } else {
+      console.log(`[STATS] Stored ${matchData.metadata.matchId} (patch ${patchVersion} skipped)`)
     }
 
-    console.log(`  Successfully stored match ${matchData.metadata.matchId} (${trackedRows.length} tracked, ${participantRows.length - trackedRows.length} anonymous)`)
     return { success: true }
   } catch (error) {
     console.error('error in storeMatchData:', error)
