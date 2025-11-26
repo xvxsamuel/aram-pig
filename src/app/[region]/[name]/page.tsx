@@ -133,7 +133,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
           if (cacheError) {
             console.error('Failed to cache summoner:', cacheError)
           } else {
-            console.log('✓ Summoner cached successfully')
+            console.log('Summoner cached successfully')
           }
         }
       } catch (apiError: any) {

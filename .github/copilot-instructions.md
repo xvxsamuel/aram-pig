@@ -83,7 +83,7 @@ required secrets for workflows:
 
 ## conventions
 - **env vars**: required in `.env.local`: `RIOT_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`
-- **console output**: capitalize messages, no emoji or decorative symbols
+- **console output**: capitalize messages, NO EMOJIS OR DECORATIVE SYMBOLS EVER
 - **comments**: lowercase, minimal
 - **admin client**: never use in browser code—`createAdminClient()` throws if called client-side
 - **database changes**: reference `supabase/current_db_schema.sql` for table structure, `supabase/functions/` for rpc functions, `supabase/triggers/` for triggers

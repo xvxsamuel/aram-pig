@@ -7,9 +7,9 @@ import { existsSync } from 'fs'
 const envPath = resolve(process.cwd(), '.env.local')
 if (existsSync(envPath)) {
   config({ path: envPath })
-  console.log('✓ Environment variables loaded from .env.local')
+  console.log('Environment variables loaded from .env.local')
 } else if (process.env.CI || process.env.GITHUB_ACTIONS) {
-  console.log('✓ Running in CI, using pre-set environment variables')
+  console.log('Running in CI, using pre-set environment variables')
 } else {
   console.warn('⚠ No .env.local found and not in CI - env vars may be missing')
 }

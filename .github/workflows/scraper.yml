@@ -121,14 +121,14 @@ jobs:
             echo "Visited counts by region:"
             cat scripts/scraper-state.json | jq '.visited | to_entries | map({region: .key, visited: (.value | length)})' 2>/dev/null || echo "Could not parse"
           else
-            echo "⚠️ No scraper state file found"
+            echo "WARNING: No scraper state file found"
           fi
           
           echo ""
           if [ -f scripts/match-cache.json ]; then
             MATCH_COUNT=$(cat scripts/match-cache.json | jq 'length' 2>/dev/null || echo "0")
-            echo "✅ Match cache: $MATCH_COUNT known matches"
+            echo "Match cache: $MATCH_COUNT known matches"
           else
-            echo "⚠️ No match cache file found"
+            echo "WARNING: No match cache file found"
           fi
           echo "========================================"

@@ -604,7 +604,7 @@ async function processMatchesInBackground(
               console.error(`  Error inserting participant records:`, insertError)
             }
           } else {
-            console.log(`  ✓ Added ${summonerMatchRecords.length} participant records to existing match ${matchId}`)
+            console.log(`  Added ${summonerMatchRecords.length} participant records to existing match ${matchId}`)
             
             // Call increment_champion_stats for ALL participants (like scraper does)
             // Only for patches in the accepted list (latest 3 patches)
@@ -868,7 +868,7 @@ async function processMatchesInBackground(
             console.error('Junction table insert error:', junctionError);
           }
         } else {
-          console.log(`✓ Inserted ${summonerMatchRecords.length} summoner_match records for match ${matchId}`)
+          console.log(`Inserted ${summonerMatchRecords.length} summoner_match records for match ${matchId}`)
           
           // Call increment_champion_stats for ALL participants (like scraper does)
           // Only for patches in the accepted list (latest 3 patches)
