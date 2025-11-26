@@ -25,6 +25,10 @@ env:
   SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
   SCRAPER_THROTTLE: '50'
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   check-pause:
     runs-on: ubuntu-latest
