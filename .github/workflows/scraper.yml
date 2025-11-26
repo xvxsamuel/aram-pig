@@ -22,8 +22,15 @@ jobs:
       - name: Run scraper via API
         run: |
           DURATION=${{ github.event.inputs.duration_minutes || '50' }}
-          echo "Calling scraper API for ${DURATION} minutes..."
+          echo "========================================"
+          echo "Starting scraper API call"
+          echo "========================================"
+          echo "URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}/api/scraper"
+          echo "Duration: ${DURATION} minutes"
+          echo "Time: $(date -u)"
+          echo "========================================"
           
+          # Make the API call with verbose output
           RESPONSE=$(curl -s -L -w "\n%{http_code}" -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
@@ -34,12 +41,31 @@ jobs:
           HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
           BODY=$(echo "$RESPONSE" | sed '$d')
           
-          echo "Response code: $HTTP_CODE"
-          echo "Response body: $BODY"
+          echo ""
+          echo "========================================"
+          echo "API Response"
+          echo "========================================"
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response Body:"
+          echo "$BODY" | jq '.' 2>/dev/null || echo "$BODY"
+          echo "========================================"
           
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "Scraper API returned error"
+            echo ""
+            echo "❌ Scraper API returned error (HTTP $HTTP_CODE)"
             exit 1
           fi
           
-          echo "$BODY" | jq '.'
+          # Extract and display key metrics
+          echo ""
+          echo "========================================"
+          echo "Scraper Results Summary"
+          echo "========================================"
+          MATCHES=$(echo "$BODY" | jq -r '.matches_stored // "N/A"')
+          DURATION_SEC=$(echo "$BODY" | jq -r '.duration_seconds // "N/A"')
+          echo "✅ Matches stored: $MATCHES"
+          echo "⏱️  Duration: ${DURATION_SEC}s"
+          echo ""
+          echo "Results by region:"
+          echo "$BODY" | jq -r '.results_by_region // {}' 2>/dev/null || echo "N/A"
+          echo "========================================"
