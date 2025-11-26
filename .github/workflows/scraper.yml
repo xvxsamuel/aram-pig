@@ -24,7 +24,7 @@ jobs:
           DURATION=${{ github.event.inputs.duration_minutes || '50' }}
           echo "Calling scraper API for ${DURATION} minutes..."
           
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          RESPONSE=$(curl -s -L -w "\n%{http_code}" -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -d "{\"duration_minutes\": ${DURATION}}" \
