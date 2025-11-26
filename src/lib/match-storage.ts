@@ -74,11 +74,42 @@ function extractSkillOrderAbbreviation(abilityOrder: string): string {
   return result
 }
 
+// Type for stats data that can be batched
+export interface ParticipantStatsData {
+  champion_name: string
+  patch: string
+  win: boolean
+  items: number[]
+  first_buy: string | null
+  keystone_id: number
+  rune1: number
+  rune2: number
+  rune3: number
+  rune4: number
+  rune5: number
+  rune_tree_primary: number
+  rune_tree_secondary: number
+  stat_perk0: number
+  stat_perk1: number
+  stat_perk2: number
+  spell1_id: number
+  spell2_id: number
+  skill_order: string | null
+  damage_to_champions: number
+  total_damage: number
+  healing: number
+  shielding: number
+  cc_time: number
+  game_duration: number
+  deaths: number
+}
+
 export async function storeMatchData(
   matchData: MatchData,
   region?: RegionalCluster,
-  skipTimeline: boolean = false // Fetch timeline by default for full data
-): Promise<boolean> {
+  skipTimeline: boolean = false, // Fetch timeline by default for full data
+  skipStatsUpdate: boolean = false // If true, don't call RPC - return stats for batching
+): Promise<{ success: boolean; stats?: ParticipantStatsData[] }> {
   const supabase = createAdminClient()
   
   try {
@@ -96,7 +127,7 @@ export async function storeMatchData(
 
     if (existingMatch) {
       // match already exists, skip silently
-      return false
+      return { success: false }
     }
 
     // fetch timeline data for ability leveling and caching (optional for speed)
@@ -127,10 +158,10 @@ export async function storeMatchData(
     if (matchError) {
       // ignore duplicate key errors (race condition between scrapers)
       if (matchError.code === '23505') {
-        return false
+        return { success: false }
       }
       console.error('error storing match:', matchError)
-      return false
+      return { success: false }
     }
 
     // store participant data (pig scores calculated separately from this dataset)
@@ -145,12 +176,6 @@ export async function storeMatchData(
       if (!item) return false
       const type = item.itemType
       return type === 'legendary' || type === 'boots'
-    }
-    
-    // normalize boot IDs to 10010 (matches SQL normalize_boot_id behavior)
-    const BOOT_IDS = [1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158]
-    const normalizeBootId = (itemId: number): number => {
-      return BOOT_IDS.includes(itemId) ? 10010 : itemId
     }
     
     // Track ability orders, first buys, and build orders for champion stats RPC
@@ -297,11 +322,13 @@ export async function storeMatchData(
       
       if (trackedError) {
         console.error('error storing tracked participants:', trackedError)
-        return false
+        return { success: false }
       }
     }
     
-    // Update champion_stats JSONB for ALL participants (tracked + anonymous)
+    // Build stats data for all participants
+    const statsData: ParticipantStatsData[] = []
+    
     for (let i = 0; i < participantRows.length; i++) {
       const p = participantRows[i]
       const abilityOrder = participantAbilityOrders[i]
@@ -317,64 +344,88 @@ export async function storeMatchData(
         ? buildOrderStr.split(',').map(id => parseInt(id, 10))
         : (Array.isArray(p.match_data?.items) && p.match_data.items.length > 0 ? p.match_data.items : [])
       
-      // Debug logging
-      if (i === 0) { // Only log first participant to avoid spam
-        console.log(`DEBUG: Champion ${p.champion_name}`)
-        console.log(`  buildOrderStr: ${buildOrderStr}`)
-        console.log(`  itemsForStats: ${JSON.stringify(itemsForStats)}`)
-        console.log(`  p.match_data.items: ${JSON.stringify(p.match_data?.items)}`)
-      }
-      
       // Validate runes structure
       const runes = p.match_data?.runes || { primary: { style: 0, perks: [0, 0, 0, 0] }, secondary: { style: 0, perks: [0, 0] }, statPerks: [0, 0, 0] }
       const spells = p.match_data?.spells || [0, 0]
       
-      // pass items as JSON string to work around supabase rpc array serialization bug
+      // Build stats entry for this participant
+      statsData.push({
+        champion_name: p.champion_name,
+        patch: patchVersion,
+        win: p.win,
+        items: itemsForStats,
+        first_buy: firstBuyStr,
+        keystone_id: runes.primary.perks[0] || 0,
+        rune1: runes.primary.perks[1] || 0,
+        rune2: runes.primary.perks[2] || 0,
+        rune3: runes.primary.perks[3] || 0,
+        rune4: runes.secondary.perks[0] || 0,
+        rune5: runes.secondary.perks[1] || 0,
+        rune_tree_primary: runes.primary.style || 0,
+        rune_tree_secondary: runes.secondary.style || 0,
+        stat_perk0: runes.statPerks[0] || 0,
+        stat_perk1: runes.statPerks[1] || 0,
+        stat_perk2: runes.statPerks[2] || 0,
+        spell1_id: spells[0] || 0,
+        spell2_id: spells[1] || 0,
+        skill_order: skillOrder,
+        damage_to_champions: p.match_data?.stats?.damage || 0,
+        total_damage: p.match_data?.stats?.totalDamageDealt || 0,
+        healing: p.match_data?.stats?.totalHealsOnTeammates || 0,
+        shielding: p.match_data?.stats?.totalDamageShieldedOnTeammates || 0,
+        cc_time: p.match_data?.stats?.timeCCingOthers || 0,
+        game_duration: matchData.info.gameDuration || 0,
+        deaths: p.match_data?.deaths || 0
+      })
+    }
+    
+    // If skipStatsUpdate is true, return stats for batch processing
+    if (skipStatsUpdate) {
+      console.log(`  Stored match ${matchData.metadata.matchId} (stats deferred for batching)`)
+      return { success: true, stats: statsData }
+    }
+    
+    // Otherwise, update champion_stats immediately via RPC (legacy behavior)
+    for (const stats of statsData) {
       const { error: statsError } = await supabase.rpc('increment_champion_stats', {
-        p_champion_name: p.champion_name,
-        p_patch: patchVersion,
-        p_win: p.win ? 1 : 0,
-        p_items: JSON.stringify(itemsForStats),
-        p_first_buy: firstBuyStr || '',
-        p_keystone_id: runes.primary.perks[0] || 0,
-        p_rune1: runes.primary.perks[1] || 0,
-        p_rune2: runes.primary.perks[2] || 0,
-        p_rune3: runes.primary.perks[3] || 0,
-        p_rune4: runes.secondary.perks[0] || 0,
-        p_rune5: runes.secondary.perks[1] || 0,
-        p_rune_tree_primary: runes.primary.style || 0,
-        p_rune_tree_secondary: runes.secondary.style || 0,
-        p_stat_perk0: runes.statPerks[0] || 0,
-        p_stat_perk1: runes.statPerks[1] || 0,
-        p_stat_perk2: runes.statPerks[2] || 0,
-        p_spell1_id: spells[0] || 0,
-        p_spell2_id: spells[1] || 0,
-        p_skill_order: skillOrder || '',
-        p_damage_to_champions: p.match_data?.stats?.damage || 0,
-        p_total_damage: p.match_data?.stats?.totalDamageDealt || 0,
-        p_healing: p.match_data?.stats?.totalHealsOnTeammates || 0,
-        p_shielding: p.match_data?.stats?.totalDamageShieldedOnTeammates || 0,
-        p_cc_time: p.match_data?.stats?.timeCCingOthers || 0,
-        p_game_duration: matchData.info.gameDuration || 0,
-        p_deaths: p.match_data?.deaths || 0
+        p_champion_name: stats.champion_name,
+        p_patch: stats.patch,
+        p_win: stats.win ? 1 : 0,
+        p_items: JSON.stringify(stats.items),
+        p_first_buy: stats.first_buy || '',
+        p_keystone_id: stats.keystone_id,
+        p_rune1: stats.rune1,
+        p_rune2: stats.rune2,
+        p_rune3: stats.rune3,
+        p_rune4: stats.rune4,
+        p_rune5: stats.rune5,
+        p_rune_tree_primary: stats.rune_tree_primary,
+        p_rune_tree_secondary: stats.rune_tree_secondary,
+        p_stat_perk0: stats.stat_perk0,
+        p_stat_perk1: stats.stat_perk1,
+        p_stat_perk2: stats.stat_perk2,
+        p_spell1_id: stats.spell1_id,
+        p_spell2_id: stats.spell2_id,
+        p_skill_order: stats.skill_order || '',
+        p_damage_to_champions: stats.damage_to_champions,
+        p_total_damage: stats.total_damage,
+        p_healing: stats.healing,
+        p_shielding: stats.shielding,
+        p_cc_time: stats.cc_time,
+        p_game_duration: stats.game_duration,
+        p_deaths: stats.deaths
       }).select()
       
       if (statsError) {
         console.error('error updating champion stats:', statsError)
-        console.error('Problematic data:', {
-          champion: p.champion_name,
-          items: itemsForStats,
-          itemsString: JSON.stringify(itemsForStats),
-          match_data: p.match_data
-        })
         // Continue processing other players even if one fails
       }
     }
 
     console.log(`  Successfully stored match ${matchData.metadata.matchId} (${trackedRows.length} tracked, ${participantRows.length - trackedRows.length} anonymous)`)
-    return true
+    return { success: true }
   } catch (error) {
     console.error('error in storeMatchData:', error)
-    return false
+    return { success: false }
   }
 }

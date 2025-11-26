@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getChampionImageUrl } from '../lib/ddragon-client'
 import { getChampionDisplayName, getSortedChampionNames, getChampionUrlName } from '../lib/champion-names'
-import { getWinrateColor } from '../lib/winrate-colors'
+import { getWinrateColor, getKdaColor, getPigScoreColor } from '../lib/winrate-colors'
 
 type SortKey = 'games' | 'winrate' | 'kda' | 'damage' | 'pigScore'
 type SortDirection = 'asc' | 'desc'
@@ -33,19 +33,22 @@ interface Props {
   ddragonVersion: string
   championNames: Record<string, string>
   profileIconUrl: string
+  preloadedStats?: ChampionStats[]
 }
 
-export default function ChampionStatsList({ puuid, ddragonVersion, championNames, profileIconUrl }: Props) {
+export default function ChampionStatsList({ puuid, ddragonVersion, championNames, profileIconUrl, preloadedStats }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('games')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [championStats, setChampionStats] = useState<ChampionStats[]>([])
-  const [loading, setLoading] = useState(true)
+  const [championStats, setChampionStats] = useState<ChampionStats[]>(preloadedStats || [])
+  const [loading, setLoading] = useState(!preloadedStats)
   
   // get all champion names sorted alphabetically for skeleton
   const allChampionNames = useMemo(() => getSortedChampionNames(championNames), [championNames])
 
-  // fetch champion stats from api
+  // fetch champion stats from api only if not preloaded
   useEffect(() => {
+    if (preloadedStats) return // already have data
+    
     async function fetchStats() {
       try {
         const response = await fetch(`/api/player-champion-stats?puuid=${puuid}`)
@@ -61,7 +64,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
     }
     
     fetchStats()
-  }, [puuid])
+  }, [puuid, preloadedStats])
 
   // calculate aggregate stats
   const aggregateStats = useMemo(() => {
@@ -281,11 +284,14 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                 <div className="text-gray-300">
                   <span className="text-white">{formatStat(aggregateStats.kills / aggregateStats.games)}</span> / {formatStat(aggregateStats.deaths / aggregateStats.games)} / <span className="text-white">{formatStat(aggregateStats.assists / aggregateStats.games)}</span>
                 </div>
-                <div className={`text-xs ${
-                  aggregateStats.deaths > 0 && ((aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths) >= 3 
-                    ? 'text-gold-light' 
-                    : 'text-gray-400'
-                }`}>
+                <div 
+                  className="text-xs font-semibold"
+                  style={{ color: getKdaColor(
+                    aggregateStats.deaths > 0 
+                      ? (aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths 
+                      : aggregateStats.kills + aggregateStats.assists
+                  ) }}
+                >
                   {aggregateStats.deaths > 0 
                     ? formatStat((aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths, 2)
                     : formatStat(aggregateStats.kills + aggregateStats.assists, 2)
@@ -301,15 +307,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
               {/* pig score */}
               <div className="w-[100px] text-center">
                 {aggregateStats.averagePigScore !== null ? (
-                  <span 
-                    className={
-                      aggregateStats.averagePigScore >= 70 
-                        ? 'text-accent-light' 
-                        : aggregateStats.averagePigScore >= 50 
-                        ? 'text-yellow-400' 
-                        : 'text-negative'
-                    }
-                  >
+                  <span style={{ color: getPigScoreColor(aggregateStats.averagePigScore) }}>
                     {aggregateStats.averagePigScore.toFixed(1)}
                   </span>
                 ) : (
@@ -330,7 +328,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
             return (
               <div 
                 key={stats.championName}
-                className={`flex items-center gap-2 px-1 py-2 transition-colors ${isLoading ? 'animate-pulse' : 'hover:bg-abyss-300'}`}
+                className={`flex items-center gap-2 px-1 py-2 transition-colors ${isLoading ? 'animate-pulse' : 'hover:bg-gold-light/20 cursor-pointer'}`}
               >
                 {/* rank */}
                 <div className="w-[60px] text-center text-xl font-bold text-gold-light">
@@ -421,10 +419,10 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                     <div className="h-5 w-20 bg-abyss-500 rounded mx-auto"></div>
                   ) : (
                     <>
-                      <div className="text-gray-300">
+                      <div className="text-white">
                         <span className="text-white">{formatStat(stats.kills / stats.games)}</span> / {formatStat(stats.deaths / stats.games)} / <span className="text-white">{formatStat(stats.assists / stats.games)}</span>
                       </div>
-                      <div className={`text-xs ${parseFloat(kda) >= 3 ? 'text-gold-light' : 'text-gray-400'}`}>
+                      <div className="text-xs font-semibold" style={{ color: getKdaColor(parseFloat(kda)) }}>
                         {formatStat(parseFloat(kda), 2)} KDA
                       </div>
                     </>
@@ -445,15 +443,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                   {isLoading ? (
                     <div className="h-5 w-12 bg-abyss-500 rounded mx-auto"></div>
                   ) : stats.averagePigScore !== null ? (
-                    <span 
-                      className={
-                        stats.averagePigScore >= 70 
-                          ? 'text-accent-light' 
-                          : stats.averagePigScore >= 50 
-                          ? 'text-yellow-400' 
-                          : 'text-negative'
-                      }
-                    >
+                    <span style={{ color: getPigScoreColor(stats.averagePigScore) }}>
                       {stats.averagePigScore.toFixed(1)}
                     </span>
                   ) : (

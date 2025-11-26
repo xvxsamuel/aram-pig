@@ -45,6 +45,7 @@ required secrets for workflows:
 - **comments**: lowercase, minimal
 - **admin client**: never use in browser code—`createAdminClient()` throws if called client-side
 - **database changes**: reference `supabase/current_db_schema.sql` for table structure, `supabase/functions/` for rpc functions, `supabase/triggers/` for triggers
+- **styling/colors**: always use css variables from `src/app/globals.css` (e.g., `var(--color-kda-3)`); add new variables there if needed rather than hardcoding colors in components
 
 ## patch management
 when a new lol patch releases:

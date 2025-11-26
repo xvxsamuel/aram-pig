@@ -57,7 +57,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
       <div className="relative h-8 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
         <div
           onClick={handleInputClick}
-          className="relative z-10 h-full w-full rounded-[inherit] bg-abyss-700 flex items-center px-4 gap-2 cursor-pointer transition-colors"
+          className="relative h-full w-full rounded-[inherit] bg-abyss-700 flex items-center px-4 gap-2 cursor-pointer transition-colors"
         >
           {isOpen ? (
             <input
@@ -78,7 +78,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
       </div>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 left-0 w-full bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-[100] overflow-hidden">
+        <div className="absolute top-full mt-2 left-0 w-full bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-30 overflow-hidden">
           <div className="max-h-64 overflow-y-auto" style={{
             scrollbarWidth: 'thin',
             scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',
@@ -87,7 +87,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
           }}>
             <button
               onClick={() => handleSelect("")}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-accent-light/20 text-gold-light font-bold"
+              className="w-full px-4 py-2 text-left text-sm hover:bg-gold-light/20 text-gold-light"
             >
               All Champions
             </button>
@@ -98,8 +98,8 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
                 <button
                   key={champion}
                   onClick={() => handleSelect(champion)}
-                  className={`w-full px-4 py-2 text-left text-sm hover:bg-accent-light/20 flex items-center gap-2 ${
-                    value === champion ? 'text-gold-light bg-accent-light/10' : 'text-white'
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-gold-light/20 flex items-center gap-2 ${
+                    value === champion ? ' bg-accent-light/20' : 'text-white'
                   }`}
                 >
                   <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 border border-gold-dark/30">

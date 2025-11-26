@@ -35,8 +35,8 @@ interface Props {
   onUpdateStarted: () => void
   lastUpdated: string | null
   loading?: boolean
-  selectedTab?: 'overview' | 'champions' | 'badges'
-  onTabChange?: (tab: 'overview' | 'champions' | 'badges') => void
+  selectedTab?: 'overview' | 'champions' | 'performance'
+  onTabChange?: (tab: 'overview' | 'champions' | 'performance') => void
 }
 
 export default function ProfileHeader({ 
@@ -62,7 +62,7 @@ export default function ProfileHeader({
   const tabs = [
     { id: 'overview' as const, label: 'Overview' },
     { id: 'champions' as const, label: 'Champions' },
-    { id: 'badges' as const, label: 'Badges' },
+    { id: 'performance' as const, label: 'Performance' },
   ]
 
   return (
@@ -135,7 +135,7 @@ export default function ProfileHeader({
             <button
               key={tab.id}
               onClick={() => onTabChange?.(tab.id)}
-              className={`px-6 py-2 font-semibold transition-all border-b-2 ${
+              className={`cursor-pointer px-6 py-2 font-semibold transition-all border-b-2 ${
                 selectedTab === tab.id
                   ? 'border-accent-light text-white'
                   : 'border-transparent text-text-muted hover:text-white'

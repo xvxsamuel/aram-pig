@@ -1147,7 +1147,7 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
           )}
 
           {/* Item Slots */}
-          {[0, 1, 2, 3, 4].map((slot) => {
+          {[0, 1, 2, 3, 4, 5].map((slot) => {
             const items = itemsBySlot[slot]
             if (!items || items.length === 0) return null
 

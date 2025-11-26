@@ -3,16 +3,29 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import ProfileHeader from "./ProfileHeader"
-import ProfileSkeleton from "./ProfileSkeleton"
-import PigScoreCard from "./PigScoreCard"
-import AramStatsCard from "./AramStatsCard"
 import MatchHistoryList from "./MatchHistoryList"
 import ChampionStatsList from "./ChampionStatsList"
 import FetchMessage from "./FetchMessage"
 import Toast from "./Toast"
+import SummonerSummaryCard from "./SummonerSummaryCard"
+import SummonerTopChampions from "./SummonerTopChampions"
+import SummonerLoadingSkeleton from "./SummonerLoadingSkeleton"
+import RecentlyPlayedWith from "./RecentlyPlayedWith"
 import type { MatchData } from "../lib/riot-api"
 import type { UpdateJobProgress } from "../types/update-jobs"
 import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
+
+interface ChampionStats {
+  championName: string
+  games: number
+  wins: number
+  losses: number
+  kills: number
+  deaths: number
+  assists: number
+  totalDamage: number
+  averagePigScore: number | null
+}
 
 interface Props {
   summonerData: any
@@ -68,8 +81,37 @@ export default function SummonerContent({
   pigScoreGames: initialPigScoreGames
 }: Props) {
   const router = useRouter()
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'champions' | 'badges'>('overview')
+  
+  // get initial tab from URL hash
+  const getTabFromHash = useCallback((): 'overview' | 'champions' | 'performance' => {
+    if (typeof window === 'undefined') return 'overview'
+    const hash = window.location.hash.slice(1) // remove #
+    if (hash === 'champions' || hash === 'performance') return hash
+    return 'overview'
+  }, [])
+  
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'champions' | 'performance'>('overview')
   const [renderedTabs, setRenderedTabs] = useState<Set<string>>(new Set(['overview']))
+  
+  // sync tab with URL hash on mount and handle browser back/forward
+  useEffect(() => {
+    // set initial tab from hash
+    const initialTab = getTabFromHash()
+    if (initialTab !== 'overview') {
+      setSelectedTab(initialTab)
+      setRenderedTabs(prev => new Set([...prev, initialTab]))
+    }
+    
+    // handle browser back/forward
+    const handlePopState = () => {
+      const tab = getTabFromHash()
+      setSelectedTab(tab)
+      setRenderedTabs(prev => new Set([...prev, tab]))
+    }
+    
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [getTabFromHash])
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>("Your profile is up to date!")
@@ -96,6 +138,24 @@ export default function SummonerContent({
   const [lastUpdated, setLastUpdated] = useState(initialLastUpdated)
   const [averagePigScore, setAveragePigScore] = useState(initialAveragePigScore)
   const [pigScoreGames, setPigScoreGames] = useState(initialPigScoreGames)
+  const [championStats, setChampionStats] = useState<ChampionStats[]>([])
+
+  // preload champion stats on mount
+  useEffect(() => {
+    async function fetchChampionStats() {
+      try {
+        const response = await fetch(`/api/player-champion-stats?puuid=${summonerData.account.puuid}`)
+        if (response.ok) {
+          const data = await response.json()
+          setChampionStats(data)
+        }
+      } catch (error) {
+        console.error('Failed to preload champion stats:', error)
+      }
+    }
+    
+    fetchChampionStats()
+  }, [summonerData.account.puuid])
 
   // fetch stats client-side if not provided (totalGames === 0)
   useEffect(() => {
@@ -339,29 +399,82 @@ export default function SummonerContent({
   }
 
   // handle tab changes and mark tabs as rendered
-  const handleTabChange = (tab: 'overview' | 'champions' | 'badges') => {
+  const handleTabChange = useCallback((tab: 'overview' | 'champions' | 'performance') => {
     setSelectedTab(tab)
     setRenderedTabs(prev => new Set([...prev, tab]))
-  }
+    
+    // update URL hash (overview = no hash, others = #tabname)
+    const newHash = tab === 'overview' ? '' : `#${tab}`
+    const newUrl = window.location.pathname + window.location.search + newHash
+    window.history.pushState(null, '', newUrl)
+  }, [])
+
+  // calculate summary stats from champion stats
+  const aggregateStats = useMemo(() => {
+    if (championStats.length === 0) return null
+
+    const totalGamesAgg = championStats.reduce((sum, c) => sum + c.games, 0)
+    const totalWins = championStats.reduce((sum, c) => sum + c.wins, 0)
+    const totalKillsAgg = championStats.reduce((sum, c) => sum + c.kills, 0)
+    const totalDeathsAgg = championStats.reduce((sum, c) => sum + c.deaths, 0)
+    const totalAssistsAgg = championStats.reduce((sum, c) => sum + c.assists, 0)
+    
+    const gamesWithPigScore = championStats.filter(c => c.averagePigScore !== null)
+    const totalPigScore = gamesWithPigScore.reduce((sum, c) => {
+      return sum + (c.averagePigScore! * c.games)
+    }, 0)
+    const totalPigScoreGames = gamesWithPigScore.reduce((sum, c) => sum + c.games, 0)
+
+    return {
+      games: totalGamesAgg,
+      wins: totalWins,
+      losses: totalGamesAgg - totalWins,
+      kills: totalKillsAgg,
+      deaths: totalDeathsAgg,
+      assists: totalAssistsAgg,
+      averagePigScore: totalPigScoreGames > 0 ? totalPigScore / totalPigScoreGames : null
+    }
+  }, [championStats])
+
+  const summaryKda = aggregateStats && aggregateStats.deaths > 0 
+    ? ((aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths).toFixed(2)
+    : aggregateStats ? (aggregateStats.kills + aggregateStats.assists).toFixed(2) : '0.00'
+
+  // get top champions sorted by games
+  const topChampions = useMemo(() => {
+    return [...championStats]
+      .sort((a, b) => b.games - a.games)
+      .slice(0, 7)
+  }, [championStats])
+
+  // callback when more matches are loaded
+  const handleMoreMatchesLoaded = useCallback((newMatches: MatchData[]) => {
+    setMatches(prev => [...prev, ...newMatches])
+  }, [])
 
   // memoize overview content to prevent re-rendering
   const overviewContent = useMemo(() => (
     <div className="flex flex-col xl:flex-row gap-4">
-      <div className="flex flex-col gap-4 xl:w-80 w-full">
-        <PigScoreCard averagePigScore={averagePigScore} totalGames={pigScoreGames} />
-        <AramStatsCard
-          totalGames={totalGames}
-          wins={wins}
-          totalKills={totalKills}
-          totalDeaths={totalDeaths}
-          totalAssists={totalAssists}
-          longestWinStreak={longestWinStreak}
-          totalDamage={totalDamage}
-          totalGameDuration={totalGameDuration}
-          totalDoubleKills={totalDoubleKills}
-          totalTripleKills={totalTripleKills}
-          totalQuadraKills={totalQuadraKills}
-          totalPentaKills={totalPentaKills}
+      <div className="flex flex-col gap-4 xl:w-80 w-full flex-shrink-0">
+        <SummonerSummaryCard
+          championStatsLoading={championStats.length === 0}
+          aggregateStats={aggregateStats}
+          summaryKda={summaryKda}
+          onTabChange={handleTabChange}
+        />
+        <SummonerTopChampions
+          championStats={championStats}
+          topChampions={topChampions}
+          ddragonVersion={ddragonVersion}
+          championNames={championNames}
+          onShowMore={() => handleTabChange('champions')}
+          onTabChange={handleTabChange}
+        />
+        <RecentlyPlayedWith
+          matches={matches}
+          currentPuuid={summonerData.account.puuid}
+          region={region}
+          ddragonVersion={ddragonVersion}
         />
       </div>
       <MatchHistoryList
@@ -370,9 +483,10 @@ export default function SummonerContent({
         region={region}
         ddragonVersion={ddragonVersion}
         championNames={championNames}
+        onMatchesLoaded={handleMoreMatchesLoaded}
       />
     </div>
-  ), [matches, averagePigScore, pigScoreGames, totalGames, wins, totalKills, totalDeaths, totalAssists, longestWinStreak, totalDamage, totalGameDuration, totalDoubleKills, totalTripleKills, totalQuadraKills, totalPentaKills, summonerData.account.puuid, region, ddragonVersion, championNames])
+  ), [matches, summonerData.account.puuid, region, ddragonVersion, championNames, championStats, aggregateStats, summaryKda, topChampions, handleTabChange, handleMoreMatchesLoaded])
 
   // memoize champions content
   const championsContent = useMemo(() => (
@@ -381,8 +495,9 @@ export default function SummonerContent({
       ddragonVersion={ddragonVersion}
       championNames={championNames}
       profileIconUrl={profileIconUrl}
+      preloadedStats={championStats.length > 0 ? championStats : undefined}
     />
-  ), [summonerData.account.puuid, ddragonVersion, championNames, profileIconUrl])
+  ), [summonerData.account.puuid, ddragonVersion, championNames, profileIconUrl, championStats])
 
   return (
     <>
@@ -415,54 +530,7 @@ export default function SummonerContent({
             onTabChange={handleTabChange}
           />
           <div className="max-w-6xl mx-auto px-2 sm:px-8">
-            <div className="flex flex-col xl:flex-row gap-4 py-4">
-              <div className="flex flex-col gap-4 xl:w-80 w-full">
-                {/* pig score card shell */}
-                <div className="w-full">
-                  <section className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-                    <div className="px-6 py-3">
-                      <h2 className="text-xl font-bold text-left mb-3">Personal Item Grade</h2>
-                      <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
-                      <div className="text-center min-h-[120px] flex items-center justify-center">
-                        <div className="relative w-10 h-10">
-                          <div className="absolute inset-0 border-3 border-accent-light rounded-full animate-spin border-t-transparent"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-
-                {/* stats card shell */}
-                <div className="w-full">
-                  <section className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-                    <div className="px-6 py-3">
-                      <h2 className="text-xl font-bold text-left mb-3">Stats</h2>
-                      <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
-                      <div className="min-h-[300px] flex items-center justify-center">
-                        <div className="relative w-10 h-10">
-                          <div className="absolute inset-0 border-3 border-accent-light rounded-full animate-spin border-t-transparent"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-              </div>
-
-              {/* match history shell */}
-              <div className="flex-1">
-                <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-                  <div className="px-6 py-3">
-                    <h2 className="text-xl font-bold text-left mb-3">Match History</h2>
-                    <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-6 -mx-6" />
-                    <div className="min-h-[500px] flex items-center justify-center">
-                      <div className="relative w-12 h-12">
-                        <div className="absolute inset-0 border-4 border-accent-light rounded-full animate-spin border-t-transparent"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SummonerLoadingSkeleton />
           </div>
         </>
       ) : (
@@ -502,10 +570,10 @@ export default function SummonerContent({
                 </div>
               )}
 
-              {renderedTabs.has('badges') && (
-                <div className={selectedTab === 'badges' ? '' : 'hidden'}>
+              {renderedTabs.has('performance') && (
+                <div className={selectedTab === 'performance' ? '' : 'hidden'}>
                   <div className="py-8 text-center text-gray-400">
-                    <p className="text-xl">badges view coming soon</p>
+                    <p className="text-xl">Performance view coming soon</p>
                   </div>
                 </div>
               )}

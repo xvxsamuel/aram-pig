@@ -18,7 +18,7 @@ export default function UpdateButton({ hasActiveJob, onUpdateStarted }: Props) {
       <button 
         onClick={handleUpdate}
         disabled={hasActiveJob}
-        className="w-32 px-6 py-2 bg-gradient-to-t from-action-100 to-action-200 hover:brightness-130 rounded-lg font-semibold transition-all"
+        className="w-32 px-6 py-2 bg-gradient-to-t cursor-pointer from-action-100 to-action-200 hover:brightness-130 rounded-lg font-semibold transition-all"
         data-update-button
       >
         {hasActiveJob ? 'Updating...' : 'Update'}

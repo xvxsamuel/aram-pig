@@ -66,13 +66,13 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
             "flex-1",
             isExpanded ? "rounded-tl-lg" : "rounded-l-lg",
             isRemake
-              ? "bg-[#3A3A3A]"
+              ? "bg-remake"
               : isWin 
-                ? "bg-[#28344E]" 
-                : "bg-[#59343B]"
+                ? "bg-win" 
+                : "bg-loss"
           )}
         >
-          <div className="flex items-center px-4 py-3 min-h-[80px] gap-5">
+          <div className="flex items-center px-4 py-2 min-h-[80px] gap-5">
         {/* left side: game info, champion, summoners, runes */}
         <div className="flex items-center flex-shrink-0">
           <div className="flex flex-col justify-center min-w-[75px]">
@@ -100,7 +100,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
             <div className="flex items-center gap-1">
               <Link href={`/champions/${getChampionUrlName(participant.championName, championNames)}`}>
                 <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg cursor-pointer">
-                  <div className="w-14 h-14 rounded-[inherit] overflow-hidden bg-accent-dark">
+                  <div className="w-12 h-12 rounded-[inherit] overflow-hidden bg-accent-dark">
                     <Image
                       src={getChampionImageUrl(participant.championName, ddragonVersion)}
                       alt={participant.championName}
@@ -187,9 +187,9 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 participant.item4,
                 participant.item5,
               ].map((itemId, idx) => (
-                <Tooltip key={idx} id={itemId} type="item">
-                  <div className="w-7.5 h-7.5 rounded overflow-hidden bg-gray-800 border border-gray-700">
-                    {itemId > 0 && (
+                itemId > 0 ? (
+                  <Tooltip key={idx} id={itemId} type="item">
+                    <div className="w-7 h-7 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
                       <Image
                         src={getItemImageUrl(itemId, ddragonVersion)}
                         alt={`Item ${itemId}`}
@@ -198,9 +198,11 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                         className="w-full h-full object-cover"
                         unoptimized
                       />
-                    )}
-                  </div>
-                </Tooltip>
+                    </div>
+                  </Tooltip>
+                ) : (
+                  <div key={idx} className="w-7 h-7 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark" />
+                )
               ))}
             </div>
           </div>

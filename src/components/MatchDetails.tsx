@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
 import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl } from "../lib/ddragon-client"
+import { getKdaColor, getPigScoreColor } from "../lib/winrate-colors"
 import Tooltip from "./Tooltip"
 import runesData from "@/data/runes.json"
 
@@ -334,10 +335,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           <td className="py-3 text-center">
             {score !== null ? (
               <div className="flex flex-col items-center justify-center">
-                <span className={clsx(
-                  "text-sm font-bold",
-                  score < 50 ? "text-negative" : "text-accent-light"
-                )}>
+                <span 
+                  className="text-sm font-bold"
+                  style={{ color: getPigScoreColor(score) }}
+                >
                   {score.toFixed(1)}
                 </span>
                 {badge ? (
@@ -353,7 +354,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
               </div>
             ) : loadingPigScores ? (
               <div className="flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-gray-600 border-t-gold-light rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
               </div>
             ) : (
               <span className="text-sm text-gray-500">-</span>
@@ -367,10 +368,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
             <div className="text-xs text-gray-300">
               {p.kills}/{p.deaths}/{p.assists} <span className="text-gray-500">({killParticipation}%)</span>
             </div>
-            <div className={clsx(
-              "text-[10px] font-bold",
-              Number(kda) >= 4 ? "text-yellow-400" : Number(kda) >= 3 ? "text-blue-400" : "text-gray-500"
-            )}>
+            <div 
+              className="text-[10px] font-bold"
+              style={{ color: kda === "Perfect" ? getKdaColor(99) : getKdaColor(Number(kda)) }}
+            >
               {kda}:1
             </div>
           </div>
@@ -391,8 +392,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         {/* CS */}
         <td className="py-3 text-center">
           <div className="flex flex-col items-center">
-            <span className="text-xs text-gray-300">{p.totalMinionsKilled}</span>
-            <span className="text-[10px] text-text-muted">{csPerMin}/m</span>
+            <span className="text-xs text-gray-300">{csPerMin}/min</span>
+            <span className="text-[10px] text-text-muted">{p.totalMinionsKilled} total</span>
           </div>
         </td>
 
@@ -672,13 +673,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           </div>
         ) : (
           <div className="p-4 space-y-4">
-            {loadingBreakdown ? (
-              <div className="min-h-[200px] flex items-center justify-center text-text-muted">
-                Loading performance breakdown...
-              </div>
-            ) : !pigScoreBreakdown ? (
-              <div className="min-h-[200px] flex items-center justify-center text-text-muted">
-                Performance data not available for this match
+            {(loadingBreakdown || !pigScoreBreakdown) ? (
+              <div className="min-h-[200px] flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
               </div>
             ) : (
               <>
@@ -687,7 +684,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold text-white">PIG Score Breakdown</h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold"><h2>{pigScoreBreakdown.finalScore}</h2></span>
+                      <span className="text-2xl font-bold" style={{ color: getPigScoreColor(pigScoreBreakdown.finalScore) }}><h2>{pigScoreBreakdown.finalScore}</h2></span>
                       <span className="text-xs text-subtitle">/ 100</span>
                     </div>
                   </div>
