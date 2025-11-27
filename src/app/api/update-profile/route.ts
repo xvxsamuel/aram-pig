@@ -555,7 +555,6 @@ async function processMatchesInBackground(
   // process all matches directly (for small batches ≤20)
   // large batches go to GitHub Actions instead
   const matchesToProcess = newMatchIds
-  const totalMatches = newMatchIds.length
   
   console.log(`[UpdateProfile] processMatchesInBackground started for job ${jobId}: processing ${matchesToProcess.length} matches`)
   
