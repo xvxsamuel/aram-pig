@@ -129,25 +129,26 @@ jobs:
         if: always()
         run: |
           echo "========================================"
-          echo "Scraper State After Run"
+          echo "SCRAPER RUN SUMMARY"
           echo "========================================"
-          if [ -f scripts/scraper-state.json ]; then
-            echo "State file saved successfully"
-            echo ""
-            echo "Stack sizes by region:"
-            cat scripts/scraper-state.json | jq '.stacks | to_entries | map({region: .key, stack_size: (.value | length)})' 2>/dev/null || echo "Could not parse"
-            echo ""
-            echo "Visited counts by region:"
-            cat scripts/scraper-state.json | jq '.visited | to_entries | map({region: .key, visited: (.value | length)})' 2>/dev/null || echo "Could not parse"
-          else
-            echo "WARNING: No scraper state file found"
+          
+          # Extract total matches from the last summary in logs (grep from npm output)
+          echo ""
+          echo "Match Statistics:"
+          if [ -f scripts/match-cache.json ]; then
+            MATCH_COUNT=$(cat scripts/match-cache.json | jq 'length' 2>/dev/null || echo "0")
+            echo "  Known matches in cache: $MATCH_COUNT"
           fi
           
           echo ""
-          if [ -f scripts/match-cache.json ]; then
-            MATCH_COUNT=$(cat scripts/match-cache.json | jq 'length' 2>/dev/null || echo "0")
-            echo "Match cache: $MATCH_COUNT known matches"
+          echo "State by Region:"
+          if [ -f scripts/scraper-state.json ]; then
+            cat scripts/scraper-state.json | jq -r '.stacks | to_entries[] | "  \(.key): \(.value | length) in stack"' 2>/dev/null || echo "  Could not parse stacks"
+            echo ""
+            cat scripts/scraper-state.json | jq -r '.visited | to_entries[] | "  \(.key): \(.value | length) visited"' 2>/dev/null || echo "  Could not parse visited"
           else
-            echo "WARNING: No match cache file found"
+            echo "  WARNING: No scraper state file found"
           fi
+          
+          echo ""
           echo "========================================"

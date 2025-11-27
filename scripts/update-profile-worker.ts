@@ -100,7 +100,28 @@ async function main() {
   }
   
   const matchIds: string[] = JSON.parse(matchIdsJson)
-  console.log(`[Worker] Starting job ${jobId} for ${matchIds.length} matches`)
+  const startTime = Date.now()
+  
+  // fetch summoner info for logging
+  let summonerName = 'Unknown'
+  let summonerTag = ''
+  try {
+    const { data: summoner } = await supabase
+      .from('summoners')
+      .select('game_name, tag_line, region')
+      .eq('puuid', puuid)
+      .single()
+    if (summoner) {
+      summonerName = summoner.game_name
+      summonerTag = summoner.tag_line
+    }
+  } catch (_e) {
+    // ignore - just for logging
+  }
+  
+  console.log(`[Worker] Starting job ${jobId}`)
+  console.log(`[Worker] Summoner: ${summonerName}#${summonerTag} (${region})`)
+  console.log(`[Worker] Matches to process: ${matchIds.length}`)
   
   // mark job as processing
   await supabase
@@ -333,7 +354,17 @@ async function main() {
     
     // complete job
     await completeJob(jobId)
-    console.log(`[Worker] Job ${jobId} completed - processed ${fetchedMatches} matches`)
+    
+    const duration = Math.round((Date.now() - startTime) / 1000)
+    console.log(``)
+    console.log(`========================================`)
+    console.log(`PROFILE UPDATE COMPLETE`)
+    console.log(`========================================`)
+    console.log(`Summoner: ${summonerName}#${summonerTag}`)
+    console.log(`Region: ${region}`)
+    console.log(`Matches processed: ${fetchedMatches}`)
+    console.log(`Duration: ${duration}s`)
+    console.log(`========================================`)
     
   } catch (error: any) {
     console.error('[Worker] Fatal error:', error)
