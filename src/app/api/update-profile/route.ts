@@ -124,9 +124,9 @@ async function getActiveJob(supabase: any, puuid: string): Promise<UpdateJob | n
 }
 
 // threshold for direct processing vs GitHub Actions
-// ≤50 matches: process in Vercel (~1-3 min, fast UX)
-// >50 matches: trigger GitHub Action (handles large batches without timeout)
-const DIRECT_PROCESS_THRESHOLD = 50;
+// ≤40 matches (80 API calls): process in Vercel directly
+// >40 matches: trigger GitHub Action (handles large batches without timeout)
+const DIRECT_PROCESS_THRESHOLD = 40;
 
 // minimum rate limit buffer to keep for other website users
 const RATE_LIMIT_RESERVE = 10;

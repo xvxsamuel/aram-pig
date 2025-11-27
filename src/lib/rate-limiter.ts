@@ -91,18 +91,20 @@ interface RateLimitStatus {
 /**
  * Check rate limit status without consuming a request.
  * Used by update-profile to decide Vercel vs GitHub Actions.
+ * Returns remaining capacity in the LONG (2-min) window since that's the real constraint.
  */
 export async function checkRateLimit(region: string): Promise<RateLimitStatus> {
   if (!redis) {
     // in-memory mode: use local cache directly
     const cache = getOrCreateCache(region);
     resetExpiredWindows(cache);
+    // use LONG_LIMIT for remaining since short window resets every second
     return {
       canProceed: cache.shortCount < SHORT_LIMIT && cache.longCount < LONG_LIMIT,
       waitTime: 0,
       shortCount: cache.shortCount,
       longCount: cache.longCount,
-      estimatedRequestsRemaining: Math.min(SHORT_LIMIT - cache.shortCount, LONG_LIMIT - cache.longCount),
+      estimatedRequestsRemaining: LONG_LIMIT - cache.longCount,
     };
   }
 
@@ -125,12 +127,13 @@ export async function checkRateLimit(region: string): Promise<RateLimitStatus> {
     cache.longCount = longCount;
     cache.lastSync = Date.now();
 
+    // use LONG_LIMIT for remaining since short window resets every second
     return {
       canProceed: shortCount < SHORT_LIMIT && longCount < LONG_LIMIT,
       waitTime: 0,
       shortCount,
       longCount,
-      estimatedRequestsRemaining: Math.min(SHORT_LIMIT - shortCount, LONG_LIMIT - longCount),
+      estimatedRequestsRemaining: LONG_LIMIT - longCount,
     };
   } catch (error) {
     console.error('[RATE LIMIT] Redis check error:', error);
@@ -139,7 +142,7 @@ export async function checkRateLimit(region: string): Promise<RateLimitStatus> {
       waitTime: 0,
       shortCount: 0,
       longCount: 0,
-      estimatedRequestsRemaining: SHORT_LIMIT,
+      estimatedRequestsRemaining: LONG_LIMIT,
     };
   }
 }
