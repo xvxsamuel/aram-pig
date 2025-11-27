@@ -5,6 +5,7 @@ import Link from "next/link"
 import { getChampionImageUrl } from "../lib/ddragon-client"
 import { getChampionDisplayName, getChampionUrlName } from "../lib/champion-names"
 import { getWinrateColor, getKdaColor, getPigScoreColor } from "../lib/winrate-colors"
+import ProfileCard from "./ProfileCard"
 
 interface ChampionStats {
   championName: string
@@ -39,17 +40,11 @@ export default function SummonerTopChampions({
   }
 
   return (
-    <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-      <div className="px-4 py-1.5">
-        <button 
-          onClick={() => onTabChange('champions')}
-          className="text-xl font-bold text-left mb-1.5 transition-colors cursor-pointer"
-        >
-          <h2>Champions</h2>
-        </button>
-        <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-4 -mx-4" />
-        
-        <div className="space-y-1">
+    <ProfileCard 
+      title="Champions" 
+      onTitleClick={() => onTabChange('champions')}
+    >
+      <div className="space-y-1">
           {championStats.length === 0 ? (
             // loading skeleton
             Array.from({ length: 7 }).map((_, i) => (
@@ -119,8 +114,7 @@ export default function SummonerTopChampions({
               )
             })
           )}
-        </div>
       </div>
-    </div>
+    </ProfileCard>
   )
 }

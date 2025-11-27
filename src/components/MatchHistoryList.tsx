@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import type { MatchData } from "../lib/riot-api"
 import MatchHistoryItem from "./MatchHistoryItem"
 import ChampionFilter from "./ChampionFilter"
+import ProfileCard from "./ProfileCard"
 
 interface Props {
   matches: MatchData[]
@@ -71,22 +72,22 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
     }
   }
 
+  const filterDropdown = (
+    <ChampionFilter
+      value={championFilter}
+      onChange={setChampionFilter}
+      championNames={championNames}
+      ddragonVersion={ddragonVersion}
+    />
+  )
+
   return (
     <div className="w-full xl:flex-1 xl:min-w-0">
-      <section className="bg-abyss-600 rounded-lg border border-gold-dark/40">
-        <div className="px-4 py-1.5">
-          <div className="flex items-center justify-between gap-4 mb-1.5 relative z-20">
-            <h2 className="text-xl font-bold flex-shrink-0">Match History</h2>
-            <ChampionFilter
-              value={championFilter}
-              onChange={setChampionFilter}
-              championNames={championNames}
-              ddragonVersion={ddragonVersion}
-            />
-          </div>
-          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-3" />
-          
-          {filteredMatches.length === 0 ? (
+      <ProfileCard 
+        title="Match History" 
+        headerRight={filterDropdown}
+      >
+        {filteredMatches.length === 0 ? (
           <div className="min-h-[500px] flex items-center justify-center">
             <div className="text-center text-text-muted py-8">
               {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
@@ -127,10 +128,9 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
                 </button>
               </div>
             )}
-          </>
+          </>  
         )}
-        </div>
-      </section>
+      </ProfileCard>
     </div>
   )
 }

@@ -8,18 +8,11 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
 
-const leagueSpartanLight = League_Spartan({
+const leagueSpartan = League_Spartan({
   subsets: ['latin'],
-  weight: '300',
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
   display: 'swap',
-  variable: '--font-light',
-})
-
-const leagueSpartanRegular = League_Spartan({
-  subsets: ['latin'],
-  weight: '400',
-  display: 'swap',
-  variable: '--font-regular',
+  variable: '--font-league-spartan',
 })
 
 export const viewport: Viewport = {
@@ -71,11 +64,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${leagueSpartanLight.variable} ${leagueSpartanRegular.variable}`}>
+    <html lang="en" className={leagueSpartan.variable}>
       <head>
         <link rel="preload" href="/bg.png" as="image" />
       </head>
-      <body className='min-h-screen antialiased font-light flex flex-col bg-abyss-700 text-white'>
+      <body className='min-h-screen antialiased font-light flex flex-col bg-abyss-700 text-white' style={{ fontFamily: 'var(--font-league-spartan), sans-serif' }}>
         <NextTopLoader
           color="#2299DD"
           height={3}

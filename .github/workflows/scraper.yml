@@ -10,7 +10,7 @@ on:
       reset_state:
         description: 'Reset scraper state before running'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       duration_minutes:
         description: 'How long to run the scraper (minutes)'

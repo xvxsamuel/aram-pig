@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useMemo, useState, useEffect } from "react"
 import type { MatchData } from "../lib/riot-api"
 import { getWinrateColor } from "../lib/winrate-colors"
+import ProfileCard from "./ProfileCard"
 
 interface Props {
   matches: MatchData[]
@@ -92,15 +93,9 @@ export default function RecentlyPlayedWith({ matches, currentPuuid, region, ddra
   }
 
   return (
-    <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-      <div className="py-1.5">
-        <h2 className="text-xl font-bold text-left mb-1.5 px-4">
-          Recently played with
-        </h2>
-        <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-1" />
-        
-        <div>
-          {recentPlayers.map((player) => {
+    <ProfileCard title="Recently played with">
+      <div className="-mx-4">
+        {recentPlayers.map((player) => {
             const winrate = (player.wins / player.games) * 100
             const profileUrl = `/${region}/${encodeURIComponent(player.gameName)}-${encodeURIComponent(player.tagLine)}`
             const iconId = profileIcons[player.puuid] || 29 // default icon
@@ -149,9 +144,8 @@ export default function RecentlyPlayedWith({ matches, currentPuuid, region, ddra
                 </div>
               </Link>
             )
-          })}
-        </div>
+        })}
       </div>
-    </div>
+    </ProfileCard>
   )
 }

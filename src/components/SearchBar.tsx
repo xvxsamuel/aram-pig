@@ -1,7 +1,6 @@
 "use client"
 import { useRouter } from "nextjs-toploader/app"
 import RegionSelector from "./RegionSelector"
-import RegionDropdown from "./RegionDropdown"
 import { useState, useRef, useEffect } from "react"
 import { clsx } from "clsx"
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
@@ -14,8 +13,6 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
   const [name, setName] = useState("")
   const [region, setRegion] = useState("EUW")
   const [isHydrated, setIsHydrated] = useState(false)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const regionContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // load saved region from localStorage after mount
@@ -26,19 +23,6 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
     }
     setIsHydrated(true)
   }, [])
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (regionContainerRef.current && !regionContainerRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false)
-      }
-    }
-
-    if (isDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-      return () => document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [isDropdownOpen])
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -61,8 +45,6 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
 
   function handleRegionSelect(regionLabel: string) {
     setRegion(regionLabel)
-    setIsDropdownOpen(false)
-    // save to localStorage
     localStorage.setItem('selected-region', regionLabel)
   }
 
@@ -87,24 +69,17 @@ export default function SearchBar({ className = "w-full max-w-3xl" }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Search summoner name"
-              className="w-full h-full px-4 sm:px-6 leading-none text-white placeholder:text-transparent md:placeholder:text-text-muted placeholder:text-xs md:placeholder:text-sm bg-transparent outline-none relative z-10"
+              className="w-full h-full px-4 sm:px-6 text-white text-base placeholder:text-transparent md:placeholder:text-text-muted placeholder:text-sm bg-transparent outline-none relative z-10"
               style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}
             />
           </div>            <div className="flex items-center gap-3 pr-4 h-full">
-              <div className="relative h-full flex items-center" ref={regionContainerRef}>
-                {/* Only render RegionSelector after hydration to prevent EUW flicker */}
+              <div className="relative h-full flex items-center">
+                {/* only render RegionSelector after hydration to prevent flicker of default */}
                 {isHydrated && (
-                  <>
-                    <RegionSelector
-                      value={region}
-                      isOpen={isDropdownOpen}
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    />
-                    <RegionDropdown
-                      isOpen={isDropdownOpen}
-                      onSelect={handleRegionSelect}
-                    />
-                  </>
+                  <RegionSelector
+                    value={region}
+                    onChange={handleRegionSelect}
+                  />
                 )}
               </div>
               <button

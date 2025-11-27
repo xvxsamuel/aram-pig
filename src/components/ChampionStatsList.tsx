@@ -320,8 +320,8 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
           {displayList.map((stats, index) => {
             const isLoading = 'isLoading' in stats && stats.isLoading
             const kda = !isLoading && stats.deaths > 0 
-              ? ((stats.kills + stats.assists) / stats.deaths).toFixed(2)
-              : !isLoading ? (stats.kills + stats.assists).toFixed(2) : '0.00'
+              ? ((stats.kills + stats.assists) / stats.deaths).toFixed(1)
+              : !isLoading ? (stats.kills + stats.assists).toFixed(1) : '0.0'
             const winRate = !isLoading && stats.games > 0 ? ((stats.wins / stats.games) * 100).toFixed(0) : '0'
             const avgDamage = !isLoading && stats.games > 0 ? Math.round(stats.totalDamage / stats.games) : 0
 

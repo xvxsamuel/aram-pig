@@ -1,13 +1,5 @@
 @import 'tailwindcss';
 
-@font-face {
-    font-family: 'Amiamie';
-    src: url('/fonts/amiamie-black.woff') format('woff');
-    font-weight: 900;
-    font-style: normal;
-    font-display: block;
-}
-
 @theme {
     --color-text-muted: oklch(73.16% 0 0 );
 
@@ -42,9 +34,8 @@
     --color-kda-5:oklch(70.243% 0.1937 336.063);
     --color-kda-5-dark:oklch(0.45 0.15 336.063);
     
-    --font-family-light: var(--font-light);
-    --font-family-title: var(--font-regular);
-    --font-family-amiamie: 'Amiamie', sans-serif;
+    --font-family-light: var(--font-league-spartan);
+    --font-family-title: var(--font-league-spartan);
     /* tooltip colors */
     --tooltip-ap: oklch(78.453%  0.13254 181.95);
     --tooltip-ad: oklch(80.595%  0.14126 63.272);
@@ -89,7 +80,7 @@ body {
     background: var(--color-gold-light);
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1, h3, h4, h5, h6 {
     font-family: var(--font-family-title);
 }
 
@@ -99,6 +90,8 @@ h2 {
     -webkit-text-fill-color: transparent;
     background-clip: text;
     font-size: 1.1rem;
+    font-weight: 500;
+    
 }
 
 .nav-link h6 {
@@ -116,7 +109,7 @@ h2 {
 }
 
 input::placeholder {
-    font-family: var(--font-light);
+    font-family: var(--font-league-spartan);
     font-weight: 300;
 }
 

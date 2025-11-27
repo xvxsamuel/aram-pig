@@ -177,9 +177,9 @@ export default function ProfileHeader({
           </div>
         </SimpleTooltip>
         <div className="flex-1 flex flex-col justify-between h-26">
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-semibold text-white">
             {gameName}
-            <span className="text-text-muted"> #{tagLine}</span>
+            <span className="text-text-muted font-normal"> #{tagLine}</span>
           </h1>
           <div className="flex flex-col gap-2">
             <UpdateButton 

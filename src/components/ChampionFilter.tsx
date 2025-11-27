@@ -53,11 +53,11 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
   }
 
   return (
-    <div className="relative w-64" ref={dropdownRef}>
-      <div className="gold-border relative h-8 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
+    <div className="relative w-48" ref={dropdownRef}>
+      <div className="gold-border relative h-7 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
         <div
           onClick={handleInputClick}
-          className="relative h-full w-full rounded-[inherit] bg-abyss-700 flex items-center px-4 gap-2 cursor-pointer transition-colors"
+          className="relative h-full w-full rounded-[inherit] bg-abyss-700 flex items-center pl-4 pr-8 cursor-pointer transition-colors"
         >
           {isOpen ? (
             <input
@@ -66,14 +66,14 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search champions"
-              className="text-sm flex-1 bg-transparent outline-none text-white placeholder:text-text-muted"
+              className="text-xs flex-1 bg-transparent outline-none text-white placeholder:text-text-muted"
             />
           ) : (
-            <span className={`text-sm flex-1 text-left ${value ? 'text-white' : 'text-text-muted font-light'}`}>
+            <span className={`text-xs flex-1 text-left truncate ${value ? 'text-white' : 'text-text-muted font-light'}`}>
               {displayValue}
             </span>
           )}
-          <MagnifyingGlassIcon className="w-4 h-4 text-gold-light flex-shrink-0" />
+          <MagnifyingGlassIcon className="w-4 h-4 text-gold-light absolute right-3 top-1/2 -translate-y-1/2" />
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
           }}>
             <button
               onClick={() => handleSelect("")}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-gold-light/20 text-gold-light"
+              className="w-full px-3 py-1.5 text-left text-xs hover:bg-gold-light/20 text-gold-light"
             >
               All Champions
             </button>
@@ -98,7 +98,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
                 <button
                   key={champion}
                   onClick={() => handleSelect(champion)}
-                  className={`w-full px-4 py-2 text-left text-sm hover:bg-gold-light/20 flex items-center gap-2 ${
+                  className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gold-light/20 flex items-center gap-2 ${
                     value === champion ? ' bg-accent-light/20' : 'text-white'
                   }`}
                 >

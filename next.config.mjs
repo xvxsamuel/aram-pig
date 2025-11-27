@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false, // disable double-invoke in dev (causes duplicate API calls)
   images: {
     unoptimized: true, // disable image optimization for Vercel temporarily
     remotePatterns: [

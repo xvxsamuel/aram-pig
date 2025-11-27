@@ -1,6 +1,7 @@
 "use client"
 
 import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from "../lib/winrate-colors"
+import ProfileCard from "./ProfileCard"
 
 interface AggregateStats {
   games: number
@@ -119,17 +120,12 @@ export default function SummonerSummaryCard({
   }
 
   return (
-    <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-      <div className="px-4 py-1.5">
-        <button 
-          onClick={() => onTabChange('performance')}
-          className="text-xl font-bold text-left mb-1.5 transition-colors cursor-pointer"
-        >
-          <h2>Performance</h2>
-        </button>
-        <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-4 -mx-6" />
-        
-        <div className="grid grid-cols-3 gap-2 pb-2">
+    <ProfileCard 
+      title="Performance" 
+      onTitleClick={() => onTabChange('performance')}
+      contentClassName="pb-2"
+    >
+      <div className="grid grid-cols-3 gap-2">
           {/* PIG score arc */}
           <div className="flex items-center justify-start">
             <PigScoreArc 
@@ -175,8 +171,7 @@ export default function SummonerSummaryCard({
               </>
             ) : null}
           </div>
-        </div>
       </div>
-    </div>
+    </ProfileCard>
   )
 }
