@@ -414,7 +414,14 @@ export async function POST(request: Request) {
     
     console.log(`[UpdateProfile] Fetched ${matchIds.length} total match IDs from Riot API`)
     
-    const newMatchIds = matchIds.filter((id: string) => !existingMatchIds.has(id));
+    // filter to new matches and deduplicate (safety measure)
+    const newMatchIdsRaw = matchIds.filter((id: string) => !existingMatchIds.has(id));
+    const newMatchIds = [...new Set(newMatchIdsRaw)];
+    
+    if (newMatchIdsRaw.length !== newMatchIds.length) {
+      console.log(`[UpdateProfile] WARNING: Removed ${newMatchIdsRaw.length - newMatchIds.length} duplicate match IDs from Riot API response`)
+    }
+    
     console.log(`[UpdateProfile] Found ${newMatchIds.length} new matches to process`)
 
     // use batch queue for all profile updates
@@ -478,53 +485,64 @@ async function processMatchesInBackground(
   requestType: RequestType,
   puuid: string
 ) {
+  console.log(`[UpdateProfile] processMatchesInBackground started for job ${jobId} with ${newMatchIds.length} matches`)
+  
   const startTime = Date.now();
   const updateProgressInterval = 3; // update every 3 matches to keep updated_at fresh
   let fetchedMatches = 0;
+  const processedMatches = new Set<string>(); // track processed matches to catch duplicates
 
   try {
     for (const matchId of newMatchIds) {
+      // safety check for duplicate processing
+      if (processedMatches.has(matchId)) {
+        console.log(`[UpdateProfile] WARNING: Match ${matchId} already processed in this batch, skipping duplicate`)
+        continue
+      }
+      processedMatches.add(matchId)
+      
       try {
-        // Check if match already exists in database (from scraper)
-        const { data: existingMatch } = await supabase
-          .from('matches')
-          .select('match_id, game_creation, game_duration, patch')
-          .eq('match_id', matchId)
-          .maybeSingle()
+        const timings: Record<string, number> = {}
+        let t0 = Date.now()
         
-        if (existingMatch) {
-          // Check if current user already has a summoner_matches record for this match
-          const { data: existingUserRecord } = await supabase
+        // Check both match existence and user record in parallel to reduce latency
+        const [matchResult, userRecordResult] = await Promise.all([
+          supabase
+            .from('matches')
+            .select('match_id, game_creation, game_duration, patch')
+            .eq('match_id', matchId)
+            .maybeSingle(),
+          supabase
             .from('summoner_matches')
             .select('puuid')
             .eq('match_id', matchId)
             .eq('puuid', puuid)
             .maybeSingle()
-          
+        ])
+        
+        const existingMatch = matchResult.data
+        const existingUserRecord = userRecordResult.data
+        timings.dbChecks = Date.now() - t0
+        
+        if (existingMatch) {
           if (existingUserRecord) {
             // User already has this match, skip entirely (no API call needed)
-            console.log(`[UpdateProfile] Match ${matchId} already has user record, skipping`)
+            console.log(`[UpdateProfile] Match ${matchId} skip (db: ${timings.dbChecks}ms)`)
             fetchedMatches++
             continue
           }
           
           // Match exists but user doesn't have a record - need to fetch from API
-          console.log(`[UpdateProfile] Match ${matchId} in DB but missing user record, fetching...`)
+          t0 = Date.now()
           const match = await fetchMatch(region, matchId, requestType);
+          timings.fetchMatch = Date.now() - t0
           
-          // Check if match is older than 30 days for timeline
-          const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-          const isOlderThan30Days = existingMatch.game_creation < thirtyDaysAgo;
+          console.log(`[UpdateProfile] Match ${matchId} fetched (db: ${timings.dbChecks}ms, api: ${timings.fetchMatch}ms)`)
           
-          // Fetch timeline for recent matches
-          let timeline = null
-          if (!isOlderThan30Days) {
-            try {
-              timeline = await getMatchTimeline(matchId, region as any, requestType)
-            } catch {
-              console.log(`[UpdateProfile] Could not fetch timeline for ${matchId}`)
-            }
-          }
+          // Skip timeline for matches that already exist - saves an API call
+          // User gets the match without detailed build order, which is acceptable
+          const timeline = null
+          const isOlderThan30Days = existingMatch.game_creation < (Date.now() - 30 * 24 * 60 * 60 * 1000)
           
           // Prepare records for ALL participants (same as new match logic)
           const summonerMatchRecords = await Promise.all(
@@ -752,8 +770,9 @@ async function processMatchesInBackground(
         }
         
         // Match doesn't exist, fetch full match data
-        console.log(`[UpdateProfile] Fetching new match ${fetchedMatches + 1}/${newMatchIds.length}: ${matchId}`)
+        t0 = Date.now()
         const match = await fetchMatch(region, matchId, requestType);
+        timings.fetchMatch = Date.now() - t0
 
         // check if match is older than 30 days - if so, skip timeline fetch and pig score calculation
         const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
@@ -764,15 +783,16 @@ async function processMatchesInBackground(
         let timeline = null
         if (!isOlderThan30Days) {
           try {
+            t0 = Date.now()
             timeline = await getMatchTimeline(matchId, region as any, requestType)
-            console.log(`[UpdateProfile] Fetched timeline for match ${fetchedMatches + 1}`)
-            console.log(`[UpdateProfile] Timeline has ${timeline?.info?.frames?.length || 0} frames`)
+            timings.fetchTimeline = Date.now() - t0
+            console.log(`[UpdateProfile] Match ${matchId} new (db: ${timings.checkMatch}ms, api: ${timings.fetchMatch}ms, timeline: ${timings.fetchTimeline}ms)`)
           } catch (err) {
             console.error(`[UpdateProfile] Failed to fetch timeline:`, err)
             // continue without timeline - pig score will use final items instead
           }
         } else {
-          console.log(`[UpdateProfile] Skipping timeline fetch for old match (>30 days)`)
+          console.log(`[UpdateProfile] Match ${matchId} new+old (db: ${timings.checkMatch}ms, api: ${timings.fetchMatch}ms, no timeline)`)
         }
 
         // extract patch version (with API conversion 15.x -> 25.x)
@@ -780,6 +800,7 @@ async function processMatchesInBackground(
           ? extractPatch(match.info.gameVersion)
           : getPatchFromDate(match.info.gameCreation)
 
+        t0 = Date.now()
         const { error: matchError } = await supabase
           .from('matches')
           .upsert({

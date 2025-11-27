@@ -1,5 +1,6 @@
 {
   "crons": [],
+  "regions": ["fra1"],
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 60
