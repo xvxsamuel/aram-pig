@@ -99,8 +99,10 @@ function PigScoreArc({ score, loading }: { score: number | null | undefined; loa
       ) : (
         <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-bold text-gray-500 leading-none">--</span>
       )}
-      {/* PIG label at bottom gap */}
-      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[12px] text-text-muted leading-none">PIG</span>
+      {/* PIG label at bottom gap - only show when score is available */}
+      {score !== null && score !== undefined && !loading && (
+        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[12px] text-text-muted leading-none">PIG</span>
+      )}
     </div>
   )
 }

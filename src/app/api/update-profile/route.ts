@@ -493,8 +493,23 @@ async function processMatchesInBackground(
           .maybeSingle()
         
         if (existingMatch) {
-          // Match exists! Fetch match data to insert all 10 players (not just user)
-          console.log(`[UpdateProfile] Match ${matchId} already in DB, fetching to add participant records...`)
+          // Check if current user already has a summoner_matches record for this match
+          const { data: existingUserRecord } = await supabase
+            .from('summoner_matches')
+            .select('puuid')
+            .eq('match_id', matchId)
+            .eq('puuid', puuid)
+            .maybeSingle()
+          
+          if (existingUserRecord) {
+            // User already has this match, skip entirely (no API call needed)
+            console.log(`[UpdateProfile] Match ${matchId} already has user record, skipping`)
+            fetchedMatches++
+            continue
+          }
+          
+          // Match exists but user doesn't have a record - need to fetch from API
+          console.log(`[UpdateProfile] Match ${matchId} in DB but missing user record, fetching...`)
           const match = await fetchMatch(region, matchId, requestType);
           
           // Check if match is older than 30 days for timeline

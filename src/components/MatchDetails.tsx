@@ -78,11 +78,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   useEffect(() => {
     if (!isWithin30Days || pigScoresFetched) return
     
-    // check if we already have all pig scores from match data
-    const allHavePigScores = match.info.participants.every(p => 
-      p.pigScore !== null && p.pigScore !== undefined
-    )
-    if (allHavePigScores) {
+    // check if current player already has pig score from match data
+    const currentPlayerHasPigScore = currentPlayer?.pigScore !== null && currentPlayer?.pigScore !== undefined
+    if (currentPlayerHasPigScore) {
+      // we already have the tracked user's score, no need to fetch
       setPigScoresFetched(true)
       return
     }

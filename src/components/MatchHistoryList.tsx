@@ -87,7 +87,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
           <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-3" />
           
           {filteredMatches.length === 0 ? (
-          <div className="min-h-[200px] flex items-center justify-center">
+          <div className="min-h-[500px] flex items-center justify-center">
             <div className="text-center text-text-muted py-8">
               {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
             </div>
