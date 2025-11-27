@@ -215,7 +215,8 @@ export default function SummonerContent({
       console.log('Stats fetch complete, success:', success)
       setLoading(false)
     })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps - only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // only run once on mount
 
   // determine if this is a brand new profile (never updated)
   const isNewProfile = initialTotalGames === 0 && !initialLastUpdated

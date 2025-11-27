@@ -122,21 +122,6 @@ export default function SummonerTopChampions({
             })
           )}
         </div>
-
-        {championStats.length > 0 && (
-          <>
-            <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent my-3 -mx-4" />
-            <button 
-              onClick={onShowMore}
-              className="w-full py-1.5 text-sm text-text-muted hover:text-white transition-colors flex items-center justify-center gap-1"
-            >
-              Show more + Past seasons
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </>
-        )}
       </div>
     </div>
   )

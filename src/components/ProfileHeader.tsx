@@ -204,7 +204,7 @@ export default function ProfileHeader({
             <button
               key={tab.id}
               onClick={() => onTabChange?.(tab.id)}
-              className={`cursor-pointer px-6 py-2 font-semibold transition-all border-b-2 ${
+              className={`cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2 ${
                 selectedTab === tab.id
                   ? 'border-accent-light text-white'
                   : 'border-transparent text-text-muted hover:text-white'

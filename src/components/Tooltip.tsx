@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import Image from 'next/image'
 import { getTooltipData, type TooltipType } from '../lib/tooltip-data'
 import { cleanWikiMarkup } from '../lib/wiki-markup-simple'
 import { getItemImageUrl, getLatestVersion } from '../lib/ddragon-client'
+import SimpleTooltip from './SimpleTooltip'
 
 interface TooltipProps {
   id: number
@@ -255,7 +256,7 @@ const TooltipContent = memo(({
   )
   
   return (
-    <div className="bg-[#1a1a1a] border border-gold-dark/40 rounded-lg p-3 shadow-xl w-80 text-left">
+    <div className="w-80 text-left p-1">
       {/* header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -305,7 +306,7 @@ const TooltipContent = memo(({
               </div>
             ))}
           </div>
-          <div className="h-px bg-gradient-to-r from-gold-light/50 via-gold-light/30 to-transparent mb-2" />
+          <div className="h-px bg-gradient-to-r from-gold-dark/70 via-gold-dark/40 to-transparent -mx-4 mb-2" />
         </>
       )}
       
@@ -316,7 +317,7 @@ const TooltipContent = memo(({
             {formattedDescription}
           </div>
           {tooltipData.itemType && tooltipData.itemType !== 'other' && (
-            <div className="h-px bg-gradient-to-r from-gold-light/50 via-gold-light/30 to-transparent mb-2" />
+            <div className="h-px bg-gradient-to-r from-gold-dark/70 via-gold-dark/40 to-transparent -mx-4 mb-2" />
           )}
         </>
       )}
@@ -333,12 +334,8 @@ const TooltipContent = memo(({
 
 TooltipContent.displayName = 'TooltipContent'
 
-// main tooltip component
+// main tooltip component - uses SimpleTooltip for positioning
 export default function Tooltip({ id, type = 'item', children }: TooltipProps) {
-  const [isVisible, setIsVisible] = useState(false)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
-  const triggerRef = useRef<HTMLDivElement>(null)
-  
   // hubris id override
   const actualId = id === 126697 ? 6697 : id
   
@@ -348,64 +345,21 @@ export default function Tooltip({ id, type = 'item', children }: TooltipProps) {
     [actualId, type]
   )
 
-  // only attach listeners when visible
-  useEffect(() => {
-    if (!isVisible) return
-    
-    const updatePosition = () => {
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect()
-        setPosition({
-          x: rect.left + rect.width / 2,
-          y: rect.top
-        })
-      }
-    }
-
-    updatePosition()
-    window.addEventListener('scroll', updatePosition, { passive: true })
-    window.addEventListener('resize', updatePosition, { passive: true })
-
-    return () => {
-      window.removeEventListener('scroll', updatePosition)
-      window.removeEventListener('resize', updatePosition)
-    }
-  }, [isVisible])
-
   if (id === 0 || !tooltipData) {
     return <div className="inline-block">{children}</div>
   }
 
   return (
-    <>
-      <div
-        ref={triggerRef}
-        className="inline-block relative"
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-      >
-        {children}
-      </div>
-      
-      {isVisible && (
-        <div
-          className="fixed z-[9999] pointer-events-none"
-          style={{
-            left: `${position.x}px`,
-            top: `${position.y}px`,
-            transform: 'translate(-50%, calc(-100% - 8px))'
-          }}
-        >
-          <TooltipContent 
-            tooltipData={tooltipData}
-            actualId={actualId}
-            type={type}
-          />
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
-            <div className="border-8 border-transparent border-t-gold-dark" />
-          </div>
-        </div>
-      )}
-    </>
+    <SimpleTooltip
+      content={
+        <TooltipContent 
+          tooltipData={tooltipData}
+          actualId={actualId}
+          type={type}
+        />
+      }
+    >
+      {children}
+    </SimpleTooltip>
   )
 }

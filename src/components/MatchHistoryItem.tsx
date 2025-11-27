@@ -14,6 +14,7 @@ import {
   getRuneStyleImageUrl,
 } from '../lib/ddragon-client'
 import { getChampionUrlName } from '../lib/champion-names'
+import { getKdaColor } from '../lib/winrate-colors'
 import MatchDetails from './MatchDetails'
 import Tooltip from './Tooltip'
 
@@ -106,12 +107,12 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                       alt={participant.championName}
                       width={56}
                       height={56}
-                      className="w-full h-full scale-110 object-cover"
+                      className="w-full h-full scale-115 object-cover"
                       unoptimized
                     />
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded">
-                    <div className="bg-gray-800 rounded-[inherit] px-1 py-0.5 text-[10px] font-bold leading-none">
+                    <div className="bg-abyss-500 rounded-[inherit] px-1 py-0.5 text-[10px] font-regular leading-none">
                       {participant.champLevel}
                     </div>
                   </div>
@@ -119,7 +120,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
               </Link>
               <div className="flex flex-col gap-0.5">
                 <Tooltip id={participant.summoner1Id} type="summoner-spell">
-                  <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                  <div className="w-6 h-6 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
                     <Image
                       src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
                       alt="Spell 1"
@@ -131,7 +132,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                   </div>
                 </Tooltip>
                 <Tooltip id={participant.summoner2Id} type="summoner-spell">
-                  <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                  <div className="w-6 h-6 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
                     <Image
                       src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
                       alt="Spell 2"
@@ -146,7 +147,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
               <div className="flex flex-col gap-0.5">
                 {participant.perks?.styles?.[0]?.selections?.[0]?.perk && (
                   <Tooltip id={participant.perks.styles[0].selections[0].perk} type="rune">
-                    <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden">
+                    <div className="w-6 h-6 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
                       <Image
                         src={getRuneImageUrl(participant.perks.styles[0].selections[0].perk)}
                         alt="Primary Rune"
@@ -160,7 +161,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 )}
                 {participant.perks?.styles?.[1]?.style && (
                   <Tooltip id={participant.perks.styles[1].style} type="rune">
-                    <div className="w-6 h-6 rounded bg-gray-800 border border-gray-700 overflow-hidden flex items-center justify-center">
+                    <div className="w-6 h-6 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark flex items-center justify-center">
                       <Image
                         src={getRuneStyleImageUrl(participant.perks.styles[1].style)}
                         alt="Secondary Rune"
@@ -189,19 +190,19 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
               ].map((itemId, idx) => (
                 itemId > 0 ? (
                   <Tooltip key={idx} id={itemId} type="item">
-                    <div className="w-7 h-7 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
+                    <div className="w-6 h-6 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
                       <Image
                         src={getItemImageUrl(itemId, ddragonVersion)}
                         alt={`Item ${itemId}`}
-                        width={32}
-                        height={32}
+                        width={6}
+                        height={6}
                         className="w-full h-full object-cover"
                         unoptimized
                       />
                     </div>
                   </Tooltip>
                 ) : (
-                  <div key={idx} className="w-7 h-7 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark" />
+                  <div key={idx} className="w-6 h-6 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark" />
                 )
               ))}
             </div>
@@ -213,22 +214,25 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
               <span className="text-base font-bold text-white">
                 {participant.kills}
               </span>
-              <span className="text-gray-500 text-sm">/</span>
+              <span className="text-text-muted text-sm font-light">/</span>
               <span className="text-base font-bold text-negative">
                 {participant.deaths}
               </span>
-              <span className="text-gray-500 text-sm">/</span>
+              <span className="text-text-muted text-sm font-light">/</span>
               <span className="text-base font-bold text-white">
                 {participant.assists}
               </span>
             </div>
-            <div className="text-xs text-white text-center mt-0.5">
+            <div 
+              className="text-[12px] font-semibold text-center tracking-wide"
+              style={{ color: kda === 'Perfect' ? getKdaColor(99) : getKdaColor(Number(kda)) }}
+            >
               {kda} KDA
             </div>
-            <div className="text-xs text-white text-center mt-0.5">
+            <div className="text-[12px] text-text-muted text-center mt-1">
               {participant.totalMinionsKilled + participant.neutralMinionsKilled} CS
             </div>
-            <div className="text-xs text-white text-center mt-0.5">
+            <div className="text-[12px] text-text-muted text-center">
               {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
             </div>
           </div>

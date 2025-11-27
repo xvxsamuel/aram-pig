@@ -299,18 +299,18 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
             
             <div className="flex gap-1">
               <div className="flex flex-col gap-0.5">
-                <div className="w-4 h-4 rounded overflow-hidden bg-abyss-800">
+                <div className="w-4 h-4 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
                   <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="Summoner 1" width={16} height={16} />
                 </div>
-                <div className="w-4 h-4 rounded overflow-hidden bg-abyss-800">
+                <div className="w-4 h-4 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
                   <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="Summoner 2" width={16} height={16} />
                 </div>
               </div>
               <div className="flex flex-col gap-0.5">
-                <div className="w-4 h-4 rounded-full overflow-hidden bg-abyss-800">
+                <div className="w-4 h-4 rounded-full overflow-hidden bg-abyss-900/30 border border-gold-dark">
                   <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="Keystone" width={16} height={16} />
                 </div>
-                <div className="w-4 h-4 rounded-full overflow-hidden bg-abyss-800">
+                <div className="w-4 h-4 rounded-full overflow-hidden bg-abyss-900/30 border border-gold-dark">
                   <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="Secondary" width={16} height={16} />
                 </div>
               </div>
@@ -351,6 +351,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                 ) : allHavePigScores ? (
                   <span className="text-[10px] text-gray-500">{rank}th</span>
                 ) : null}
+              </div>
+            ) : loadingPigScores ? (
+              <div className="flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
               </div>
             ) : (
               <span className="text-sm text-gray-500">-</span>
@@ -400,7 +404,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
               <div
                 key={idx}
                 className={clsx(
-                  "w-7 h-7 rounded bg-abyss-800 border border-abyss-700 overflow-hidden",
+                  "w-7 h-7 rounded bg-abyss-900/30 border border-gold-dark overflow-hidden",
                   idx === 6 && "rounded-full" // trinket
                 )}
               >
@@ -671,7 +675,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           <div className="p-4 space-y-4">
             {(loadingBreakdown || !pigScoreBreakdown) ? (
               <div className="min-h-[200px] flex items-center justify-center">
-                <span className="text-sm text-gray-500">-</span>
+                <div className="w-6 h-6 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
               </div>
             ) : (
               <>

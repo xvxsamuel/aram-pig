@@ -8,9 +8,10 @@ interface SimpleTooltipProps {
   children: React.ReactNode
   position?: 'top' | 'bottom'
   forceVisible?: boolean
+  raw?: boolean // skip wrapper styling, content provides its own
 }
 
-export default function SimpleTooltip({ content, children, position = 'top', forceVisible = false }: SimpleTooltipProps) {
+export default function SimpleTooltip({ content, children, position = 'top', forceVisible = false, raw = false }: SimpleTooltipProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const [mounted, setMounted] = useState(false)
