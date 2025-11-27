@@ -12,6 +12,9 @@ import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } 
 import { extractItemPurchases, type ItemPurchaseEvent } from '../../../lib/item-purchase-history';
 import itemsData from '../../../data/items.json';
 
+// in-memory lock to prevent concurrent processing of same profile (handles Strict Mode double-invoke)
+const processingLocks = new Map<string, Promise<Response>>()
+
 // helper to check if item is a finished item (legendary or boots)
 const isFinishedItem = (itemId: number): boolean => {
   const item = (itemsData as Record<string, any>)[itemId.toString()]
@@ -316,6 +319,35 @@ export async function POST(request: Request) {
       );
     }
 
+    // check if already processing this profile (handles Strict Mode double-invoke)
+    const lockKey = `${region}:${gameName}:${tagLine}`.toLowerCase()
+    const existingLock = processingLocks.get(lockKey)
+    if (existingLock) {
+      console.log(`[UpdateProfile] Already processing ${gameName}#${tagLine}, waiting for result...`)
+      return existingLock
+    }
+
+    // create processing promise and store it
+    const processPromise = processProfileUpdate(region, gameName, tagLine, platform)
+    processingLocks.set(lockKey, processPromise)
+
+    try {
+      return await processPromise
+    } finally {
+      processingLocks.delete(lockKey)
+    }
+  } catch (error) {
+    console.error('[UpdateProfile] Error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+async function processProfileUpdate(region: string, gameName: string, tagLine: string, platform: string): Promise<Response> {
+  let jobId: string | null = null;
+  try {
     const supabase = createAdminClient();
 
     // cleanup stale jobs first
@@ -478,6 +510,7 @@ export async function POST(request: Request) {
     if (useGitHubAction) {
       // trigger GitHub Action for large batches
       const githubToken = process.env.GITHUB_PAT;
+      console.log(`[UpdateProfile] GITHUB_PAT configured: ${!!githubToken}, length: ${githubToken?.length || 0}`)
       if (!githubToken) {
         console.error('[UpdateProfile] GITHUB_PAT not configured, falling back to Vercel direct');
         // fall through to direct processing
