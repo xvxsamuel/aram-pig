@@ -3,7 +3,7 @@ import { writeFileSync, readFileSync, existsSync } from 'fs'
 import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId } from '../src/lib/riot-api'
-import { waitForRateLimit } from '../src/lib/rate-limiter'
+import { waitForRateLimit, flushRateLimits } from '../src/lib/rate-limiter'
 import { type RegionalCluster, type PlatformCode } from '../src/lib/regions'
 import { storeMatchData, flushStatsBatch, getStatsBufferCount } from '../src/lib/match-storage'
 import { extractPatch } from '../src/lib/patch-utils'
@@ -938,6 +938,8 @@ process.on('SIGINT', async () => {
   console.log('\n\n[CRAWLER] Shutting down gracefully...')
   console.log('[CRAWLER] Flushing stats buffer...')
   await flushStatsBatch()
+  console.log('[CRAWLER] Flushing rate limits...')
+  await flushRateLimits()
   console.log('[CRAWLER] Saving state and caches...')
   saveState()
   saveMatchCache()
@@ -950,6 +952,8 @@ process.on('SIGTERM', async () => {
   console.log('\n\n[CRAWLER] Shutting down gracefully...')
   console.log('[CRAWLER] Flushing stats buffer...')
   await flushStatsBatch()
+  console.log('[CRAWLER] Flushing rate limits...')
+  await flushRateLimits()
   console.log('[CRAWLER] Saving state and caches...')
   saveState()
   saveMatchCache()
