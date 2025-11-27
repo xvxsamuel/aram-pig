@@ -7,6 +7,9 @@ import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } 
 import { extractItemPurchases } from '../../../lib/item-purchase-history'
 import { isPatchAccepted } from '../../../lib/patch-utils'
 
+// in-memory lock to prevent concurrent processing of the same match (handles Strict Mode double-invoke)
+const processingLocks = new Map<string, Promise<Response>>()
+
 // finished items are tier 3+ items (legendaries and boots)
 import itemsData from '../../../data/items.json'
 
@@ -69,6 +72,36 @@ export async function POST(request: Request) {
       )
     }
     
+    // check if already processing this match (handles Strict Mode double-invoke)
+    const existingLock = processingLocks.get(matchId)
+    if (existingLock) {
+      console.log(`[EnrichMatch] Already processing ${matchId}, waiting for result...`)
+      return existingLock
+    }
+    
+    // create processing promise and store it
+    const processPromise = processEnrichment(matchId, region)
+    processingLocks.set(matchId, processPromise)
+    
+    try {
+      const result = await processPromise
+      return result
+    } finally {
+      // clean up lock after processing completes
+      processingLocks.delete(matchId)
+    }
+  } catch (error) {
+    console.error('[EnrichMatch] Error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// actual enrichment logic separated for locking
+async function processEnrichment(matchId: string, region: string): Promise<Response> {
+  try {
     const supabase = createAdminClient()
     
     // get match record
