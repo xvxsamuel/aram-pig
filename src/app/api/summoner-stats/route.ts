@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       .in("match_id", matchIds)
     
     const matchDurationMap = new Map(matchesData?.map(m => [m.match_id, m.game_duration]) || [])
-    const matchDateMap = new Map(matchesData?.map(m => [m.match_id, m.game_creation]) || [])
+    const _matchDateMap = new Map(matchesData?.map(m => [m.match_id, m.game_creation]) || [])
     
     // filter out remakes from stats calculation
     const validMatches = allMatchStats.filter(m => !m.match_data?.isRemake)
@@ -70,10 +70,10 @@ export async function GET(request: NextRequest) {
     const totalPentaKills = validMatches.reduce((sum, m) => sum + (m.match_data?.stats?.pentaKills || 0), 0)
 
     // calculate average pig score (calculated on-demand, not stored)
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+    const _thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
     
-    let averagePigScore: number | null = null
-    let pigScoreGames = 0
+    const averagePigScore: number | null = null
+    const pigScoreGames = 0
 
     // find most played champion
     const championCounts: { [key: string]: number } = {}

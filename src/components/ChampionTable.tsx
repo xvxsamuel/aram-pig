@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { getChampionImageUrl } from '@/lib/ddragon-client'
 import { getChampionDisplayName, getChampionUrlName } from '@/lib/champion-names'
 import { getWinrateColor } from '@/lib/winrate-colors'
-import clsx from 'clsx'
 
 type SortKey = 'rank' | 'champion' | 'winrate' | 'pickrate' | 'matches'
 type SortDirection = 'asc' | 'desc'
@@ -26,7 +25,7 @@ interface Props {
   patch?: string
 }
 
-export default function ChampionTable({ champions, ddragonVersion, championNames, totalChampions, filter, patch }: Props) {
+export default function ChampionTable({ champions, ddragonVersion, championNames, totalChampions: _totalChampions, filter: _filter, patch: _patch }: Props) {
   const [allChampions, setAllChampions] = useState<ChampionStats[]>(champions)
 
   // Update when champions prop changes

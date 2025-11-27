@@ -34,10 +34,10 @@ export const PLATFORM_TO_LABEL: Record<PlatformCode, string> =
   Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [k, v.label])) as Record<PlatformCode, string>
 
 export const LABEL_TO_PLATFORM: Record<string, PlatformCode> =
-  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [v.label, k])) as Record<string, PlatformCode>
+  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([_k, v]) => [v.label, _k])) as Record<string, PlatformCode>
 
 export const LABEL_TO_TAG: Record<string, string> =
-  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [v.label, v.tag])) as Record<string, string>
+  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([_k, v]) => [v.label, v.tag])) as Record<string, string>
 
 export const REGION_OPTIONS = Object.entries(PLATFORM_DATA).map(([code, data]) => ({ 
   value: code as PlatformCode, 

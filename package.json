@@ -22,15 +22,21 @@
     "react-dom": "latest"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.39.1",
+    "@next/eslint-plugin-next": "^16.0.5",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/dotenv": "^6.1.1",
     "@types/node": "^24.10.1",
     "@types/react": "latest",
     "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.8.28",
+    "eslint": "9.39.1",
+    "eslint-config-next": "16.0.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.20.6",
-    "typescript": "latest"
+    "typescript": "latest",
+    "typescript-eslint": "^8.48.0"
   }
 }

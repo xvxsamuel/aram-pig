@@ -61,7 +61,7 @@ interface PigScoreBreakdown {
   patch: string
 }
 
-export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin, isRemake }: Props) {
+export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin: _isWin, isRemake: _isRemake }: Props) {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
   const [participantDetails, setParticipantDetails] = useState<Map<string, ParticipantDetails>>(new Map())
   const [pigScores, setPigScores] = useState<Record<string, number | null>>({})
@@ -130,12 +130,12 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const team200Won = team200[0]?.win || false
 
   // calculate team totals
-  const team100Gold = team100.reduce((sum, p) => sum + p.goldEarned, 0)
-  const team200Gold = team200.reduce((sum, p) => sum + p.goldEarned, 0)
+  const _team100Gold = team100.reduce((sum, p) => sum + p.goldEarned, 0)
+  const _team200Gold = team200.reduce((sum, p) => sum + p.goldEarned, 0)
   const team100Kills = team100.reduce((sum, p) => sum + p.kills, 0)
   const team200Kills = team200.reduce((sum, p) => sum + p.kills, 0)
 
-  const formatGold = (gold: number) => `${(gold / 1000).toFixed(1)}k`
+  const _formatGold = (gold: number) => `${(gold / 1000).toFixed(1)}k`
   const formatDamage = (dmg: number) => new Intl.NumberFormat('en-US').format(dmg)
 
   // Calculate max values for bars
@@ -257,7 +257,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const renderPlayerRow = (p: any, isCurrentPlayer: boolean) => {
     const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
     const kda = p.deaths === 0 ? "Perfect" : ((p.kills + p.assists) / p.deaths).toFixed(2)
-    const dpm = ((p.totalDamageDealtToChampions || 0) / (match.info.gameDuration / 60)).toFixed(0)
+    const _dpm = ((p.totalDamageDealtToChampions || 0) / (match.info.gameDuration / 60)).toFixed(0)
     const playerName = p.riotIdGameName || p.summonerName
     const playerTag = p.riotIdTagline || ""
     const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
@@ -267,7 +267,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
     const killParticipation = teamTotalKills > 0 ? Math.round(((p.kills + p.assists) / teamTotalKills) * 100) : 0
     
     const damageDealtPct = maxDamageDealt > 0 ? (p.totalDamageDealtToChampions / maxDamageDealt) * 100 : 0
-    const damageTakenPct = maxDamageTaken > 0 ? (p.totalDamageTaken / maxDamageTaken) * 100 : 0
+    const _damageTakenPct = maxDamageTaken > 0 ? (p.totalDamageTaken / maxDamageTaken) * 100 : 0
 
     const csPerMin = (p.totalMinionsKilled / (match.info.gameDuration / 60)).toFixed(1)
 

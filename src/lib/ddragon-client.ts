@@ -74,10 +74,12 @@ function getSpellName(spellId: number): string {
   return spellMap[spellId] || 'Flash'
 }
 
+import runesDataImport from '../data/runes.json'
+const runesDataObj = runesDataImport as Record<string, { icon?: string }>
+
 export function getRuneImageUrl(perkId: number): string {
   // get icon path from runes data
-  const runesData = require('../data/runes.json')
-  const rune = runesData[perkId]
+  const rune = runesDataObj[perkId]
   if (!rune || !rune.icon) {
     return ''
   }
@@ -86,8 +88,7 @@ export function getRuneImageUrl(perkId: number): string {
 
 export function getRuneStyleImageUrl(styleId: number): string {
   // get icon path from runes data (tree styles)
-  const runesData = require('../data/runes.json')
-  const style = runesData[styleId]
+  const style = runesDataObj[styleId]
   if (!style || !style.icon) {
     return ''
   }

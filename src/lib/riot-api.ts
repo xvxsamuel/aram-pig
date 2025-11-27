@@ -1,4 +1,4 @@
-import { RiotAPI, RiotAPITypes, PlatformId, DDragon } from "@fightmegg/riot-api"
+import { RiotAPI, DDragon } from "@fightmegg/riot-api"
 import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "./regions"
 import { waitForRateLimit, type RequestType } from './rate-limiter'
 import { getLatestVersion } from './ddragon-client'

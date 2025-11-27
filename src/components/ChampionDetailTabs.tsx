@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import clsx from 'clsx'
 import Tooltip from './Tooltip'
-import { getItemImageUrl, getRuneImageUrl, getSummonerSpellUrl } from '@/lib/ddragon-client'
+import { getItemImageUrl, getSummonerSpellUrl } from '@/lib/ddragon-client'
 import { getWinrateColor } from '@/lib/winrate-colors'
 import runesData from '@/data/runes.json'
 
@@ -196,7 +196,7 @@ interface Props {
   allBuildData: PreCalculatedCombo[]
 }
 
-export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterItems, runeStats, abilityLevelingStats, summonerSpellStats, ddragonVersion, totalGames, buildOrders, allBuildData }: Props) {
+export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterItems, runeStats, abilityLevelingStats, summonerSpellStats, ddragonVersion, totalGames, allBuildData }: Props) {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
   const [selectedCombo, setSelectedCombo] = useState<number>(0)
 
@@ -494,7 +494,7 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {[1, 2, 3, 4, 5, 6].map((slotNum) => {
-                    const slotIdx = slotNum - 1
+                    const _slotIdx = slotNum - 1
                     
                     // get combo object to access all itemStats with positions
                     const combo = allBuildData[selectedCombo]
@@ -1001,7 +1001,7 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
                           if (tierRunes.length === 0) return null
                           return (
                             <div key={tierKey} className="flex items-center gap-3">
-                              {tierRunes.slice(0, 3).map((rune, idx) => {
+                              {tierRunes.slice(0, 3).map((rune, _idx) => {
                                 const runeInfo = (runesData as Record<string, any>)[rune.rune_id.toString()]
                                 return (
                                   <div key={rune.rune_id} className="flex items-center gap-2">

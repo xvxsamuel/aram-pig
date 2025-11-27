@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     }
 
     const totalPending = batchPending;
-    const queueType = 'batch';
+    const _queueType = 'batch';
 
     return NextResponse.json({
       canProceed: status.canProceed,

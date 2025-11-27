@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId } from '@/lib/riot-api'
 import { waitForRateLimit } from '@/lib/rate-limiter'
-import { storeMatchData, flushAggregatedStats, getStatsBufferCount, getAggregatedChampionCount } from '@/lib/match-storage'
+import { storeMatchData, flushAggregatedStats, getStatsBufferCount } from '@/lib/match-storage'
 import { extractPatch } from '@/lib/patch-utils'
 import type { RegionalCluster, PlatformCode } from '@/lib/regions'
 

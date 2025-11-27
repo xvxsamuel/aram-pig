@@ -11,7 +11,7 @@ interface TimelineEvent {
 
 interface TimelineFrame {
   timestamp: number
-  participantFrames?: Record<string, any>
+  participantFrames?: Record<string, unknown>
   events?: TimelineEvent[]
 }
 

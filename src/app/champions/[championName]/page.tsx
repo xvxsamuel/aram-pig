@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase'
@@ -51,7 +50,7 @@ interface ItemStat {
   wins: number
 }
 
-interface KeystoneStat {
+interface _KeystoneStat {
   keystone_id: number
   games: number
   wins: number
@@ -433,7 +432,7 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
   const buildOrders: string[] = []
 
   // for backwards compatibility, extract keystone stats (slot 0)
-  const keystoneStats = runeStats[0].map(r => ({
+  const _keystoneStats = runeStats[0].map(r => ({
     keystone_id: r.rune_id,
     games: r.games,
     wins: r.wins,

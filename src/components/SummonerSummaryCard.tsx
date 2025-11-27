@@ -1,6 +1,6 @@
 "use client"
 
-import { getWinrateColor, getKdaColor, getPigScoreColor, getPigScoreGradientColors } from "../lib/winrate-colors"
+import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from "../lib/winrate-colors"
 
 interface AggregateStats {
   games: number

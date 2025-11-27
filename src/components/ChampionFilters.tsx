@@ -7,20 +7,27 @@ interface ChampionFiltersProps {
   availablePatches: string[]
 }
 
+// temporarily hide patches we didn't scrape data for (site didn't exist yet)
+// remove this when new patches come out and push these off the list
+const HIDDEN_PATCHES = ['25.21', '25.22']
+
 export default function ChampionFilters({ availablePatches }: ChampionFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
   
+  // filter out hidden patches
+  const visiblePatches = availablePatches.filter(p => !HIDDEN_PATCHES.includes(p))
+  
   // load from localStorage or URL params
-  const [currentFilter, setCurrentFilter] = useState<string>('')
+  const [_currentFilter, setCurrentFilter] = useState<string>('')
   const [currentPatch, setCurrentPatch] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // initialize from localStorage or defaults
   useEffect(() => {
-    const savedFilter = localStorage.getItem('championFilter')
+    const _savedFilter = localStorage.getItem('championFilter')
     const savedPatch = localStorage.getItem('championPatch')
     
     const urlFilter = searchParams.get('filter')
@@ -28,7 +35,7 @@ export default function ChampionFilters({ availablePatches }: ChampionFiltersPro
     
     // Only support patch filtering now
     const filter = 'patch'
-    const patch = urlPatch || savedPatch || (availablePatches.length > 0 ? availablePatches[0] : null)
+    const patch = urlPatch || savedPatch || (visiblePatches.length > 0 ? visiblePatches[0] : null)
     
     setCurrentFilter(filter)
     setCurrentPatch(patch)
@@ -46,7 +53,7 @@ export default function ChampionFilters({ availablePatches }: ChampionFiltersPro
       }
       router.replace(`${pathname}?${params.toString()}`)
     }
-  }, [searchParams, availablePatches, pathname, router])
+  }, [searchParams, visiblePatches, pathname, router])
 
   // close dropdown when clicking outside
   useEffect(() => {
@@ -102,12 +109,12 @@ export default function ChampionFilters({ availablePatches }: ChampionFiltersPro
         {isOpen && (
           <div className="absolute top-full left-0 mt-2 w-full sm:w-auto min-w-[200px] bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-10 overflow-hidden">
             {/* patch selection */}
-            {availablePatches.length > 0 ? (
+            {visiblePatches.length > 0 ? (
               <>
                 <div className="px-4 py-2 text-xs font-semibold text-gold-light uppercase tracking-wider bg-abyss-800">
                   Select Patch
                 </div>
-                {availablePatches.map(patch => (
+                {visiblePatches.map(patch => (
                   <button
                     key={patch}
                     onClick={() => handleFilterChange(patch)}

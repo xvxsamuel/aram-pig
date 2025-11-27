@@ -8,7 +8,7 @@ import { calculatePigScore } from '../../../lib/pig-score-v2'
 
 export async function POST(request: Request) {
   try {
-    const { matchId, puuid, region } = await request.json()
+    const { matchId, puuid, region: _region } = await request.json()
     
     if (!matchId || !puuid) {
       return NextResponse.json({ error: 'Missing matchId or puuid' }, { status: 400 })

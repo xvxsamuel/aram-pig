@@ -78,7 +78,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
               ddragonVersion={ddragonVersion}
             />
           </div>
-          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-4 -mx-4" />
+          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-3" />
           
           {filteredMatches.length === 0 ? (
           <div className="text-center text-text-muted py-8 min-h-[200px] flex items-center justify-center">
@@ -104,7 +104,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
                 <button
                   onClick={loadMore}
                   disabled={loading}
-                  className="w-full mt-2 px-4 py-3 bg-gradient-to-t from-action-100 to-action-200 hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+                  className="w-full my-3 px-4 py-3 bg-gradient-to-t from-action-100 to-action-200 hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white rounded-full animate-spin border-t-transparent" />

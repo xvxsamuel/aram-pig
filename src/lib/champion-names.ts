@@ -27,7 +27,7 @@ export async function fetchChampionNames(version: string): Promise<Record<string
     const data: ChampionList = await response.json()
     
     championDataCache = Object.fromEntries(
-      Object.entries(data.data).map(([key, champion]) => [champion.id, champion.name])
+      Object.entries(data.data).map(([_key, champion]) => [champion.id, champion.name])
     )
 
     return championDataCache

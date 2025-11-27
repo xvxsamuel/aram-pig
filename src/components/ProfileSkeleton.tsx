@@ -15,13 +15,13 @@ interface Props {
 
 
 export default function ProfileSkeleton({ 
-  profileIconId, 
+  profileIconId: _profileIconId, 
   gameName, 
   tagLine, 
   summonerLevel,
   profileIconUrl,
-  region,
-  name
+  region: _region,
+  name: _name
 }: Props) {
   return (
     <>

@@ -100,6 +100,14 @@ to pause github actions scraper for manual scraping:
 5. DB merges pre-aggregated JSONB with existing data (simple recursive merge)
 6. frontend pages query aggregated stats from supabase views
 
+## pig score system
+- **pig score**: performance metric comparing player stats to champion averages (0-100 scale, 100 = perfect)
+- **calculated at match storage time**: when update-profile API stores a new match, pig score AND breakdown are calculated immediately
+- **stored in match_data JSONB**: both `pigScore` (number) and `pigScoreBreakdown` (full stats breakdown) are stored in `summoner_matches.match_data`
+- **Performance tab**: reads pre-calculated breakdown from `match_data.pigScoreBreakdown` - no recalculation needed
+- **fallback calculation**: `/api/pig-score-breakdown` endpoint will calculate and cache breakdown for old matches missing it
+- **only for tracked users**: pig score is only calculated for the user whose profile is being updated (not other players in match)
+
 ## conventions
 - **env vars**: required in `.env.local`: `RIOT_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SECRET_KEY`
 - **console output**: capitalize messages, NO EMOJIS OR DECORATIVE SYMBOLS EVER

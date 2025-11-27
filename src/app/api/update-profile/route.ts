@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '../../../lib/supabase';
 import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline} from '../../../lib/riot-api';
 import type { RequestType } from '../../../lib/rate-limiter';
-import { PLATFORM_TO_REGIONAL, type PlatformCode } from '../../../lib/regions';
+import type { PlatformCode } from '../../../lib/regions';
 import type { UpdateJob } from '../../../types/update-jobs';
-import { calculatePigScore } from '../../../lib/pig-score-v2';
+import { calculatePigScoreWithBreakdown } from '../../../lib/pig-score-v2';
 import { extractAbilityOrder } from '../../../lib/ability-leveling';
 import { extractPatch, getPatchFromDate, isPatchAccepted } from '../../../lib/patch-utils';
 import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../../../lib/item-purchases';
@@ -46,7 +46,7 @@ function extractSkillOrderAbbreviation(abilityOrder: string): string {
   return result
 }
 
-const RIOT_API_KEY = process.env.RIOT_API_KEY;
+const _RIOT_API_KEY = process.env.RIOT_API_KEY;
 
 async function fetchMatchIds(region: string, puuid: string, count?: number, requestType: RequestType = 'batch') {
   const allMatchIds: string[] = [];
@@ -229,8 +229,8 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
         continue // skip old matches
       }
       
-      // calculate pig score
-      const pigScore = await calculatePigScore({
+      // calculate pig score with breakdown
+      const breakdown = await calculatePigScoreWithBreakdown({
         championName: match.champion_name,
         damage_dealt_to_champions: match.match_data.stats?.damage || 0,
         total_damage_dealt: match.match_data.stats?.totalDamageDealt || 0,
@@ -253,11 +253,12 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
         buildOrder: match.match_data.buildOrder || undefined
       })
       
-      if (pigScore !== null) {
-        // update the match_data with pig score
+      if (breakdown) {
+        // update the match_data with pig score and breakdown
         const updatedMatchData = {
           ...match.match_data,
-          pigScore
+          pigScore: breakdown.finalScore,
+          pigScoreBreakdown: breakdown
         }
         
         await supabase
@@ -485,7 +486,7 @@ async function processMatchesInBackground(
           if (!isOlderThan30Days) {
             try {
               timeline = await getMatchTimeline(matchId, region as any, requestType)
-            } catch (err) {
+            } catch {
               console.log(`  Could not fetch timeline for ${matchId}`)
             }
           }
@@ -512,11 +513,12 @@ async function processMatchesInBackground(
                 itemPurchasesStr = itemPurchases.length > 0 ? JSON.stringify(itemPurchases) : null
               }
               
-              // Calculate pig score only for tracked user
+              // Calculate pig score with breakdown for tracked user
               let pigScore = null
+              let pigScoreBreakdown = null
               if (isTrackedUser && !isOlderThan30Days && !p.gameEndedInEarlySurrender) {
                 try {
-                  pigScore = await calculatePigScore({
+                  const breakdown = await calculatePigScoreWithBreakdown({
                     championName: p.championName,
                     damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
                     total_damage_dealt: p.totalDamageDealt || 0,
@@ -533,11 +535,22 @@ async function processMatchesInBackground(
                     item5: p.item5,
                     perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
                     patch: existingMatch.patch,
+                    spell1: p.summoner1Id || 0,
+                    spell2: p.summoner2Id || 0,
+                    skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
+                    buildOrder: buildOrderStr || undefined
                   })
+                  if (breakdown) {
+                    pigScore = breakdown.finalScore
+                    pigScoreBreakdown = breakdown
+                  }
                 } catch (err) {
                   console.error(`  Failed to calculate PIG score:`, err)
                 }
               }
+              
+              // parse item purchases from JSON string
+              const itemPurchases = itemPurchasesStr ? JSON.parse(itemPurchasesStr) : null
               
               return {
                 puuid: p.puuid,
@@ -545,49 +558,68 @@ async function processMatchesInBackground(
                 champion_name: p.championName,
                 riot_id_game_name: p.riotIdGameName || '',
                 riot_id_tagline: p.riotIdTagline || '',
-                kills: p.kills,
-                deaths: p.deaths,
-                assists: p.assists,
                 win: p.win,
-                game_ended_in_early_surrender: p.gameEndedInEarlySurrender || false,
-                damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
-                total_damage_dealt: p.totalDamageDealt || 0,
-                time_ccing_others: p.timeCCingOthers || 0,
-                total_minions_killed: p.totalMinionsKilled || 0,
-                gold_earned: p.goldEarned || 0,
-                total_heals_on_teammates: p.totalHealsOnTeammates || 0,
-                total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
-                double_kills: p.doubleKills || 0,
-                triple_kills: p.tripleKills || 0,
-                quadra_kills: p.quadraKills || 0,
-                penta_kills: p.pentaKills || 0,
-                item0: p.item0 || 0,
-                item1: p.item1 || 0,
-                item2: p.item2 || 0,
-                item3: p.item3 || 0,
-                item4: p.item4 || 0,
-                item5: p.item5 || 0,
-                pig_score: pigScore,
                 game_creation: existingMatch.game_creation,
-                champ_level: p.champLevel || 0,
-                team_id: p.teamId || 0,
-                summoner1_id: p.summoner1Id || 0,
-                summoner2_id: p.summoner2Id || 0,
-                perk_primary_style: p.perks?.styles?.[0]?.style || 0,
-                perk_sub_style: p.perks?.styles?.[1]?.style || 0,
-                perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
-                perk1: p.perks?.styles?.[0]?.selections?.[1]?.perk || 0,
-                perk2: p.perks?.styles?.[0]?.selections?.[2]?.perk || 0,
-                perk3: p.perks?.styles?.[0]?.selections?.[3]?.perk || 0,
-                perk4: p.perks?.styles?.[1]?.selections?.[0]?.perk || 0,
-                perk5: p.perks?.styles?.[1]?.selections?.[1]?.perk || 0,
-                stat_perk0: p.perks?.statPerks?.offense || 0,
-                stat_perk1: p.perks?.statPerks?.flex || 0,
-                stat_perk2: p.perks?.statPerks?.defense || 0,
-                ability_order: abilityOrder,
-                build_order: buildOrderStr,
-                first_buy: firstBuyStr,
-                item_purchases: itemPurchasesStr,
+                patch: existingMatch.patch,
+                match_data: {
+                  kills: p.kills,
+                  deaths: p.deaths,
+                  assists: p.assists,
+                  level: p.champLevel || 0,
+                  teamId: p.teamId || 0,
+                  isRemake: p.gameEndedInEarlySurrender || false,
+                  
+                  stats: {
+                    damage: p.totalDamageDealtToChampions || 0,
+                    gold: p.goldEarned || 0,
+                    cs: p.totalMinionsKilled || 0,
+                    doubleKills: p.doubleKills || 0,
+                    tripleKills: p.tripleKills || 0,
+                    quadraKills: p.quadraKills || 0,
+                    pentaKills: p.pentaKills || 0,
+                    totalDamageDealt: p.totalDamageDealt || 0,
+                    timeCCingOthers: p.timeCCingOthers || 0,
+                    totalHealsOnTeammates: p.totalHealsOnTeammates || 0,
+                    totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0
+                  },
+                  
+                  // filter to only finished items (legendary/boots)
+                  items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
+                    .filter(id => id > 0 && isFinishedItem(id)),
+                  
+                  spells: [p.summoner1Id || 0, p.summoner2Id || 0],
+                  
+                  runes: {
+                    primary: {
+                      style: p.perks?.styles?.[0]?.style || 0,
+                      perks: [
+                        p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
+                        p.perks?.styles?.[0]?.selections?.[1]?.perk || 0,
+                        p.perks?.styles?.[0]?.selections?.[2]?.perk || 0,
+                        p.perks?.styles?.[0]?.selections?.[3]?.perk || 0
+                      ]
+                    },
+                    secondary: {
+                      style: p.perks?.styles?.[1]?.style || 0,
+                      perks: [
+                        p.perks?.styles?.[1]?.selections?.[0]?.perk || 0,
+                        p.perks?.styles?.[1]?.selections?.[1]?.perk || 0
+                      ]
+                    },
+                    statPerks: [
+                      p.perks?.statPerks?.offense || 0,
+                      p.perks?.statPerks?.flex || 0,
+                      p.perks?.statPerks?.defense || 0
+                    ]
+                  },
+                  
+                  pigScore: pigScore,
+                  pigScoreBreakdown: pigScoreBreakdown,
+                  abilityOrder: abilityOrder,
+                  buildOrder: buildOrderStr,
+                  firstBuy: firstBuyStr,
+                  itemPurchases: itemPurchases
+                }
               }
             })
           )
@@ -755,11 +787,12 @@ async function processMatchesInBackground(
               }
             }
 
-            // only calculate pig score for tracked user in recent matches
+            // calculate pig score with breakdown for tracked user in recent matches
             let pigScore = null
+            let pigScoreBreakdown = null
             if (isTrackedUser && !isOlderThan30Days && !p.gameEndedInEarlySurrender) {
               try {
-                pigScore = await calculatePigScore({
+                const breakdown = await calculatePigScoreWithBreakdown({
                   championName: p.championName,
                   damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
                   total_damage_dealt: p.totalDamageDealt || 0,
@@ -776,7 +809,15 @@ async function processMatchesInBackground(
                   item5: p.item5,
                   perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
                   patch: patchVersion,
+                  spell1: p.summoner1Id || 0,
+                  spell2: p.summoner2Id || 0,
+                  skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
+                  buildOrder: buildOrderStr || undefined
                 })
+                if (breakdown) {
+                  pigScore = breakdown.finalScore
+                  pigScoreBreakdown = breakdown
+                }
               } catch (err) {
                 console.error(`  Failed to calculate PIG score:`, err)
                 pigScore = null
@@ -845,6 +886,7 @@ async function processMatchesInBackground(
                 },
                 
                 pigScore: pigScore,
+                pigScoreBreakdown: pigScoreBreakdown,
                 abilityOrder: abilityOrder,
                 buildOrder: buildOrderStr,
                 firstBuy: firstBuyStr,

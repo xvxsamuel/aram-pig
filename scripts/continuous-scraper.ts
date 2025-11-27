@@ -260,7 +260,7 @@ async function crawlSummoner(puuid: string, region: RegionalCluster): Promise<{ 
       for (const { matchId, matchData, error } of results) {
         if (error) {
           if (error?.status === 429) {
-            console.log(`  Rate limited by Riot API, skipping remaining matches`)
+            console.log(`[RIOT API] Rate limited on ${region} (match endpoint), skipping remaining matches`)
             return { stored, discovered, isDry: false }
           }
           console.error(`  Error fetching match ${matchId}:`, error?.message || error)
@@ -323,7 +323,7 @@ async function crawlSummoner(puuid: string, region: RegionalCluster): Promise<{ 
     return { stored, discovered: [...new Set(discovered)], isDry: false }
   } catch (error: any) {
     if (error?.status === 429) {
-      console.log(`  Rate limited fetching match list`)
+      console.log(`[RIOT API] Rate limited on ${region} (match-list endpoint)`)
     } else {
       console.error(`Error crawling puuid ${puuid.substring(0, 8)}...:`, error?.message || error)
     }

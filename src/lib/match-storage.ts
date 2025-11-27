@@ -7,9 +7,9 @@ import type { RegionalCluster } from './regions'
 import { getMatchTimelineNoWait } from './riot-api'
 import { extractAbilityOrder } from './ability-leveling'
 import { extractPatch, getPatchFromDate, isPatchAccepted } from './patch-utils'
-import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from './item-purchases'
+import { extractFirstBuy, formatFirstBuy } from './item-purchases'
 import { extractItemPurchases } from './item-purchase-history'
-import { StatsAggregator, type ParticipantStatsInput } from './stats-aggregator'
+import { StatsAggregator } from './stats-aggregator'
 
 // ============================================================================
 // STATS AGGREGATOR - module-level state for batch processing
@@ -239,7 +239,7 @@ export async function storeMatchData(
       : getPatchFromDate(matchData.info.gameCreation)
 
     // check if match already exists
-    const { data: existingMatch, error: checkError } = await supabase
+    const { data: existingMatch, error: _checkError } = await supabase
       .from('matches')
       .select('match_id')
       .eq('match_id', matchData.metadata.matchId)
@@ -420,7 +420,7 @@ export async function storeMatchData(
     
     // Separate tracked vs anonymous participants
     const trackedRows = participantRows.filter(p => trackedPuuids.has(p.puuid))
-    const anonymousRows = participantRows.filter(p => !trackedPuuids.has(p.puuid))
+    const _anonymousRows = participantRows.filter(p => !trackedPuuids.has(p.puuid))
     
     // Insert tracked players to summoner_matches (stores raw match data for profiles)
     if (trackedRows.length > 0) {

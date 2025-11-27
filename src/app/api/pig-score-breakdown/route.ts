@@ -59,6 +59,11 @@ export async function GET(request: Request) {
       )
     }
     
+    // check if breakdown is already cached in match_data
+    if (participantData.match_data?.pigScoreBreakdown) {
+      return NextResponse.json(participantData.match_data.pigScoreBreakdown)
+    }
+    
     // get game_duration from matches table
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
@@ -103,6 +108,18 @@ export async function GET(request: Request) {
         { status: 500 }
       )
     }
+    
+    // cache the breakdown in match_data for future requests
+    const updatedMatchData = {
+      ...participantData.match_data,
+      pigScoreBreakdown: breakdown
+    }
+    
+    await supabase
+      .from('summoner_matches')
+      .update({ match_data: updatedMatchData })
+      .eq('match_id', matchId)
+      .eq('puuid', puuid)
     
     return NextResponse.json(breakdown)
   } catch (error) {

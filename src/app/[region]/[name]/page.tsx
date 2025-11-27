@@ -3,7 +3,7 @@ import { LABEL_TO_PLATFORM, getDefaultTag } from "../../../lib/regions"
 import SummonerContent from "../../../components/SummonerContent"
 import SummonerNotFound from "../../../components/SummonerNotFound"
 import { getSummonerByRiotId, getProfileIconUrl } from "../../../lib/riot-api"
-import { getLatestVersion, getChampionImageUrl } from "../../../lib/ddragon-client"
+import { getLatestVersion } from "../../../lib/ddragon-client"
 import { supabase } from "../../../lib/supabase"
 import { fetchChampionNames } from "../../../lib/champion-names"
 import type { Metadata } from 'next'

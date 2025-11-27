@@ -40,7 +40,7 @@ interface Props {
 }
 
 export default function ProfileHeader({ 
-  profileIconId, 
+  profileIconId: _profileIconId, 
   gameName, 
   tagLine, 
   summonerLevel,

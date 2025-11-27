@@ -165,7 +165,7 @@ async function waitForRateLimitRedis(platformOrRegion: string, requestType: Requ
         throw new Error('TIMEOUT_EXCEEDED');
       }
       
-      console.log(`[RATE LIMIT] Throttle limit reached (${currentLong}/${effectiveLongLimit}), waiting ${(waitTime/1000).toFixed(1)}s`);
+      console.log(`[RATE LIMIT] Throttle limit reached for ${platformOrRegion} (${currentLong}/${effectiveLongLimit}), waiting ${(waitTime/1000).toFixed(1)}s`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       return waitForRateLimitRedis(platformOrRegion, requestType, maxWaitMs);
     }
@@ -259,7 +259,7 @@ async function waitForRateLimitMemory(platformOrRegion: string, requestType: Req
       
       // Only log if waiting more than 1 second to reduce spam
       if (waitTime > 1000) {
-        console.log(`[RATE LIMIT] Throttle limit reached (${limits.long}/${effectiveLongLimit}), waiting ${(waitTime/1000).toFixed(1)}s`);
+        console.log(`[RATE LIMIT] Throttle limit reached for ${platformOrRegion} (${limits.long}/${effectiveLongLimit}), waiting ${(waitTime/1000).toFixed(1)}s`);
       }
       
       rateLimitLocks.delete(platformOrRegion);
