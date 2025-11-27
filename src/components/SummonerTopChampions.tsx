@@ -23,7 +23,6 @@ interface Props {
   topChampions: ChampionStats[]
   ddragonVersion: string
   championNames: Record<string, string>
-  onShowMore: () => void
   onTabChange: (tab: 'overview' | 'champions' | 'performance') => void
 }
 
@@ -32,7 +31,6 @@ export default function SummonerTopChampions({
   topChampions,
   ddragonVersion, 
   championNames,
-  onShowMore,
   onTabChange
 }: Props) {
   const formatStat = (num: number, decimals: number = 1): string => {

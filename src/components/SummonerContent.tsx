@@ -215,7 +215,6 @@ export default function SummonerContent({
       console.log('Stats fetch complete, success:', success)
       setLoading(false)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // only run once on mount
 
   // determine if this is a brand new profile (never updated)
@@ -492,7 +491,6 @@ export default function SummonerContent({
           topChampions={topChampions}
           ddragonVersion={ddragonVersion}
           championNames={championNames}
-          onShowMore={() => handleTabChange('champions')}
           onTabChange={handleTabChange}
         />
         <RecentlyPlayedWith
