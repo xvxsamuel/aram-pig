@@ -1,11 +1,7 @@
-import { initializeCleanup } from './lib/startup-cleanup'
-import { preloadDDragonVersion } from './lib/ddragon-client'
+// instrumentation disabled for vercel serverless
+// preloading doesn't work well with cold starts and isolated function instances
+// all initialization happens lazily when needed
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    initializeCleanup()
-    preloadDDragonVersion().catch(err => {
-      console.error('Failed to preload DDragon version:', err)
-    })
-  }
+  // intentionally empty - serverless functions handle their own initialization
 }
