@@ -62,7 +62,7 @@ export async function GET() {
       stuckJobs: data?.length || 0,
       jobs: data
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
