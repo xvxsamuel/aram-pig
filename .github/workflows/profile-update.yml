@@ -1,0 +1,44 @@
+name: Profile Update
+
+on:
+  # triggered via repository dispatch from the API
+  repository_dispatch:
+    types: [update-profile]
+
+env:
+  RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+  USE_REDIS_RATE_LIMIT: 'true'
+  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run profile update
+        run: npx tsx scripts/update-profile-worker.ts
+        env:
+          JOB_ID: ${{ github.event.client_payload.job_id }}
+          PUUID: ${{ github.event.client_payload.puuid }}
+          REGION: ${{ github.event.client_payload.region }}
+          MATCH_IDS: ${{ github.event.client_payload.match_ids }}

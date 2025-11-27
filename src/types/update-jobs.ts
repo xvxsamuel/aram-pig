@@ -14,6 +14,8 @@ export interface UpdateJob {
   error_message: string | null
   created_at: string
   updated_at: string
+  pending_match_ids?: string[]
+  region?: string
 }
 
 export interface UpdateJobProgress {

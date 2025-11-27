@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { createAdminClient } from '../../../lib/supabase';
 import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline} from '../../../lib/riot-api';
 import type { RequestType } from '../../../lib/rate-limiter';
@@ -119,16 +120,23 @@ async function getActiveJob(supabase: any, puuid: string): Promise<UpdateJob | n
   return data;
 }
 
-// create new job
-async function createJob(supabase: any, puuid: string, totalMatches: number, etaSeconds: number): Promise<string> {
+// threshold for direct processing vs GitHub Actions
+// ≤20 matches: process in Vercel (~1-2 min, fast UX)
+// >20 matches: trigger GitHub Action (handles large batches without timeout)
+const DIRECT_PROCESS_THRESHOLD = 20;
+
+// create new job with pending matches
+async function createJob(supabase: any, puuid: string, matchIds: string[], region: string, etaSeconds: number, useGitHubAction: boolean = false): Promise<string> {
   const { data, error } = await supabase
     .from('update_jobs')
     .insert({
       puuid,
-      status: 'processing',
-      total_matches: totalMatches,
+      status: useGitHubAction ? 'pending' : 'processing',
+      total_matches: matchIds.length,
       fetched_matches: 0,
       eta_seconds: etaSeconds,
+      pending_match_ids: matchIds,
+      region: region,
       started_at: new Date().toISOString()
     })
     .select('id')
@@ -141,23 +149,29 @@ async function createJob(supabase: any, puuid: string, totalMatches: number, eta
   return data.id;
 }
 
-// update job progress with dynamic eta
-async function updateJobProgress(supabase: any, jobId: string, fetchedMatches: number, elapsedMs: number, totalMatches: number) {
+// update job progress with remaining matches
+async function updateJobProgress(supabase: any, jobId: string, fetchedMatches: number, elapsedMs: number, totalMatches: number, remainingMatchIds?: string[]) {
   // calculate dynamic eta based on actual fetch time
-  // use exponential moving average to smooth out variance
-  const avgTimePerMatch = elapsedMs / fetchedMatches;
+  const avgTimePerMatch = fetchedMatches > 0 ? elapsedMs / fetchedMatches : 5000;
   const remainingMatches = totalMatches - fetchedMatches;
   
   // add 10% buffer for variance and final processing
   const etaSeconds = Math.ceil((avgTimePerMatch * remainingMatches * 1.1) / 1000);
   
+  const updateData: any = { 
+    fetched_matches: fetchedMatches,
+    eta_seconds: etaSeconds,
+    updated_at: new Date().toISOString()
+  }
+  
+  // update remaining matches if provided (for chunked processing)
+  if (remainingMatchIds !== undefined) {
+    updateData.pending_match_ids = remainingMatchIds
+  }
+  
   await supabase
     .from('update_jobs')
-    .update({ 
-      fetched_matches: fetchedMatches,
-      eta_seconds: etaSeconds,
-      updated_at: new Date().toISOString() // manually update timestamp to prevent stale job cleanup
-    })
+    .update(updateData)
     .eq('id', jobId);
 }
 
@@ -427,19 +441,67 @@ export async function POST(request: Request) {
     // use batch queue for all profile updates
     const requestType: RequestType = 'batch';
 
-    // calculate initial eta based on actual batch queue limits
-    // batch queue: 14 req/sec, 70 req/2min -> effective ~0.58 req/sec sustained
-    // each match needs 1 api call, plus timeline fetch (if available)
-    // timeline is fetched after match data, so roughly 2x the api calls
-    const apiCallsNeeded = newMatchIds.length * 2; // match + timeline
-    const etaSeconds = Math.ceil(apiCallsNeeded * 1.2); // ~1.2 sec per api call (conservative estimate)
-
+    // decide: small batch → Vercel direct, large batch → GitHub Actions
+    const useGitHubAction = newMatchIds.length > DIRECT_PROCESS_THRESHOLD;
+    
+    // calculate ETA based on method
+    // Vercel: ~5 sec/match (includes DB latency)
+    // GitHub Actions: 30s startup + ~3 sec/match (warmer environment)
+    const etaSeconds = useGitHubAction
+      ? 30 + Math.ceil(newMatchIds.length * 3)
+      : Math.ceil(newMatchIds.length * 5);
+    
     // create job
-    jobId = await createJob(supabase, accountData.puuid, newMatchIds.length, etaSeconds);
-    console.log(`[UpdateProfile] Created job ${jobId} for ${newMatchIds.length} matches (type: ${requestType})`)
+    jobId = await createJob(supabase, accountData.puuid, newMatchIds, region, etaSeconds, useGitHubAction);
+    console.log(`[UpdateProfile] Created job ${jobId} for ${newMatchIds.length} matches (method: ${useGitHubAction ? 'GitHub Action' : 'Vercel direct'}, ETA: ${etaSeconds}s)`)
 
-    // start processing matches asynchronously (don't await)
-    processMatchesInBackground(
+    if (useGitHubAction) {
+      // trigger GitHub Action for large batches
+      const githubToken = process.env.GITHUB_PAT;
+      if (!githubToken) {
+        console.error('[UpdateProfile] GITHUB_PAT not configured, falling back to Vercel direct');
+        // fall through to direct processing
+      } else {
+        try {
+          const response = await fetch('https://api.github.com/repos/xvxsamuel/aram-pig/dispatches', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${githubToken}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              event_type: 'update-profile',
+              client_payload: {
+                job_id: jobId,
+                puuid: accountData.puuid,
+                region: region,
+                match_ids: JSON.stringify(newMatchIds)
+              }
+            })
+          });
+          
+          if (response.ok) {
+            console.log(`[UpdateProfile] Triggered GitHub Action for job ${jobId}`);
+            return NextResponse.json({
+              message: 'Update started (processing in background)',
+              newMatches: newMatchIds.length,
+              jobId,
+              method: 'github-action'
+            });
+          } else {
+            console.error('[UpdateProfile] Failed to trigger GitHub Action:', await response.text());
+            // fall through to direct processing
+          }
+        } catch (err) {
+          console.error('[UpdateProfile] Error triggering GitHub Action:', err);
+          // fall through to direct processing
+        }
+      }
+    }
+
+    // direct processing for small batches (or fallback)
+    const backgroundWork = processMatchesInBackground(
       supabase,
       jobId,
       newMatchIds,
@@ -452,12 +514,16 @@ export async function POST(request: Request) {
         failJob(supabase, jobId, err.message || 'unknown error')
       }
     })
+    
+    // waitUntil keeps the function alive until backgroundWork completes
+    waitUntil(backgroundWork)
 
     // return immediately so user sees progress
     return NextResponse.json({
       message: 'Update started',
       newMatches: newMatchIds.length,
-      jobId
+      jobId,
+      method: 'vercel-direct'
     });
 
   } catch (error: any) {
@@ -477,6 +543,7 @@ export async function POST(request: Request) {
 }
 
 // process matches in background after response is sent
+// processes up to CHUNK_SIZE matches, saves remaining for continuation
 async function processMatchesInBackground(
   supabase: any,
   jobId: string,
@@ -485,26 +552,31 @@ async function processMatchesInBackground(
   requestType: RequestType,
   puuid: string
 ) {
-  console.log(`[UpdateProfile] processMatchesInBackground started for job ${jobId} with ${newMatchIds.length} matches`)
+  // process all matches directly (for small batches ≤20)
+  // large batches go to GitHub Actions instead
+  const matchesToProcess = newMatchIds
+  const totalMatches = newMatchIds.length
+  
+  console.log(`[UpdateProfile] processMatchesInBackground started for job ${jobId}: processing ${matchesToProcess.length} matches`)
   
   const startTime = Date.now();
-  const updateProgressInterval = 3; // update every 3 matches to keep updated_at fresh
+  const updateProgressInterval = 3;
   let fetchedMatches = 0;
-  const processedMatches = new Set<string>(); // track processed matches to catch duplicates
+  const processedMatches = new Set<string>();
 
   try {
-    // BATCH PRE-CHECK: fetch all existing matches and user records in 2 queries instead of 2 per match
+    // BATCH PRE-CHECK: fetch existing matches and user records
     const batchStart = Date.now()
     const [existingMatchesResult, existingUserRecordsResult] = await Promise.all([
       supabase
         .from('matches')
         .select('match_id, game_creation, game_duration, patch')
-        .in('match_id', newMatchIds),
+        .in('match_id', matchesToProcess),
       supabase
         .from('summoner_matches')
         .select('match_id')
         .eq('puuid', puuid)
-        .in('match_id', newMatchIds)
+        .in('match_id', matchesToProcess)
     ])
     
     const batchTime = Date.now() - batchStart
@@ -522,7 +594,7 @@ async function processMatchesInBackground(
     
     console.log(`[UpdateProfile] Batch pre-check: ${existingMatchesMap.size} matches in DB, ${userHasRecord.size} user records (${batchTime}ms)`)
     
-    for (const matchId of newMatchIds) {
+    for (const matchId of matchesToProcess) {
       // safety check for duplicate processing
       if (processedMatches.has(matchId)) {
         console.log(`[UpdateProfile] WARNING: Match ${matchId} already processed in this batch, skipping duplicate`)
@@ -1074,15 +1146,15 @@ async function processMatchesInBackground(
       .update({ last_updated: new Date().toISOString() })
       .eq('puuid', puuid);
 
-    // calculate any missing pig scores for recent matches before completing
-    console.log('Checking for missing pig scores...')
+    // all matches processed (small batch), calculate pig scores and complete
+    console.log('[UpdateProfile] Checking for missing pig scores...')
     const pigScoresCalculated = await calculateMissingPigScores(supabase, puuid)
     
     // mark job as completed
     await completeJob(supabase, jobId);
-    console.log(`Job ${jobId} completed - fetched ${fetchedMatches} matches, calculated ${pigScoresCalculated} pig scores`)
+    console.log(`[UpdateProfile] Job ${jobId} completed - fetched ${fetchedMatches} matches, calculated ${pigScoresCalculated} pig scores`)
   } catch (error: any) {
-    console.error('Background processing error:', error);
+    console.error('[UpdateProfile] Background processing error:', error);
     await failJob(supabase, jobId, error.message || 'unknown error');
   }
 }

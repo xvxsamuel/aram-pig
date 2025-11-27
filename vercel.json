@@ -4,8 +4,7 @@
   "functions": {
     "src/app/api/update-profile/route.ts": {
       "memory": 1024,
-      "maxDuration": 60,
-      "experimentalFluid": true
+      "maxDuration": 300
     },
     "src/app/api/**/*.ts": {
       "maxDuration": 60
