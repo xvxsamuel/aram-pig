@@ -489,18 +489,21 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
     const rateLimitStatus = await checkRateLimit(region);
     const rateLimitLow = rateLimitStatus.estimatedRequestsRemaining < RATE_LIMIT_FALLBACK_THRESHOLD;
     
+    console.log(`[UpdateProfile] Rate limit status: ${rateLimitStatus.estimatedRequestsRemaining} remaining, threshold: ${RATE_LIMIT_FALLBACK_THRESHOLD}, low: ${rateLimitLow}`)
+    console.log(`[UpdateProfile] Match count: ${newMatchIds.length}, threshold: ${DIRECT_PROCESS_THRESHOLD}`)
+    
     // decide: use GitHub Actions if too many matches OR rate limit is running low
     let useGitHubAction = newMatchIds.length > DIRECT_PROCESS_THRESHOLD || rateLimitLow;
     
     if (rateLimitLow) {
-      console.log(`[UpdateProfile] Rate limit low (${rateLimitStatus.estimatedRequestsRemaining} remaining), routing to GitHub Actions`);
+      console.log(`[UpdateProfile] Rate limit low, routing to GitHub Actions`);
     }
     
     // calculate ETA based on method
     // Vercel: ~5 sec/match (includes DB latency)
-    // GitHub Actions: 30s startup + ~3 sec/match (warmer environment)
+    // GitHub Actions: 15s startup + ~3 sec/match (warmer environment)
     const etaSeconds = useGitHubAction
-      ? 30 + Math.ceil(newMatchIds.length * 3)
+      ? 15 + Math.ceil(newMatchIds.length * 3)
       : Math.ceil(newMatchIds.length * 5);
     
     // create job
