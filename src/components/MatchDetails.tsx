@@ -336,7 +336,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
             {score !== null ? (
               <div className="flex flex-col items-center justify-center">
                 <span 
-                  className="text-sm font-bold"
+                  className="text-sm font-semibold "
                   style={{ color: getPigScoreColor(score) }}
                 >
                   {score.toFixed(1)}
@@ -351,10 +351,6 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                 ) : allHavePigScores ? (
                   <span className="text-[10px] text-gray-500">{rank}th</span>
                 ) : null}
-              </div>
-            ) : loadingPigScores ? (
-              <div className="flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
               </div>
             ) : (
               <span className="text-sm text-gray-500">-</span>
@@ -675,7 +671,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           <div className="p-4 space-y-4">
             {(loadingBreakdown || !pigScoreBreakdown) ? (
               <div className="min-h-[200px] flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
+                <span className="text-sm text-gray-500">-</span>
               </div>
             ) : (
               <>

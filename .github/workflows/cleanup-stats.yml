@@ -15,9 +15,13 @@ jobs:
     steps:
       - name: Cleanup old champion stats
         run: |
-          response=$(curl -s -w "\n%{http_code}" -X GET \
+          # remove trailing slash from URL if present
+          SITE_URL="${{ secrets.NEXT_PUBLIC_SITE_URL }}"
+          SITE_URL="${SITE_URL%/}"
+          
+          response=$(curl -sL -w "\n%{http_code}" -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.NEXT_PUBLIC_SITE_URL }}/api/cleanup-champion-stats")
+            "${SITE_URL}/api/cleanup-champion-stats")
           
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')

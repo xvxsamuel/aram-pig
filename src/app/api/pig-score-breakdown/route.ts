@@ -44,6 +44,8 @@ export async function GET(request: Request) {
     
     const supabase = createAdminClient()
     
+    console.log(`[pig-score-breakdown] Request for matchId=${matchId}, puuid=${puuid.slice(0, 8)}...`)
+    
     // get participant data
     const { data: participantData, error: participantError } = await supabase
       .from('summoner_matches')
@@ -53,6 +55,7 @@ export async function GET(request: Request) {
       .single()
     
     if (participantError || !participantData) {
+      console.log(`[pig-score-breakdown] Participant not found`)
       return NextResponse.json(
         { error: 'Participant not found' },
         { status: 404 }
@@ -61,8 +64,11 @@ export async function GET(request: Request) {
     
     // check if breakdown is already cached in match_data
     if (participantData.match_data?.pigScoreBreakdown) {
+      console.log(`[pig-score-breakdown] CACHE HIT - returning stored breakdown`)
       return NextResponse.json(participantData.match_data.pigScoreBreakdown)
     }
+    
+    console.log(`[pig-score-breakdown] CACHE MISS - calculating breakdown for ${participantData.champion_name}...`)
     
     // get game_duration from matches table
     const { data: matchRecord, error: matchError } = await supabase
@@ -103,11 +109,14 @@ export async function GET(request: Request) {
     })
     
     if (!breakdown) {
+      console.log(`[pig-score-breakdown] Failed to calculate breakdown`)
       return NextResponse.json(
         { error: 'Could not calculate pig score breakdown' },
         { status: 500 }
       )
     }
+    
+    console.log(`[pig-score-breakdown] Calculated breakdown, caching to DB...`)
     
     // cache the breakdown in match_data for future requests
     const updatedMatchData = {
@@ -121,6 +130,7 @@ export async function GET(request: Request) {
       .eq('match_id', matchId)
       .eq('puuid', puuid)
     
+    console.log(`[pig-score-breakdown] Done - calculated and cached new breakdown`)
     return NextResponse.json(breakdown)
   } catch (error) {
     console.error('Error calculating pig score breakdown:', error)

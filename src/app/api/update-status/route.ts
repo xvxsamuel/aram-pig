@@ -55,6 +55,22 @@ export async function POST(request: Request) {
     // cleanup stale jobs first
     await cleanupStaleJobs(supabase)
 
+    // check cooldown status from summoners table
+    const { data: summoner } = await supabase
+      .from("summoners")
+      .select("last_updated")
+      .eq("puuid", puuid)
+      .single()
+
+    let cooldownUntil: string | null = null
+    if (summoner?.last_updated) {
+      const lastUpdatedTime = new Date(summoner.last_updated).getTime()
+      const cooldownEnd = lastUpdatedTime + 5 * 60 * 1000 // 5 minutes
+      if (cooldownEnd > Date.now()) {
+        cooldownUntil = new Date(cooldownEnd).toISOString()
+      }
+    }
+
     // get most recent job for this puuid
     const { data: job } = await supabase
       .from("update_jobs")
@@ -67,7 +83,8 @@ export async function POST(request: Request) {
     if (!job) {
       return NextResponse.json({
         hasActiveJob: false,
-        job: null
+        job: null,
+        cooldownUntil
       })
     }
 
@@ -101,7 +118,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       hasActiveJob: isActive,
-      job: response
+      job: response,
+      cooldownUntil
     })
 
   } catch (error: any) {

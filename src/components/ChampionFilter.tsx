@@ -54,7 +54,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
 
   return (
     <div className="relative w-64" ref={dropdownRef}>
-      <div className="relative h-8 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
+      <div className="gold-border relative h-8 rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
         <div
           onClick={handleInputClick}
           className="relative h-full w-full rounded-[inherit] bg-abyss-700 flex items-center px-4 gap-2 cursor-pointer transition-colors"
@@ -69,7 +69,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
               className="text-sm flex-1 bg-transparent outline-none text-white placeholder:text-text-muted"
             />
           ) : (
-            <span className={`text-sm flex-1 text-left ${value ? 'text-white' : 'text-text-muted'}`}>
+            <span className={`text-sm flex-1 text-left ${value ? 'text-white' : 'text-text-muted font-light'}`}>
               {displayValue}
             </span>
           )}

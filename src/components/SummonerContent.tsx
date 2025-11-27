@@ -1,12 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { useRouter } from "next/navigation"
 import ProfileHeader from "./ProfileHeader"
 import MatchHistoryList from "./MatchHistoryList"
 import ChampionStatsList from "./ChampionStatsList"
 import FetchMessage from "./FetchMessage"
-import Toast from "./Toast"
 import SummonerSummaryCard from "./SummonerSummaryCard"
 import SummonerTopChampions from "./SummonerTopChampions"
 import SummonerLoadingSkeleton from "./SummonerLoadingSkeleton"
@@ -80,8 +78,6 @@ export default function SummonerContent({
   averagePigScore: initialAveragePigScore,
   pigScoreGames: initialPigScoreGames
 }: Props) {
-  const router = useRouter()
-  
   // get initial tab from URL hash
   const getTabFromHash = useCallback((): 'overview' | 'champions' | 'performance' => {
     if (typeof window === 'undefined') return 'overview'
@@ -113,9 +109,8 @@ export default function SummonerContent({
     return () => window.removeEventListener('popstate', handlePopState)
   }, [getTabFromHash])
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
-  const [showToast, setShowToast] = useState(false)
-  const [toastMessage, setToastMessage] = useState<string>("Your profile is up to date!")
-  const [toastType, setToastType] = useState<"success" | "error">("success")
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [cooldownUntil, setCooldownUntil] = useState<string | null>(null)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   
   // state for client-side loaded data
@@ -157,66 +152,62 @@ export default function SummonerContent({
     fetchChampionStats()
   }, [summonerData.account.puuid])
 
-  // fetch stats client-side if not provided (totalGames === 0)
-  useEffect(() => {
-    if (initialTotalGames > 0) return // already have data
-    
-    async function fetchStats() {
-      try {
-        const response = await fetch(`/api/summoner-stats?puuid=${summonerData.account.puuid}`)
-        if (response.ok) {
-          const data = await response.json()
-          console.log('Fetched summoner stats:', {
-            matchesCount: data.matches?.length,
-            totalGames: data.totalGames,
-            averagePigScore: data.averagePigScore
-          })
-          setMatches(data.matches)
-          setWins(data.wins)
-          setTotalGames(data.totalGames)
-          setTotalKills(data.totalKills)
-          setTotalDeaths(data.totalDeaths)
-          setTotalAssists(data.totalAssists)
-          setMostPlayedChampion(data.mostPlayedChampion)
-          setLongestWinStreak(data.longestWinStreak)
-          setTotalDamage(data.totalDamage)
-          setTotalGameDuration(data.totalGameDuration)
-          setTotalDoubleKills(data.totalDoubleKills)
-          setTotalTripleKills(data.totalTripleKills)
-          setTotalQuadraKills(data.totalQuadraKills)
-          setTotalPentaKills(data.totalPentaKills)
-          setLastUpdated(data.lastUpdated)
-          setAveragePigScore(data.averagePigScore)
-          setPigScoreGames(data.pigScoreGames)
-          
-          // fetch champion image if we have most played champion
-          if (data.mostPlayedChampion) {
-            const imgResponse = await fetch(`https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${data.mostPlayedChampion}_0.jpg`)
-            if (imgResponse.ok) {
-              setChampionImageUrl(imgResponse.url)
-            }
+  // reusable function to fetch fresh stats
+  const refreshStats = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/summoner-stats?puuid=${summonerData.account.puuid}`)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Refreshed summoner stats:', {
+          matchesCount: data.matches?.length,
+          totalGames: data.totalGames,
+          averagePigScore: data.averagePigScore
+        })
+        setMatches(data.matches)
+        setWins(data.wins)
+        setTotalGames(data.totalGames)
+        setTotalKills(data.totalKills)
+        setTotalDeaths(data.totalDeaths)
+        setTotalAssists(data.totalAssists)
+        setMostPlayedChampion(data.mostPlayedChampion)
+        setLongestWinStreak(data.longestWinStreak)
+        setTotalDamage(data.totalDamage)
+        setTotalGameDuration(data.totalGameDuration)
+        setTotalDoubleKills(data.totalDoubleKills)
+        setTotalTripleKills(data.totalTripleKills)
+        setTotalQuadraKills(data.totalQuadraKills)
+        setTotalPentaKills(data.totalPentaKills)
+        setLastUpdated(data.lastUpdated)
+        setAveragePigScore(data.averagePigScore)
+        setPigScoreGames(data.pigScoreGames)
+        
+        // fetch champion image if we have most played champion
+        if (data.mostPlayedChampion) {
+          const imgResponse = await fetch(`https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${data.mostPlayedChampion}_0.jpg`)
+          if (imgResponse.ok) {
+            setChampionImageUrl(imgResponse.url)
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch stats:', error)
-      } finally {
-        setLoading(false)
+        
+        // also refresh champion stats
+        const champResponse = await fetch(`/api/player-champion-stats?puuid=${summonerData.account.puuid}`)
+        if (champResponse.ok) {
+          const champData = await champResponse.json()
+          setChampionStats(champData)
+        }
+        
+        return true
       }
+      return false
+    } catch (error) {
+      console.error('Failed to refresh stats:', error)
+      return false
     }
-    
-    fetchStats()
-  }, [summonerData.account.puuid, initialTotalGames])
+  }, [summonerData.account.puuid])
 
-  // check for profile update flag on mount
-  useEffect(() => {
-    const wasUpdated = sessionStorage.getItem('profileUpdated')
-    if (wasUpdated === 'true') {
-      sessionStorage.removeItem('profileUpdated')
-      setToastMessage("Profile updated successfully!")
-      setToastType("success")
-      setShowToast(true)
-    }
-  }, [])
+  // determine if this is a brand new profile (never updated)
+  const isNewProfile = initialTotalGames === 0 && !initialLastUpdated
+  const [shouldAutoUpdate, setShouldAutoUpdate] = useState(isNewProfile)
 
   // check for active job on mount
   useEffect(() => {
@@ -230,6 +221,11 @@ export default function SummonerContent({
 
         if (statusResponse.ok) {
           const statusData = await statusResponse.json()
+          
+          // update cooldown status
+          if (statusData.cooldownUntil) {
+            setCooldownUntil(statusData.cooldownUntil)
+          }
           
           if (statusData.hasActiveJob && statusData.job) {
             setJobProgress(statusData.job)
@@ -262,38 +258,54 @@ export default function SummonerContent({
       const data = await response.json()
       console.log("Poll response:", data)
 
+      // update cooldown status
+      if (data.cooldownUntil) {
+        setCooldownUntil(data.cooldownUntil)
+      }
+
       // if we have job data (active or recently completed), update state
       if (data.job) {
         setJobProgress(data.job)
         
-        // if job is completed or failed, reload after showing final state
+        // if job is completed or failed, refresh data without page reload
         if (data.job.status === 'completed' || data.job.status === 'failed') {
-          console.log("Job finished, reloading in 2 seconds to show fresh data")
+          console.log("Job finished, refreshing data")
           
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current)
             pollIntervalRef.current = null
           }
           
-          // wait 2 seconds to show completion state, then reload
-          setTimeout(() => {
-            sessionStorage.setItem('profileUpdated', 'true')
-            window.location.reload()
-          }, 2000)
+          // wait 1 second to show completion state, then refresh data
+          setTimeout(async () => {
+            const success = await refreshStats()
+            setJobProgress(null)
+            // set cooldown after successful update with new matches
+            setCooldownUntil(new Date(Date.now() + 5 * 60 * 1000).toISOString())
+            if (success) {
+              setStatusMessage("Profile updated successfully!")
+            } else {
+              setStatusMessage("Failed to refresh data")
+            }
+          }, 1000)
         }
       } else if (!data.hasActiveJob && !jobProgress) {
         // no job exists and we weren't tracking one - nothing to do
         return
       } else if (!data.hasActiveJob && jobProgress) {
-        // job disappeared (cleaned up) but we were tracking it - reload
-        console.log("Job was cleaned up, reloading page")
+        // job disappeared (cleaned up) but we were tracking it - refresh
+        console.log("Job was cleaned up, refreshing data")
         setJobProgress(null)
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current)
           pollIntervalRef.current = null
         }
-        sessionStorage.setItem('profileUpdated', 'true')
-        window.location.reload()
+        const success = await refreshStats()
+        // set cooldown after successful update
+        setCooldownUntil(new Date(Date.now() + 5 * 60 * 1000).toISOString())
+        if (success) {
+          setStatusMessage("Profile updated successfully!")
+        }
       }
     } catch (error: any) {
       // ignore abort errors (happens when page refreshes during fetch)
@@ -302,7 +314,7 @@ export default function SummonerContent({
       }
       console.error("Failed to poll job status:", error)
     }
-  }, [summonerData.account.puuid, router])
+  }, [summonerData.account.puuid, refreshStats])
 
   // polling interval - only start polling once job has actually started (totalMatches > 0)
   useEffect(() => {
@@ -365,18 +377,14 @@ export default function SummonerContent({
         // check if profile was recently updated (5 min cd from server)
         if (result.recentlyUpdated) {
           setJobProgress(null)
-          setToastMessage("Profile updated recently. Please try again later.")
-          setToastType("error")
-          setShowToast(true)
+          setStatusMessage("Profile updated recently. Please try again later.")
           return
         }
         
-        // check if already up to date (no new matches found)
+        // check if already up to date (no new matches found - no cooldown since no API calls)
         if (result.newMatches === 0) {
           setJobProgress(null)
-          setToastMessage("Your profile is up to date!")
-          setToastType("success")
-          setShowToast(true)
+          setStatusMessage("Your profile is already up to date")
           return
         }
         
@@ -385,18 +393,22 @@ export default function SummonerContent({
       } else {
         // handle error response from server
         setJobProgress(null)
-        setToastMessage(result.error || "Error updating profile")
-        setToastType("error")
-        setShowToast(true)
+        setStatusMessage(result.error || "Error updating profile")
       }
     } catch (error) {
       console.error("Update failed:", error)
       setJobProgress(null)
-      setToastMessage("Error updating profile")
-      setToastType("error")
-      setShowToast(true)
+      setStatusMessage("Error updating profile")
     }
   }
+
+  // auto-trigger update for new profiles (after handleManualUpdate is defined)
+  useEffect(() => {
+    if (shouldAutoUpdate && !jobProgress) {
+      setShouldAutoUpdate(false)
+      handleManualUpdate()
+    }
+  }, [shouldAutoUpdate, jobProgress])
 
   // handle tab changes and mark tabs as rendered
   const handleTabChange = useCallback((tab: 'overview' | 'champions' | 'performance') => {
@@ -499,17 +511,12 @@ export default function SummonerContent({
     />
   ), [summonerData.account.puuid, ddragonVersion, championNames, profileIconUrl, championStats])
 
+  // for new profiles, don't show skeleton - show progress/fetch message instead
+  const showSkeleton = loading && !isNewProfile && !jobProgress
+
   return (
     <>
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-        />
-      )}
-      
-      {loading ? (
+      {showSkeleton ? (
         <>
           <ProfileHeader
             profileIconId={summonerData.summoner.profileIconId}
@@ -528,6 +535,9 @@ export default function SummonerContent({
             loading={true}
             selectedTab={selectedTab}
             onTabChange={handleTabChange}
+            longestWinStreak={_longestWinStreak}
+            cooldownUntil={cooldownUntil}
+            statusMessage={statusMessage}
           />
           <div className="max-w-6xl mx-auto px-2 sm:px-8">
             <SummonerLoadingSkeleton />
@@ -551,6 +561,9 @@ export default function SummonerContent({
             lastUpdated={lastUpdated}
             selectedTab={selectedTab}
             onTabChange={handleTabChange}
+            longestWinStreak={_longestWinStreak}
+            cooldownUntil={cooldownUntil}
+            statusMessage={statusMessage}
           />
 
           <div className="">
@@ -559,23 +572,28 @@ export default function SummonerContent({
                 <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />
               )}
 
-              {/* keep all rendered tabs in dom, hide with css */}
-              <div className={selectedTab === 'overview' ? '' : 'hidden'}>
-                {overviewContent}
-              </div>
-
-              {renderedTabs.has('champions') && (
-                <div className={selectedTab === 'champions' ? '' : 'hidden'}>
-                  {championsContent}
-                </div>
-              )}
-
-              {renderedTabs.has('performance') && (
-                <div className={selectedTab === 'performance' ? '' : 'hidden'}>
-                  <div className="py-8 text-center text-gray-400">
-                    <p className="text-xl">Performance view coming soon</p>
+              {/* don't show content for new profiles while updating */}
+              {isNewProfile && jobProgress ? null : (
+                <>
+                  {/* keep all rendered tabs in dom, hide with css */}
+                  <div className={selectedTab === 'overview' ? '' : 'hidden'}>
+                    {overviewContent}
                   </div>
-                </div>
+
+                  {renderedTabs.has('champions') && (
+                    <div className={selectedTab === 'champions' ? '' : 'hidden'}>
+                      {championsContent}
+                    </div>
+                  )}
+
+                  {renderedTabs.has('performance') && (
+                    <div className={selectedTab === 'performance' ? '' : 'hidden'}>
+                      <div className="py-8 text-center text-gray-400">
+                        <p className="text-xl">Performance view coming soon</p>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

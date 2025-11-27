@@ -4,6 +4,7 @@ import { League_Spartan } from 'next/font/google'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import NextTopLoader from 'nextjs-toploader'
+import { Analytics } from '@vercel/analytics/react'
 
 const leagueSpartanLight = League_Spartan({
   subsets: ['latin'],
@@ -88,6 +89,7 @@ export default function RootLayout({
           {children}
         </main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   )

@@ -8,7 +8,7 @@ export async function getLatestVersion(): Promise<string> {
     const response = await fetch('https://ddragon.leagueoflegends.com/api/versions.json')
     const versions = await response.json()
     latestVersion = versions[0]
-    console.log(`DDragon version loaded: ${latestVersion}`)
+    console.log(`[DDragon] Version loaded: ${latestVersion}`)
   }
   return latestVersion!
 }

@@ -209,11 +209,11 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
   })
   
   if (matchesNeedingPigScore.length === 0) {
-    console.log('All recent matches have pig scores')
+    console.log('[UpdateProfile] All recent matches have pig scores')
     return 0
   }
   
-  console.log(`Calculating pig scores for ${matchesNeedingPigScore.length} matches...`)
+  console.log(`[UpdateProfile] Calculating pig scores for ${matchesNeedingPigScore.length} matches...`)
   
   let calculated = 0
   for (const match of matchesNeedingPigScore) {
@@ -270,11 +270,11 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
         calculated++
       }
     } catch (err) {
-      console.error(`Failed to calculate pig score for ${match.match_id}:`, err)
+      console.error(`[UpdateProfile] Failed to calculate pig score for ${match.match_id}:`, err)
     }
   }
   
-  console.log(`Calculated ${calculated} pig scores`)
+  console.log(`[UpdateProfile] Calculated ${calculated} pig scores`)
   return calculated
 }
 
@@ -366,36 +366,56 @@ export async function POST(request: Request) {
       existingMatches?.map((m: { match_id: string }) => m.match_id) || []
     );
 
-    console.log(`Found ${existingMatchIds.size} existing matches for puuid ${accountData.puuid}`)
+    console.log(`[UpdateProfile] Found ${existingMatchIds.size} existing matches for puuid ${accountData.puuid}`)
+
+    // check if last job failed/interrupted - if so, skip quick check optimization
+    // to ensure we properly find any matches that weren't fetched
+    const { data: lastJob } = await supabase
+      .from('update_jobs')
+      .select('status, error_message')
+      .eq('puuid', accountData.puuid)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    const lastJobFailed = lastJob?.status === 'failed';
+    const shouldSkipQuickCheck = lastJobFailed || existingMatchIds.size === 0;
+
+    if (shouldSkipQuickCheck) {
+      console.log(`[UpdateProfile] Skipping quick check optimization (last job failed: ${lastJobFailed}, existing matches: ${existingMatchIds.size})`)
+    }
 
     // Quick check: fetch just the most recent match ID to see if there are any new matches
-    console.log('Quick check: fetching most recent match ID...')
-    const quickCheckIds = await fetchMatchIds(region, accountData.puuid, 1, 'overhead');
-    
-    if (quickCheckIds.length > 0 && existingMatchIds.has(quickCheckIds[0])) {
-      console.log('No new matches found (most recent match already in database)')
+    // Only use this optimization if the last job completed successfully
+    if (!shouldSkipQuickCheck) {
+      console.log('[UpdateProfile] Quick check: fetching most recent match ID...')
+      const quickCheckIds = await fetchMatchIds(region, accountData.puuid, 1, 'overhead');
       
-      // still check for missing pig scores before returning
-      console.log('Checking for missing pig scores...')
-      const pigScoresCalculated = await calculateMissingPigScores(supabase, accountData.puuid)
-      
-      return NextResponse.json({ 
-        success: true, 
-        newMatches: 0,
-        pigScoresCalculated,
-        message: pigScoresCalculated > 0 
-          ? `Profile is up to date, calculated ${pigScoresCalculated} pig scores`
-          : 'Profile is already up to date'
-      });
+      if (quickCheckIds.length > 0 && existingMatchIds.has(quickCheckIds[0])) {
+        console.log('[UpdateProfile] No new matches found (most recent match already in database)')
+        
+        // still check for missing pig scores before returning
+        console.log('[UpdateProfile] Checking for missing pig scores...')
+        const pigScoresCalculated = await calculateMissingPigScores(supabase, accountData.puuid)
+        
+        return NextResponse.json({ 
+          success: true, 
+          newMatches: 0,
+          pigScoresCalculated,
+          message: pigScoresCalculated > 0 
+            ? `Profile is up to date, calculated ${pigScoresCalculated} pig scores`
+            : 'Profile is already up to date'
+        });
+      }
     }
     
-    console.log('New matches detected, fetching full match history...')
+    console.log('[UpdateProfile] New matches detected, fetching full match history...')
     const matchIds = await fetchMatchIds(region, accountData.puuid, undefined, 'batch');
     
-    console.log(`Fetched ${matchIds.length} total match IDs from Riot API`)
+    console.log(`[UpdateProfile] Fetched ${matchIds.length} total match IDs from Riot API`)
     
     const newMatchIds = matchIds.filter((id: string) => !existingMatchIds.has(id));
-    console.log(`Found ${newMatchIds.length} new matches to process`)
+    console.log(`[UpdateProfile] Found ${newMatchIds.length} new matches to process`)
 
     // use batch queue for all profile updates
     const requestType: RequestType = 'batch';
@@ -409,7 +429,7 @@ export async function POST(request: Request) {
 
     // create job
     jobId = await createJob(supabase, accountData.puuid, newMatchIds.length, etaSeconds);
-    console.log(`Created job ${jobId} for ${newMatchIds.length} matches (type: ${requestType})`)
+    console.log(`[UpdateProfile] Created job ${jobId} for ${newMatchIds.length} matches (type: ${requestType})`)
 
     // start processing matches asynchronously (don't await)
     processMatchesInBackground(
@@ -420,7 +440,7 @@ export async function POST(request: Request) {
       requestType,
       accountData.puuid
     ).catch(err => {
-      console.error('Background processing error:', err)
+      console.error('[UpdateProfile] Background processing error:', err)
       if (jobId) {
         failJob(supabase, jobId, err.message || 'unknown error')
       }
@@ -434,7 +454,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Update profile error:', error);
+    console.error('[UpdateProfile] Error:', error);
     
     // mark job as failed if we created one
     if (jobId) {
@@ -474,7 +494,7 @@ async function processMatchesInBackground(
         
         if (existingMatch) {
           // Match exists! Fetch match data to insert all 10 players (not just user)
-          console.log(`Match ${matchId} already in DB, fetching to add participant records...`)
+          console.log(`[UpdateProfile] Match ${matchId} already in DB, fetching to add participant records...`)
           const match = await fetchMatch(region, matchId, requestType);
           
           // Check if match is older than 30 days for timeline
@@ -487,7 +507,7 @@ async function processMatchesInBackground(
             try {
               timeline = await getMatchTimeline(matchId, region as any, requestType)
             } catch {
-              console.log(`  Could not fetch timeline for ${matchId}`)
+              console.log(`[UpdateProfile] Could not fetch timeline for ${matchId}`)
             }
           }
           
@@ -545,7 +565,7 @@ async function processMatchesInBackground(
                     pigScoreBreakdown = breakdown
                   }
                 } catch (err) {
-                  console.error(`  Failed to calculate PIG score:`, err)
+                  console.error(`[UpdateProfile] Failed to calculate PIG score:`, err)
                 }
               }
               
@@ -631,12 +651,12 @@ async function processMatchesInBackground(
           
           if (insertError) {
             if (insertError.code === '23505') {
-              console.log(`  Some/all records already exist for match ${matchId}`)
+              console.log(`[UpdateProfile] Some/all records already exist for match ${matchId}`)
             } else {
-              console.error(`  Error inserting participant records:`, insertError)
+              console.error(`[UpdateProfile] Error inserting participant records:`, insertError)
             }
           } else {
-            console.log(`  Added ${summonerMatchRecords.length} participant records to existing match ${matchId}`)
+            console.log(`[UpdateProfile] Added ${summonerMatchRecords.length} participant records to existing match ${matchId}`)
             
             // Call increment_champion_stats for ALL participants (like scraper does)
             // Only for patches in the accepted list (latest 3 patches)
@@ -702,7 +722,7 @@ async function processMatchesInBackground(
               })
               
               if (statsError) {
-                console.error(`  Error updating champion stats for ${participant.championName}:`, statsError)
+                console.error(`[UpdateProfile] Error updating champion stats for ${participant.championName}:`, statsError)
               }
               }
             } // end isPatchAccepted check
@@ -717,7 +737,7 @@ async function processMatchesInBackground(
         }
         
         // Match doesn't exist, fetch full match data
-        console.log(`Fetching new match ${fetchedMatches + 1}/${newMatchIds.length}: ${matchId}`)
+        console.log(`[UpdateProfile] Fetching new match ${fetchedMatches + 1}/${newMatchIds.length}: ${matchId}`)
         const match = await fetchMatch(region, matchId, requestType);
 
         // check if match is older than 30 days - if so, skip timeline fetch and pig score calculation
@@ -730,14 +750,14 @@ async function processMatchesInBackground(
         if (!isOlderThan30Days) {
           try {
             timeline = await getMatchTimeline(matchId, region as any, requestType)
-            console.log(`  Fetched timeline for match ${fetchedMatches + 1}`)
-            console.log(`  Timeline has ${timeline?.info?.frames?.length || 0} frames`)
+            console.log(`[UpdateProfile] Fetched timeline for match ${fetchedMatches + 1}`)
+            console.log(`[UpdateProfile] Timeline has ${timeline?.info?.frames?.length || 0} frames`)
           } catch (err) {
-            console.error(`  Failed to fetch timeline:`, err)
+            console.error(`[UpdateProfile] Failed to fetch timeline:`, err)
             // continue without timeline - pig score will use final items instead
           }
         } else {
-          console.log(`  Skipping timeline fetch for old match (>30 days)`)
+          console.log(`[UpdateProfile] Skipping timeline fetch for old match (>30 days)`)
         }
 
         // extract patch version (with API conversion 15.x -> 25.x)
@@ -755,11 +775,11 @@ async function processMatchesInBackground(
           });
 
         if (matchError) {
-          console.error('Match insert error:', matchError);
+          console.error('[UpdateProfile] Match insert error:', matchError);
           continue;
         }
 
-        console.log(`Match ${matchId} stored in matches table, preparing participant records...`)
+        console.log(`[UpdateProfile] Match ${matchId} stored in matches table, preparing participant records...`)
 
         try {
           // prepare summoner match records (only calculate PIG for tracked user, lazy load for others)
