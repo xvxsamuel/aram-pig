@@ -442,14 +442,18 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
       console.log(`[UpdateProfile] Skipping quick check optimization (last job failed: ${lastJobFailed}, existing matches: ${existingMatchIds.size})`)
     }
 
-    // Quick check: fetch just the most recent match ID to see if there are any new matches
-    // Only use this optimization if the last job completed successfully
+    // Quick check: fetch match IDs and compare against this player's summoner_matches
+    // This handles the case where matches exist (from other players) but aren't linked to this player
+    // Fetching 100 IDs is 1 API call, so this is efficient
     if (!shouldSkipQuickCheck) {
-      console.log('[UpdateProfile] Quick check: fetching most recent match ID...')
-      const quickCheckIds = await fetchMatchIds(region, accountData.puuid, 1, 'overhead');
+      console.log('[UpdateProfile] Quick check: fetching recent match IDs...')
+      const quickCheckIds = await fetchMatchIds(region, accountData.puuid, 100, 'overhead');
       
-      if (quickCheckIds.length > 0 && existingMatchIds.has(quickCheckIds[0])) {
-        console.log('[UpdateProfile] No new matches found (most recent match already in database)')
+      // count how many matches are missing for THIS player (not in summoner_matches)
+      const missingForPlayer = quickCheckIds.filter((id: string) => !existingMatchIds.has(id));
+      
+      if (missingForPlayer.length === 0) {
+        console.log('[UpdateProfile] No new matches found (all recent matches already linked to player)')
         
         // still check for missing pig scores before returning
         console.log('[UpdateProfile] Checking for missing pig scores...')
@@ -464,6 +468,8 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
             : 'Profile is already up to date'
         });
       }
+      
+      console.log(`[UpdateProfile] Quick check found ${missingForPlayer.length} matches not linked to player`)
     }
     
     console.log('[UpdateProfile] New matches detected, fetching full match history...')
