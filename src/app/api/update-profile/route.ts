@@ -493,6 +493,35 @@ async function processMatchesInBackground(
   const processedMatches = new Set<string>(); // track processed matches to catch duplicates
 
   try {
+    // BATCH PRE-CHECK: fetch all existing matches and user records in 2 queries instead of 2 per match
+    const batchStart = Date.now()
+    const [existingMatchesResult, existingUserRecordsResult] = await Promise.all([
+      supabase
+        .from('matches')
+        .select('match_id, game_creation, game_duration, patch')
+        .in('match_id', newMatchIds),
+      supabase
+        .from('summoner_matches')
+        .select('match_id')
+        .eq('puuid', puuid)
+        .in('match_id', newMatchIds)
+    ])
+    
+    const batchTime = Date.now() - batchStart
+    
+    // build lookup maps
+    const existingMatchesMap = new Map<string, any>()
+    for (const match of existingMatchesResult.data || []) {
+      existingMatchesMap.set(match.match_id, match)
+    }
+    
+    const userHasRecord = new Set<string>()
+    for (const record of existingUserRecordsResult.data || []) {
+      userHasRecord.add(record.match_id)
+    }
+    
+    console.log(`[UpdateProfile] Batch pre-check: ${existingMatchesMap.size} matches in DB, ${userHasRecord.size} user records (${batchTime}ms)`)
+    
     for (const matchId of newMatchIds) {
       // safety check for duplicate processing
       if (processedMatches.has(matchId)) {
@@ -505,29 +534,13 @@ async function processMatchesInBackground(
         const timings: Record<string, number> = {}
         let t0 = Date.now()
         
-        // Check both match existence and user record in parallel to reduce latency
-        const [matchResult, userRecordResult] = await Promise.all([
-          supabase
-            .from('matches')
-            .select('match_id, game_creation, game_duration, patch')
-            .eq('match_id', matchId)
-            .maybeSingle(),
-          supabase
-            .from('summoner_matches')
-            .select('puuid')
-            .eq('match_id', matchId)
-            .eq('puuid', puuid)
-            .maybeSingle()
-        ])
-        
-        const existingMatch = matchResult.data
-        const existingUserRecord = userRecordResult.data
-        timings.dbChecks = Date.now() - t0
+        // use pre-fetched data instead of per-match queries
+        const existingMatch = existingMatchesMap.get(matchId)
+        const existingUserRecord = userHasRecord.has(matchId)
         
         if (existingMatch) {
           if (existingUserRecord) {
             // User already has this match, skip entirely (no API call needed)
-            console.log(`[UpdateProfile] Match ${matchId} skip (db: ${timings.dbChecks}ms)`)
             fetchedMatches++
             continue
           }
@@ -537,7 +550,7 @@ async function processMatchesInBackground(
           const match = await fetchMatch(region, matchId, requestType);
           timings.fetchMatch = Date.now() - t0
           
-          console.log(`[UpdateProfile] Match ${matchId} fetched (db: ${timings.dbChecks}ms, api: ${timings.fetchMatch}ms)`)
+          console.log(`[UpdateProfile] Match ${matchId} fetched (api: ${timings.fetchMatch}ms)`)
           
           // Skip timeline for matches that already exist - saves an API call
           // User gets the match without detailed build order, which is acceptable
@@ -786,13 +799,13 @@ async function processMatchesInBackground(
             t0 = Date.now()
             timeline = await getMatchTimeline(matchId, region as any, requestType)
             timings.fetchTimeline = Date.now() - t0
-            console.log(`[UpdateProfile] Match ${matchId} new (db: ${timings.checkMatch}ms, api: ${timings.fetchMatch}ms, timeline: ${timings.fetchTimeline}ms)`)
+            console.log(`[UpdateProfile] Match ${matchId} new (api: ${timings.fetchMatch}ms, timeline: ${timings.fetchTimeline}ms)`)
           } catch (err) {
             console.error(`[UpdateProfile] Failed to fetch timeline:`, err)
             // continue without timeline - pig score will use final items instead
           }
         } else {
-          console.log(`[UpdateProfile] Match ${matchId} new+old (db: ${timings.checkMatch}ms, api: ${timings.fetchMatch}ms, no timeline)`)
+          console.log(`[UpdateProfile] Match ${matchId} new+old (api: ${timings.fetchMatch}ms, no timeline)`)
         }
 
         // extract patch version (with API conversion 15.x -> 25.x)

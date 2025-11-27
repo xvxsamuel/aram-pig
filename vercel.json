@@ -2,6 +2,11 @@
   "crons": [],
   "regions": ["fra1"],
   "functions": {
+    "src/app/api/update-profile/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "experimentalFluid": true
+    },
     "src/app/api/**/*.ts": {
       "maxDuration": 60
     }
