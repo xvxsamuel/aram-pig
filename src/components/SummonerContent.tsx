@@ -155,15 +155,18 @@ export default function SummonerContent({
   // reusable function to fetch fresh stats
   const refreshStats = useCallback(async () => {
     try {
+      console.log('refreshStats: starting fetch...')
       const response = await fetch(`/api/summoner-stats?puuid=${summonerData.account.puuid}`)
+      console.log('refreshStats: response status:', response.status)
       if (response.ok) {
         const data = await response.json()
-        console.log('Refreshed summoner stats:', {
+        console.log('refreshStats: received data:', {
           matchesCount: data.matches?.length,
           totalGames: data.totalGames,
-          averagePigScore: data.averagePigScore
+          firstMatch: data.matches?.[0]?.metadata?.matchId
         })
-        setMatches(data.matches)
+        setMatches(data.matches || [])
+        console.log('refreshStats: setMatches called with', data.matches?.length, 'matches')
         setWins(data.wins)
         setTotalGames(data.totalGames)
         setTotalKills(data.totalKills)
@@ -204,6 +207,15 @@ export default function SummonerContent({
       return false
     }
   }, [summonerData.account.puuid])
+
+  // fetch stats on mount - page.tsx doesn't pass match data, we always need to fetch it client-side
+  useEffect(() => {
+    console.log('Mount effect - fetching stats, initialMatches:', initialMatches.length)
+    refreshStats().then((success) => {
+      console.log('Stats fetch complete, success:', success)
+      setLoading(false)
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps - only run once on mount
 
   // determine if this is a brand new profile (never updated)
   const isNewProfile = initialTotalGames === 0 && !initialLastUpdated
@@ -511,8 +523,8 @@ export default function SummonerContent({
     />
   ), [summonerData.account.puuid, ddragonVersion, championNames, profileIconUrl, championStats])
 
-  // for new profiles, don't show skeleton - show progress/fetch message instead
-  const showSkeleton = loading && !isNewProfile && !jobProgress
+  // show skeleton while loading (regardless of new/existing profile)
+  const showSkeleton = loading && !jobProgress
 
   return (
     <>
@@ -568,32 +580,30 @@ export default function SummonerContent({
 
           <div className="">
             <div className="max-w-6xl mx-auto px-2 sm:px-8">
+              {/* show FetchMessage above all content during update */}
               {jobProgress && (
-                <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />
+                <div className="mb-4">
+                  <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />
+                </div>
               )}
 
-              {/* don't show content for new profiles while updating */}
-              {isNewProfile && jobProgress ? null : (
-                <>
-                  {/* keep all rendered tabs in dom, hide with css */}
-                  <div className={selectedTab === 'overview' ? '' : 'hidden'}>
-                    {overviewContent}
+              {/* keep all rendered tabs in dom, hide with css */}
+              <div className={selectedTab === 'overview' ? '' : 'hidden'}>
+                {overviewContent}
+              </div>
+
+              {renderedTabs.has('champions') && (
+                <div className={selectedTab === 'champions' ? '' : 'hidden'}>
+                  {championsContent}
+                </div>
+              )}
+
+              {renderedTabs.has('performance') && (
+                <div className={selectedTab === 'performance' ? '' : 'hidden'}>
+                  <div className="py-8 text-center text-gray-400">
+                    <p className="text-xl">Performance view coming soon</p>
                   </div>
-
-                  {renderedTabs.has('champions') && (
-                    <div className={selectedTab === 'champions' ? '' : 'hidden'}>
-                      {championsContent}
-                    </div>
-                  )}
-
-                  {renderedTabs.has('performance') && (
-                    <div className={selectedTab === 'performance' ? '' : 'hidden'}>
-                      <div className="py-8 text-center text-gray-400">
-                        <p className="text-xl">Performance view coming soon</p>
-                      </div>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
             </div>
           </div>

@@ -79,6 +79,19 @@ export default function UpdateButton({ hasActiveJob, onUpdateStarted, cooldownUn
     )
   }
 
+  // show cooldown tooltip when disabled due to cooldown
+  if (isOnCooldown) {
+    return (
+      <div className="relative">
+        <SimpleTooltip 
+          content={<span className="text-sm text-white">Please wait before updating again</span>}
+        >
+          {buttonContent}
+        </SimpleTooltip>
+      </div>
+    )
+  }
+
   return (
     <div className="relative">
       {buttonContent}

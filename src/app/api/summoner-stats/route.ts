@@ -27,14 +27,15 @@ export async function GET(request: NextRequest) {
     // get lightweight match stats from summoner_matches (with JSONB)
     const { data: allMatchStats, error: statsError } = await supabase
       .from("summoner_matches")
-      .select("match_id, champion_name, win, match_data")
+      .select("match_id, champion_name, win, match_data, game_creation")
       .eq("puuid", puuid)
-      .order("match_id", { ascending: false })
+      .order("game_creation", { ascending: false })
 
-    console.log(`[summoner-stats] Query result:`, {
+    console.log(`[summoner-stats] Query for puuid ${puuid}:`, {
       error: statsError?.message,
       dataLength: allMatchStats?.length,
-      firstMatchId: allMatchStats?.[0]?.match_id
+      firstMatchId: allMatchStats?.[0]?.match_id,
+      firstChamp: allMatchStats?.[0]?.champion_name
     })
     console.log(`[summoner-stats] Found ${allMatchStats?.length || 0} matches for puuid ${puuid.substring(0, 20)}...`)
 
@@ -102,15 +103,29 @@ export async function GET(request: NextRequest) {
     if (matchIds.length > 0) {
       const displayMatchIds = matchIds.slice(0, 20)
       
-      const { data: matchRecords } = await supabase
+      console.log(`[summoner-stats] Looking up ${displayMatchIds.length} match IDs:`, displayMatchIds.slice(0, 3))
+      
+      const { data: matchRecords, error: matchError } = await supabase
         .from("matches")
         .select("match_id, game_creation, game_duration, patch")
         .in("match_id", displayMatchIds)
 
-      const { data: participants } = await supabase
+      console.log(`[summoner-stats] Match records query:`, { 
+        found: matchRecords?.length || 0, 
+        error: matchError?.message,
+        firstMatch: matchRecords?.[0]?.match_id 
+      })
+
+      const { data: participants, error: partError } = await supabase
         .from("summoner_matches")
         .select("*")
         .in("match_id", displayMatchIds)
+
+      console.log(`[summoner-stats] Participants query:`, { 
+        found: participants?.length || 0, 
+        error: partError?.message,
+        uniqueMatches: new Set(participants?.map(p => p.match_id)).size
+      })
 
       console.log(`[summoner-stats] Fetched ${matchRecords?.length || 0} match records and ${participants?.length || 0} participants for display`)
 
@@ -119,7 +134,10 @@ export async function GET(request: NextRequest) {
           const match = matchRecords.find(m => m.match_id === matchId)
           const matchParticipants = participants.filter(p => p.match_id === matchId)
           
-          if (!match || matchParticipants.length === 0) return null
+          if (!match || matchParticipants.length === 0) {
+            console.log(`[summoner-stats] Skipping match ${matchId}: match=${!!match}, participants=${matchParticipants.length}`)
+            return null
+          }
 
           return {
             metadata: {
@@ -197,6 +215,8 @@ export async function GET(request: NextRequest) {
         }).filter(m => m !== null)
       }
     }
+
+    console.log(`[summoner-stats] Returning ${matches.length} matches to client`)
 
     return NextResponse.json({
       lastUpdated,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { MatchData } from "../lib/riot-api"
 import MatchHistoryItem from "./MatchHistoryItem"
 import ChampionFilter from "./ChampionFilter"
@@ -20,9 +20,15 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialMatches.length >= 20)
   
-  // filter out incomplete matches (missing participant data)
+  // sync local state when parent passes new matches
+  useEffect(() => {
+    setMatches(initialMatches)
+    setHasMore(initialMatches.length >= 20)
+  }, [initialMatches])
+  
+  // filter out matches with no participants at all (shouldn't happen, but safety check)
   const validMatches = matches.filter(match => 
-    match.info.participants && match.info.participants.length === 10
+    match.info.participants && match.info.participants.length > 0
   )
 
   const filteredMatches = championFilter
@@ -81,8 +87,10 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
           <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-3" />
           
           {filteredMatches.length === 0 ? (
-          <div className="text-center text-text-muted py-8 min-h-[200px] flex items-center justify-center">
-            {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
+          <div className="min-h-[200px] flex items-center justify-center">
+            <div className="text-center text-text-muted py-8">
+              {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
+            </div>
           </div>
         ) : (
           <>

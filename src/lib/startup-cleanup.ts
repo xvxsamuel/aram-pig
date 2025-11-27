@@ -1,30 +1,29 @@
 import { createAdminClient } from './supabase'
 
 let isInitialized = false
-// cleanup orphaned jobs on server startup
-async function cleanupOrphanedJobs() {
-  console.log('[Startup] Cleaning up orphaned jobs from previous server instance...')
+
+// cleanup all jobs on server startup - jobs can't survive server restarts
+// users will just click Update again to find any missing matches
+async function cleanupAllJobs() {
+  console.log('[Startup] Clearing all jobs from previous server instance...')
   
   try {
     const supabase = createAdminClient()
     
+    // delete all jobs - they can't be resumed after server restart
     const { data, error } = await supabase
       .from('update_jobs')
-      .update({
-        status: 'failed',
-        error_message: 'Server restarted - job cancelled',
-        completed_at: new Date().toISOString()
-      })
-      .in('status', ['pending', 'processing'])
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000') // delete all (neq with impossible id)
       .select('id')
     
     if (error) {
-      console.error('[Startup] Error cleaning up orphaned jobs:', error)
+      console.error('[Startup] Error clearing jobs:', error)
     } else {
-      console.log(`[Startup] Marked ${data?.length || 0} orphaned jobs as failed`)
+      console.log(`[Startup] Deleted ${data?.length || 0} jobs`)
     }
   } catch (error) {
-    console.error('[Startup] Error in cleanupOrphanedJobs:', error)
+    console.error('[Startup] Error in cleanupAllJobs:', error)
   }
 }
 
@@ -38,7 +37,7 @@ export function initializeCleanup() {
   isInitialized = true
   console.log('[Startup] Initializing automated tasks...')
   
-  cleanupOrphanedJobs()
+  cleanupAllJobs()
 
   console.log('[Startup] Initialization complete')
 }

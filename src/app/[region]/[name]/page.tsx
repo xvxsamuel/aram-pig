@@ -181,6 +181,28 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   const championNames = await fetchChampionNames(ddragonVersion)
   const profileIconUrl = summonerData ? await getProfileIconUrl(summonerData.summoner.profileIconId) : ''
 
+  // fetch last_updated status to determine if this is a new profile
+  let lastUpdated: string | null = null
+  let hasMatches = false
+  if (summonerData) {
+    const { data: summonerRecord } = await supabase
+      .from("summoners")
+      .select("last_updated")
+      .eq("puuid", summonerData.account.puuid)
+      .single()
+    
+    lastUpdated = summonerRecord?.last_updated || null
+    
+    // quick check if any matches exist
+    const { count } = await supabase
+      .from("summoner_matches")
+      .select("match_id", { count: 'exact', head: true })
+      .eq("puuid", summonerData.account.puuid)
+      .limit(1)
+    
+    hasMatches = (count || 0) > 0
+  }
+
   // fetch all summoners with matching name for suggestions
   let suggestedSummoners: any[] = []
   if (error && error.startsWith('wrong-region:')) {
@@ -226,7 +248,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             summonerData={summonerData}
             matches={[]}
             wins={0}
-            totalGames={0}
+            totalGames={hasMatches ? 1 : 0}
             totalKills={0}
             totalDeaths={0}
             totalAssists={0}
@@ -244,7 +266,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             profileIconUrl={profileIconUrl}
             ddragonVersion={ddragonVersion}
             championNames={championNames}
-            lastUpdated={null}
+            lastUpdated={lastUpdated}
             averagePigScore={null}
             pigScoreGames={0}
           />
