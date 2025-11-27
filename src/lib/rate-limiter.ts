@@ -1,18 +1,12 @@
 import { Redis } from '@upstash/redis';
 
-// redis off by default
+// redis off by default locally, enabled in production/CI
 const USE_REDIS = process.env.USE_REDIS_RATE_LIMIT === 'true';
 
 const redis = USE_REDIS ? new Redis({
   url: (process.env.UPSTASH_REDIS_REST_URL || '').replace(/^["']|["']$/g, ''),
   token: (process.env.UPSTASH_REDIS_REST_TOKEN || '').replace(/^["']|["']$/g, ''),
 }) : null;
-
-if (!USE_REDIS) {
-  console.log('Using in-memory rate limiting')
-} else {
-  console.log('Using Redis for distributed rate limiting')
-}
 
 // fallback defaults
 const SHORT_WINDOW = 1; //secs
@@ -26,14 +20,13 @@ const LONG_LIMIT = 100;
 const THROTTLE_PERCENT = Math.min(100, Math.max(10, parseInt(process.env.SCRAPER_THROTTLE || '100', 10)));
 const THROTTLED_LONG_LIMIT = Math.floor(LONG_LIMIT * THROTTLE_PERCENT / 100);
 
-if (THROTTLE_PERCENT < 100) {
-  console.log(`Rate limit throttled to ${THROTTLE_PERCENT}% (${THROTTLED_LONG_LIMIT}/${LONG_LIMIT} requests per 2min)`)
-}
+// log rate limit config
+console.log(`[RATE LIMIT] Mode: ${USE_REDIS ? 'Redis (shared)' : 'In-memory (local)'}`)
+console.log(`[RATE LIMIT] Throttle: ${THROTTLE_PERCENT}% (${THROTTLED_LONG_LIMIT} batch / ${LONG_LIMIT} total per 2min)`)
 
 // reserve small capacity for profile refreshes
 const RESERVED_OVERHEAD_SHORT = 2;
 const RESERVED_OVERHEAD_LONG = 10;
-
 export type RequestType = 'overhead' | 'batch';
 
 // in-memory rate limiting
@@ -172,7 +165,7 @@ async function waitForRateLimitRedis(platformOrRegion: string, requestType: Requ
         throw new Error('TIMEOUT_EXCEEDED');
       }
       
-      console.log(`Rate limit hit for ${platformOrRegion} (${requestType}), waiting ${waitTime}ms`);
+      console.log(`[RATE LIMIT] Throttle limit reached (${currentLong}/${effectiveLongLimit}), waiting ${(waitTime/1000).toFixed(1)}s`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       return waitForRateLimitRedis(platformOrRegion, requestType, maxWaitMs);
     }
@@ -266,7 +259,7 @@ async function waitForRateLimitMemory(platformOrRegion: string, requestType: Req
       
       // Only log if waiting more than 1 second to reduce spam
       if (waitTime > 1000) {
-        console.log(`Rate limit hit for ${platformOrRegion} (${requestType}), waiting ${(waitTime/1000).toFixed(1)}s`);
+        console.log(`[RATE LIMIT] Throttle limit reached (${limits.long}/${effectiveLongLimit}), waiting ${(waitTime/1000).toFixed(1)}s`);
       }
       
       rateLimitLocks.delete(platformOrRegion);

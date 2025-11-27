@@ -72,6 +72,8 @@ required secrets for workflows:
 - `SUPABASE_SECRET_KEY`
 - `CRON_SECRET` (for cleanup-stats)
 - `NEXT_PUBLIC_SITE_URL` (for cleanup-stats)
+- `UPSTASH_REDIS_REST_URL` (for shared rate limiting)
+- `UPSTASH_REDIS_REST_TOKEN` (for shared rate limiting)
 
 optional secrets:
 - `SCRAPER_PAUSED`: set to `true` to pause automatic scraping (for manual local scraping)
@@ -81,6 +83,9 @@ the scraper uses `SCRAPER_THROTTLE` env var (0-100) to limit rate limit usage:
 - github actions uses 50% by default (50 req/2min instead of 90)
 - local scraping uses 100% by default (full rate limit)
 - this leaves capacity for website users to refresh profiles
+
+rate limiting uses Redis (Upstash) in production/CI for shared state between scraper and website.
+local development uses in-memory rate limiting by default (`USE_REDIS_RATE_LIMIT=false`).
 
 to pause github actions scraper for manual scraping:
 1. go to repo settings -> secrets and variables -> actions

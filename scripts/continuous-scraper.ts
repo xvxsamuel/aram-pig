@@ -237,9 +237,11 @@ async function crawlSummoner(puuid: string, region: RegionalCluster): Promise<{ 
     let stored = 0
     let skippedOldPatch = 0
     
-    // Process matches in parallel batches - keep under 20req/1s limit
-    // Each match = 2 calls (match + timeline), so batch of 10 = 20 calls (at limit)
-    const BATCH_SIZE = 10
+    // Process matches in parallel batches
+    // With 50% throttle (50 req/2min), use smaller batches to avoid rate limit waits
+    // Each match = 1 API call (match data), so batch of 5 = 5 calls
+    const THROTTLE = parseInt(process.env.SCRAPER_THROTTLE || '100', 10)
+    const BATCH_SIZE = THROTTLE <= 50 ? 3 : 10
     for (let i = 0; i < newMatchIds.length; i += BATCH_SIZE) {
       const batch = newMatchIds.slice(i, i + BATCH_SIZE)
       

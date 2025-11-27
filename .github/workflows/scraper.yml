@@ -24,35 +24,30 @@ env:
   NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
   SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
   SCRAPER_THROTTLE: '50'
+  USE_REDIS_RATE_LIMIT: 'true'
+  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
 
 permissions:
   actions: write
   contents: read
 
 jobs:
-  check-pause:
-    runs-on: ubuntu-latest
-    outputs:
-      paused: ${{ steps.check.outputs.paused }}
-    steps:
-      - name: Check if scraper is paused
-        id: check
-        run: |
-          if [ "${{ secrets.SCRAPER_PAUSED }}" = "true" ]; then
-            echo "Scraper is PAUSED (set SCRAPER_PAUSED secret to 'false' to resume)"
-            echo "paused=true" >> $GITHUB_OUTPUT
-          else
-            echo "Scraper is active"
-            echo "paused=false" >> $GITHUB_OUTPUT
-          fi
-
   scrape:
-    needs: check-pause
-    if: needs.check-pause.outputs.paused != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
+      - name: Check if paused
+        env:
+          PAUSED: ${{ secrets.SCRAPER_PAUSED }}
+        run: |
+          if [ "$PAUSED" = "true" ]; then
+            echo "Scraper is PAUSED - set SCRAPER_PAUSED secret to empty or remove it to resume"
+            exit 1
+          fi
+          echo "Scraper is active"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -93,13 +88,11 @@ jobs:
           echo "========================================"
 
       - name: Run scraper
-        env:
-          SCRAPER_THROTTLE: ${{ env.SCRAPER_THROTTLE }}
         run: |
-          DURATION=${{ github.event.inputs.duration_minutes || '55' }}
+          DURATION=${{ github.event.inputs.duration_minutes || '45' }}
           echo "========================================"
           echo "Starting scraper for ${DURATION} minutes"
-          echo "Throttle: ${SCRAPER_THROTTLE}% of rate limit"
+          echo "SCRAPER_THROTTLE=${SCRAPER_THROTTLE}"
           echo "Time: $(date -u)"
           echo "========================================"
           
