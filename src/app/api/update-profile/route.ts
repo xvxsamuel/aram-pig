@@ -308,7 +308,6 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
 }
 
 export async function POST(request: Request) {
-  let jobId: string | null = null;
   try {
     const { region, gameName, tagLine, platform } = await request.json();
     
