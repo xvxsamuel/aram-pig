@@ -128,8 +128,8 @@ async function getActiveJob(supabase: any, puuid: string): Promise<UpdateJob | n
 // >50 matches: trigger GitHub Action (handles large batches without timeout)
 const DIRECT_PROCESS_THRESHOLD = 50;
 
-// if rate limit remaining is below this, use GitHub Actions to avoid blocking website users
-const RATE_LIMIT_FALLBACK_THRESHOLD = 30;
+// minimum rate limit buffer to keep for other website users
+const RATE_LIMIT_RESERVE = 10;
 
 // create new job with pending matches
 async function createJob(supabase: any, puuid: string, matchIds: string[], region: string, etaSeconds: number, useGitHubAction: boolean = false): Promise<string> {
@@ -486,13 +486,18 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
 
     // check rate limit status to decide processing method
     const rateLimitStatus = await checkRateLimit(region);
-    const rateLimitLow = rateLimitStatus.estimatedRequestsRemaining < RATE_LIMIT_FALLBACK_THRESHOLD;
     
-    // decide: use GitHub Actions if too many matches OR rate limit is running low
-    let useGitHubAction = newMatchIds.length > DIRECT_PROCESS_THRESHOLD || rateLimitLow;
+    // calculate required API calls: 2 per match (match data + timeline for recent matches)
+    // we already used some calls for match ID fetch, but rate limit should have refreshed or be accounted for
+    const requiredApiCalls = newMatchIds.length * 2;
+    const availableForProcessing = rateLimitStatus.estimatedRequestsRemaining - RATE_LIMIT_RESERVE;
+    const canFitInRateLimit = requiredApiCalls <= availableForProcessing;
+    
+    // decide: use GitHub Actions if too many matches OR can't fit in rate limit
+    let useGitHubAction = newMatchIds.length > DIRECT_PROCESS_THRESHOLD || !canFitInRateLimit;
     
     // single consolidated log for decision
-    console.log(`[UpdateProfile] Decision: ${newMatchIds.length} matches (threshold: ${DIRECT_PROCESS_THRESHOLD}), rate limit: ${rateLimitStatus.estimatedRequestsRemaining} remaining (threshold: ${RATE_LIMIT_FALLBACK_THRESHOLD}), method: ${useGitHubAction ? 'GitHub Action' : 'Vercel direct'}${rateLimitLow ? ' [RATE LIMIT LOW]' : ''}${newMatchIds.length > DIRECT_PROCESS_THRESHOLD ? ' [TOO MANY MATCHES]' : ''}`)
+    console.log(`[UpdateProfile] Decision: ${newMatchIds.length} matches (threshold: ${DIRECT_PROCESS_THRESHOLD}), need ~${requiredApiCalls} API calls, have ${availableForProcessing} available (${rateLimitStatus.estimatedRequestsRemaining} - ${RATE_LIMIT_RESERVE} reserve), method: ${useGitHubAction ? 'GitHub Action' : 'Vercel direct'}${!canFitInRateLimit ? ' [RATE LIMIT]' : ''}${newMatchIds.length > DIRECT_PROCESS_THRESHOLD ? ' [TOO MANY MATCHES]' : ''}`)
     
     // calculate ETA based on method
     // Vercel: ~5 sec/match (includes DB latency)
@@ -539,7 +544,10 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
               message: 'Update started (processing in background)',
               newMatches: newMatchIds.length,
               jobId,
-              method: 'github-action'
+              method: 'github-action',
+              reason: !canFitInRateLimit ? 'rate-limit' : 'too-many-matches',
+              rateLimit: rateLimitStatus.estimatedRequestsRemaining,
+              required: requiredApiCalls
             });
           } else {
             console.error('[UpdateProfile] Failed to trigger GitHub Action:', await response.text());
