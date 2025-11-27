@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { createAdminClient } from '../../../lib/supabase';
 import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline} from '../../../lib/riot-api';
-import type { RequestType } from '../../../lib/rate-limiter';
+import { checkRateLimit, type RequestType } from '../../../lib/rate-limiter';
 import type { PlatformCode } from '../../../lib/regions';
 import type { UpdateJob } from '../../../types/update-jobs';
 import { calculatePigScoreWithBreakdown } from '../../../lib/pig-score-v2';
@@ -121,9 +121,12 @@ async function getActiveJob(supabase: any, puuid: string): Promise<UpdateJob | n
 }
 
 // threshold for direct processing vs GitHub Actions
-// ≤20 matches: process in Vercel (~1-2 min, fast UX)
-// >20 matches: trigger GitHub Action (handles large batches without timeout)
-const DIRECT_PROCESS_THRESHOLD = 20;
+// ≤50 matches: process in Vercel (~1-3 min, fast UX)
+// >50 matches: trigger GitHub Action (handles large batches without timeout)
+const DIRECT_PROCESS_THRESHOLD = 50;
+
+// if rate limit remaining is below this, use GitHub Actions to avoid blocking website users
+const RATE_LIMIT_FALLBACK_THRESHOLD = 30;
 
 // create new job with pending matches
 async function createJob(supabase: any, puuid: string, matchIds: string[], region: string, etaSeconds: number, useGitHubAction: boolean = false): Promise<string> {
@@ -230,6 +233,8 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
   console.log(`[UpdateProfile] Calculating pig scores for ${matchesNeedingPigScore.length} matches...`)
   
   let calculated = 0
+  let skippedOld = 0
+  let failedCalc = 0
   for (const match of matchesNeedingPigScore) {
     try {
       // get game_creation from matches table to check if within 30 days
@@ -240,6 +245,7 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
         .single()
       
       if (!matchRecord || matchRecord.game_creation < thirtyDaysAgo) {
+        skippedOld++
         continue // skip old matches
       }
       
@@ -282,13 +288,19 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
           .eq('puuid', match.puuid)
         
         calculated++
+      } else {
+        failedCalc++
+        // log first few failures for debugging
+        if (failedCalc <= 3) {
+          console.log(`[UpdateProfile] Pig score returned null for ${match.champion_name} on patch ${match.patch} (match ${match.match_id})`)
+        }
       }
     } catch (err) {
       console.error(`[UpdateProfile] Failed to calculate pig score for ${match.match_id}:`, err)
     }
   }
   
-  console.log(`[UpdateProfile] Calculated ${calculated} pig scores`)
+  console.log(`[UpdateProfile] Pig scores: ${calculated} calculated, ${skippedOld} skipped (old), ${failedCalc} failed (insufficient data)`)
   return calculated
 }
 
@@ -441,8 +453,16 @@ export async function POST(request: Request) {
     // use batch queue for all profile updates
     const requestType: RequestType = 'batch';
 
-    // decide: small batch → Vercel direct, large batch → GitHub Actions
-    const useGitHubAction = newMatchIds.length > DIRECT_PROCESS_THRESHOLD;
+    // check rate limit status to decide processing method
+    const rateLimitStatus = await checkRateLimit(region);
+    const rateLimitLow = rateLimitStatus.estimatedRequestsRemaining < RATE_LIMIT_FALLBACK_THRESHOLD;
+    
+    // decide: use GitHub Actions if too many matches OR rate limit is running low
+    let useGitHubAction = newMatchIds.length > DIRECT_PROCESS_THRESHOLD || rateLimitLow;
+    
+    if (rateLimitLow) {
+      console.log(`[UpdateProfile] Rate limit low (${rateLimitStatus.estimatedRequestsRemaining} remaining), routing to GitHub Actions`);
+    }
     
     // calculate ETA based on method
     // Vercel: ~5 sec/match (includes DB latency)
@@ -461,6 +481,7 @@ export async function POST(request: Request) {
       if (!githubToken) {
         console.error('[UpdateProfile] GITHUB_PAT not configured, falling back to Vercel direct');
         // fall through to direct processing
+        useGitHubAction = false;
       } else {
         try {
           const response = await fetch('https://api.github.com/repos/xvxsamuel/aram-pig/dispatches', {
@@ -774,75 +795,9 @@ async function processMatchesInBackground(
             }
           } else {
             console.log(`[UpdateProfile] Added ${summonerMatchRecords.length} participant records to existing match ${matchId}`)
-            
-            // Call increment_champion_stats for ALL participants (like scraper does)
-            // Only for patches in the accepted list (latest 3 patches)
-            if (await isPatchAccepted(existingMatch.patch)) {
-              for (let idx = 0; idx < match.info.participants.length; idx++) {
-                const participant = match.info.participants[idx]
-                const participantId = idx + 1
-              
-                // Extract timeline data for stats
-                let abilityOrderStr = null
-                let buildOrderForStats: number[] = []
-                let firstBuyForStats = ''
-              
-                if (!isOlderThan30Days && timeline) {
-                  abilityOrderStr = extractAbilityOrder(timeline, participantId)
-                const buildOrder = extractBuildOrder(timeline, participantId)
-                const firstBuy = extractFirstBuy(timeline, participantId)
-                buildOrderForStats = buildOrder.filter(id => isFinishedItem(id)).slice(0, 6)
-                firstBuyForStats = (firstBuy.length > 0 ? formatFirstBuy(firstBuy) : '') ?? ''
-              }
-              
-              const skillOrder = abilityOrderStr ? extractSkillOrderAbbreviation(abilityOrderStr) : ''
-              
-              // Get items - use build order if available, otherwise filter final items to finished only
-              const itemsForStats = buildOrderForStats.length > 0 
-                ? buildOrderForStats
-                : [participant.item0, participant.item1, participant.item2, participant.item3, participant.item4, participant.item5]
-                    .filter(id => id > 0 && isFinishedItem(id))
-              
-              const runes = {
-                primary: { style: participant.perks?.styles?.[0]?.style || 0, perks: participant.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0,0,0,0] },
-                secondary: { style: participant.perks?.styles?.[1]?.style || 0, perks: participant.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0,0] },
-                statPerks: [participant.perks?.statPerks?.offense || 0, participant.perks?.statPerks?.flex || 0, participant.perks?.statPerks?.defense || 0]
-              }
-              
-              const { error: statsError } = await supabase.rpc('increment_champion_stats', {
-                p_champion_name: participant.championName,
-                p_patch: existingMatch.patch,
-                p_win: participant.win ? 1 : 0,
-                p_items: JSON.stringify(itemsForStats),
-                p_first_buy: firstBuyForStats,
-                p_keystone_id: runes.primary.perks[0] || 0,
-                p_rune1: runes.primary.perks[1] || 0,
-                p_rune2: runes.primary.perks[2] || 0,
-                p_rune3: runes.primary.perks[3] || 0,
-                p_rune4: runes.secondary.perks[0] || 0,
-                p_rune5: runes.secondary.perks[1] || 0,
-                p_rune_tree_primary: runes.primary.style,
-                p_rune_tree_secondary: runes.secondary.style,
-                p_stat_perk0: runes.statPerks[0],
-                p_stat_perk1: runes.statPerks[1],
-                p_stat_perk2: runes.statPerks[2],
-                p_spell1_id: participant.summoner1Id || 0,
-                p_spell2_id: participant.summoner2Id || 0,
-                p_skill_order: skillOrder,
-                p_damage_to_champions: participant.totalDamageDealtToChampions || 0,
-                p_total_damage: participant.totalDamageDealt || 0,
-                p_healing: participant.totalHealsOnTeammates || 0,
-                p_shielding: participant.totalDamageShieldedOnTeammates || 0,
-                p_cc_time: participant.timeCCingOthers || 0,
-                p_game_duration: match.info.gameDuration || 0,
-                p_deaths: participant.deaths || 0
-              })
-              
-              if (statsError) {
-                console.error(`[UpdateProfile] Error updating champion stats for ${participant.championName}:`, statsError)
-              }
-              }
-            } // end isPatchAccepted check
+            // NOTE: Do NOT increment champion_stats here!
+            // Stats were already counted when the match was first stored (by scraper or another user's profile update)
+            // Only new matches (not in matches table) should increment stats
           }
           
           fetchedMatches++;
@@ -1052,12 +1007,15 @@ async function processMatchesInBackground(
         } else {
           console.log(`Inserted ${summonerMatchRecords.length} summoner_match records for match ${matchId}`)
           
-          // Call increment_champion_stats for ALL participants (like scraper does)
-          // Only for patches in the accepted list (latest 3 patches)
+          // Only increment champion_stats for the TRACKED USER on new matches
+          // Other players' stats will be updated when they view the match details (on-demand)
+          // This prevents incomplete data (no timeline) from polluting stats
           if (await isPatchAccepted(patchVersion)) {
-            for (let idx = 0; idx < match.info.participants.length; idx++) {
-              const participant = match.info.participants[idx]
-              const participantId = idx + 1
+            // Find the tracked user's participant
+            const trackedUserIdx = match.info.participants.findIndex((p: any) => p.puuid === puuid)
+            if (trackedUserIdx !== -1) {
+              const participant = match.info.participants[trackedUserIdx]
+              const participantId = trackedUserIdx + 1
             
               // Extract timeline data for stats
               let abilityOrderStr = null
@@ -1092,32 +1050,34 @@ async function processMatchesInBackground(
                 p_win: participant.win ? 1 : 0,
                 p_items: JSON.stringify(itemsForStats),
                 p_first_buy: firstBuyForStats,
-              p_keystone_id: runes.primary.perks[0] || 0,
-              p_rune1: runes.primary.perks[1] || 0,
-              p_rune2: runes.primary.perks[2] || 0,
-              p_rune3: runes.primary.perks[3] || 0,
-              p_rune4: runes.secondary.perks[0] || 0,
-              p_rune5: runes.secondary.perks[1] || 0,
-              p_rune_tree_primary: runes.primary.style,
-              p_rune_tree_secondary: runes.secondary.style,
-              p_stat_perk0: runes.statPerks[0],
-              p_stat_perk1: runes.statPerks[1],
-              p_stat_perk2: runes.statPerks[2],
-              p_spell1_id: participant.summoner1Id || 0,
-              p_spell2_id: participant.summoner2Id || 0,
-              p_skill_order: skillOrder,
-              p_damage_to_champions: participant.totalDamageDealtToChampions || 0,
-              p_total_damage: participant.totalDamageDealt || 0,
-              p_healing: participant.totalHealsOnTeammates || 0,
-              p_shielding: participant.totalDamageShieldedOnTeammates || 0,
-              p_cc_time: participant.timeCCingOthers || 0,
-              p_game_duration: match.info.gameDuration || 0,
-              p_deaths: participant.deaths || 0
-            })
+                p_keystone_id: runes.primary.perks[0] || 0,
+                p_rune1: runes.primary.perks[1] || 0,
+                p_rune2: runes.primary.perks[2] || 0,
+                p_rune3: runes.primary.perks[3] || 0,
+                p_rune4: runes.secondary.perks[0] || 0,
+                p_rune5: runes.secondary.perks[1] || 0,
+                p_rune_tree_primary: runes.primary.style,
+                p_rune_tree_secondary: runes.secondary.style,
+                p_stat_perk0: runes.statPerks[0],
+                p_stat_perk1: runes.statPerks[1],
+                p_stat_perk2: runes.statPerks[2],
+                p_spell1_id: participant.summoner1Id || 0,
+                p_spell2_id: participant.summoner2Id || 0,
+                p_skill_order: skillOrder,
+                p_damage_to_champions: participant.totalDamageDealtToChampions || 0,
+                p_total_damage: participant.totalDamageDealt || 0,
+                p_healing: participant.totalHealsOnTeammates || 0,
+                p_shielding: participant.totalDamageShieldedOnTeammates || 0,
+                p_cc_time: participant.timeCCingOthers || 0,
+                p_game_duration: match.info.gameDuration || 0,
+                p_deaths: participant.deaths || 0
+              })
             
-            if (statsError) {
-              console.error(`  Error updating champion stats for ${participant.championName}:`, statsError)
-            }
+              if (statsError) {
+                console.error(`  Error updating champion stats for ${participant.championName}:`, statsError)
+              } else {
+                console.log(`  Updated champion stats for tracked user: ${participant.championName}`)
+              }
             }
           } // end isPatchAccepted check
         }

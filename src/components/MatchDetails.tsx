@@ -9,6 +9,7 @@ import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImag
 import { getKdaColor, getPigScoreColor } from "../lib/winrate-colors"
 import Tooltip from "./Tooltip"
 import runesData from "@/data/runes.json"
+import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
 
 interface Props {
   match: MatchData
@@ -69,41 +70,87 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const [pigScoresFetched, setPigScoresFetched] = useState(false)
   const [pigScoreBreakdown, setPigScoreBreakdown] = useState<PigScoreBreakdown | null>(null)
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
+  const [enrichError, setEnrichError] = useState<string | null>(null)
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
   
   // check if match is within 30 days
   const isWithin30Days = (Date.now() - match.info.gameCreation) < (30 * 24 * 60 * 60 * 1000)
 
-  // calculate pig scores for all players when component mounts (for recent matches)
+  // enrich match with timeline data and pig scores when component mounts (for recent matches)
   useEffect(() => {
     if (!isWithin30Days || pigScoresFetched) return
     
-    // check if current player already has pig score from match data
-    const currentPlayerHasPigScore = currentPlayer?.pigScore !== null && currentPlayer?.pigScore !== undefined
-    if (currentPlayerHasPigScore) {
-      // we already have the tracked user's score, no need to fetch
+    // check if ALL players already have pig scores (match already enriched)
+    const allHavePigScores = match.info.participants.every(p => 
+      p.pigScore !== null && p.pigScore !== undefined
+    )
+    
+    if (allHavePigScores) {
+      // use cached pig scores from match data
+      const cached: Record<string, number | null> = {}
+      for (const p of match.info.participants) {
+        cached[p.puuid] = p.pigScore ?? null
+      }
+      setPigScores(cached)
       setPigScoresFetched(true)
       return
     }
     
     setLoadingPigScores(true)
     setPigScoresFetched(true) // mark as fetched to prevent re-runs
+    setEnrichError(null)
     
-    // use PUT endpoint to calculate pig scores for all participants
-    fetch('/api/calculate-pig-score', {
-      method: 'PUT',
+    // convert region label (euw, na) to regional cluster (europe, americas)
+    const platform = LABEL_TO_PLATFORM[region.toUpperCase()]
+    const regionalCluster = platform ? PLATFORM_TO_REGIONAL[platform] : region
+    
+    // use new enrich-match endpoint to fetch timeline, calculate pig scores, and update stats
+    fetch('/api/enrich-match', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId: match.metadata.matchId })
+      body: JSON.stringify({ 
+        matchId: match.metadata.matchId,
+        region: regionalCluster
+      })
     })
-      .then(res => res.ok ? res.json() : null)
+      .then(res => {
+        if (!res.ok) {
+          return res.json().then(data => {
+            throw new Error(data.error || 'Failed to enrich match')
+          })
+        }
+        return res.json()
+      })
       .then(data => {
         if (data?.results) {
           setPigScores(data.results)
+          if (data.cached) {
+            console.log('Pig scores loaded from cache')
+          } else {
+            console.log(`Match enriched: ${data.enriched} participants, ${data.statsUpdated} stats updated`)
+          }
         }
       })
-      .catch(err => console.error('Failed to calculate pig scores:', err))
+      .catch(err => {
+        console.error('Failed to enrich match:', err)
+        setEnrichError(err.message || 'Failed to load pig scores')
+        // fallback: try the old calculate-pig-score endpoint
+        fetch('/api/calculate-pig-score', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matchId: match.metadata.matchId })
+        })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data?.results) {
+              setPigScores(data.results)
+              setEnrichError(null) // clear error if fallback succeeds
+            }
+          })
+          .catch(() => {}) // ignore fallback errors
+      })
       .finally(() => setLoadingPigScores(false))
-  }, [match.metadata.matchId, match.info.participants, match.info.gameCreation, isWithin30Days, pigScoresFetched])
+  }, [match.metadata.matchId, match.info.participants, match.info.gameCreation, isWithin30Days, pigScoresFetched, region])
 
   // fetch pig score breakdown when performance tab is selected
   useEffect(() => {
