@@ -70,7 +70,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const [pigScoresFetched, setPigScoresFetched] = useState(false)
   const [pigScoreBreakdown, setPigScoreBreakdown] = useState<PigScoreBreakdown | null>(null)
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
-  const [enrichError, setEnrichError] = useState<string | null>(null)
+  const [_enrichError, setEnrichError] = useState<string | null>(null)
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
   
   // check if match is within 30 days
