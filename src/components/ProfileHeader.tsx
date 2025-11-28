@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import { useState, useEffect } from "react"
+import { motion } from "motion/react"
 import UpdateButton from "./UpdateButton"
 import SimpleTooltip from "./SimpleTooltip"
 
@@ -66,6 +67,7 @@ export default function ProfileHeader({
 }: Props) {
   const [iconError, setIconError] = useState(false)
   const [animateColor, setAnimateColor] = useState(false)
+  const [glintKey, setGlintKey] = useState(0)
 
   // trigger animation when borderColors changes from null to a value
   useEffect(() => {
@@ -85,6 +87,7 @@ export default function ProfileHeader({
   }
 
   const borderColors = getBorderColors(longestWinStreak)
+  const isHighestTier = longestWinStreak >= 20
 
   const tabs = [
     { id: 'overview' as const, label: 'Overview' },
@@ -116,8 +119,12 @@ export default function ProfileHeader({
           content={
             <span className="flex items-center gap-1">
               <span 
-                className="text-sm font-bold"
-                style={{ color: borderColors ? borderColors.from : 'var(--color-gold-light)' }}
+                className={`text-sm font-bold ${
+                  longestWinStreak >= 50 ? 'text-kda-5' :
+                  longestWinStreak >= 20 ? 'text-kda-4' :
+                  longestWinStreak >= 10 ? 'text-kda-3' :
+                  'text-gold-light'
+                }`}
               >
                 {longestWinStreak}
               </span>
@@ -125,7 +132,10 @@ export default function ProfileHeader({
             </span>
           }
         >
-          <div className="relative flex-shrink-0 cursor-help">
+          <div 
+            className="relative flex-shrink-0 cursor-help"
+            onMouseEnter={() => setGlintKey(k => k + 1)}
+          >
             <div 
               className="rounded-xl p-px relative overflow-hidden"
               style={{ background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))' }}
@@ -133,10 +143,32 @@ export default function ProfileHeader({
               {/* animated color overlay */}
               {borderColors && (
                 <div 
-                  className="absolute inset-0 rounded-xl transition-transform duration-700 ease-out"
+                  className="absolute inset-0 rounded-xl transition-transform duration-500 ease-out"
                   style={{ 
                     background: `linear-gradient(to bottom, ${borderColors.from}, ${borderColors.to})`,
                     transform: animateColor ? 'translateY(0)' : 'translateY(100%)'
+                  }}
+                />
+              )}
+              {/* glint effect for highest tier */}
+              {isHighestTier && animateColor && (
+                <motion.div
+                  key={glintKey}
+                  className="absolute top-0 bottom-0 rounded-xl pointer-events-none"
+                  animate={{ 
+                    left: ['-35%', '135%'],
+                    opacity: [0, 0.5, 0.6, 0.5, 0]
+                  }}
+                  transition={{
+                    duration: 1.2,
+                    repeat: Infinity,
+                    repeatDelay: 6,
+                    ease: 'easeInOut',
+                    times: [0, 0.2, 0.5, 0.8, 1]
+                  }}
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2) 35%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.2) 65%, transparent)',
+                    width: '40%'
                   }}
                 />
               )}
@@ -157,31 +189,53 @@ export default function ProfileHeader({
               </div>
             </div>
             <div 
-              className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-md p-px overflow-hidden"
+              className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-lg p-px overflow-hidden"
               style={{ background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))' }}
             >
               {/* animated color overlay for level badge */}
               {borderColors && (
                 <div 
-                  className="absolute inset-0 rounded-md transition-transform duration-700 ease-out delay-200"
+                  className="absolute inset-0 rounded-lg transition-transform duration-150"
                   style={{ 
                     background: `linear-gradient(to bottom, ${borderColors.from}, ${borderColors.to})`,
                     transform: animateColor ? 'translateY(0)' : 'translateY(100%)'
                   }}
                 />
               )}
-              <div className="px-2 py-0.5 rounded-[inherit] bg-abyss-500 relative">
+              {/* glint effect for level badge */}
+              {isHighestTier && animateColor && (
+                <motion.div
+                  key={`badge-${glintKey}`}
+                  className="absolute top-0 bottom-0 rounded-lg pointer-events-none"
+                  animate={{ 
+                    left: ['-45%', '145%'],
+                    opacity: [0, 0.4, 0.5, 0.4, 0]
+                  }}
+                  transition={{
+                    duration: 0.9,
+                    repeat: Infinity,
+                    repeatDelay: 6.3,
+                    ease: 'easeInOut',
+                    times: [0, 0.2, 0.5, 0.8, 1]
+                  }}
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15) 35%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.15) 65%, transparent)',
+                    width: '45%'
+                  }}
+                />
+              )}
+              <div className="px-2 rounded-[inherit] bg-abyss-500 relative">
                 <span className="text-sm font-bold text-white">{summonerLevel}</span>
               </div>
             </div>
           </div>
         </SimpleTooltip>
-        <div className="flex-1 flex flex-col justify-between h-26">
+        <div className="flex-1 flex flex-col justify-between h-28">
           <h1 className="text-3xl font-semibold text-white">
             {gameName}
             <span className="text-text-muted font-normal"> #{tagLine}</span>
           </h1>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <UpdateButton 
               region={region}
               name={name}
@@ -191,7 +245,7 @@ export default function ProfileHeader({
               cooldownUntil={cooldownUntil}
               statusMessage={statusMessage}
             />
-            <p className="text-xs text-text-muted">
+            <p className="text-xs font-light text-text-muted">
               Last updated: {loading ? 'loading...' : lastUpdated ? getTimeAgo(lastUpdated) : 'Never'}
             </p>
           </div>

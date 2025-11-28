@@ -29,10 +29,10 @@
     
     --color-kda-3:oklch(0.897 0.123 164.65);
     --color-kda-3-dark:oklch(39.833% 0.09609 149.532);
-    --color-kda-4:oklch(0.7397 0.1313 300.71);
-    --color-kda-4-dark:oklch(42.207% 0.16939 286.634);
-    --color-kda-5:oklch(0.7367 0.1644 37.06);
-    --color-kda-5-dark:oklch(49.01% 0.1034 30.118);
+    --color-kda-4:oklch(76.839% 0.09573 309.482);
+    --color-kda-4-dark:oklch(0.3865 0.1824 286.634);
+    --color-kda-5:oklch(72.69% 0.17193 36.338);
+    --color-kda-5-dark:oklch(30.07% 0.11341 27.517);
     
     --font-family-light: var(--font-league-spartan);
     --font-family-title: var(--font-league-spartan);
