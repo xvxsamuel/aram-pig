@@ -1,9 +1,9 @@
 name: Fetch Item Data
 
 on:
-  # run weekly on monday at 6am UTC (typically after patches release)
-  schedule:
-    - cron: '0 6 * * 1'
+  # schedule disabled until fetch-items script is implemented
+  # schedule:
+  #   - cron: '0 6 * * 4'
   # allow manual trigger
   workflow_dispatch:
 

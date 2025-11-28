@@ -19,9 +19,8 @@ jobs:
           SITE_URL="${{ secrets.NEXT_PUBLIC_SITE_URL }}"
           SITE_URL="${SITE_URL%/}"
           
-          # Don't use -L (follow redirects) as it drops auth headers
-          # Make sure URL is exact to avoid redirects
-          response=$(curl -s -w "\n%{http_code}" -X GET \
+          # Use --location-trusted to follow redirects while preserving auth header
+          response=$(curl -s -w "\n%{http_code}" --location-trusted -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${SITE_URL}/api/cleanup-champion-stats")
           
