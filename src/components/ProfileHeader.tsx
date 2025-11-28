@@ -110,7 +110,7 @@ export default function ProfileHeader({
           <div className="absolute inset-0 bg-gradient-to-r from-abyss-700 from-35% via-transparent/30 via-60% to-abyss-700" />
         </>
       )}
-      <div className="max-w-6xl mx-auto px-8 py-6 min-h-40 relative z-10">
+      <div className="max-w-6xl mx-auto px-8 py-6 pb-8 min-h-40 relative z-10">
         <div className="flex items-start gap-6">
         <SimpleTooltip
           content={
@@ -157,7 +157,7 @@ export default function ProfileHeader({
               </div>
             </div>
             <div 
-              className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-md p-px overflow-hidden"
+              className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-md p-px overflow-hidden"
               style={{ background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))' }}
             >
               {/* animated color overlay for level badge */}
@@ -181,7 +181,7 @@ export default function ProfileHeader({
             {gameName}
             <span className="text-text-muted font-normal"> #{tagLine}</span>
           </h1>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <UpdateButton 
               region={region}
               name={name}

@@ -5,6 +5,7 @@ import type { MatchData } from "../lib/riot-api"
 import MatchHistoryItem from "./MatchHistoryItem"
 import ChampionFilter from "./ChampionFilter"
 import ProfileCard from "./ProfileCard"
+import LoadingSpinner from "./LoadingSpinner"
 
 interface Props {
   matches: MatchData[]
@@ -13,9 +14,10 @@ interface Props {
   ddragonVersion: string
   championNames: Record<string, string>
   onMatchesLoaded?: (newMatches: MatchData[]) => void
+  initialLoading?: boolean
 }
 
-export default function MatchHistoryList({ matches: initialMatches, puuid, region, ddragonVersion, championNames, onMatchesLoaded }: Props) {
+export default function MatchHistoryList({ matches: initialMatches, puuid, region, ddragonVersion, championNames, onMatchesLoaded, initialLoading = false }: Props) {
   const [matches, setMatches] = useState(initialMatches)
   const [championFilter, setChampionFilter] = useState("")
   const [loading, setLoading] = useState(false)
@@ -88,7 +90,11 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
         headerRight={filterDropdown}
         contentClassName="flex-1 flex flex-col"
       >
-        {filteredMatches.length === 0 ? (
+        {initialLoading ? (
+          <div className="flex-1 flex items-center justify-center py-20">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : filteredMatches.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center text-text-muted py-8">
               {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
@@ -96,7 +102,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
           </div>
         ) : (
           <>
-            <div className="space-y-2">
+            <div className={`space-y-2 ${(!championFilter && hasMore) ? '' : 'pb-2'}`}>
               {filteredMatches.map((match) => (
                 <MatchHistoryItem 
                   key={match.metadata.matchId} 
@@ -110,24 +116,22 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
             </div>
             
             {!championFilter && hasMore && (
-              <div className="">
-                <button
-                  onClick={loadMore}
-                  disabled={loading}
-                  className="w-full my-3 px-4 py-3 bg-gradient-to-t from-action-100 to-action-200 hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white rounded-full animate-spin border-t-transparent" />
-                  ) : (
-                    <>
-                      <span>Show More</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                onClick={loadMore}
+                disabled={loading}
+                className="w-full h-12 mt-2 mb-2 px-4 bg-gradient-to-t from-action-100 to-action-200 hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white rounded-full animate-spin border-t-transparent" />
+                ) : (
+                  <>
+                    <span>Show More</span>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                )}
+              </button>
             )}
           </>  
         )}

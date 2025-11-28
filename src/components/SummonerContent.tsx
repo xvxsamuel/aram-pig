@@ -165,7 +165,8 @@ export default function SummonerContent({
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   
   // state for client-side loaded data
-  const [loading, setLoading] = useState(initialTotalGames === 0)
+  // always start loading since we fetch fresh data on mount
+  const [loading, setLoading] = useState(true)
   const [matches, setMatches] = useState<MatchData[]>(initialMatches)
   const [_wins, setWins] = useState(initialWins)
   const [_totalGames, setTotalGames] = useState(initialTotalGames)
@@ -204,6 +205,11 @@ export default function SummonerContent({
     
     fetchChampionStats()
   }, [summonerData.account.puuid])
+
+  // save visited region to localStorage for search bar default
+  useEffect(() => {
+    localStorage.setItem('selected-region', region.toUpperCase())
+  }, [region])
 
   // reusable function to fetch fresh stats
   const refreshStats = useCallback(async () => {
@@ -579,9 +585,10 @@ export default function SummonerContent({
         ddragonVersion={ddragonVersion}
         championNames={championNames}
         onMatchesLoaded={handleMoreMatchesLoaded}
+        initialLoading={loading}
       />
     </div>
-  ), [matches, summonerData.account.puuid, region, ddragonVersion, championNames, championStats, aggregateStats, summaryKda, topChampions, handleTabChange, handleMoreMatchesLoaded])
+  ), [matches, summonerData.account.puuid, region, ddragonVersion, championNames, championStats, aggregateStats, summaryKda, topChampions, handleTabChange, handleMoreMatchesLoaded, loading])
 
   // memoize champions content
   const championsContent = useMemo(() => (

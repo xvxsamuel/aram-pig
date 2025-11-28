@@ -18,23 +18,9 @@ function ChampionRowSkeleton() {
   )
 }
 
-// skeleton row for recently played
-function RecentlyPlayedRowSkeleton() {
-  return (
-    <div className="flex items-center gap-3 py-2 px-2 animate-pulse">
-      <div className="w-8 h-8 bg-abyss-500 rounded-full flex-shrink-0"></div>
-      <div className="flex-1 min-w-0">
-        <div className="h-4 w-24 bg-abyss-500 rounded mb-1"></div>
-        <div className="h-3 w-14 bg-abyss-500 rounded"></div>
-      </div>
-      <div className="h-4 w-12 bg-abyss-500 rounded"></div>
-    </div>
-  )
-}
-
 export default function SummonerLoadingSkeleton() {
   return (
-    <div className="flex flex-col xl:flex-row gap-4 py-4">
+    <div className="flex flex-col xl:flex-row gap-4">
       {/* left sidebar */}
       <div className="flex flex-col gap-4 xl:w-80 w-full flex-shrink-0">
         {/* Performance card */}
@@ -67,15 +53,6 @@ export default function SummonerLoadingSkeleton() {
             ))}
           </div>
         </ProfileCard>
-
-        {/* Recently played card */}
-        <ProfileCard title="Recently played with">
-          <div className="-mx-2 space-y-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <RecentlyPlayedRowSkeleton key={i} />
-            ))}
-          </div>
-        </ProfileCard>
       </div>
 
       {/* Match History with spinner */}
@@ -84,7 +61,7 @@ export default function SummonerLoadingSkeleton() {
           title="Match History" 
           contentClassName="flex-1 flex flex-col"
           headerRight={
-            <div className="h-8 w-40 bg-abyss-500 rounded-full animate-pulse"></div>
+            <div className="h-7 w-48 bg-abyss-500 rounded-xl animate-pulse"></div>
           }
         >
           <div className="flex-1 flex items-center justify-center py-20">
