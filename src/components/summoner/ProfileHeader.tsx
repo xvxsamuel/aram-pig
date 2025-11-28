@@ -4,7 +4,7 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { motion } from "motion/react"
 import UpdateButton from "./UpdateButton"
-import SimpleTooltip from "./SimpleTooltip"
+import SimpleTooltip from "@/components/ui/SimpleTooltip"
 
 function getTimeAgo(timestamp: string | null): string {
   if (!timestamp) return ''

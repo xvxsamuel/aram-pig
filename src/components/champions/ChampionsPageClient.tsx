@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import ChampionFilters from '@/components/ChampionFilters'
-import ChampionTable from '@/components/ChampionTable'
+import PatchFilter from '@/components/filters/PatchFilter'
+import ChampionTable from '@/components/champions/ChampionTable'
 
 interface ChampionStats {
   champion_name: string
@@ -91,14 +91,16 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
       <div className="max-w-6xl mx-auto px-12 py-8">
         {/* header */}
         <div className="mb-6">
-          <h2 className="text-4xl font-bold mb-2">ARAM Champion Statistics</h2>
+          <h2 className="text-3xl font-bold mb-2">ARAM Champion Statistics</h2>
           <p className="text-subtitle">
             {totalMatches.toLocaleString()} matches analyzed • Last updated {timeAgo}
           </p>
         </div>
 
         {/* filters */}
-        <ChampionFilters availablePatches={availablePatches} />
+        <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4 mb-6">
+          <PatchFilter availablePatches={availablePatches} />
+        </div>
 
         {/* champion table or skeleton */}
         {loading || !filter || !patch ? (

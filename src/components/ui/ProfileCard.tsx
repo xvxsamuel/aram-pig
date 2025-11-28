@@ -36,7 +36,7 @@ export default function ProfileCard({
         <div className="flex items-center justify-between gap-4 pb-1.5 relative z-20">
           <TitleElement 
             onClick={onTitleClick}
-            className={`text-xl font-bold text-left flex-shrink-0 ${onTitleClick ? 'cursor-pointer transition-colors hover:text-gold-light' : ''}`}
+            className={`text-lg bold text-left flex-shrink-0 ${onTitleClick ? 'cursor-pointer transition-colors hover:text-gold-light' : ''}`}
           >
             <h2>{title}</h2>
           </TitleElement>

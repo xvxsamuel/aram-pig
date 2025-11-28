@@ -1,7 +1,7 @@
 "use client"
 
-import ProfileCard from "./ProfileCard"
-import LoadingSpinner from "./LoadingSpinner"
+import ProfileCard from "@/components/ui/ProfileCard"
+import LoadingSpinner from "@/components/ui/LoadingSpinner"
 
 // skeleton row for champions list
 function ChampionRowSkeleton() {

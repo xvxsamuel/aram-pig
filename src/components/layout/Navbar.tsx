@@ -1,6 +1,6 @@
 "use client"
 
-import SearchBar from "./SearchBar"
+import SearchBar from "@/components/search/SearchBar"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"

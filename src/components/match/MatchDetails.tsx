@@ -1,15 +1,16 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import type { MatchData } from "../lib/riot-api"
+import type { MatchData } from "@/lib/riot-api"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
-import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl } from "../lib/ddragon-client"
-import { getKdaColor, getPigScoreColor } from "../lib/winrate-colors"
-import Tooltip from "./Tooltip"
+import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl } from "@/lib/ddragon-client"
+import { getChampionUrlName } from "@/lib/champion-names"
+import { getKdaColor, getPigScoreColor } from "@/lib/winrate-colors"
+import Tooltip from "@/components/ui/Tooltip"
 import runesData from "@/data/runes.json"
-import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
+import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "@/lib/regions"
 
 interface Props {
   match: MatchData
@@ -177,19 +178,11 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const team100Won = team100[0]?.win || false
   const team200Won = team200[0]?.win || false
 
-  // calculate team totals
-  const _team100Gold = team100.reduce((sum, p) => sum + p.goldEarned, 0)
-  const _team200Gold = team200.reduce((sum, p) => sum + p.goldEarned, 0)
-  const team100Kills = team100.reduce((sum, p) => sum + p.kills, 0)
-  const team200Kills = team200.reduce((sum, p) => sum + p.kills, 0)
-
-  const _formatGold = (gold: number) => `${(gold / 1000).toFixed(1)}k`
   const formatDamage = (dmg: number) => new Intl.NumberFormat('en-US').format(dmg)
 
   // Calculate max values for bars
   const allParticipants = match.info.participants
   const maxDamageDealt = Math.max(...allParticipants.map(p => p.totalDamageDealtToChampions || 0))
-  const maxDamageTaken = Math.max(...allParticipants.map(p => (p as any).totalDamageTaken || 0))
   
   // Check if any participant has a pig score (only show PIG column if within 30 days OR scores exist OR loading)
   const hasPigScores = isWithin30Days || loadingPigScores || allParticipants.some(p => 
@@ -302,35 +295,34 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
     }
   }, [selectedTab, match.metadata.matchId])
 
-  const renderPlayerRow = (p: any, isCurrentPlayer: boolean) => {
+  const renderPlayerRow = (p: any, isCurrentPlayer: boolean, isWinningTeam: boolean) => {
     const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
     const kda = p.deaths === 0 ? "Perfect" : ((p.kills + p.assists) / p.deaths).toFixed(2)
-    const _dpm = ((p.totalDamageDealtToChampions || 0) / (match.info.gameDuration / 60)).toFixed(0)
     const playerName = p.riotIdGameName || p.summonerName
     const playerTag = p.riotIdTagline || ""
     const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
     
-    const { rank, badge, score } = getRankInfo(p.puuid, p.teamId)
-    const teamTotalKills = p.teamId === 100 ? team100Kills : team200Kills
-    const killParticipation = teamTotalKills > 0 ? Math.round(((p.kills + p.assists) / teamTotalKills) * 100) : 0
+    const { badge, score } = getRankInfo(p.puuid, p.teamId)
     
     const damageDealtPct = maxDamageDealt > 0 ? (p.totalDamageDealtToChampions / maxDamageDealt) * 100 : 0
-    const _damageTakenPct = maxDamageTaken > 0 ? (p.totalDamageTaken / maxDamageTaken) * 100 : 0
-
-    const csPerMin = (p.totalMinionsKilled / (match.info.gameDuration / 60)).toFixed(1)
 
     return (
       <tr 
         key={p.puuid} 
         className={clsx(
-          "",
-          isCurrentPlayer && "bg-gold-dark/40"
+          "border-b border-abyss-500/30 last:border-b-0",
+          isWinningTeam 
+            ? (isCurrentPlayer ? "bg-win-light" : "bg-win") 
+            : (isCurrentPlayer ? "bg-loss-light" : "bg-loss")
         )}
       >
-        {/* champion & info */}
-        <td className="py-3 pl-2">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        {/* champion & player info */}
+        <td className="py-1.5 pl-3 pr-2">
+          <div className="flex items-center gap-1.5">
+            <Link 
+              href={`/champions/${getChampionUrlName(p.championName, {})}`}
+              className="relative flex-shrink-0 hover:brightness-75 transition-all"
+            >
               <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800">
                 <Image
                   src={getChampionImageUrl(p.championName, ddragonVersion)}
@@ -340,132 +332,120 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   className="w-full h-full scale-110 object-cover"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-abyss-900 rounded-[6px] w-4 h-4 flex items-center justify-center text-[9px] border bg-abyss-700 border-gold-dark">
+              <div className="absolute -bottom-0.5 -left-0.5 w-3.5 h-3.5 rounded-sm flex items-center justify-center text-[9px] font-bold bg-abyss-700 text-white">
                 {p.champLevel}
               </div>
-            </div>
+            </Link>
             
-            <div className="flex gap-1">
-              <div className="flex flex-col gap-0.5">
-                <div className="w-4 h-4 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
-                  <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="Summoner 1" width={16} height={16} />
+            <div className="flex flex-col gap-0.5">
+              <div className="flex gap-0.5">
+                <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
+                  <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" />
                 </div>
-                <div className="w-4 h-4 rounded overflow-hidden bg-abyss-900/30 border border-gold-dark">
-                  <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="Summoner 2" width={16} height={16} />
+                <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
+                  <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="" width={14} height={14} className="w-full h-full" />
                 </div>
               </div>
-              <div className="flex flex-col gap-0.5">
-                <div className="w-4 h-4 rounded-full overflow-hidden bg-abyss-900/30 border border-gold-dark">
-                  <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="Keystone" width={16} height={16} />
+              <div className="flex gap-0.5">
+                <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
+                  <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" />
                 </div>
-                <div className="w-4 h-4 rounded-full overflow-hidden bg-abyss-900/30 border border-gold-dark">
-                  <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="Secondary" width={16} height={16} />
+                <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
+                  <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="" width={14} height={14} className="w-full h-full p-0.5" />
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col min-w-0">
-              <Link 
-                href={profileUrl}
-                className={clsx(
-                  "text-xs truncate hover:underline",
-                  isCurrentPlayer ? "text-gold-light" : "text-white"
-                )}
-              >
-                {playerName}
-              </Link>
-            </div>
+            <Link 
+              href={profileUrl}
+              className={clsx(
+                "text-xs font-medium truncate transition-colors",
+                isCurrentPlayer ? "text-white" : "text-text-secondary hover:text-gold-light"
+              )}
+            >
+              {playerName}
+            </Link>
           </div>
         </td>
 
-        {/* PIG - only show if any participant has pig scores */}
+        {/* PIG Score */}
         {hasPigScores && (
-          <td className="py-3 text-center">
+          <td className="py-1.5 text-center">
             {score !== null ? (
-              <div className="flex flex-col items-center justify-center">
+              <div className="flex flex-col items-center">
                 <span 
-                  className="text-sm font-semibold "
+                  className="text-xs font-bold tabular-nums"
                   style={{ color: getPigScoreColor(score) }}
                 >
-                  {score.toFixed(1)}
+                  {Math.round(score)}
                 </span>
-                {badge ? (
-                  <span className={clsx(
-                    "text-[10px] px-1.5 rounded-full font-bold",
-                    badge === "MVP" ? "bg-yellow-500/20 text-yellow-400" : "bg-purple-500/20 text-purple-400"
-                  )}>
-                    {badge}
-                  </span>
-                ) : allHavePigScores ? (
-                  <span className="text-[10px] text-gray-500">{rank}th</span>
-                ) : null}
+                {badge && (
+                  <span className="text-[9px] text-text-muted">{badge}</span>
+                )}
               </div>
             ) : loadingPigScores ? (
-              <div className="flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
-              </div>
+              <div className="w-3 h-3 mx-auto border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light" />
             ) : (
-              <span className="text-sm text-gray-500">-</span>
+              <span className="text-text-muted text-xs">-</span>
             )}
           </td>
         )}
 
         {/* KDA */}
-        <td className="py-3 text-center">
-          <div className="flex flex-col items-center">
-            <div className="text-xs text-gray-300">
-              {p.kills}/{p.deaths}/{p.assists} <span className="text-gray-500">({killParticipation}%)</span>
-            </div>
-            <div 
-              className="text-[10px] font-bold"
+        <td className="py-1.5 text-center">
+          <div className="text-xs text-white tabular-nums whitespace-nowrap">
+            {p.kills} / <span className="text-negative">{p.deaths}</span> / {p.assists}
+            <span 
+              className="ml-1 font-semibold"
               style={{ color: kda === "Perfect" ? getKdaColor(99) : getKdaColor(Number(kda)) }}
             >
-              {kda}:1
-            </div>
+              {kda}
+            </span>
           </div>
         </td>
 
         {/* Damage */}
-        <td className="py-3 text-center w-32 px-4">
-          <div className="flex flex-col gap-2 justify-center h-full">
-            <div className="flex flex-col gap-1.5 text-[12px]">
-              <span className="text-negative text-center leading-none">{formatDamage(p.totalDamageDealtToChampions)}</span>
-              <div className="h-3 bg-abyss-800 rounded-sm overflow-hidden w-full">
-                <div className="h-full bg-negative" style={{ width: `${damageDealtPct}%` }}></div>
-              </div>
+        <td className="py-1.5 text-center">
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-xs text-white tabular-nums">{formatDamage(p.totalDamageDealtToChampions)}</span>
+            <div className="w-12 h-1 bg-abyss-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-negative rounded-full" 
+                style={{ width: `${damageDealtPct}%` }}
+              />
             </div>
           </div>
         </td>
 
         {/* CS */}
-        <td className="py-3 text-center">
+        <td className="py-1.5 text-center">
           <div className="flex flex-col items-center">
-            <span className="text-xs text-gray-300">{csPerMin}/min</span>
-            <span className="text-[10px] text-text-muted">{p.totalMinionsKilled} total</span>
+            <span className="text-xs text-text-secondary tabular-nums">{p.totalMinionsKilled}</span>
+            <span className="text-[10px] text-text-muted tabular-nums">
+              {(p.totalMinionsKilled / (match.info.gameDuration / 60)).toFixed(1)}/m
+            </span>
           </div>
         </td>
 
         {/* Items */}
-        <td className="py-3 pl-4">
-          <div className="flex gap-0.5">
+        <td className="py-1">
+          <div className="flex gap-0.5 justify-center">
             {items.map((item, idx) => (
-              <div
-                key={idx}
-                className={clsx(
-                  "w-7 h-7 rounded bg-abyss-900/30 border border-gold-dark overflow-hidden",
-                  idx === 6 && "rounded-full" // trinket
-                )}
-              >
-                {item > 0 && (
-                  <Image
-                    src={getItemImageUrl(item, ddragonVersion)}
-                    alt={`Item ${item}`}
-                    width={28}
-                    height={28}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </div>
+              item > 0 ? (
+                <Tooltip key={idx} id={item} type="item">
+                  <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
+                    <Image
+                      src={getItemImageUrl(item, ddragonVersion)}
+                      alt=""
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </Tooltip>
+              ) : (
+                <div key={idx} className="w-6 h-6 rounded bg-abyss-800/50 border border-gold-dark/50" />
+              )
             ))}
           </div>
         </td>
@@ -485,15 +465,15 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
       ]
 
   return (
-    <div className="bg-abyss-600 rounded-b-lg border-t border-abyss-700">
+    <div className="bg-abyss-600">
       {/* tab navigation */}
-      <div className="flex border-b border-abyss-700">
+      <div className="flex border-b border-gold-dark/20">
         <button
           onClick={() => setSelectedTab('overview')}
           className={clsx(
-            "flex-1 px-6 py-3 font-semibold text-sm transition-all border-b-2",
+            "flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px",
             selectedTab === 'overview'
-              ? "border-accent-light text-white bg-abyss-700/50"
+              ? "border-accent-light text-white"
               : "border-transparent text-text-muted hover:text-white"
           )}
         >
@@ -502,76 +482,88 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         <button
           onClick={() => setSelectedTab('build')}
           className={clsx(
-            "flex-1 px-6 py-3 font-semibold text-sm transition-all border-b-2",
+            "flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px",
             selectedTab === 'build'
-              ? "border-accent-light text-white bg-abyss-700/50"
+              ? "border-accent-light text-white"
               : "border-transparent text-text-muted hover:text-white"
           )}
         >
           Build
         </button>
-        {hasPigScores && (
-          <button
-            onClick={() => setSelectedTab('performance')}
-            className={clsx(
-              "flex-1 px-6 py-3 font-semibold text-sm transition-all border-b-2",
-              selectedTab === 'performance'
-                ? "border-accent-light text-white bg-abyss-700/50"
-                : "border-transparent text-text-muted hover:text-white"
-            )}
-          >
-            Performance
-          </button>
-        )}
+        <button
+          onClick={() => setSelectedTab('performance')}
+          className={clsx(
+            "flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px",
+            selectedTab === 'performance'
+              ? "border-accent-light text-white"
+              : "border-transparent text-text-muted hover:text-white"
+          )}
+        >
+          Performance
+        </button>
       </div>
 
       {/* Tab Content */}
-      <div className="p-0">
+      <div>
         {selectedTab === 'overview' ? (
           <div className="flex flex-col">
-            {teamsToRender.map((team) => (
+            {teamsToRender.map((team, teamIdx) => (
               <div 
                 key={team.name}
                 className={clsx(
-                  team.isFirst && "border-b border-abyss-700",
-                  team.won ? "bg-[#28344E]" : "bg-[#59343B]"
+                  teamIdx === 0 && "border-b border-abyss-500/50"
                 )}
               >
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-abyss-700/50 text-xs text-gray-400">
-                    <tr>
-                      <th className="py-2 pl-2 font-bold">
-                        <span className={team.won ? "text-accent-light" : "text-negative"}>{team.won ? 'Victory' : 'Defeat'}</span> <span className="text-text-muted font-normal">({team.name})</span>
+                <table className="w-full table-fixed">
+                  <colgroup>
+                    <col className="w-[28%]" />
+                    {hasPigScores && <col className="w-[10%]" />}
+                    <col className="w-[13%]" />
+                    <col className="w-[13%]" />
+                    <col className="w-[8%]" />
+                    <col className="w-[28%]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-[10px] text-text-muted border-b border-abyss-500/30 bg-abyss-800/60">
+                      <th className="py-1.5 pl-3 text-left font-normal">
+                        <span className={clsx(
+                          "text-sm font-semibold",
+                          team.won ? "text-accent-light" : "text-negative"
+                        )}>
+                          {team.won ? 'Victory' : 'Defeat'}
+                        </span>
+                        <span className="text-xs text-text-muted ml-1.5">({team.name})</span>
                       </th>
-                      {hasPigScores && (
-                        <th className="py-2 text-center font-normal">
-                          PIG
-                        </th>
-                      )}
-                      <th className="py-2 text-center font-normal">KDA</th>
-                      <th className="py-2 text-center font-normal">Damage</th>
-                      <th className="py-2 text-center font-normal">CS</th>
-                      <th className="py-2 pl-4 font-normal">Items</th>
+                      {hasPigScores && <th className="py-1.5 text-center font-normal">PIG</th>}
+                      <th className="py-1.5 text-center font-normal">KDA</th>
+                      <th className="py-1.5 text-center font-normal">Damage</th>
+                      <th className="py-1.5 text-center font-normal">CS</th>
+                      <th className="py-1.5 text-center font-normal">Items</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {team.players.map(p => renderPlayerRow(p, p.puuid === currentPuuid))}
+                    {team.players.map(p => renderPlayerRow(p, p.puuid === currentPuuid, team.won))}
                   </tbody>
                 </table>
               </div>
             ))}
           </div>
         ) : selectedTab === 'build' ? (
-          <div className="p-4 space-y-6">
+          <div className="p-4 space-y-4">
             {currentPlayer && (
               <>
                 {/* item Timeline */}
-                <div className="bg-abyss-700 rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-white mb-3">Item Timeline</h3>
+                <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
+                  <h3 className="text-sm font-semibold text-white mb-3">Item Timeline</h3>
                   {(() => {
                     const details = participantDetails.get(currentPlayer.puuid)
                     if (details?.loading) {
-                      return <div className="text-xs text-subtitle">Loading timeline...</div>
+                      return (
+                        <div className="flex items-center gap-2 text-xs text-text-muted">
+                          <div className="w-4 h-4 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
+                          Loading timeline...
+                        </div>
+                      )
                     }
                     if (!details?.item_timeline || details.item_timeline.length === 0) {
                       return (
@@ -580,12 +572,12 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                             .filter(itemId => itemId > 0)
                             .map((itemId, idx) => (
                               <div key={idx} className="relative group">
-                                <div className="w-12 h-12 rounded border-2 border-gold-dark/40 overflow-hidden bg-abyss-800">
+                                <div className="w-11 h-11 rounded border border-gold-dark overflow-hidden bg-abyss-800">
                                   <Image
                                     src={getItemImageUrl(itemId, ddragonVersion)}
                                     alt={`Item ${itemId}`}
-                                    width={48}
-                                    height={48}
+                                    width={44}
+                                    height={44}
                                     className="w-full h-full object-cover"
                                   />
                                 </div>
@@ -602,24 +594,24 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     }
                     
                     return (
-                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                      <div className="space-y-1.5 max-h-80 overflow-y-auto pr-2">
                         {details.item_timeline.map((event, idx) => (
-                          <div key={idx} className="flex items-center gap-3 text-xs">
-                            <span className="text-subtitle font-mono w-12">{formatTime(event.timestamp)}</span>
-                            <div className="w-8 h-8 rounded border border-abyss-800 overflow-hidden bg-abyss-900">
+                          <div key={idx} className="flex items-center gap-3 py-1 px-2 rounded hover:bg-white/5 transition-colors">
+                            <span className="text-xs text-text-muted font-mono w-10 tabular-nums">{formatTime(event.timestamp)}</span>
+                            <div className="w-7 h-7 rounded border border-gold-dark overflow-hidden bg-abyss-800">
                               <Image
                                 src={getItemImageUrl(event.itemId, ddragonVersion)}
                                 alt={`Item ${event.itemId}`}
-                                width={32}
-                                height={32}
+                                width={28}
+                                height={28}
                                 className="w-full h-full object-cover"
                               />
                             </div>
                             <span className={clsx(
-                              "font-medium",
+                              "text-xs font-medium",
                               event.type === 'ITEM_PURCHASED' && "text-accent-light",
                               event.type === 'ITEM_SOLD' && "text-negative",
-                              event.type === 'ITEM_UNDO' && "text-yellow-400"
+                              event.type === 'ITEM_UNDO' && "text-gold-light"
                             )}>
                               {event.type === 'ITEM_PURCHASED' && 'Purchased'}
                               {event.type === 'ITEM_SOLD' && 'Sold'}
@@ -633,13 +625,13 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                 </div>
 
                 {/* runes */}
-                <div className="bg-abyss-700 rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-white mb-3">Runes</h3>
-                  <div className="flex gap-6">
+                <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
+                  <h3 className="text-sm font-semibold text-white mb-3">Runes</h3>
+                  <div className="flex gap-8">
                     {/* primary Tree */}
                     <div className="flex-1">
-                      <div className="text-xs font-semibold text-gold-light mb-2">Primary</div>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="text-xs font-medium text-gold-light mb-2">Primary</div>
+                      <div className="flex gap-2">
                         {[currentPlayer.perks?.styles[0]?.selections[0]?.perk,
                           currentPlayer.perks?.styles[0]?.selections[1]?.perk,
                           currentPlayer.perks?.styles[0]?.selections[2]?.perk,
@@ -651,8 +643,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                             return (
                               <Tooltip key={idx} id={runeId!} type="rune">
                                 <div className={clsx(
-                                  "w-12 h-12 rounded-full overflow-hidden border-2 transition-colors",
-                                  idx === 0 ? "border-gold-light bg-gold-dark/20" : "border-abyss-800 bg-abyss-800"
+                                  "w-10 h-10 rounded-full overflow-hidden border transition-colors",
+                                  idx === 0 ? "border-gold-light bg-gold-dark/30 w-12 h-12" : "border-gold-dark bg-abyss-800"
                                 )}>
                                   {runeIcon && (
                                     <Image
@@ -671,9 +663,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     </div>
 
                     {/* Secondary Tree */}
-                    <div className="flex-1">
-                      <div className="text-xs font-semibold text-subtitle mb-2">Secondary</div>
-                      <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <div className="text-xs font-medium text-text-muted mb-2">Secondary</div>
+                      <div className="flex gap-2">
                         {[currentPlayer.perks?.styles[1]?.selections[0]?.perk,
                           currentPlayer.perks?.styles[1]?.selections[1]?.perk]
                           .filter(Boolean)
@@ -682,13 +674,13 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                             const runeIcon = runeInfo?.icon
                             return (
                               <Tooltip key={idx} id={runeId!} type="rune">
-                                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-abyss-800 bg-abyss-800">
+                                <div className="w-9 h-9 rounded-full overflow-hidden border border-gold-dark bg-abyss-800">
                                   {runeIcon && (
                                     <Image
                                       src={`https://ddragon.leagueoflegends.com/cdn/img/${runeIcon}`}
                                       alt="Rune"
-                                      width={40}
-                                      height={40}
+                                      width={36}
+                                      height={36}
                                       className="w-full h-full object-cover"
                                     />
                                   )}
@@ -700,16 +692,16 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     </div>
 
                     {/* Stat Shards */}
-                    <div className="flex-1">
-                      <div className="text-xs font-semibold text-subtitle mb-2">Shards</div>
-                      <div className="flex gap-2">
+                    <div>
+                      <div className="text-xs font-medium text-text-muted mb-2">Shards</div>
+                      <div className="flex gap-1.5">
                         {[currentPlayer.perks?.statPerks?.offense,
                           currentPlayer.perks?.statPerks?.flex,
                           currentPlayer.perks?.statPerks?.defense]
                           .filter(Boolean)
                           .map((shardId, idx) => (
-                            <div key={idx} className="w-8 h-8 rounded bg-abyss-800 border border-abyss-900 flex items-center justify-center">
-                              <span className="text-[10px] text-subtitle">+</span>
+                            <div key={idx} className="w-7 h-7 rounded-full bg-abyss-800 border border-gold-dark flex items-center justify-center">
+                              <span className="text-[10px] text-text-muted font-bold">+</span>
                             </div>
                           ))}
                       </div>
@@ -723,25 +715,27 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           <div className="p-4 space-y-4">
             {(loadingBreakdown || !pigScoreBreakdown) ? (
               <div className="min-h-[200px] flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-accent-light rounded-full animate-spin border-t-transparent"></div>
+                <div className="w-6 h-6 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
               </div>
             ) : (
               <>
                 {/* PIG Score Summary */}
-                <div className="bg-abyss-700 rounded-lg p-4">
+                <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-white">PIG Score Breakdown</h3>
+                    <h3 className="text-sm font-semibold text-white">PIG Score Breakdown</h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold" style={{ color: getPigScoreColor(pigScoreBreakdown.finalScore) }}><h2>{pigScoreBreakdown.finalScore}</h2></span>
-                      <span className="text-xs text-subtitle">/ 100</span>
+                      <span className="text-2xl font-bold tabular-nums" style={{ color: getPigScoreColor(pigScoreBreakdown.finalScore) }}>
+                        {pigScoreBreakdown.finalScore}
+                      </span>
+                      <span className="text-xs text-text-muted">/ 100</span>
                     </div>
                   </div>
-                  <div className="text-xs text-subtitle mb-4">
+                  <p className="text-xs text-text-muted mb-4">
                     Based on {pigScoreBreakdown.totalGames.toLocaleString()} games on patch {pigScoreBreakdown.patch}
-                  </div>
+                  </p>
                   
                   {/* Penalties Grid */}
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {pigScoreBreakdown.penalties.map((p, idx) => {
                       const isGood = p.penalty === 0
                       const isBad = p.penalty >= p.maxPenalty * 0.5
@@ -751,23 +745,23 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         <div key={idx} className="flex items-center gap-3">
                           {/* Status indicator */}
                           <div className={clsx(
-                            "w-2 h-2 rounded-full flex-shrink-0",
+                            "w-1.5 h-1.5 rounded-full flex-shrink-0",
                             isGood && "bg-accent-light",
-                            isModerate && "bg-yellow-500",
+                            isModerate && "bg-gold-light",
                             isBad && "bg-negative"
                           )} />
                           
                           {/* Stat name */}
-                          <span className="text-xs text-white w-32 flex-shrink-0">{p.name}</span>
+                          <span className="text-xs text-white w-36 flex-shrink-0">{p.name}</span>
                           
                           {/* Progress bar */}
-                          <div className="flex-1 h-2 bg-abyss-900 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1.5 bg-abyss-800 rounded-full overflow-hidden">
                             <div 
                               className={clsx(
                                 "h-full rounded-full transition-all",
-                                isGood && "bg-accent-light",
-                                isModerate && "bg-yellow-500",
-                                isBad && "bg-negative"
+                                isGood && "bg-gradient-to-r from-accent-light/80 to-accent-light",
+                                isModerate && "bg-gradient-to-r from-gold-dark to-gold-light",
+                                isBad && "bg-gradient-to-r from-negative/80 to-negative"
                               )}
                               style={{ width: `${Math.max(5, 100 - (p.penalty / p.maxPenalty) * 100)}%` }}
                             />
@@ -775,9 +769,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                           
                           {/* Penalty value */}
                           <span className={clsx(
-                            "text-xs font-mono w-12 text-right",
+                            "text-xs font-mono w-12 text-right tabular-nums",
                             isGood && "text-accent-light",
-                            isModerate && "text-yellow-400",
+                            isModerate && "text-gold-light",
                             isBad && "text-negative"
                           )}>
                             {p.penalty === 0 ? 'MAX' : `-${p.penalty.toFixed(1)}`}
@@ -789,17 +783,17 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                 </div>
 
                 {/* Detailed Stats Comparison */}
-                <div className="bg-abyss-700 rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-white mb-4">Stats vs Champion Average</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
+                  <h3 className="text-sm font-semibold text-white mb-4">Stats vs Champion Average</h3>
+                  <div className="grid grid-cols-2 gap-3">
                     {/* Damage to Champions */}
-                    <div className="bg-abyss-800 rounded p-3">
-                      <div className="text-xs text-subtitle mb-1">Damage to Champions /min</div>
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Damage to Champions /min</div>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-bold text-white">
+                        <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.damageToChampionsPerMin.toFixed(0)}
                         </span>
-                        <span className="text-xs text-subtitle">
+                        <span className="text-xs text-text-muted">
                           vs {pigScoreBreakdown.championAvgStats.damageToChampionsPerMin.toFixed(0)} avg
                         </span>
                       </div>
@@ -808,8 +802,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         if (!p?.percentOfAvg) return null
                         return (
                           <div className={clsx(
-                            "text-xs mt-1",
-                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-yellow-400" : "text-negative"
+                            "text-xs mt-1 font-medium",
+                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-gold-light" : "text-negative"
                           )}>
                             {p.percentOfAvg.toFixed(0)}% of average
                           </div>
@@ -818,13 +812,13 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     </div>
                     
                     {/* Total Damage */}
-                    <div className="bg-abyss-800 rounded p-3">
-                      <div className="text-xs text-subtitle mb-1">Total Damage /min</div>
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Total Damage /min</div>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-bold text-white">
+                        <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.totalDamagePerMin.toFixed(0)}
                         </span>
-                        <span className="text-xs text-subtitle">
+                        <span className="text-xs text-text-muted">
                           vs {pigScoreBreakdown.championAvgStats.totalDamagePerMin.toFixed(0)} avg
                         </span>
                       </div>
@@ -833,8 +827,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         if (!p?.percentOfAvg) return null
                         return (
                           <div className={clsx(
-                            "text-xs mt-1",
-                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-yellow-400" : "text-negative"
+                            "text-xs mt-1 font-medium",
+                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-gold-light" : "text-negative"
                           )}>
                             {p.percentOfAvg.toFixed(0)}% of average
                           </div>
@@ -843,13 +837,13 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     </div>
                     
                     {/* Healing/Shielding */}
-                    <div className="bg-abyss-800 rounded p-3">
-                      <div className="text-xs text-subtitle mb-1">Healing + Shielding /min</div>
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Healing + Shielding /min</div>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-bold text-white">
+                        <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.healingShieldingPerMin.toFixed(0)}
                         </span>
-                        <span className="text-xs text-subtitle">
+                        <span className="text-xs text-text-muted">
                           vs {pigScoreBreakdown.championAvgStats.healingShieldingPerMin.toFixed(0)} avg
                         </span>
                       </div>
@@ -858,8 +852,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         if (!p?.percentOfAvg) return null
                         return (
                           <div className={clsx(
-                            "text-xs mt-1",
-                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-yellow-400" : "text-negative"
+                            "text-xs mt-1 font-medium",
+                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-gold-light" : "text-negative"
                           )}>
                             {p.percentOfAvg.toFixed(0)}% of average
                           </div>
@@ -868,13 +862,13 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     </div>
                     
                     {/* CC Time */}
-                    <div className="bg-abyss-800 rounded p-3">
-                      <div className="text-xs text-subtitle mb-1">CC Time /min</div>
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">CC Time /min</div>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-bold text-white">
+                        <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.ccTimePerMin.toFixed(1)}s
                         </span>
-                        <span className="text-xs text-subtitle">
+                        <span className="text-xs text-text-muted">
                           vs {pigScoreBreakdown.championAvgStats.ccTimePerMin.toFixed(1)}s avg
                         </span>
                       </div>
@@ -883,8 +877,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         if (!p?.percentOfAvg) return null
                         return (
                           <div className={clsx(
-                            "text-xs mt-1",
-                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-yellow-400" : "text-negative"
+                            "text-xs mt-1 font-medium",
+                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-gold-light" : "text-negative"
                           )}>
                             {p.percentOfAvg.toFixed(0)}% of average
                           </div>
@@ -893,13 +887,13 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     </div>
                     
                     {/* Deaths per Min */}
-                    <div className="bg-abyss-800 rounded p-3 col-span-2">
-                      <div className="text-xs text-subtitle mb-1">Deaths per Minute</div>
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3 col-span-2">
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Deaths per Minute</div>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-bold text-white">
+                        <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.deathsPerMin.toFixed(2)}
                         </span>
-                        <span className="text-xs text-subtitle">
+                        <span className="text-xs text-text-muted">
                           (optimal: 0.5-0.7)
                         </span>
                       </div>
@@ -909,8 +903,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         const isTooFew = dpm < 0.5
                         return (
                           <div className={clsx(
-                            "text-xs mt-1",
-                            isOptimal ? "text-accent-light" : isTooFew ? "text-yellow-400" : "text-negative"
+                            "text-xs mt-1 font-medium",
+                            isOptimal ? "text-accent-light" : isTooFew ? "text-gold-light" : "text-negative"
                           )}>
                             {isOptimal ? 'Optimal engagement' : isTooFew ? 'Could engage more' : 'Too many deaths'}
                           </div>

@@ -1,7 +1,7 @@
 "use client"
 
-import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from "../lib/winrate-colors"
-import ProfileCard from "./ProfileCard"
+import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from "@/lib/winrate-colors"
+import ProfileCard from "@/components/ui/ProfileCard"
 
 interface AggregateStats {
   games: number
@@ -98,7 +98,7 @@ function PigScoreArc({ score, loading }: { score: number | null | undefined; loa
           {score.toFixed(0)}
         </span>
       ) : (
-        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-bold text-gray-500 leading-none">--</span>
+        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl font-bold text-text-muted leading-none">--</span>
       )}
       {/* PIG label at bottom gap - only show when score is available */}
       {score !== null && score !== undefined && !loading && (
@@ -162,7 +162,7 @@ export default function SummonerSummaryCard({
               </>
             ) : aggregateStats ? (
               <>
-                <span className="text-sm text-text-muted">
+                <span className="text-sm text-white">
                   {aggregateStats.wins}W / {aggregateStats.losses}L
                 </span>
                 <span className="text-xs text-text-muted">

@@ -7,8 +7,8 @@ import { fetchChampionNames, getChampionDisplayName, getApiNameFromUrl } from '@
 import { getLatestPatches } from '@/lib/patch-utils'
 import { getWinrateColor } from '@/lib/winrate-colors'
 import { getLatestVersion } from '@/lib/ddragon-client'
-import ChampionDetailTabs from '@/components/ChampionDetailTabs'
-import ChampionFilters from '@/components/ChampionFilters'
+import ChampionDetailTabs from '@/components/champions/ChampionDetailTabs'
+import PatchFilter from '@/components/filters/PatchFilter'
 
 export const revalidate = 0 // disable cache for patch filter to work
 
@@ -140,7 +140,7 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
           <div className="bg-abyss-600 rounded-lg p-6 mb-6">
             <div className="flex items-center gap-6">
               <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-                <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+                <div className="relative w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
                   <Image
                     src={getChampionImageUrl(apiName, ddragonVersion)}
                     alt={displayName}
@@ -149,6 +149,7 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
                     className="w-full h-full object-cover scale-110"
                     unoptimized
                   />
+                  <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
                 </div>
               </div>
               <div className="flex-1">
@@ -159,7 +160,9 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
                   </div>
                   
                   {/* patch & date range filters */}
-                  <ChampionFilters availablePatches={availablePatches} />
+                  <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4">
+                    <PatchFilter availablePatches={availablePatches} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -447,7 +450,7 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
         <div className="bg-abyss-600 rounded-lg p-6 mb-6 border border-gold-dark/40">
           <div className="flex items-center gap-6">
             <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-              <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+              <div className="relative w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
                 <Image
                   src={getChampionImageUrl(apiName, ddragonVersion)}
                   alt={displayName}
@@ -456,6 +459,7 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
                   className="w-full h-full object-cover scale-110"
                   unoptimized
                 />
+                <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
               </div>
             </div>
             <div className="flex-1">
@@ -478,7 +482,9 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
                     Last updated: {new Date(championData.last_calculated_at).toLocaleDateString()}
                   </div>
                 </div>
-                <ChampionFilters availablePatches={availablePatches} />
+                <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4">
+                  <PatchFilter availablePatches={availablePatches} />
+                </div>
               </div>
             </div>
           </div>

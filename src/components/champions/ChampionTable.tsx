@@ -147,7 +147,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
               
               {/* champion image */}
               <div className="w-12 h-12 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-xl">
-                <div className="w-full h-full rounded-[inherit] overflow-hidden bg-accent-dark">
+                <div className="relative w-full h-full rounded-[inherit] overflow-hidden bg-accent-dark">
                   <Image
                     src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
                     alt={champion.champion_name}
@@ -156,6 +156,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
                     className="w-full h-full object-cover scale-110"
                     unoptimized
                   />
+                  <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
                 </div>
               </div>
               

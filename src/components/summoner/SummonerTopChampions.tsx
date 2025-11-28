@@ -2,10 +2,10 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { getChampionImageUrl } from "../lib/ddragon-client"
-import { getChampionDisplayName, getChampionUrlName } from "../lib/champion-names"
-import { getWinrateColor, getKdaColor, getPigScoreColor } from "../lib/winrate-colors"
-import ProfileCard from "./ProfileCard"
+import { getChampionImageUrl } from "@/lib/ddragon-client"
+import { getChampionDisplayName, getChampionUrlName } from "@/lib/champion-names"
+import { getWinrateColor, getKdaColor, getPigScoreColor } from "@/lib/winrate-colors"
+import ProfileCard from "@/components/ui/ProfileCard"
 
 interface ChampionStats {
   championName: string

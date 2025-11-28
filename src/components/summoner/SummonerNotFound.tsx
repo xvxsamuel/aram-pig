@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { PLATFORM_TO_LABEL } from '../lib/regions'
+import { PLATFORM_TO_LABEL } from '@/lib/regions'
 
 interface SuggestedSummoner {
   puuid: string

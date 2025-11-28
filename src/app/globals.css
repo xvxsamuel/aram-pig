@@ -24,7 +24,9 @@
     --color-negative: oklch(62.451% 0.20324 17.952);
     --color-negative-dark: oklch(45% 0.15 17.952);
     --color-loss:oklch(33.809% 0.04742 13.776);
-    --color-win:oklch(33.989% 0.0559 265.681);;
+    --color-loss-light:oklch(40% 0.05 13.776);
+    --color-win:oklch(33.989% 0.0559 265.681);
+    --color-win-light:oklch(40% 0.065 265.681);
     --color-remake:oklch(34.846% 0.00004 271.152);
     
     --color-kda-3:oklch(0.897 0.123 164.65);
@@ -89,7 +91,6 @@ h2 {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    font-size: 1.1rem;
     font-weight: 500;
     
 }

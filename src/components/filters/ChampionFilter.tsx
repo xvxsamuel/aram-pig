@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from "react"
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import Image from "next/image"
-import { getChampionImageUrl } from "../lib/ddragon-client"
-import { getChampionDisplayName, getSortedChampionNames } from "../lib/champion-names"
+import { getChampionImageUrl } from "@/lib/ddragon-client"
+import { getChampionDisplayName, getSortedChampionNames } from "@/lib/champion-names"
 
 interface Props {
   value: string

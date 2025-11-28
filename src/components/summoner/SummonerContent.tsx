@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import ProfileHeader from "./ProfileHeader"
-import MatchHistoryList from "./MatchHistoryList"
+import MatchHistoryList from "@/components/match/MatchHistoryList"
 import ChampionStatsList from "./ChampionStatsList"
 import FetchMessage from "./FetchMessage"
 import UpdateErrorMessage from "./UpdateErrorMessage"
@@ -10,9 +10,9 @@ import SummonerSummaryCard from "./SummonerSummaryCard"
 import SummonerTopChampions from "./SummonerTopChampions"
 import SummonerLoadingSkeleton from "./SummonerLoadingSkeleton"
 import RecentlyPlayedWith from "./RecentlyPlayedWith"
-import type { MatchData } from "../lib/riot-api"
-import type { UpdateJobProgress } from "../types/update-jobs"
-import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
+import type { MatchData } from "@/lib/riot-api"
+import type { UpdateJobProgress } from "@/types/update-jobs"
+import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "@/lib/regions"
 
 // flash tab title to notify user when update completes
 function flashTabNotification(message: string, originalTitle: string) {

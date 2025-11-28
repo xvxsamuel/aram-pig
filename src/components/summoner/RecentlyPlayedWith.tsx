@@ -3,9 +3,9 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useMemo, useState, useEffect } from "react"
-import type { MatchData } from "../lib/riot-api"
-import { getWinrateColor } from "../lib/winrate-colors"
-import ProfileCard from "./ProfileCard"
+import type { MatchData } from "@/lib/riot-api"
+import { getWinrateColor } from "@/lib/winrate-colors"
+import ProfileCard from "@/components/ui/ProfileCard"
 
 interface Props {
   matches: MatchData[]

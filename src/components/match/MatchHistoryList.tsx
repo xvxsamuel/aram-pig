@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { MatchData } from "../lib/riot-api"
-import MatchHistoryItem from "./MatchHistoryItem"
-import ChampionFilter from "./ChampionFilter"
-import ProfileCard from "./ProfileCard"
-import LoadingSpinner from "./LoadingSpinner"
+import type { MatchData } from "@/lib/riot-api"
+import MatchHistoryItem from "@/components/match/MatchHistoryItem"
+import ChampionFilter from "@/components/filters/ChampionFilter"
+import ProfileCard from "@/components/ui/ProfileCard"
+import LoadingSpinner from "@/components/ui/LoadingSpinner"
 
 interface Props {
   matches: MatchData[]

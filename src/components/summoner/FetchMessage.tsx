@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import type { UpdateJobProgress } from "../types/update-jobs"
-import LoadingSpinner from "./LoadingSpinner"
+import type { UpdateJobProgress } from "@/types/update-jobs"
+import LoadingSpinner from "@/components/ui/LoadingSpinner"
 
 interface Props {
   job: UpdateJobProgress

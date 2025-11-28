@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import SimpleTooltip from "./SimpleTooltip"
+import SimpleTooltip from "@/components/ui/SimpleTooltip"
 
 interface Props {
   region: string
