@@ -786,9 +786,9 @@ async function processMatchesInBackground(
                     totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0
                   },
                   
-                  // filter to only finished items (legendary/boots)
+                  // store all items for display (filtering happens at stats aggregation time)
                   items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
-                    .filter(id => id > 0 && isFinishedItem(id)),
+                    .filter(id => id > 0),
                   
                   spells: [p.summoner1Id || 0, p.summoner2Id || 0],
                   
@@ -995,9 +995,9 @@ async function processMatchesInBackground(
                   totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0
                 },
                 
-                // filter to only finished items (legendary/boots) for champion stats consistency
+                // store all items for display (filtering happens at stats aggregation time)
                 items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
-                  .filter(id => id > 0 && isFinishedItem(id)),
+                  .filter(id => id > 0),
                 
                 spells: [p.summoner1Id || 0, p.summoner2Id || 0],
                 
@@ -1055,7 +1055,9 @@ async function processMatchesInBackground(
           // Only increment champion_stats for the TRACKED USER on new matches
           // Other players' stats will be updated when they view the match details (on-demand)
           // This prevents incomplete data (no timeline) from polluting stats
-          if (await isPatchAccepted(patchVersion)) {
+          // Skip remakes - they have very short durations and skew the data
+          const isRemake = match.info.participants.some((p: any) => p.gameEndedInEarlySurrender)
+          if (await isPatchAccepted(patchVersion) && !isRemake) {
             // Find the tracked user's participant
             const trackedUserIdx = match.info.participants.findIndex((p: any) => p.puuid === puuid)
             if (trackedUserIdx !== -1) {

@@ -51,7 +51,7 @@ export default function RegionSelector({
           className
         )}
       >
-        <span className="translate-x-px translate-y-px">{value.toUpperCase()}</span>
+        <span className="translate-y-px">{value.toUpperCase()}</span>
       </button>
 
       {isOpen && (

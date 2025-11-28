@@ -28,10 +28,11 @@ export default function ProfileCard({
   headerRight
 }: Props) {
   const TitleElement = onTitleClick ? 'button' : 'div'
+  const hasFlex = contentClassName.includes('flex')
   
   return (
-    <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-      <div className="px-4.5 py-2">
+    <div className={`bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden ${hasFlex ? 'flex-1 flex flex-col' : ''}`}>
+      <div className={`px-4.5 py-2 ${hasFlex ? 'flex-1 flex flex-col' : ''}`}>
         <div className="flex items-center justify-between gap-4 pb-1.5 relative z-20">
           <TitleElement 
             onClick={onTitleClick}
@@ -42,9 +43,9 @@ export default function ProfileCard({
           {headerRight}
         </div>
         {!hideDivider && (
-          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-3 -mx-4" />
+          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-3 -mx-4.5" />
         )}
-        <div className={contentClassName}>
+        <div className={`pb-1 ${contentClassName}`}>
           {children}
         </div>
       </div>

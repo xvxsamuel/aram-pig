@@ -5,6 +5,7 @@ import ProfileHeader from "./ProfileHeader"
 import MatchHistoryList from "./MatchHistoryList"
 import ChampionStatsList from "./ChampionStatsList"
 import FetchMessage from "./FetchMessage"
+import UpdateErrorMessage from "./UpdateErrorMessage"
 import SummonerSummaryCard from "./SummonerSummaryCard"
 import SummonerTopChampions from "./SummonerTopChampions"
 import SummonerLoadingSkeleton from "./SummonerLoadingSkeleton"
@@ -12,6 +13,56 @@ import RecentlyPlayedWith from "./RecentlyPlayedWith"
 import type { MatchData } from "../lib/riot-api"
 import type { UpdateJobProgress } from "../types/update-jobs"
 import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "../lib/regions"
+
+// flash tab title to notify user when update completes
+function flashTabNotification(message: string, originalTitle: string) {
+  if (document.hidden) {
+    let isFlashing = true
+    let showMessage = true
+    
+    const flashInterval = setInterval(() => {
+      if (!isFlashing) {
+        document.title = originalTitle
+        clearInterval(flashInterval)
+        return
+      }
+      document.title = showMessage ? message : originalTitle
+      showMessage = !showMessage
+    }, 1000)
+    
+    // stop flashing when tab becomes visible
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        isFlashing = false
+        document.title = originalTitle
+        document.removeEventListener('visibilitychange', handleVisibility)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    
+    // auto-stop after 30 seconds
+    setTimeout(() => {
+      isFlashing = false
+      document.title = originalTitle
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }, 30000)
+  }
+}
+
+// show browser notification (flashes taskbar on Windows)
+function showBrowserNotification(title: string, body: string) {
+  if (!('Notification' in window)) return
+  
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '/favicon/favicon-32x32.png' })
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        new Notification(title, { body, icon: '/favicon/favicon-32x32.png' })
+      }
+    })
+  }
+}
 
 interface ChampionStats {
   championName: string
@@ -134,6 +185,8 @@ export default function SummonerContent({
   const [_averagePigScore, setAveragePigScore] = useState(initialAveragePigScore)
   const [_pigScoreGames, setPigScoreGames] = useState(initialPigScoreGames)
   const [championStats, setChampionStats] = useState<ChampionStats[]>([])
+  const [notifyEnabled, setNotifyEnabled] = useState(false)
+  const [updateError, setUpdateError] = useState<{ matchesFetched?: number; totalMatches?: number } | null>(null)
 
   // preload champion stats on mount
   useEffect(() => {
@@ -283,18 +336,37 @@ export default function SummonerContent({
         if (data.job.status === 'completed' || data.job.status === 'failed') {
           console.log("Job finished, refreshing data")
           
+          const isFailed = data.job.status === 'failed'
+          
+          // notify user if they opted in (only for successful completion)
+          if (notifyEnabled && !isFailed) {
+            const originalTitle = document.title
+            flashTabNotification("Update Complete!", originalTitle)
+            if (document.hidden) {
+              showBrowserNotification("ARAM PIG", "Profile update complete!")
+            }
+          }
+          
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current)
             pollIntervalRef.current = null
           }
           
+          // capture progress before clearing job
+          const fetchedMatches = data.job.fetchedMatches
+          const totalMatches = data.job.totalMatches
+          
           // wait 1 second to show completion state, then refresh data
           setTimeout(async () => {
             const success = await refreshStats()
             setJobProgress(null)
-            // set cooldown after successful update with new matches
+            // set cooldown after update
             setCooldownUntil(new Date(Date.now() + 5 * 60 * 1000).toISOString())
-            if (success) {
+            
+            if (isFailed) {
+              // show error message with progress info
+              setUpdateError({ matchesFetched: fetchedMatches, totalMatches: totalMatches })
+            } else if (success) {
               setStatusMessage("Profile updated successfully!")
             } else {
               setStatusMessage("Failed to refresh data")
@@ -326,7 +398,7 @@ export default function SummonerContent({
       }
       console.error("Failed to poll job status:", error)
     }
-  }, [summonerData.account.puuid, refreshStats])
+  }, [summonerData.account.puuid, refreshStats, notifyEnabled])
 
   // polling interval - only start polling once job has actually started (totalMatches > 0)
   useEffect(() => {
@@ -579,10 +651,26 @@ export default function SummonerContent({
 
           <div className="">
             <div className="max-w-6xl mx-auto px-2 sm:px-8">
+              {/* show error message if update failed */}
+              {updateError && (
+                <div className="mb-4">
+                  <UpdateErrorMessage 
+                    matchesFetched={updateError.matchesFetched}
+                    totalMatches={updateError.totalMatches}
+                    onDismiss={() => setUpdateError(null)}
+                  />
+                </div>
+              )}
+              
               {/* show FetchMessage above all content during update */}
               {jobProgress && (
                 <div className="mb-4">
-                  <FetchMessage job={jobProgress} region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]} />
+                  <FetchMessage 
+                    job={jobProgress} 
+                    region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]}
+                    notifyEnabled={notifyEnabled}
+                    onNotifyChange={setNotifyEnabled}
+                  />
                 </div>
               )}
 
@@ -599,7 +687,7 @@ export default function SummonerContent({
 
               {renderedTabs.has('performance') && (
                 <div className={selectedTab === 'performance' ? '' : 'hidden'}>
-                  <div className="py-8 text-center text-gray-400">
+                  <div className="py-8 text-center text-white">
                     <p className="text-xl">Performance view coming soon</p>
                   </div>
                 </div>

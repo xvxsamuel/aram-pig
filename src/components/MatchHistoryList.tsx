@@ -82,13 +82,14 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
   )
 
   return (
-    <div className="w-full xl:flex-1 xl:min-w-0">
+    <div className="w-full xl:flex-1 xl:min-w-0 flex flex-col">
       <ProfileCard 
         title="Match History" 
         headerRight={filterDropdown}
+        contentClassName="flex-1 flex flex-col"
       >
         {filteredMatches.length === 0 ? (
-          <div className="min-h-[500px] flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center">
             <div className="text-center text-text-muted py-8">
               {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
             </div>

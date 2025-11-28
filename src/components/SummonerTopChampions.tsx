@@ -44,12 +44,12 @@ export default function SummonerTopChampions({
       title="Champions" 
       onTitleClick={() => onTabChange('champions')}
     >
-      <div className="space-y-1">
+      <div className="-mx-2 space-y-1">
           {championStats.length === 0 ? (
             // loading skeleton
             Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 py-2 animate-pulse">
-                <div className="w-10 h-10 bg-abyss-500 rounded"></div>
+              <div key={i} className="flex items-center gap-3 py-2 px-2 animate-pulse">
+                <div className="w-8 h-8 bg-abyss-500 rounded"></div>
                 <div className="flex-1">
                   <div className="h-4 w-20 bg-abyss-500 rounded mb-1"></div>
                   <div className="h-3 w-28 bg-abyss-500 rounded"></div>
@@ -65,13 +65,13 @@ export default function SummonerTopChampions({
               const winrate = (champ.wins / champ.games) * 100
               
               return (
-                <div 
+                <div
                   key={champ.championName}
-                  className="flex items-center gap-3 py-2 rounded-md -mx-1 px-1"
+                  className="flex items-center gap-3 py-2 px-2 rounded-lg"
                 >
                   <Link
                     href={`/champions/${getChampionUrlName(champ.championName, championNames)}`}
-                    className="flex items-center gap-3 hover:opacity-80 transition-opacity min-w-0 flex-1"
+                    className="flex items-center gap-3 min-w-0 flex-1 hover:brightness-75 transition-all"
                   >
                     <div className="w-8 h-8 rounded overflow-hidden bg-abyss-700 flex-shrink-0">
                       <Image
@@ -83,19 +83,19 @@ export default function SummonerTopChampions({
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-semibold tracking-wide text-white truncate transition-colors">
+                      <div className="text-sm font-medium text-white truncate">
                         {getChampionDisplayName(champ.championName, championNames)}
                       </div>
-                      <div className="text-xs truncate" style={{ color: champ.averagePigScore !== null ? getPigScoreColor(champ.averagePigScore) : 'var(--color-text-muted)' }}>
+                      <div className="text-xs" style={{ color: champ.averagePigScore !== null ? getPigScoreColor(champ.averagePigScore) : 'var(--color-text-muted)' }}>
                         {champ.averagePigScore !== null ? `${Math.round(champ.averagePigScore)} PIG` : '-'}
                       </div>
                     </div>
                   </Link>
-                  <div className="text-center flex-shrink-0 w-20">
+                  <div className="text-center flex-shrink-0 w-24">
                     <div className="text-sm font-bold" style={{ color: getKdaColor(parseFloat(kda)) }}>
                       {kda} KDA
                     </div>
-                    <div className="text-xs text-text-muted">
+                    <div className="text-xs text-text-muted whitespace-nowrap">
                       {formatStat(champ.kills / champ.games)} / {formatStat(champ.deaths / champ.games)} / {formatStat(champ.assists / champ.games)}
                     </div>
                   </div>

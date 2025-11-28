@@ -46,11 +46,18 @@ await flushAggregatedStats()  // or flushStatsBatch() alias
 
 ### stats aggregation flow
 1. `storeMatchData(batchStats=true)` extracts participant data
-2. each participant added to `StatsAggregator` via `addParticipant()`
-3. aggregator combines stats by champion+patch key in memory
-4. on flush: `getAggregatedStats()` returns pre-combined JSONB for each champion+patch
-5. `upsert_aggregated_champion_stats_batch` RPC does simple merge with existing DB data
-6. DB CPU reduced significantly (JSONB merge vs per-participant manipulation)
+2. remakes are detected via `gameEndedInEarlySurrender` - stored in DB but skipped for stats
+3. each participant added to `StatsAggregator` via `addParticipant()`
+4. aggregator combines stats by champion+patch key in memory
+5. on flush: `getAggregatedStats()` returns pre-combined JSONB for each champion+patch
+6. `upsert_aggregated_champion_stats_batch` RPC does simple merge with existing DB data
+7. DB CPU reduced significantly (JSONB merge vs per-participant manipulation)
+
+## remake handling
+remakes (gameEndedInEarlySurrender) are:
+- **stored** in `summoner_matches` so users can see them in match history
+- **excluded** from champion stats aggregation (short game duration would skew averages)
+- **excluded** from pig score calculation
 
 ## commands
 ```

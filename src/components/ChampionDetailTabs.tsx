@@ -68,7 +68,7 @@ function getRuneTree(runeId: number): { tree: typeof RUNE_TREES.precision; tier:
   return null
 }
 
-// convert ability order abbreviation to display format (e.g., "qew" -> "Q > E > W", "qwe" -> "Q > W > E")
+// "qew" -> "Q > E > W"
 function getAbilityMaxOrder(abilityOrder: string): string {
   if (!abilityOrder || abilityOrder.trim() === '') return 'Q > W > E'
   

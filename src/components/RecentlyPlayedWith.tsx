@@ -94,7 +94,7 @@ export default function RecentlyPlayedWith({ matches, currentPuuid, region, ddra
 
   return (
     <ProfileCard title="Recently played with">
-      <div className="-mx-4">
+      <div className="-mx-2 space-y-1">
         {recentPlayers.map((player) => {
             const winrate = (player.wins / player.games) * 100
             const profileUrl = `/${region}/${encodeURIComponent(player.gameName)}-${encodeURIComponent(player.tagLine)}`
@@ -104,10 +104,10 @@ export default function RecentlyPlayedWith({ matches, currentPuuid, region, ddra
               <Link 
                 key={player.puuid}
                 href={profileUrl}
-                className="flex items-center gap-3 py-1.5 px-6 hover:bg-gold-light/20 transition-colors"
+                className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gold-light/10 transition-colors"
               >
                 {/* Profile Icon */}
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-abyss-700 flex-shrink-0">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-abyss-700 flex-shrink-0">
                   <Image
                     src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/profileicon/${iconId}.png`}
                     alt={player.gameName}
@@ -117,7 +117,7 @@ export default function RecentlyPlayedWith({ matches, currentPuuid, region, ddra
                   />
                 </div>
                 
-                {/* Name and Level */}
+                {/* Name and Games */}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white truncate">
                     {player.gameName}
@@ -131,8 +131,8 @@ export default function RecentlyPlayedWith({ matches, currentPuuid, region, ddra
                 </div>
                 
                 {/* W/L Stats */}
-                <div className="text-right flex-shrink-0">
-                    <div 
+                <div className="text-right flex-shrink-0 w-16">
+                  <div 
                     className="text-sm font-bold"
                     style={{ color: getWinrateColor(winrate) }}
                   >

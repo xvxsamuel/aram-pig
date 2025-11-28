@@ -306,7 +306,7 @@ const TooltipContent = memo(({
               </div>
             ))}
           </div>
-          <div className="h-px bg-gradient-to-r from-gold-dark/70 via-gold-dark/40 to-transparent -mx-4 mb-2" />
+          <div className="h-px bg-gradient-to-r from-gold-dark/40 to-transparent -mx-4 mb-2" />
         </>
       )}
       
@@ -317,7 +317,7 @@ const TooltipContent = memo(({
             {formattedDescription}
           </div>
           {tooltipData.itemType && tooltipData.itemType !== 'other' && (
-            <div className="h-px bg-gradient-to-r from-gold-dark/70 via-gold-dark/40 to-transparent -mx-4 mb-2" />
+            <div className="h-px bg-gradient-to-r from-gold-dark/40 to-transparent -mx-4 mb-2" />
           )}
         </>
       )}

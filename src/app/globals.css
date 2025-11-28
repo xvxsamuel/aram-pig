@@ -28,11 +28,11 @@
     --color-remake:oklch(34.846% 0.00004 271.152);
     
     --color-kda-3:oklch(0.897 0.123 164.65);
-    --color-kda-3-dark:oklch(0.55 0.1 164.65);
-    --color-kda-4:oklch(81.975% 0.12539 89.607);
-    --color-kda-4-dark:oklch(0.5 0.1 89.607);
-    --color-kda-5:oklch(70.243% 0.1937 336.063);
-    --color-kda-5-dark:oklch(0.45 0.15 336.063);
+    --color-kda-3-dark:oklch(39.833% 0.09609 149.532);
+    --color-kda-4:oklch(0.7397 0.1313 300.71);
+    --color-kda-4-dark:oklch(42.207% 0.16939 286.634);
+    --color-kda-5:oklch(0.7367 0.1644 37.06);
+    --color-kda-5-dark:oklch(49.01% 0.1034 30.118);
     
     --font-family-light: var(--font-league-spartan);
     --font-family-title: var(--font-league-spartan);
@@ -92,6 +92,13 @@ h2 {
     font-size: 1.1rem;
     font-weight: 500;
     
+}
+
+h2.h2-error {
+    background: linear-gradient(to top, var(--color-negative-dark), var(--color-negative));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .nav-link h6 {

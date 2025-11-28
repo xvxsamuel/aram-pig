@@ -374,9 +374,9 @@ export async function storeMatchData(
             totalDamageShieldedOnTeammates: (p as any).totalDamageShieldedOnTeammates || 0
           },
           
-          // filter to only finished items (legendary/boots) for champion stats
+          // store all items for display (filtering happens at stats aggregation time)
           items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
-            .filter(id => id > 0 && isFinishedItem(id)),
+            .filter(id => id > 0),
           
           spells: [p.summoner1Id, p.summoner2Id],
           
@@ -446,10 +446,15 @@ export async function storeMatchData(
       }
     }
     
-    // Build stats data for all participants
+    // Check if this is a remake (any participant has gameEndedInEarlySurrender)
+    // Remakes should be stored in summoner_matches but excluded from stats aggregation
+    const isRemake = matchData.info.participants.some(p => p.gameEndedInEarlySurrender)
+    
+    // Build stats data for all participants (only if not a remake)
     const statsData: ParticipantStatsData[] = []
     
-    for (let i = 0; i < participantRows.length; i++) {
+    if (!isRemake) {
+      for (let i = 0; i < participantRows.length; i++) {
       const p = participantRows[i]
       const abilityOrder = participantAbilityOrders[i]
       const firstBuyStr = participantFirstBuys[i]
@@ -497,6 +502,7 @@ export async function storeMatchData(
         game_duration: matchData.info.gameDuration || 0,
         deaths: p.match_data?.deaths || 0
       })
+      }
     }
     
     // Only process stats for accepted patches (latest 3)
@@ -549,6 +555,8 @@ export async function storeMatchData(
         }
         console.log(`[STATS] Stored ${matchData.metadata.matchId} (${trackedRows.length} tracked, ${participantRows.length - trackedRows.length} anonymous)`)
       }
+    } else if (isRemake) {
+      console.log(`[STATS] Stored ${matchData.metadata.matchId} (remake, stats skipped)`)
     } else {
       console.log(`[STATS] Stored ${matchData.metadata.matchId} (patch ${patchVersion} skipped)`)
     }

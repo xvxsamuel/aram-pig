@@ -286,8 +286,9 @@ async function main() {
                   totalHealsOnTeammates: p.totalHealsOnTeammates || 0,
                   totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0
                 },
+                // store ALL items for display; stats filtering happens separately
                 items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
-                  .filter((id: number) => id > 0 && isFinishedItem(id)),
+                  .filter((id: number) => id > 0),
                 spells: [p.summoner1Id || 0, p.summoner2Id || 0],
                 runes: {
                   primary: {
