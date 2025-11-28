@@ -15,6 +15,10 @@ export async function GET(request: Request) {
   console.log('[CLEANUP] CRON_SECRET env var present:', !!cronSecret);
   console.log('[CLEANUP] Auth header length:', authHeader?.length);
   console.log('[CLEANUP] Expected length:', cronSecret ? `Bearer ${cronSecret}`.length : 'N/A');
+  console.log('[CLEANUP] Auth header first 10 chars:', authHeader?.substring(0, 10));
+  console.log('[CLEANUP] Expected first 17 chars:', cronSecret ? `Bearer ${cronSecret.substring(0, 10)}` : 'N/A');
+  console.log('[CLEANUP] Auth header last 5 chars:', authHeader?.slice(-5));
+  console.log('[CLEANUP] Expected last 5 chars:', cronSecret ? cronSecret.slice(-5) : 'N/A');
   
   // allow access if no CRON_SECRET is set (development) or if it matches
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {

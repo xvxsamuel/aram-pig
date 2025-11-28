@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import clsx from 'clsx'
+import { motion } from 'motion/react'
 import { ChevronDownIcon } from '@heroicons/react/24/solid'
 import type { MatchData } from '../lib/riot-api'
 import {
@@ -28,6 +29,7 @@ interface Props {
 
 export default function MatchHistoryItem({ match, puuid, region, ddragonVersion, championNames }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
 
   const participant = match.info.participants.find((p) => p.puuid === puuid)
   if (!participant) return null
@@ -47,14 +49,24 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
   const team1 = match.info.participants.filter(p => p.teamId === 100)
   const team2 = match.info.participants.filter(p => p.teamId === 200)
 
+  const showBorder = isExpanded || isHovered
+
   return (
-    <div className={clsx(
-      "group p-px transition-all",
-      isExpanded 
-        ? "bg-gradient-to-b from-gold-light to-gold-dark rounded-lg" 
-        : "bg-transparent hover:bg-gradient-to-b hover:from-gold-light hover:to-gold-dark rounded-lg"
-    )}>
-      <div className={clsx("overflow-hidden relative bg-abyss-600", isExpanded ? "rounded-lg" : "rounded-lg")}>
+    <div 
+      className="relative rounded-lg p-px"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* animated gradient border */}
+      <motion.div
+        className="absolute inset-0 rounded-lg bg-gradient-to-b from-gold-light to-gold-dark"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: showBorder ? 1 : 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+      />
+      
+      {/* content wrapper */}
+      <div className="relative rounded-lg overflow-hidden bg-abyss-600">
         <div 
           className="flex cursor-pointer"
           onClick={() => setIsExpanded(!isExpanded)}

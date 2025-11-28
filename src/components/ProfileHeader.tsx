@@ -162,7 +162,7 @@ export default function ProfileHeader({
                   transition={{
                     duration: 1.2,
                     repeat: Infinity,
-                    repeatDelay: 6,
+                    repeatDelay: 3,
                     ease: 'easeInOut',
                     times: [0, 0.2, 0.5, 0.8, 1]
                   }}
@@ -214,7 +214,7 @@ export default function ProfileHeader({
                   transition={{
                     duration: 0.9,
                     repeat: Infinity,
-                    repeatDelay: 6.3,
+                    repeatDelay: 3.3,
                     ease: 'easeInOut',
                     times: [0, 0.2, 0.5, 0.8, 1]
                   }}
