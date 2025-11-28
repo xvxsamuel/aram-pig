@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { MatchData } from "../lib/riot-api"
 import Image from "next/image"
 import Link from "next/link"
@@ -71,6 +71,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const [pigScoreBreakdown, setPigScoreBreakdown] = useState<PigScoreBreakdown | null>(null)
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
   const [_enrichError, setEnrichError] = useState<string | null>(null)
+  const enrichFetchingRef = useRef(false) // prevent double-fetch
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
   
   // check if match is within 30 days
@@ -78,7 +79,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
 
   // enrich match with timeline data and pig scores when component mounts (for recent matches)
   useEffect(() => {
-    if (!isWithin30Days || pigScoresFetched) return
+    if (!isWithin30Days || pigScoresFetched || enrichFetchingRef.current) return
     
     // check if ALL players already have pig scores (match already enriched)
     const allHavePigScores = match.info.participants.every(p => 
@@ -96,6 +97,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
       return
     }
     
+    enrichFetchingRef.current = true // prevent concurrent fetches
     setLoadingPigScores(true)
     setPigScoresFetched(true) // mark as fetched to prevent re-runs
     setEnrichError(null)

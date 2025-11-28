@@ -8,7 +8,7 @@ import { extractItemPurchases } from '../../../lib/item-purchase-history'
 import { isPatchAccepted } from '../../../lib/patch-utils'
 
 // in-memory lock to prevent concurrent processing of the same match (handles Strict Mode double-invoke)
-const processingLocks = new Map<string, Promise<Response>>()
+const processingLocks = new Map<string, Promise<{ data: any; status: number }>>()
 
 // finished items are tier 3+ items (legendaries and boots)
 import itemsData from '../../../data/items.json'
@@ -76,7 +76,8 @@ export async function POST(request: Request) {
     const existingLock = processingLocks.get(matchId)
     if (existingLock) {
       console.log(`[EnrichMatch] Already processing ${matchId}, waiting for result...`)
-      return existingLock
+      const { data, status } = await existingLock
+      return NextResponse.json(data, { status })
     }
     
     // create processing promise and store it
@@ -84,8 +85,8 @@ export async function POST(request: Request) {
     processingLocks.set(matchId, processPromise)
     
     try {
-      const result = await processPromise
-      return result
+      const { data, status } = await processPromise
+      return NextResponse.json(data, { status })
     } finally {
       // clean up lock after processing completes
       processingLocks.delete(matchId)
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
 }
 
 // actual enrichment logic separated for locking
-async function processEnrichment(matchId: string, region: string): Promise<Response> {
+async function processEnrichment(matchId: string, region: string): Promise<{ data: any; status: number }> {
   try {
     const supabase = createAdminClient()
     
@@ -112,16 +113,16 @@ async function processEnrichment(matchId: string, region: string): Promise<Respo
       .single()
     
     if (matchError || !matchRecord) {
-      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+      return { data: { error: 'Match not found' }, status: 404 }
     }
     
     // check if match is older than 30 days - no timeline available
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
     if (matchRecord.game_creation < thirtyDaysAgo) {
-      return NextResponse.json({ 
-        error: 'Match older than 30 days - timeline not available',
-        tooOld: true 
-      }, { status: 400 })
+      return { 
+        data: { error: 'Match older than 30 days - timeline not available', tooOld: true },
+        status: 400 
+      }
     }
     
     // get all participants for this match
@@ -131,7 +132,7 @@ async function processEnrichment(matchId: string, region: string): Promise<Respo
       .eq('match_id', matchId)
     
     if (participantsError || !participants || participants.length === 0) {
-      return NextResponse.json({ error: 'No participants found' }, { status: 404 })
+      return { data: { error: 'No participants found' }, status: 404 }
     }
     
     // check if already enriched (has timeline data)
@@ -149,11 +150,10 @@ async function processEnrichment(matchId: string, region: string): Promise<Respo
       for (const p of participants) {
         results[p.puuid] = p.match_data?.pigScore ?? null
       }
-      return NextResponse.json({ 
-        results, 
-        cached: true,
-        message: 'Match already enriched'
-      })
+      return { 
+        data: { results, cached: true, message: 'Match already enriched' },
+        status: 200 
+      }
     }
     
     console.log(`[EnrichMatch] Fetching timeline for ${matchId}...`)
@@ -164,14 +164,14 @@ async function processEnrichment(matchId: string, region: string): Promise<Respo
       timeline = await getMatchTimeline(matchId, region as any, 'overhead')
     } catch (err) {
       console.error(`[EnrichMatch] Failed to fetch timeline:`, err)
-      return NextResponse.json({ 
-        error: 'Failed to fetch timeline from Riot API',
-        rateLimited: true 
-      }, { status: 503 })
+      return { 
+        data: { error: 'Failed to fetch timeline from Riot API', rateLimited: true },
+        status: 503 
+      }
     }
     
     if (!timeline) {
-      return NextResponse.json({ error: 'Timeline not available' }, { status: 404 })
+      return { data: { error: 'Timeline not available' }, status: 404 }
     }
     
     // we also need the full match data to get participant stats
@@ -180,9 +180,10 @@ async function processEnrichment(matchId: string, region: string): Promise<Respo
       matchData = await getMatchById(matchId, region as any, 'overhead')
     } catch (err) {
       console.error(`[EnrichMatch] Failed to fetch match:`, err)
-      return NextResponse.json({ 
-        error: 'Failed to fetch match from Riot API' 
-      }, { status: 503 })
+      return { 
+        data: { error: 'Failed to fetch match from Riot API' },
+        status: 503 
+      }
     }
     
     const patchAccepted = await isPatchAccepted(matchRecord.patch)
@@ -356,18 +357,16 @@ async function processEnrichment(matchId: string, region: string): Promise<Respo
     
     console.log(`[EnrichMatch] Enriched match ${matchId}: ${updates.length} participants updated, ${statsUpdated} stats incremented`)
     
-    return NextResponse.json({ 
-      results, 
-      enriched: updates.length,
-      statsUpdated,
-      cached: false
-    })
+    return { 
+      data: { results, enriched: updates.length, statsUpdated, cached: false },
+      status: 200 
+    }
     
   } catch (error) {
     console.error('[EnrichMatch] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to enrich match' },
-      { status: 500 }
-    )
+    return { 
+      data: { error: 'Failed to enrich match' },
+      status: 500 
+    }
   }
 }

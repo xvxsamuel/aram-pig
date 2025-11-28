@@ -10,8 +10,15 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
   
+  // debug logging (remove after troubleshooting)
+  console.log('[CLEANUP] Auth header present:', !!authHeader);
+  console.log('[CLEANUP] CRON_SECRET env var present:', !!cronSecret);
+  console.log('[CLEANUP] Auth header length:', authHeader?.length);
+  console.log('[CLEANUP] Expected length:', cronSecret ? `Bearer ${cronSecret}`.length : 'N/A');
+  
   // allow access if no CRON_SECRET is set (development) or if it matches
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    console.log('[CLEANUP] Authorization failed - secrets do not match');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   

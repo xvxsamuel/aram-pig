@@ -1,9 +1,9 @@
 name: Cleanup Champion Stats
 
 on:
-  # run daily at 3 AM UTC
+  # run weekly on Friday at 7 AM UTC
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 7 * * 5'
   # allow manual trigger
   workflow_dispatch:
 

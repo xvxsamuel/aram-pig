@@ -1,9 +1,11 @@
 name: Match Scraper
 
 on:
-  # run every 12 hours (2x per day = ~2700 min/month with 45min runs)
+  # run 2x per night EU time (~2100 min/month with 35min runs)
+  # 04:00 UTC = 05:00 CET, 06:00 UTC = 07:00 CET
   schedule:
-    - cron: '0 */12 * * *'
+    - cron: '0 4 * * *'
+    - cron: '0 6 * * *'
   # allow manual trigger
   workflow_dispatch:
     inputs:
@@ -15,7 +17,7 @@ on:
       duration_minutes:
         description: 'How long to run the scraper (minutes)'
         required: false
-        default: '45'
+        default: '35'
         type: string
 
 env:
@@ -89,7 +91,7 @@ jobs:
 
       - name: Run scraper
         run: |
-          DURATION=${{ github.event.inputs.duration_minutes || '45' }}
+          DURATION=${{ github.event.inputs.duration_minutes || '35' }}
           echo "========================================"
           echo "Starting scraper for ${DURATION} minutes"
           echo "SCRAPER_THROTTLE=${SCRAPER_THROTTLE}"
