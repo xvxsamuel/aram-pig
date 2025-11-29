@@ -30,6 +30,7 @@ interface Props {
 export default function MatchHistoryItem({ match, puuid, region, ddragonVersion, championNames }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
 
   const participant = match.info.participants.find((p) => p.puuid === puuid)
   if (!participant) return null
@@ -67,7 +68,14 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
       <div className="relative rounded-lg overflow-hidden bg-abyss-600">
         <div 
           className="group flex cursor-pointer"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => {
+            if (isExpanded) {
+              setIsExpanded(false)
+              setSelectedTab('overview') // reset tab when closed
+            } else {
+              setIsExpanded(true)
+            }
+          }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           role="button"
@@ -85,148 +93,199 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 : "bg-loss"
           )}
         >
-          <div className="flex items-center px-4 py-2.5 min-h-[84px] gap-5">
-            {/* left side: game info, champion, summoners, runes */}
-            <div className="flex items-center gap-3 flex-shrink-0">
-              {/* game result & info */}
-              <div className="flex flex-col justify-center min-w-[68px]">
+          <div className="flex items-center justify-between px-4 py-2 min-h-[84px]">
+            {/* game result & info */}
+            <div className="flex flex-col justify-center gap-2.5 w-16 flex-shrink-0">
+              <div>
                 <div className={clsx(
                   "text-sm font-bold tracking-wide",
                   isRemake 
                     ? "text-text-muted"
-                    : isWin ? "text-accent-light" : "text-negative"
+                    : isWin ? "text-victory" : "text-defeat"
                 )}>
                   {isRemake ? "REMAKE" : isWin ? "VICTORY" : "DEFEAT"}
-                </div>
-                {participant.pigScore !== null && participant.pigScore !== undefined && (
-                  <div 
-                    className="text-sm font-semibold mt-1"
-                    style={{ color: getPigScoreColor(participant.pigScore) }}
-                  >
-                    {participant.pigScore} PIG
-                  </div>
-                )}
-                <div className="text-xs text-text-muted mt-1.5">
-                  {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, "0")}
                 </div>
                 <div className="text-xs text-text-muted">
                   {timeAgo}
                 </div>
               </div>
-
-              {/* champion icon with spells & runes */}
-              <div className="flex items-center gap-1">
-                <Link href={`/champions/${getChampionUrlName(participant.championName, championNames)}`}>
-                  <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg">
-                    <div className="relative w-12 h-12 rounded-[calc(0.5rem-1px)] overflow-hidden bg-abyss-800">
-                      <Image
-                        src={getChampionImageUrl(participant.championName, ddragonVersion)}
-                        alt={participant.championName}
-                        width={64}
-                        height={64}
-                        className="w-full h-full scale-112 object-cover"
-                        unoptimized
-                      />
-                      <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded">
-                      <div className="bg-abyss-600 rounded-[calc(0.25rem-1px)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
-                        {participant.champLevel}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-                
-                {/* summoner spells */}
-                <div className="flex flex-col gap-0.5">
-                  <Tooltip id={participant.summoner1Id} type="summoner-spell">
-                    <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
-                      <Image
-                        src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
-                        alt="Spell 1"
-                        width={24}
-                        height={24}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  </Tooltip>
-                  <Tooltip id={participant.summoner2Id} type="summoner-spell">
-                    <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
-                      <Image
-                        src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
-                        alt="Spell 2"
-                        width={24}
-                        height={24}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  </Tooltip>
-                </div>
-                
-                {/* runes */}
-                <div className="flex flex-col gap-0.5">
-                  {participant.perks?.styles?.[0]?.selections?.[0]?.perk && (
-                    <Tooltip id={participant.perks.styles[0].selections[0].perk} type="rune">
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-abyss-800 border border-gold-dark">
-                        <Image
-                          src={getRuneImageUrl(participant.perks.styles[0].selections[0].perk)}
-                          alt="Primary Rune"
-                          width={24}
-                          height={24}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    </Tooltip>
-                  )}
-                  {participant.perks?.styles?.[1]?.style && (
-                    <Tooltip id={participant.perks.styles[1].style} type="rune">
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-abyss-800 border border-gold-dark flex items-center justify-center">
-                        <Image
-                          src={getRuneStyleImageUrl(participant.perks.styles[1].style)}
-                          alt="Secondary Rune"
-                          width={18}
-                          height={18}
-                          className="w-4 h-4 object-contain"
-                          unoptimized
-                        />
-                      </div>
-                    </Tooltip>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* KDA stats */}
-            <div className="flex flex-col justify-center items-center flex-shrink-0 min-w-[65px]">
-              <div className="flex items-baseline gap-0.5">
-                <span className="text-lg font-bold text-white tabular-nums">
-                  {participant.kills}
-                </span>
-                <span className="text-text-muted text-sm">/</span>
-                <span className="text-lg font-bold text-negative tabular-nums">
-                  {participant.deaths}
-                </span>
-                <span className="text-text-muted text-sm">/</span>
-                <span className="text-lg font-bold text-white tabular-nums">
-                  {participant.assists}
-                </span>
-              </div>
-              <div 
-                className="text-xs font-semibold"
-                style={{ color: kda === 'Perfect' ? getKdaColor(99) : getKdaColor(Number(kda)) }}
-              >
-                {kda} KDA
-              </div>
               <div className="text-xs text-text-muted">
-                {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
+                {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, "0")}
               </div>
             </div>
 
-            {/* items section */}
-            <div className="flex-1 flex justify-center">
+            {/* champion icon with spells & runes */}
+            {(() => {
+              const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
+              const labels: string[] = participant.labels || []
+              const hasLabels = labels.length > 0
+              
+              return (
+                <div className={clsx(
+                  "flex gap-1 flex-shrink-0",
+                  hasLabels ? "items-end" : "items-center"
+                )}>
+                    {/* champion icon column w/ pig score */}
+                    <div className={clsx(
+                      "flex flex-col items-center w-[54px]",
+                      hasLabels ? "self-stretch" : "gap-1"
+                    )}>
+                      <Link 
+                        href={`/champions/${getChampionUrlName(participant.championName, championNames)}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg">
+                          <div className="relative w-12 h-12 rounded-[calc(0.5rem-1px)] overflow-hidden bg-abyss-800">
+                            <Image
+                              src={getChampionImageUrl(participant.championName, ddragonVersion)}
+                              alt={participant.championName}
+                              width={64}
+                              height={64}
+                              className="w-full h-full scale-112 object-cover"
+                              unoptimized
+                            />
+                            <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                          </div>
+                          <div className="absolute -bottom-0.5 -right-0.5 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
+                            <div className="bg-abyss-600 rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-normal leading-none text-white pt-px">
+                              {participant.champLevel}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                      
+                      {hasPigScore && (
+                        <div className={clsx(
+                          "flex flex-col items-center w-full",
+                          hasLabels && "mt-auto"
+                        )}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedTab('performance')
+                              setIsExpanded(true)
+                            }}
+                            className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full cursor-pointer flex"
+                          >
+                            <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
+                              <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
+                                {participant.pigScore}
+                              </span>
+                              <span className="text-white">PIG</span>
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* spells & runes */}
+                    <div className={clsx(
+                      "flex gap-1",
+                      hasLabels ? "items-end" : "items-center"
+                    )}>
+                      <div className="flex flex-col gap-0.5">
+                        <Tooltip id={participant.summoner1Id} type="summoner-spell">
+                          <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
+                            <Image
+                              src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
+                              alt="Spell 1"
+                              width={24}
+                              height={24}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        </Tooltip>
+                        <Tooltip id={participant.summoner2Id} type="summoner-spell">
+                          <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
+                            <Image
+                              src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
+                              alt="Spell 2"
+                              width={24}
+                              height={24}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        </Tooltip>
+                      </div>
+                      
+                      <div className="flex flex-col gap-0.5">
+                        {participant.perks?.styles?.[0]?.selections?.[0]?.perk && (
+                          <Tooltip id={participant.perks.styles[0].selections[0].perk} type="rune">
+                            <div className="w-6 h-6 rounded-full overflow-hidden bg-abyss-800 border border-gold-dark">
+                              <Image
+                                src={getRuneImageUrl(participant.perks.styles[0].selections[0].perk)}
+                                alt="Primary Rune"
+                                width={24}
+                                height={24}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            </div>
+                          </Tooltip>
+                        )}
+                        {participant.perks?.styles?.[1]?.style && (
+                          <Tooltip id={participant.perks.styles[1].style} type="rune">
+                            <div className="w-6 h-6 rounded-full overflow-hidden bg-abyss-800 border border-gold-dark flex items-center justify-center">
+                              <Image
+                                src={getRuneStyleImageUrl(participant.perks.styles[1].style)}
+                                alt="Secondary Rune"
+                                width={18}
+                                height={18}
+                                className="w-4 h-4 object-contain"
+                                unoptimized
+                              />
+                            </div>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {hasLabels && (
+                      <div className="flex items-end gap-0.5 self-stretch flex-wrap">
+                        {labels.map((label, idx) => (
+                          <div
+                            key={idx}
+                            className="px-1.5 py-1 bg-abyss-700 border border-gold-dark/50 rounded text-[10px] font-medium text-text-muted"
+                          >
+                            {label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+            {/* kda */}
+            <div className="flex flex-col justify-center items-center flex-shrink-0">
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-lg font-bold text-white tabular-nums">
+                    {participant.kills}
+                  </span>
+                  <span className="text-text-muted text-sm">/</span>
+                  <span className="text-lg font-bold text-negative tabular-nums">
+                    {participant.deaths}
+                  </span>
+                  <span className="text-text-muted text-sm">/</span>
+                  <span className="text-lg font-bold text-white tabular-nums">
+                    {participant.assists}
+                  </span>
+                </div>
+                <div 
+                  className="text-xs font-semibold"
+                  style={{ color: kda === 'Perfect' ? getKdaColor(99) : getKdaColor(Number(kda)) }}
+                >
+                  {kda} KDA
+                </div>
+                <div className="text-xs text-text-muted">
+                  {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
+                </div>
+            </div>
+
+            {/* items */}
+            <div className="flex-shrink-0 flex justify-center items-center">
               <div className="grid grid-cols-3 grid-rows-2 gap-0.5">
                 {[
                   participant.item0,
@@ -257,7 +316,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
             </div>
 
             {/* teams - hidden on small screens */}
-            <div className="hidden lg:flex gap-3 flex-shrink-0">
+            <div className="hidden lg:flex gap-1.5 flex-shrink-0">
               <div className="flex flex-col gap-0.5 w-24">
                 {team1.map((p, idx) => {
                   const playerName = p.riotIdGameName || p.summonerName
@@ -269,7 +328,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                     <div key={idx} className="flex items-center gap-1">
                       <div
                         className={clsx(
-                          "w-4 h-4 rounded overflow-hidden flex-shrink-0",
+                          "w-4 h-4 rounded flex-shrink-0",
                           isCurrentUser && "ring-1 ring-gold-light"
                         )}
                       >
@@ -278,21 +337,27 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                           alt={p.championName}
                           width={16}
                           height={16}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover rounded"
                           unoptimized
                         />
                       </div>
-                      <Link 
-                        href={profileUrl}
-                        onClick={(e) => e.stopPropagation()}
-                        className={clsx(
-                          "text-xs truncate flex-1 transition-colors",
-                          isCurrentUser ? "text-white font-medium" : "text-text-muted font-normal hover:text-gold-light"
-                        )}
-                        title={playerName}
-                      >
-                        {playerName}
-                      </Link>
+                      {isCurrentUser ? (
+                        <span
+                          className="text-xs truncate min-w-0 flex-1 text-white font-medium"
+                          title={playerName}
+                        >
+                          {playerName}
+                        </span>
+                      ) : (
+                        <Link 
+                          href={profileUrl}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs truncate min-w-0 flex-1 transition-colors text-text-muted font-normal hover:text-gold-light"
+                          title={playerName}
+                        >
+                          {playerName}
+                        </Link>
+                      )}
                     </div>
                   )
                 })}
@@ -309,7 +374,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                     <div key={idx} className="flex items-center gap-1">
                       <div
                         className={clsx(
-                          "w-4 h-4 rounded overflow-hidden flex-shrink-0",
+                          "w-4 h-4 rounded flex-shrink-0",
                           isCurrentUser && "ring-1 ring-gold-light"
                         )}
                       >
@@ -318,21 +383,27 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                           alt={p.championName}
                           width={16}
                           height={16}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover rounded"
                           unoptimized
                         />
                       </div>
-                      <Link 
-                        href={profileUrl}
-                        onClick={(e) => e.stopPropagation()}
-                        className={clsx(
-                          "text-xs truncate flex-1 transition-colors",
-                          isCurrentUser ? "text-white font-semibold" : "text-text-muted font-normal hover:text-gold-light"
-                        )}
-                        title={playerName}
-                      >
-                        {playerName}
-                      </Link>
+                      {isCurrentUser ? (
+                        <span
+                          className="text-xs truncate min-w-0 flex-1 text-white font-medium"
+                          title={playerName}
+                        >
+                          {playerName}
+                        </span>
+                      ) : (
+                        <Link 
+                          href={profileUrl}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs truncate min-w-0 flex-1 transition-colors text-text-muted font-normal hover:text-gold-light"
+                          title={playerName}
+                        >
+                          {playerName}
+                        </Link>
+                      )}
                     </div>
                   )
                 })}
@@ -343,13 +414,13 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
 
         {/* expand button */}
         <div className={clsx(
-          "flex items-end justify-center w-10 pb-3",
+          "flex items-end justify-center w-10 pb-2",
           isExpanded ? "rounded-tr-lg" : "rounded-r-lg",
           isRemake
-            ? "bg-[#3A3A3A]"
+            ? "bg-remake"
             : isWin 
-              ? "bg-[#28344E]" 
-              : "bg-[#59343B]"
+              ? "bg-win-light" 
+              : "bg-loss-light"
         )}>
           <div className="gold-border-group p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
             <div className="relative z-10 w-6 h-6 rounded-full bg-abyss-700 flex items-center justify-center">
@@ -373,6 +444,8 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
           region={region}
           isWin={isWin}
           isRemake={isRemake}
+          defaultTab={selectedTab}
+          onTabChange={setSelectedTab}
         />
       )}
       </div>

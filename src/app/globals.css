@@ -28,6 +28,8 @@
     --color-win:oklch(33.989% 0.0559 265.681);
     --color-win-light:oklch(40% 0.065 265.681);
     --color-remake:oklch(34.846% 0.00004 271.152);
+    --color-victory:oklch(70% 0.15 265.681);
+    --color-defeat:oklch(65% 0.18 17.952);
     
     --color-kda-3:oklch(0.897 0.123 164.65);
     --color-kda-3-dark:oklch(39.833% 0.09609 149.532);
@@ -140,4 +142,25 @@ input::placeholder {
 
 .gold-border:hover::before {
     opacity: 1;
+}
+
+/* gold border that activates on parent group hover */
+.group:hover .gold-border-group::before {
+    opacity: 1;
+}
+
+.gold-border-group {
+    position: relative;
+}
+
+.gold-border-group::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark));
+    opacity: 0;
+    filter: brightness(1.5);
+    transition: opacity 0.2s ease;
+    pointer-events: none;
 }

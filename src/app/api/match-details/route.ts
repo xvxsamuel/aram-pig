@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     if (matchData.match_data?.buildOrder && matchData.match_data?.pigScore !== null && matchData.match_data?.itemPurchases) {
       return NextResponse.json({
         build_order: matchData.match_data.buildOrder,
+        ability_order: matchData.match_data.abilityOrder || null,
         first_buy: matchData.match_data.firstBuy,
         pig_score: matchData.match_data.pigScore,
         item_timeline: matchData.match_data.itemPurchases,
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
       // return without timeline data
       return NextResponse.json({
         build_order: matchData.match_data?.buildOrder || null,
+        ability_order: matchData.match_data?.abilityOrder || null,
         first_buy: matchData.match_data?.firstBuy || null,
         pig_score: matchData.match_data?.pigScore || null,
         item_timeline: [],
@@ -140,6 +142,7 @@ export async function POST(request: Request) {
     
     return NextResponse.json({
       build_order: updatedMatchData.buildOrder,
+      ability_order: matchData.match_data?.abilityOrder || null,
       first_buy: updatedMatchData.firstBuy,
       pig_score: updatedMatchData.pigScore,
       item_timeline: updatedMatchData.itemPurchases,

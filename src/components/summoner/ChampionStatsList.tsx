@@ -187,7 +187,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
             <col className="w-[8%]" />
           </colgroup>
           <thead>
-            <tr className="text-sm text-text-muted bg-abyss-700">
+            <tr className="text-sm text-text-muted bg-abyss-700 border-b border-abyss-700">
               <th className="py-3 text-center font-normal">Rank</th>
               <th className="py-3 text-center font-normal">Champion</th>
               <th className="py-3 text-center font-normal">

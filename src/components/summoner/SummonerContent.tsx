@@ -9,8 +9,8 @@ import UpdateErrorMessage from "./UpdateErrorMessage"
 import SummonerSummaryCard from "./SummonerSummaryCard"
 import SummonerTopChampions from "./SummonerTopChampions"
 import SummonerLoadingSkeleton from "./SummonerLoadingSkeleton"
-import RecentlyPlayedWith from "./RecentlyPlayedWith"
-import type { MatchData } from "@/lib/riot-api"
+import RecentlyPlayedWithList from "./RecentlyPlayedWithList"
+import { useProfileData } from "@/hooks/useProfileData"
 import type { UpdateJobProgress } from "@/types/update-jobs"
 import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "@/lib/regions"
 
@@ -30,7 +30,6 @@ function flashTabNotification(message: string, originalTitle: string) {
       showMessage = !showMessage
     }, 1000)
     
-    // stop flashing when tab becomes visible
     const handleVisibility = () => {
       if (!document.hidden) {
         isFlashing = false
@@ -40,7 +39,6 @@ function flashTabNotification(message: string, originalTitle: string) {
     }
     document.addEventListener('visibilitychange', handleVisibility)
     
-    // auto-stop after 30 seconds
     setTimeout(() => {
       isFlashing = false
       document.title = originalTitle
@@ -49,7 +47,6 @@ function flashTabNotification(message: string, originalTitle: string) {
   }
 }
 
-// show browser notification (flashes taskbar on Windows)
 function showBrowserNotification(title: string, body: string) {
   if (!('Notification' in window)) return
   
@@ -64,75 +61,53 @@ function showBrowserNotification(title: string, body: string) {
   }
 }
 
-interface ChampionStats {
-  championName: string
-  games: number
-  wins: number
-  losses: number
-  kills: number
-  deaths: number
-  assists: number
-  totalDamage: number
-  averagePigScore: number | null
-}
-
 interface Props {
-  summonerData: any
-  matches: MatchData[]
-  wins: number
-  totalGames: number
-  totalKills: number
-  totalDeaths: number
-  totalAssists: number
-  mostPlayedChampion: string
-  longestWinStreak: number
-  totalDamage: number
-  totalGameDuration: number
-  totalDoubleKills: number
-  totalTripleKills: number
-  totalQuadraKills: number
-  totalPentaKills: number
+  summonerData: {
+    account: { puuid: string; gameName: string; tagLine: string }
+    summoner: { profileIconId: number; summonerLevel: number }
+  }
   region: string
   name: string
-  championImageUrl?: string
   profileIconUrl: string
   ddragonVersion: string
   championNames: Record<string, string>
   lastUpdated: string | null
-  averagePigScore: number | null
-  pigScoreGames: number
+  hasMatches: boolean
 }
 
-export default function SummonerContent({
+export default function SummonerContentV2({
   summonerData,
-  matches: initialMatches,
-  wins: initialWins,
-  totalGames: initialTotalGames,
-  totalKills: initialTotalKills,
-  totalDeaths: initialTotalDeaths,
-  totalAssists: initialTotalAssists,
-  mostPlayedChampion: initialMostPlayedChampion,
-  longestWinStreak: initialLongestWinStreak,
-  totalDamage: initialTotalDamage,
-  totalGameDuration: initialTotalGameDuration,
-  totalDoubleKills: initialTotalDoubleKills,
-  totalTripleKills: initialTotalTripleKills,
-  totalQuadraKills: initialTotalQuadraKills,
-  totalPentaKills: initialTotalPentaKills,
   region,
   name,
-  championImageUrl: initialChampionImageUrl,
   profileIconUrl,
   ddragonVersion,
   championNames,
   lastUpdated: initialLastUpdated,
-  averagePigScore: initialAveragePigScore,
-  pigScoreGames: initialPigScoreGames
+  hasMatches
 }: Props) {
-  // get initial tab from URL hash
+  const puuid = summonerData.account.puuid
+  
+  // unified profile data hook
+  const {
+    summary,
+    champions,
+    matches,
+    recentlyPlayedWith,
+    lastUpdated,
+    mostPlayedChampion,
+    longestWinStreak,
+    cooldownUntil,
+    loading,
+    refresh,
+    matchesAsLegacyFormat,
+    setCooldown,
+    setHasActiveJob
+  } = useProfileData({ puuid })
+  
+  // tab state
   const getTabFromHash = useCallback((): 'overview' | 'champions' | 'performance' => {
     if (typeof window === 'undefined') return 'overview'
-    const hash = window.location.hash.slice(1) // remove #
+    const hash = window.location.hash.slice(1)
     if (hash === 'champions' || hash === 'performance') return hash
     return 'overview'
   }, [])
@@ -140,16 +115,13 @@ export default function SummonerContent({
   const [selectedTab, setSelectedTab] = useState<'overview' | 'champions' | 'performance'>('overview')
   const [renderedTabs, setRenderedTabs] = useState<Set<string>>(new Set(['overview']))
   
-  // sync tab with URL hash on mount and handle browser back/forward
   useEffect(() => {
-    // set initial tab from hash
     const initialTab = getTabFromHash()
     if (initialTab !== 'overview') {
       setSelectedTab(initialTab)
       setRenderedTabs(prev => new Set([...prev, initialTab]))
     }
     
-    // handle browser back/forward
     const handlePopState = () => {
       const tab = getTabFromHash()
       setSelectedTab(tab)
@@ -159,192 +131,76 @@ export default function SummonerContent({
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [getTabFromHash])
+  
+  // update job state
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
-  const [cooldownUntil, setCooldownUntil] = useState<string | null>(null)
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  
-  // state for client-side loaded data
-  // always start loading since we fetch fresh data on mount
-  const [loading, setLoading] = useState(true)
-  const [matches, setMatches] = useState<MatchData[]>(initialMatches)
-  const [_wins, setWins] = useState(initialWins)
-  const [_totalGames, setTotalGames] = useState(initialTotalGames)
-  const [_totalKills, setTotalKills] = useState(initialTotalKills)
-  const [_totalDeaths, setTotalDeaths] = useState(initialTotalDeaths)
-  const [_totalAssists, setTotalAssists] = useState(initialTotalAssists)
-  const [mostPlayedChampion, setMostPlayedChampion] = useState(initialMostPlayedChampion)
-  const [_longestWinStreak, setLongestWinStreak] = useState(initialLongestWinStreak)
-  const [_totalDamage, setTotalDamage] = useState(initialTotalDamage)
-  const [_totalGameDuration, setTotalGameDuration] = useState(initialTotalGameDuration)
-  const [_totalDoubleKills, setTotalDoubleKills] = useState(initialTotalDoubleKills)
-  const [_totalTripleKills, setTotalTripleKills] = useState(initialTotalTripleKills)
-  const [_totalQuadraKills, setTotalQuadraKills] = useState(initialTotalQuadraKills)
-  const [_totalPentaKills, setTotalPentaKills] = useState(initialTotalPentaKills)
-  const [championImageUrl, setChampionImageUrl] = useState(initialChampionImageUrl)
-  const [lastUpdated, setLastUpdated] = useState(initialLastUpdated)
-  const [_averagePigScore, setAveragePigScore] = useState(initialAveragePigScore)
-  const [_pigScoreGames, setPigScoreGames] = useState(initialPigScoreGames)
-  const [championStats, setChampionStats] = useState<ChampionStats[]>([])
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [updateError, setUpdateError] = useState<{ matchesFetched?: number; totalMatches?: number } | null>(null)
-
-  // preload champion stats on mount
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // champion image for header
+  const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
+  
   useEffect(() => {
-    async function fetchChampionStats() {
-      try {
-        const response = await fetch(`/api/player-champion-stats?puuid=${summonerData.account.puuid}`)
-        if (response.ok) {
-          const data = await response.json()
-          setChampionStats(data)
-        }
-      } catch (error) {
-        console.error('Failed to preload champion stats:', error)
-      }
+    if (mostPlayedChampion) {
+      fetch(`https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${mostPlayedChampion}_0.jpg`)
+        .then(res => res.ok ? setChampionImageUrl(res.url) : null)
+        .catch(() => {})
     }
-    
-    fetchChampionStats()
-  }, [summonerData.account.puuid])
-
-  // save visited region to localStorage for search bar default
+  }, [mostPlayedChampion])
+  
+  // save region to localStorage
   useEffect(() => {
     localStorage.setItem('selected-region', region.toUpperCase())
   }, [region])
-
-  // reusable function to fetch fresh stats
-  const refreshStats = useCallback(async () => {
-    try {
-      console.log('refreshStats: starting fetch...')
-      const response = await fetch(`/api/summoner-stats?puuid=${summonerData.account.puuid}`)
-      console.log('refreshStats: response status:', response.status)
-      if (response.ok) {
-        const data = await response.json()
-        console.log('refreshStats: received data:', {
-          matchesCount: data.matches?.length,
-          totalGames: data.totalGames,
-          firstMatch: data.matches?.[0]?.metadata?.matchId
-        })
-        setMatches(data.matches || [])
-        console.log('refreshStats: setMatches called with', data.matches?.length, 'matches')
-        setWins(data.wins)
-        setTotalGames(data.totalGames)
-        setTotalKills(data.totalKills)
-        setTotalDeaths(data.totalDeaths)
-        setTotalAssists(data.totalAssists)
-        setMostPlayedChampion(data.mostPlayedChampion)
-        setLongestWinStreak(data.longestWinStreak)
-        setTotalDamage(data.totalDamage)
-        setTotalGameDuration(data.totalGameDuration)
-        setTotalDoubleKills(data.totalDoubleKills)
-        setTotalTripleKills(data.totalTripleKills)
-        setTotalQuadraKills(data.totalQuadraKills)
-        setTotalPentaKills(data.totalPentaKills)
-        setLastUpdated(data.lastUpdated)
-        setAveragePigScore(data.averagePigScore)
-        setPigScoreGames(data.pigScoreGames)
-        
-        // fetch champion image if we have most played champion
-        if (data.mostPlayedChampion) {
-          const imgResponse = await fetch(`https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${data.mostPlayedChampion}_0.jpg`)
-          if (imgResponse.ok) {
-            setChampionImageUrl(imgResponse.url)
-          }
-        }
-        
-        // also refresh champion stats
-        const champResponse = await fetch(`/api/player-champion-stats?puuid=${summonerData.account.puuid}`)
-        if (champResponse.ok) {
-          const champData = await champResponse.json()
-          setChampionStats(champData)
-        }
-        
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('Failed to refresh stats:', error)
-      return false
-    }
-  }, [summonerData.account.puuid])
-
-  // fetch stats on mount - page.tsx doesn't pass match data, we always need to fetch it client-side
-  useEffect(() => {
-    console.log('Mount effect - fetching stats, initialMatches:', initialMatches.length)
-    refreshStats().then((success) => {
-      console.log('Stats fetch complete, success:', success)
-      setLoading(false)
-    })
-  }, []) // only run once on mount
-
-  // determine if this is a brand new profile (never updated)
-  const isNewProfile = initialTotalGames === 0 && !initialLastUpdated
-  const [shouldAutoUpdate, setShouldAutoUpdate] = useState(isNewProfile)
-
+  
   // check for active job on mount
   useEffect(() => {
     const checkForActiveJob = async () => {
       try {
-        const statusResponse = await fetch("/api/update-status", {
+        const response = await fetch("/api/update-status", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ puuid: summonerData.account.puuid })
+          body: JSON.stringify({ puuid })
         })
-
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json()
-          
-          // update cooldown status
-          if (statusData.cooldownUntil) {
-            setCooldownUntil(statusData.cooldownUntil)
-          }
-          
-          if (statusData.hasActiveJob && statusData.job) {
-            setJobProgress(statusData.job)
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.cooldownUntil) setCooldown(data.cooldownUntil)
+          if (data.hasActiveJob && data.job) {
+            setJobProgress(data.job)
+            setHasActiveJob(true)
           }
         }
       } catch (error) {
         console.error("Failed to check job status:", error)
       }
     }
-
+    
     checkForActiveJob()
-  }, [summonerData.account.puuid])
-
-  // poll for job status
+  }, [puuid, setCooldown, setHasActiveJob])
+  
+  // poll job status
   const pollJobStatus = useCallback(async () => {
     try {
-      console.log("Polling job status for puuid:", summonerData.account.puuid)
-      
       const response = await fetch("/api/update-status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ puuid: summonerData.account.puuid })
+        body: JSON.stringify({ puuid })
       })
-
-      if (!response.ok) {
-        console.error("Polling failed:", response.status)
-        return
-      }
-
+      
+      if (!response.ok) return
+      
       const data = await response.json()
-      console.log("Poll response:", data)
-
-      // update cooldown status
-      if (data.cooldownUntil) {
-        setCooldownUntil(data.cooldownUntil)
-      }
-
-      // if we have job data (active or recently completed), update state
+      if (data.cooldownUntil) setCooldown(data.cooldownUntil)
+      
       if (data.job) {
         setJobProgress(data.job)
         
-        // if job is completed or failed, refresh data without page reload
         if (data.job.status === 'completed' || data.job.status === 'failed') {
-          console.log("Job finished, refreshing data")
-          
           const isFailed = data.job.status === 'failed'
           
-          // notify user if they opted in (only for successful completion)
           if (notifyEnabled && !isFailed) {
             const originalTitle = document.title
             flashTabNotification("Update Complete!", originalTitle)
@@ -358,19 +214,16 @@ export default function SummonerContent({
             pollIntervalRef.current = null
           }
           
-          // capture progress before clearing job
           const fetchedMatches = data.job.fetchedMatches
           const totalMatches = data.job.totalMatches
           
-          // wait 1 second to show completion state, then refresh data
           setTimeout(async () => {
-            const success = await refreshStats()
+            const success = await refresh()
             setJobProgress(null)
-            // set cooldown after update
-            setCooldownUntil(new Date(Date.now() + 5 * 60 * 1000).toISOString())
+            setHasActiveJob(false)
+            setCooldown(new Date(Date.now() + 5 * 60 * 1000).toISOString())
             
             if (isFailed) {
-              // show error message with progress info
               setUpdateError({ matchesFetched: fetchedMatches, totalMatches: totalMatches })
             } else if (success) {
               setStatusMessage("Profile updated successfully!")
@@ -379,34 +232,24 @@ export default function SummonerContent({
             }
           }, 1000)
         }
-      } else if (!data.hasActiveJob && !jobProgress) {
-        // no job exists and we weren't tracking one - nothing to do
-        return
       } else if (!data.hasActiveJob && jobProgress) {
-        // job disappeared (cleaned up) but we were tracking it - refresh
-        console.log("Job was cleaned up, refreshing data")
         setJobProgress(null)
+        setHasActiveJob(false)
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current)
           pollIntervalRef.current = null
         }
-        const success = await refreshStats()
-        // set cooldown after successful update
-        setCooldownUntil(new Date(Date.now() + 5 * 60 * 1000).toISOString())
-        if (success) {
-          setStatusMessage("Profile updated successfully!")
-        }
+        const success = await refresh()
+        setCooldown(new Date(Date.now() + 5 * 60 * 1000).toISOString())
+        if (success) setStatusMessage("Profile updated successfully!")
       }
     } catch (error: any) {
-      // ignore abort errors (happens when page refreshes during fetch)
-      if (error.name === "AbortError" || error.message?.includes("fetch")) {
-        return
-      }
+      if (error.name === "AbortError" || error.message?.includes("fetch")) return
       console.error("Failed to poll job status:", error)
     }
-  }, [summonerData.account.puuid, refreshStats, notifyEnabled])
-
-  // polling interval - only start polling once job has actually started (totalMatches > 0)
+  }, [puuid, refresh, notifyEnabled, jobProgress, setCooldown, setHasActiveJob])
+  
+  // polling interval
   useEffect(() => {
     if (!jobProgress || jobProgress.totalMatches === 0) {
       if (pollIntervalRef.current) {
@@ -415,9 +258,9 @@ export default function SummonerContent({
       }
       return
     }
-
+    
     pollIntervalRef.current = setInterval(pollJobStatus, 5000)
-
+    
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current)
@@ -425,10 +268,9 @@ export default function SummonerContent({
       }
     }
   }, [jobProgress, pollJobStatus])
-
+  
+  // handle manual update
   const handleManualUpdate = async () => {
-    
-    // set placeholder job to show ui immediately
     setJobProgress({
       jobId: "pending",
       status: "pending",
@@ -438,149 +280,129 @@ export default function SummonerContent({
       etaSeconds: 0,
       startedAt: new Date().toISOString()
     })
+    setHasActiveJob(true)
     
-    // call the update api
     const decodedName = decodeURIComponent(name)
     const summonerName = decodedName.replace("-", "#")
     const [gameName, tagLine] = summonerName.includes("#") 
       ? summonerName.split("#") 
       : [summonerName, getDefaultTag(region.toUpperCase())]
-
+    
     const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
     const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : "americas"
-
+    
     try {
       const updateResponse = await fetch("/api/update-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          region: regionalCode,
-          gameName,
-          tagLine,
-          platform: platformCode,
-        })
+        body: JSON.stringify({ region: regionalCode, gameName, tagLine, platform: platformCode })
       })
-
+      
       const result = await updateResponse.json()
       
       if (updateResponse.ok) {
-        // check if profile was recently updated (5 min cd from server)
         if (result.recentlyUpdated) {
           setJobProgress(null)
+          setHasActiveJob(false)
           setStatusMessage("Profile updated recently. Please try again later.")
           return
         }
         
-        // check if already up to date (no new matches found - no cooldown since no API calls)
         if (result.newMatches === 0) {
           setJobProgress(null)
+          setHasActiveJob(false)
           setStatusMessage("Your profile is already up to date")
           return
         }
         
-        // poll for real job data
         setTimeout(() => pollJobStatus(), 500)
       } else {
-        // handle error response from server
         setJobProgress(null)
+        setHasActiveJob(false)
         setStatusMessage(result.error || "Error updating profile")
       }
     } catch (error) {
       console.error("Update failed:", error)
       setJobProgress(null)
+      setHasActiveJob(false)
       setStatusMessage("Error updating profile")
     }
   }
-
-  // auto-trigger update for new profiles (after handleManualUpdate is defined)
+  
+  // auto-update for new profiles
+  const isNewProfile = !hasMatches && !initialLastUpdated
+  const [shouldAutoUpdate, setShouldAutoUpdate] = useState(isNewProfile)
+  
   useEffect(() => {
     if (shouldAutoUpdate && !jobProgress) {
       setShouldAutoUpdate(false)
       handleManualUpdate()
     }
   }, [shouldAutoUpdate, jobProgress])
-
-  // handle tab changes and mark tabs as rendered
+  
+  // tab change handler
   const handleTabChange = useCallback((tab: 'overview' | 'champions' | 'performance') => {
     setSelectedTab(tab)
     setRenderedTabs(prev => new Set([...prev, tab]))
     
-    // update URL hash (overview = no hash, others = #tabname)
     const newHash = tab === 'overview' ? '' : `#${tab}`
     const newUrl = window.location.pathname + window.location.search + newHash
     window.history.pushState(null, '', newUrl)
   }, [])
-
-  // calculate summary stats from champion stats
+  
+  // derived summary stats for components
   const aggregateStats = useMemo(() => {
-    if (championStats.length === 0) return null
-
-    const totalGamesAgg = championStats.reduce((sum, c) => sum + c.games, 0)
-    const totalWins = championStats.reduce((sum, c) => sum + c.wins, 0)
-    const totalKillsAgg = championStats.reduce((sum, c) => sum + c.kills, 0)
-    const totalDeathsAgg = championStats.reduce((sum, c) => sum + c.deaths, 0)
-    const totalAssistsAgg = championStats.reduce((sum, c) => sum + c.assists, 0)
-    
-    const gamesWithPigScore = championStats.filter(c => c.averagePigScore !== null)
-    const totalPigScore = gamesWithPigScore.reduce((sum, c) => {
-      return sum + (c.averagePigScore! * c.games)
-    }, 0)
-    const totalPigScoreGames = gamesWithPigScore.reduce((sum, c) => sum + c.games, 0)
-
+    if (!summary) return null
     return {
-      games: totalGamesAgg,
-      wins: totalWins,
-      losses: totalGamesAgg - totalWins,
-      kills: totalKillsAgg,
-      deaths: totalDeathsAgg,
-      assists: totalAssistsAgg,
-      averagePigScore: totalPigScoreGames > 0 ? totalPigScore / totalPigScoreGames : null
+      games: summary.totalGames,
+      wins: summary.wins,
+      losses: summary.losses,
+      kills: summary.totalKills,
+      deaths: summary.totalDeaths,
+      assists: summary.totalAssists,
+      averagePigScore: summary.averagePigScore
     }
-  }, [championStats])
-
-  const summaryKda = aggregateStats && aggregateStats.deaths > 0 
-    ? ((aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths).toFixed(2)
-    : aggregateStats ? (aggregateStats.kills + aggregateStats.assists).toFixed(2) : '0.00'
-
-  // get top champions sorted by games
+  }, [summary])
+  
+  const summaryKda = summary?.kda?.toFixed(2) || '0.00'
+  
   const topChampions = useMemo(() => {
-    return [...championStats]
-      .sort((a, b) => b.games - a.games)
-      .slice(0, 7)
-  }, [championStats])
-
-  // callback when more matches are loaded
-  const handleMoreMatchesLoaded = useCallback((newMatches: MatchData[]) => {
-    setMatches(prev => [...prev, ...newMatches])
+    return [...champions].sort((a, b) => b.games - a.games).slice(0, 7)
+  }, [champions])
+  
+  // handle more matches loaded (for legacy component compatibility)
+  const handleMoreMatchesLoaded = useCallback((newMatches: any[]) => {
+    // this is handled by MatchHistoryList internally now
   }, [])
-
-  // memoize overview content to prevent re-rendering
+  
+  const showSkeleton = loading && !jobProgress
+  
+  // overview content
   const overviewContent = useMemo(() => (
     <div className="flex flex-col xl:flex-row gap-4">
       <div className="flex flex-col gap-4 xl:w-80 w-full flex-shrink-0">
         <SummonerSummaryCard
-          championStatsLoading={championStats.length === 0}
+          championStatsLoading={champions.length === 0 && loading}
           aggregateStats={aggregateStats}
           summaryKda={summaryKda}
           onTabChange={handleTabChange}
         />
         <SummonerTopChampions
-          championStats={championStats}
+          championStats={champions}
           topChampions={topChampions}
           ddragonVersion={ddragonVersion}
           championNames={championNames}
           onTabChange={handleTabChange}
         />
-        <RecentlyPlayedWith
-          matches={matches}
-          currentPuuid={summonerData.account.puuid}
+        <RecentlyPlayedWithList
+          players={recentlyPlayedWith}
           region={region}
           ddragonVersion={ddragonVersion}
         />
       </div>
       <MatchHistoryList
-        matches={matches}
-        puuid={summonerData.account.puuid}
+        matches={matchesAsLegacyFormat}
+        puuid={puuid}
         region={region}
         ddragonVersion={ddragonVersion}
         championNames={championNames}
@@ -588,22 +410,18 @@ export default function SummonerContent({
         initialLoading={loading}
       />
     </div>
-  ), [matches, summonerData.account.puuid, region, ddragonVersion, championNames, championStats, aggregateStats, summaryKda, topChampions, handleTabChange, handleMoreMatchesLoaded, loading])
-
-  // memoize champions content
+  ), [matchesAsLegacyFormat, puuid, region, ddragonVersion, championNames, champions, aggregateStats, summaryKda, topChampions, handleTabChange, handleMoreMatchesLoaded, loading, recentlyPlayedWith])
+  
   const championsContent = useMemo(() => (
     <ChampionStatsList
-      puuid={summonerData.account.puuid}
+      puuid={puuid}
       ddragonVersion={ddragonVersion}
       championNames={championNames}
       profileIconUrl={profileIconUrl}
-      preloadedStats={championStats.length > 0 ? championStats : undefined}
+      preloadedStats={champions.length > 0 ? champions : undefined}
     />
-  ), [summonerData.account.puuid, ddragonVersion, championNames, profileIconUrl, championStats])
-
-  // show skeleton while loading (regardless of new/existing profile)
-  const showSkeleton = loading && !jobProgress
-
+  ), [puuid, ddragonVersion, championNames, profileIconUrl, champions])
+  
   return (
     <>
       {showSkeleton ? (
@@ -618,14 +436,14 @@ export default function SummonerContent({
             profileIconUrl={profileIconUrl}
             region={region}
             name={name}
-            puuid={summonerData.account.puuid}
+            puuid={puuid}
             hasActiveJob={!!jobProgress}
             onUpdateStarted={handleManualUpdate}
             lastUpdated={lastUpdated}
             loading={true}
             selectedTab={selectedTab}
             onTabChange={handleTabChange}
-            longestWinStreak={_longestWinStreak}
+            longestWinStreak={longestWinStreak}
             cooldownUntil={cooldownUntil}
             statusMessage={statusMessage}
           />
@@ -645,61 +463,56 @@ export default function SummonerContent({
             profileIconUrl={profileIconUrl}
             region={region}
             name={name}
-            puuid={summonerData.account.puuid}
+            puuid={puuid}
             hasActiveJob={!!jobProgress}
             onUpdateStarted={handleManualUpdate}
             lastUpdated={lastUpdated}
             selectedTab={selectedTab}
             onTabChange={handleTabChange}
-            longestWinStreak={_longestWinStreak}
+            longestWinStreak={longestWinStreak}
             cooldownUntil={cooldownUntil}
             statusMessage={statusMessage}
           />
 
-          <div className="">
-            <div className="max-w-6xl mx-auto px-2 sm:px-8">
-              {/* show error message if update failed */}
-              {updateError && (
-                <div className="mb-4">
-                  <UpdateErrorMessage 
-                    matchesFetched={updateError.matchesFetched}
-                    totalMatches={updateError.totalMatches}
-                    onDismiss={() => setUpdateError(null)}
-                  />
-                </div>
-              )}
-              
-              {/* show FetchMessage above all content during update */}
-              {jobProgress && (
-                <div className="mb-4">
-                  <FetchMessage 
-                    job={jobProgress} 
-                    region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]}
-                    notifyEnabled={notifyEnabled}
-                    onNotifyChange={setNotifyEnabled}
-                  />
-                </div>
-              )}
-
-              {/* keep all rendered tabs in dom, hide with css */}
-              <div className={selectedTab === 'overview' ? '' : 'hidden'}>
-                {overviewContent}
+          <div className="max-w-6xl mx-auto px-2 sm:px-8">
+            {updateError && (
+              <div className="mb-4">
+                <UpdateErrorMessage 
+                  matchesFetched={updateError.matchesFetched}
+                  totalMatches={updateError.totalMatches}
+                  onDismiss={() => setUpdateError(null)}
+                />
               </div>
+            )}
+            
+            {jobProgress && (
+              <div className="mb-4">
+                <FetchMessage 
+                  job={jobProgress} 
+                  region={PLATFORM_TO_REGIONAL[LABEL_TO_PLATFORM[region.toUpperCase()]]}
+                  notifyEnabled={notifyEnabled}
+                  onNotifyChange={setNotifyEnabled}
+                />
+              </div>
+            )}
 
-              {renderedTabs.has('champions') && (
-                <div className={selectedTab === 'champions' ? '' : 'hidden'}>
-                  {championsContent}
-                </div>
-              )}
-
-              {renderedTabs.has('performance') && (
-                <div className={selectedTab === 'performance' ? '' : 'hidden'}>
-                  <div className="py-8 text-center text-white">
-                    <p className="text-xl">Performance view coming soon</p>
-                  </div>
-                </div>
-              )}
+            <div className={selectedTab === 'overview' ? '' : 'hidden'}>
+              {overviewContent}
             </div>
+
+            {renderedTabs.has('champions') && (
+              <div className={selectedTab === 'champions' ? '' : 'hidden'}>
+                {championsContent}
+              </div>
+            )}
+
+            {renderedTabs.has('performance') && (
+              <div className={selectedTab === 'performance' ? '' : 'hidden'}>
+                <div className="py-8 text-center text-white">
+                  <p className="text-xl">Performance view coming soon</p>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

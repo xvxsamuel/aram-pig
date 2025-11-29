@@ -10,6 +10,7 @@ import { extractAbilityOrder } from '../../../lib/ability-leveling';
 import { extractPatch, getPatchFromDate, isPatchAccepted } from '../../../lib/patch-utils';
 import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../../../lib/item-purchases';
 import { extractItemPurchases, type ItemPurchaseEvent } from '../../../lib/item-purchase-history';
+import { recalculateProfileStatsForPlayers, getTrackedPlayersFromMatches } from '../../../lib/profile-stats';
 import itemsData from '../../../data/items.json';
 
 // in-memory lock to prevent concurrent processing of same profile (handles Strict Mode double-invoke)
@@ -209,19 +210,21 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
   const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
   
   // get recent matches for this user that don't have pig scores
+  // join with matches table to get game_creation and filter old matches upfront
   const { data: recentMatches, error: fetchError } = await supabase
     .from('summoner_matches')
-    .select('match_id, puuid, match_data, patch, champion_name')
+    .select('match_id, puuid, match_data, patch, champion_name, game_creation, matches!inner(game_duration, game_creation)')
     .eq('puuid', puuid)
-    .order('match_id', { ascending: false })
+    .gte('game_creation', thirtyDaysAgo)
+    .order('game_creation', { ascending: false })
     .limit(30)
   
   if (fetchError || !recentMatches) {
-    console.error('Error fetching recent matches for pig score calculation:', fetchError)
+    console.error('[UpdateProfile] Error fetching recent matches for pig score calculation:', fetchError)
     return 0
   }
   
-  // filter to matches within 30 days that are missing pig scores and not remakes
+  // filter to matches that are missing pig scores and not remakes
   const matchesNeedingPigScore = recentMatches.filter((m: any) => {
     const hasPigScore = m.match_data?.pigScore !== null && m.match_data?.pigScore !== undefined
     const isRemake = m.match_data?.isRemake === true
@@ -236,21 +239,10 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
   console.log(`[UpdateProfile] Calculating pig scores for ${matchesNeedingPigScore.length} matches...`)
   
   let calculated = 0
-  let skippedOld = 0
   let failedCalc = 0
   for (const match of matchesNeedingPigScore) {
     try {
-      // get game_creation from matches table to check if within 30 days
-      const { data: matchRecord } = await supabase
-        .from('matches')
-        .select('game_duration, game_creation')
-        .eq('match_id', match.match_id)
-        .single()
-      
-      if (!matchRecord || matchRecord.game_creation < thirtyDaysAgo) {
-        skippedOld++
-        continue // skip old matches
-      }
+      const gameDuration = match.matches?.game_duration || 0
       
       // calculate pig score with breakdown
       const breakdown = await calculatePigScoreWithBreakdown({
@@ -260,7 +252,7 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
         total_heals_on_teammates: match.match_data.stats?.totalHealsOnTeammates || 0,
         total_damage_shielded_on_teammates: match.match_data.stats?.totalDamageShieldedOnTeammates || 0,
         time_ccing_others: match.match_data.stats?.timeCCingOthers || 0,
-        game_duration: matchRecord.game_duration || 0,
+        game_duration: gameDuration,
         deaths: match.match_data.deaths || 0,
         item0: match.match_data.items?.[0] || 0,
         item1: match.match_data.items?.[1] || 0,
@@ -303,7 +295,7 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
     }
   }
   
-  console.log(`[UpdateProfile] Pig scores: ${calculated} calculated, ${skippedOld} skipped (old), ${failedCalc} failed (insufficient data)`)
+  console.log(`[UpdateProfile] Pig scores: ${calculated} calculated, ${failedCalc} failed (insufficient data)`)
   return calculated
 }
 
@@ -1156,9 +1148,37 @@ async function processMatchesInBackground(
     console.log('[UpdateProfile] Checking for missing pig scores...')
     const pigScoresCalculated = await calculateMissingPigScores(supabase, puuid)
     
+    // recalculate profile champion stats for the updating player and all other tracked players in the matches
+    console.log('[UpdateProfile] Recalculating profile champion stats...')
+    
+    // collect all participant PUUIDs from processed matches
+    const allParticipantPuuids: string[] = []
+    for (const matchId of processedMatches) {
+      // fetch participant PUUIDs from summoner_matches for this match
+      const { data: participants } = await supabase
+        .from('summoner_matches')
+        .select('puuid')
+        .eq('match_id', matchId)
+      
+      if (participants) {
+        allParticipantPuuids.push(...participants.map(p => p.puuid))
+      }
+    }
+    
+    // find which of these are tracked players (exist in summoners table)
+    const trackedPlayers = await getTrackedPlayersFromMatches(allParticipantPuuids)
+    
+    // always include the updating player
+    if (!trackedPlayers.includes(puuid)) {
+      trackedPlayers.push(puuid)
+    }
+    
+    // recalculate stats for all tracked players
+    await recalculateProfileStatsForPlayers(trackedPlayers)
+    
     // mark job as completed
     await completeJob(supabase, jobId);
-    console.log(`[UpdateProfile] Job ${jobId} completed - fetched ${fetchedMatches} matches, calculated ${pigScoresCalculated} pig scores`)
+    console.log(`[UpdateProfile] Job ${jobId} completed - fetched ${fetchedMatches} matches, calculated ${pigScoresCalculated} pig scores, updated ${trackedPlayers.length} player profiles`)
   } catch (error: any) {
     console.error('[UpdateProfile] Background processing error:', error);
     await failJob(supabase, jobId, error.message || 'unknown error');

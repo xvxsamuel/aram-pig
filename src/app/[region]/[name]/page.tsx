@@ -181,7 +181,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   const championNames = await fetchChampionNames(ddragonVersion)
   const profileIconUrl = summonerData ? await getProfileIconUrl(summonerData.summoner.profileIconId) : ''
 
-  // fetch last_updated status to determine if this is a new profile
+  // fetch last_updated and check if has matches for new profile detection
   let lastUpdated: string | null = null
   let hasMatches = false
   if (summonerData) {
@@ -246,29 +246,13 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
         {summonerData && (
           <SummonerContent
             summonerData={summonerData}
-            matches={[]}
-            wins={0}
-            totalGames={hasMatches ? 1 : 0}
-            totalKills={0}
-            totalDeaths={0}
-            totalAssists={0}
-            mostPlayedChampion=""
-            longestWinStreak={0}
-            totalDamage={0}
-            totalGameDuration={0}
-            totalDoubleKills={0}
-            totalTripleKills={0}
-            totalQuadraKills={0}
-            totalPentaKills={0}
             region={region}
             name={name}
-            championImageUrl={undefined}
             profileIconUrl={profileIconUrl}
             ddragonVersion={ddragonVersion}
             championNames={championNames}
             lastUpdated={lastUpdated}
-            averagePigScore={null}
-            pigScoreGames={0}
+            hasMatches={hasMatches}
           />
         )}
       </div>

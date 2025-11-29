@@ -58,7 +58,7 @@ export default function SummonerLoadingSkeleton() {
       {/* Match History with spinner */}
       <div className="w-full xl:flex-1 xl:min-w-0 flex flex-col">
         <ProfileCard 
-          title="Match History" 
+          title="ARAM History" 
           contentClassName="flex-1 flex flex-col"
           headerRight={
             <div className="h-7 w-48 bg-abyss-500 rounded-xl animate-pulse"></div>

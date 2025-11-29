@@ -19,6 +19,8 @@ interface Props {
   region: string
   isWin: boolean
   isRemake: boolean
+  defaultTab?: 'overview' | 'build' | 'performance'
+  onTabChange?: (tab: 'overview' | 'build' | 'performance') => void
 }
 
 interface ItemTimelineEvent {
@@ -30,6 +32,7 @@ interface ItemTimelineEvent {
 interface ParticipantDetails {
   puuid: string
   build_order: string | null
+  ability_order: string | null
   first_buy: string | null
   pig_score: number | null
   item_timeline: ItemTimelineEvent[]
@@ -63,8 +66,19 @@ interface PigScoreBreakdown {
   patch: string
 }
 
-export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin: _isWin, isRemake: _isRemake }: Props) {
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
+export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin: _isWin, isRemake: _isRemake, defaultTab = 'overview', onTabChange }: Props) {
+  const [selectedTab, setSelectedTabState] = useState<'overview' | 'build' | 'performance'>(defaultTab)
+  
+  // sync tab when parent changes defaultTab (e.g., clicking PIG button when already expanded)
+  useEffect(() => {
+    setSelectedTabState(defaultTab)
+  }, [defaultTab])
+  
+  // helper to update tab and notify parent
+  const setSelectedTab = (tab: 'overview' | 'build' | 'performance') => {
+    setSelectedTabState(tab)
+    onTabChange?.(tab)
+  }
   const [participantDetails, setParticipantDetails] = useState<Map<string, ParticipantDetails>>(new Map())
   const [pigScores, setPigScores] = useState<Record<string, number | null>>({})
   const [loadingPigScores, setLoadingPigScores] = useState(false)
@@ -189,7 +203,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
     (pigScores[p.puuid] ?? p.pigScore) !== null && (pigScores[p.puuid] ?? p.pigScore) !== undefined
   )
   
-  // Check if ALL participants have pig scores (for MVP/ACE display)
+  // Check if ALL participants have pig scores (for MOG/TRY display)
   const allHavePigScores = allParticipants.every(p => {
     const score = pigScores[p.puuid] ?? p.pigScore
     return score !== null && score !== undefined
@@ -216,7 +230,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
     const rankIndex = sortedByScore.findIndex(p => p.puuid === puuid)
     const rank = rankIndex + 1
     
-    // Only show MVP/ACE if all players have pig scores
+    // Only show MOG/TRY if all players have pig scores
     let badge = null
     if (allHavePigScores && score !== null) {
       const winningTeamId = allParticipants.find(p => p.win)?.teamId
@@ -230,8 +244,8 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
       })
       
       if (highestInTeam.puuid === puuid) {
-          if (isWinningTeam) badge = "MVP"
-          else badge = "ACE"
+          if (isWinningTeam) badge = "MOG"
+          else badge = "TRY"
       }
     }
     
@@ -247,6 +261,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
     setParticipantDetails(prev => new Map(prev).set(puuid, {
       puuid,
       build_order: null,
+      ability_order: null,
       first_buy: null,
       pig_score: null,
       item_timeline: [],
@@ -269,6 +284,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         setParticipantDetails(prev => new Map(prev).set(puuid, {
           puuid,
           build_order: data.build_order,
+          ability_order: data.ability_order,
           first_buy: data.first_buy,
           pig_score: data.pig_score,
           item_timeline: data.item_timeline || [],
@@ -280,6 +296,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
       setParticipantDetails(prev => new Map(prev).set(puuid, {
         puuid,
         build_order: null,
+        ability_order: null,
         first_buy: null,
         pig_score: null,
         item_timeline: [],
@@ -302,7 +319,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
     const playerTag = p.riotIdTagline || ""
     const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
     
-    const { badge, score } = getRankInfo(p.puuid, p.teamId)
+    const { rank, badge, score } = getRankInfo(p.puuid, p.teamId)
     
     const damageDealtPct = maxDamageDealt > 0 ? (p.totalDamageDealtToChampions / maxDamageDealt) * 100 : 0
 
@@ -310,7 +327,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
       <tr 
         key={p.puuid} 
         className={clsx(
-          "border-b border-abyss-500/30 last:border-b-0",
+          "border-b border-abyss-900/25 last:border-b-0",
           isWinningTeam 
             ? (isCurrentPlayer ? "bg-win-light" : "bg-win") 
             : (isCurrentPlayer ? "bg-loss-light" : "bg-loss")
@@ -336,52 +353,62 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                 {p.champLevel}
               </div>
             </Link>
-            
-            <div className="flex flex-col gap-0.5">
-              <div className="flex gap-0.5">
-                <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
-                  <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" />
+            <div className="flex flex-row gap-3">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex gap-0.5">
+                  <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
+                    <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" />
+                  </div>
+                  <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
+                    <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="" width={14} height={14} className="w-full h-full" />
+                  </div>
                 </div>
-                <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
-                  <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="" width={14} height={14} className="w-full h-full" />
+                <div className="flex gap-0.5">
+                  <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
+                    <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" />
+                  </div>
+                  <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
+                    <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="" width={14} height={14} className="w-full h-full p-0.5" />
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-0.5">
-                <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
-                  <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" />
-                </div>
-                <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
-                  <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="" width={14} height={14} className="w-full h-full p-0.5" />
-                </div>
+              <div className="gap-1">
+                {isCurrentPlayer ? (
+                  <span className="text-xs font-medium text-white truncate">
+                    {playerName}
+                  </span>
+                ) : (
+                  <Link
+                    href={profileUrl}
+                    className="text-xs font-medium truncate transition-colors text-text-secondary hover:text-gold-light"
+                  >
+                    {playerName}
+                  </Link>
+                )}
               </div>
             </div>
-
-            <Link 
-              href={profileUrl}
-              className={clsx(
-                "text-xs font-medium truncate transition-colors",
-                isCurrentPlayer ? "text-white" : "text-text-secondary hover:text-gold-light"
-              )}
-            >
-              {playerName}
-            </Link>
           </div>
         </td>
 
         {/* PIG Score */}
         {hasPigScores && (
-          <td className="py-1.5 text-center">
+          <td className="py-1.25 text-center">
             {score !== null ? (
               <div className="flex flex-col items-center">
                 <span 
-                  className="text-xs font-bold tabular-nums"
+                  className="text-sm font-bold tabular-nums"
                   style={{ color: getPigScoreColor(score) }}
                 >
                   {Math.round(score)}
                 </span>
-                {badge && (
-                  <span className="text-[9px] text-text-muted">{badge}</span>
-                )}
+                <span className={clsx(
+                  "text-[10px]",
+                  badge === "MOG" ? "text-gold-light font-base" : 
+                  badge === "TRY" ? "text-gold-light font-base" : 
+                  "text-text-muted"
+                )}>
+                  {badge || `#${rank}`}
+                </span>
               </div>
             ) : loadingPigScores ? (
               <div className="w-3 h-3 mx-auto border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light" />
@@ -393,10 +420,12 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
 
         {/* KDA */}
         <td className="py-1.5 text-center">
-          <div className="text-xs text-white tabular-nums whitespace-nowrap">
-            {p.kills} / <span className="text-negative">{p.deaths}</span> / {p.assists}
+          <div className="flex flex-col items-center">
+            <div className="text-xs tabular-nums whitespace-nowrap">
+              {p.kills} <span className="text-text-muted">/</span> <span className="text-white">{p.deaths}</span> <span className="text-text-muted">/</span> {p.assists}
+            </div>
             <span 
-              className="ml-1 font-semibold"
+              className="text-xs font-semibold whitespace-nowrap"
               style={{ color: kda === "Perfect" ? getKdaColor(99) : getKdaColor(Number(kda)) }}
             >
               {kda}
@@ -406,9 +435,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
 
         {/* Damage */}
         <td className="py-1.5 text-center">
-          <div className="flex flex-col items-center gap-0.5">
+          <div className="flex flex-col items-center gap-1">
             <span className="text-xs text-white tabular-nums">{formatDamage(p.totalDamageDealtToChampions)}</span>
-            <div className="w-12 h-1 bg-abyss-800 rounded-full overflow-hidden">
+            <div className="w-12 h-1.5 bg-abyss-800/75 rounded-sm overflow-hidden">
               <div 
                 className="h-full bg-negative rounded-full" 
                 style={{ width: `${damageDealtPct}%` }}
@@ -524,7 +553,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     <col className="w-[28%]" />
                   </colgroup>
                   <thead>
-                    <tr className="text-[10px] text-text-muted border-b border-abyss-500/30 bg-abyss-800/60">
+                    <tr className="text-[10px] text-text-muted border-b border-abyss-700 bg-abyss-700">
                       <th className="py-1.5 pl-3 text-left font-normal">
                         <span className={clsx(
                           "text-sm font-semibold",
@@ -552,71 +581,93 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           <div className="p-4 space-y-4">
             {currentPlayer && (
               <>
-                {/* item Timeline */}
+                {/* Item Builds - grouped by time */}
                 <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
-                  <h3 className="text-sm font-semibold text-white mb-3">Item Timeline</h3>
+                  <h3 className="text-xs font-medium text-text-muted mb-3">Item Builds</h3>
                   {(() => {
                     const details = participantDetails.get(currentPlayer.puuid)
                     if (details?.loading) {
                       return (
                         <div className="flex items-center gap-2 text-xs text-text-muted">
                           <div className="w-4 h-4 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
-                          Loading timeline...
+                          Loading...
                         </div>
                       )
                     }
-                    if (!details?.item_timeline || details.item_timeline.length === 0) {
+                    
+                    // group purchases by time intervals (2-3 min windows)
+                    const purchases = (details?.item_timeline || []).filter(e => e.type === 'ITEM_PURCHASED')
+                    
+                    if (purchases.length === 0) {
+                      // fallback: show final items
                       return (
-                        <div className="flex gap-2 items-center flex-wrap">
+                        <div className="flex gap-1.5 items-center flex-wrap">
                           {[currentPlayer.item0, currentPlayer.item1, currentPlayer.item2, currentPlayer.item3, currentPlayer.item4, currentPlayer.item5]
                             .filter(itemId => itemId > 0)
                             .map((itemId, idx) => (
-                              <div key={idx} className="relative group">
-                                <div className="w-11 h-11 rounded border border-gold-dark overflow-hidden bg-abyss-800">
+                              <Tooltip key={idx} id={itemId} type="item">
+                                <div className="w-9 h-9 rounded border border-gold-dark overflow-hidden bg-abyss-800">
                                   <Image
                                     src={getItemImageUrl(itemId, ddragonVersion)}
                                     alt={`Item ${itemId}`}
-                                    width={44}
-                                    height={44}
+                                    width={36}
+                                    height={36}
                                     className="w-full h-full object-cover"
+                                    unoptimized
                                   />
                                 </div>
-                              </div>
+                              </Tooltip>
                             ))}
                         </div>
                       )
                     }
                     
-                    const formatTime = (ms: number) => {
-                      const minutes = Math.floor(ms / 60000)
-                      const seconds = Math.floor((ms % 60000) / 1000)
-                      return `${minutes}:${seconds.toString().padStart(2, '0')}`
+                    // group items by 2-minute intervals
+                    const groups: { time: number; items: number[] }[] = []
+                    let currentGroup: { time: number; items: number[] } | null = null
+                    const INTERVAL = 2 * 60 * 1000 // 2 minutes
+                    
+                    for (const purchase of purchases) {
+                      if (!currentGroup || purchase.timestamp - currentGroup.time > INTERVAL) {
+                        if (currentGroup) groups.push(currentGroup)
+                        currentGroup = { time: purchase.timestamp, items: [purchase.itemId] }
+                      } else {
+                        currentGroup.items.push(purchase.itemId)
+                      }
                     }
+                    if (currentGroup) groups.push(currentGroup)
+                    
+                    const formatMin = (ms: number) => `${Math.floor(ms / 60000)} min`
                     
                     return (
-                      <div className="space-y-1.5 max-h-80 overflow-y-auto pr-2">
-                        {details.item_timeline.map((event, idx) => (
-                          <div key={idx} className="flex items-center gap-3 py-1 px-2 rounded hover:bg-white/5 transition-colors">
-                            <span className="text-xs text-text-muted font-mono w-10 tabular-nums">{formatTime(event.timestamp)}</span>
-                            <div className="w-7 h-7 rounded border border-gold-dark overflow-hidden bg-abyss-800">
-                              <Image
-                                src={getItemImageUrl(event.itemId, ddragonVersion)}
-                                alt={`Item ${event.itemId}`}
-                                width={28}
-                                height={28}
-                                className="w-full h-full object-cover"
-                              />
+                      <div className="flex items-start gap-2 overflow-x-auto pb-2">
+                        {groups.map((group, gIdx) => (
+                          <div key={gIdx} className="flex items-center gap-2">
+                            {gIdx > 0 && (
+                              <span className="text-text-muted text-lg">&gt;</span>
+                            )}
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="flex flex-col gap-0.5 p-1.5 bg-abyss-800/50 rounded border border-gold-dark/30">
+                                {group.items.slice(0, 4).map((itemId, iIdx) => (
+                                  <Tooltip key={iIdx} id={itemId} type="item">
+                                    <div className="w-8 h-8 rounded border border-gold-dark overflow-hidden bg-abyss-800">
+                                      <Image
+                                        src={getItemImageUrl(itemId, ddragonVersion)}
+                                        alt={`Item ${itemId}`}
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                        unoptimized
+                                      />
+                                    </div>
+                                  </Tooltip>
+                                ))}
+                                {group.items.length > 4 && (
+                                  <div className="text-[10px] text-text-muted text-center">+{group.items.length - 4}</div>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-text-muted">{formatMin(group.time)}</span>
                             </div>
-                            <span className={clsx(
-                              "text-xs font-medium",
-                              event.type === 'ITEM_PURCHASED' && "text-accent-light",
-                              event.type === 'ITEM_SOLD' && "text-negative",
-                              event.type === 'ITEM_UNDO' && "text-gold-light"
-                            )}>
-                              {event.type === 'ITEM_PURCHASED' && 'Purchased'}
-                              {event.type === 'ITEM_SOLD' && 'Sold'}
-                              {event.type === 'ITEM_UNDO' && 'Undo'}
-                            </span>
                           </div>
                         ))}
                       </div>
@@ -624,84 +675,220 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   })()}
                 </div>
 
-                {/* runes */}
+                {/* Skill Order */}
                 <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
-                  <h3 className="text-sm font-semibold text-white mb-3">Runes</h3>
+                  <h3 className="text-xs font-medium text-text-muted mb-3">Skill Order</h3>
+                  {(() => {
+                    const details = participantDetails.get(currentPlayer.puuid)
+                    const abilityOrder = details?.ability_order
+                    
+                    if (details?.loading) {
+                      return (
+                        <div className="flex items-center gap-2 text-xs text-text-muted">
+                          <div className="w-4 h-4 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
+                          Loading...
+                        </div>
+                      )
+                    }
+                    
+                    if (!abilityOrder) {
+                      return <span className="text-xs text-text-muted">No skill data available</span>
+                    }
+                    
+                    const abilities = abilityOrder.split(' ')
+                    
+                    // determine skill max order (Q, W, E first maxed)
+                    const counts = { Q: 0, W: 0, E: 0 }
+                    const maxOrder: string[] = []
+                    for (const ability of abilities) {
+                      if (ability === 'R') continue
+                      if (ability in counts) {
+                        counts[ability as keyof typeof counts]++
+                        // maxed at 5 points
+                        if (counts[ability as keyof typeof counts] === 5 && !maxOrder.includes(ability)) {
+                          maxOrder.push(ability)
+                        }
+                      }
+                    }
+                    // add any abilities not yet maxed (in order of most points)
+                    const remaining = ['Q', 'W', 'E'].filter(a => !maxOrder.includes(a))
+                    remaining.sort((a, b) => counts[b as keyof typeof counts] - counts[a as keyof typeof counts])
+                    maxOrder.push(...remaining)
+                    
+                    const abilityTextColors: Record<string, string> = {
+                      Q: 'text-kda-3',
+                      W: 'text-kda-4',
+                      E: 'text-kda-5',
+                    }
+                    
+                    return (
+                      <div className="space-y-3">
+                        {/* Max order display */}
+                        <div className="flex items-center gap-2">
+                          {maxOrder.map((ability, idx) => (
+                            <div key={ability} className="flex items-center gap-1.5">
+                              {idx > 0 && <span className="text-text-muted text-sm">&gt;</span>}
+                              <div className={clsx(
+                                "w-7 h-7 rounded border bg-abyss-800 flex items-center justify-center text-xs font-bold",
+                                ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
+                                abilityTextColors[ability]
+                              )}>
+                                {ability === 'R' ? <h2 className="text-xs">{ability}</h2> : ability}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* full sequence */}
+                        <div className="flex flex-wrap gap-1">
+                          {abilities.map((ability, idx) => (
+                            <div 
+                              key={idx}
+                              className={clsx(
+                                "w-6 h-6 rounded border bg-abyss-800 text-[12px] font-bold flex items-center justify-center",
+                                ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
+                                abilityTextColors[ability]
+                              )}
+                            >
+                              {ability === 'R' ? <h2 className="text-[12px]">{ability}</h2> : ability}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                {/* Runes */}
+                <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
+                  <h3 className="text-xs font-medium text-text-muted mb-3">Runes</h3>
                   <div className="flex gap-8">
-                    {/* primary Tree */}
-                    <div className="flex-1">
-                      <div className="text-xs font-medium text-gold-light mb-2">Primary</div>
-                      <div className="flex gap-2">
-                        {[currentPlayer.perks?.styles[0]?.selections[0]?.perk,
-                          currentPlayer.perks?.styles[0]?.selections[1]?.perk,
-                          currentPlayer.perks?.styles[0]?.selections[2]?.perk,
-                          currentPlayer.perks?.styles[0]?.selections[3]?.perk]
-                          .filter(Boolean)
-                          .map((runeId, idx) => {
-                            const runeInfo = (runesData as Record<string, any>)[String(runeId)]
-                            const runeIcon = runeInfo?.icon
-                            return (
-                              <Tooltip key={idx} id={runeId!} type="rune">
-                                <div className={clsx(
-                                  "w-10 h-10 rounded-full overflow-hidden border transition-colors",
-                                  idx === 0 ? "border-gold-light bg-gold-dark/30 w-12 h-12" : "border-gold-dark bg-abyss-800"
-                                )}>
-                                  {runeIcon && (
-                                    <Image
-                                      src={`https://ddragon.leagueoflegends.com/cdn/img/${runeIcon}`}
-                                      alt="Rune"
-                                      width={48}
-                                      height={48}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  )}
+                    {/* Primary Tree */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        {(() => {
+                          const treeId = currentPlayer.perks?.styles[0]?.style
+                          const treeInfo = treeId ? (runesData as Record<string, any>)[String(treeId)] : null
+                          return (
+                            <>
+                              {treeInfo?.icon && (
+                                <div className="w-6 h-6 rounded-full overflow-hidden">
+                                  <Image
+                                    src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
+                                    alt={treeInfo.name || 'Primary'}
+                                    width={24}
+                                    height={24}
+                                    className="w-full h-full object-cover"
+                                    unoptimized
+                                  />
                                 </div>
-                              </Tooltip>
-                            )
-                          })}
+                              )}
+                              <span className="text-[10px] text-gold-light font-medium">{treeInfo?.name || 'Primary'}</span>
+                            </>
+                          )
+                        })()}
+                      </div>
+                      <div className="flex gap-2">
+                        {/* Keystone */}
+                        {(() => {
+                          const runeId = currentPlayer.perks?.styles[0]?.selections[0]?.perk
+                          const runeInfo = runeId ? (runesData as Record<string, any>)[String(runeId)] : null
+                          return runeInfo?.icon ? (
+                            <Tooltip id={runeId!} type="rune">
+                              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-gold-light bg-abyss-800">
+                                <Image
+                                  src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
+                                  alt={runeInfo.name || 'Keystone'}
+                                  width={44}
+                                  height={44}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              </div>
+                            </Tooltip>
+                          ) : null
+                        })()}
+                        {/* Other primary runes */}
+                        {[1, 2, 3].map(idx => {
+                          const runeId = currentPlayer.perks?.styles[0]?.selections[idx]?.perk
+                          const runeInfo = runeId ? (runesData as Record<string, any>)[String(runeId)] : null
+                          return runeInfo?.icon ? (
+                            <Tooltip key={idx} id={runeId!} type="rune">
+                              <div className="w-8 h-8 rounded-full overflow-hidden border border-gold-dark bg-abyss-800">
+                                <Image
+                                  src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
+                                  alt={runeInfo.name || 'Rune'}
+                                  width={32}
+                                  height={32}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              </div>
+                            </Tooltip>
+                          ) : null
+                        })}
                       </div>
                     </div>
-
+                    
                     {/* Secondary Tree */}
                     <div>
-                      <div className="text-xs font-medium text-text-muted mb-2">Secondary</div>
-                      <div className="flex gap-2">
-                        {[currentPlayer.perks?.styles[1]?.selections[0]?.perk,
-                          currentPlayer.perks?.styles[1]?.selections[1]?.perk]
-                          .filter(Boolean)
-                          .map((runeId, idx) => {
-                            const runeInfo = (runesData as Record<string, any>)[String(runeId)]
-                            const runeIcon = runeInfo?.icon
-                            return (
-                              <Tooltip key={idx} id={runeId!} type="rune">
-                                <div className="w-9 h-9 rounded-full overflow-hidden border border-gold-dark bg-abyss-800">
-                                  {runeIcon && (
-                                    <Image
-                                      src={`https://ddragon.leagueoflegends.com/cdn/img/${runeIcon}`}
-                                      alt="Rune"
-                                      width={36}
-                                      height={36}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  )}
+                      <div className="flex items-center gap-2 mb-2">
+                        {(() => {
+                          const treeId = currentPlayer.perks?.styles[1]?.style
+                          const treeInfo = treeId ? (runesData as Record<string, any>)[String(treeId)] : null
+                          return (
+                            <>
+                              {treeInfo?.icon && (
+                                <div className="w-6 h-6 rounded-full overflow-hidden">
+                                  <Image
+                                    src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
+                                    alt={treeInfo.name || 'Secondary'}
+                                    width={24}
+                                    height={24}
+                                    className="w-full h-full object-cover"
+                                    unoptimized
+                                  />
                                 </div>
-                              </Tooltip>
-                            )
-                          })}
+                              )}
+                              <span className="text-[10px] text-text-muted font-medium">{treeInfo?.name || 'Secondary'}</span>
+                            </>
+                          )
+                        })()}
+                      </div>
+                      <div className="flex gap-2">
+                        {[0, 1].map(idx => {
+                          const runeId = currentPlayer.perks?.styles[1]?.selections[idx]?.perk
+                          const runeInfo = runeId ? (runesData as Record<string, any>)[String(runeId)] : null
+                          return runeInfo?.icon ? (
+                            <Tooltip key={idx} id={runeId!} type="rune">
+                              <div className="w-8 h-8 rounded-full overflow-hidden border border-gold-dark bg-abyss-800">
+                                <Image
+                                  src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
+                                  alt={runeInfo.name || 'Rune'}
+                                  width={32}
+                                  height={32}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              </div>
+                            </Tooltip>
+                          ) : null
+                        })}
                       </div>
                     </div>
-
+                    
                     {/* Stat Shards */}
                     <div>
-                      <div className="text-xs font-medium text-text-muted mb-2">Shards</div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] text-text-muted font-medium">Shards</span>
+                      </div>
                       <div className="flex gap-1.5">
                         {[currentPlayer.perks?.statPerks?.offense,
                           currentPlayer.perks?.statPerks?.flex,
                           currentPlayer.perks?.statPerks?.defense]
-                          .filter(Boolean)
                           .map((shardId, idx) => (
-                            <div key={idx} className="w-7 h-7 rounded-full bg-abyss-800 border border-gold-dark flex items-center justify-center">
-                              <span className="text-[10px] text-text-muted font-bold">+</span>
+                            <div key={idx} className="w-6 h-6 rounded-full bg-abyss-800 border border-gold-dark/50 flex items-center justify-center">
+                              <span className="text-[9px] text-text-muted font-medium">+</span>
                             </div>
                           ))}
                       </div>

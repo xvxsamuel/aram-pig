@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     let champions: any[] = []
     let totalCount = 0
     
-    // Only support patch-based filtering with new JSONB structure
+    // patch-based filtering w JSONB structure
     if (filter === 'patch' && patch) {
       // Get actual match count for this patch
       const { count: matchCount } = await supabase
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         .select('*', { count: 'exact', head: true })
         .eq('patch', patch)
       
-      // Fetch champions sorted by winrate in database
+      // fetch champions sorted by winrate in db
       const { data, error, count } = await supabase
         .from('champion_stats')
         .select('champion_name, games, wins, last_updated', { count: 'exact' })
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       
       totalCount = count || 0
       
-      // Transform data and calculate winrate on client
+      // calculate winrate on client
       champions = (data || []).map(row => {
         const winrate = row.games > 0 ? (row.wins / row.games) * 100 : 0
         
@@ -60,10 +60,10 @@ export async function GET(request: NextRequest) {
         }
       })
       
-      // Sort by winrate
+      // sort by winrate (just in case)
       champions.sort((a, b) => parseFloat(b.overall_winrate) - parseFloat(a.overall_winrate))
       
-      // Add total matches to response
+      // add total matches to response
       return NextResponse.json({
         champions,
         total: totalCount,
@@ -71,7 +71,6 @@ export async function GET(request: NextRequest) {
         hasMore: offset + limit < totalCount
       })
     } else {
-      // Time-based filters not supported with JSONB structure
       return NextResponse.json({
         champions: [],
         total: 0,

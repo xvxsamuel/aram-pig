@@ -86,7 +86,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
   return (
     <div className="w-full xl:flex-1 xl:min-w-0 flex flex-col">
       <ProfileCard 
-        title="Match History" 
+        title="ARAM History" 
         headerRight={filterDropdown}
         contentClassName="flex-1 flex flex-col"
       >

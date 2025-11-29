@@ -278,6 +278,8 @@ export interface ParticipantData {
   item4: number
   item5: number
   pigScore?: number
+  pigScoreBreakdown?: Record<string, unknown>
+  labels?: string[]
   firstItem?: number
   secondItem?: number
   thirdItem?: number
