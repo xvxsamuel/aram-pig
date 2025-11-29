@@ -91,7 +91,6 @@ export default function SummonerContentV2({
   const {
     summary,
     champions,
-    matches,
     recentlyPlayedWith,
     lastUpdated,
     mostPlayedChampion,
@@ -371,7 +370,7 @@ export default function SummonerContentV2({
   }, [champions])
   
   // handle more matches loaded (for legacy component compatibility)
-  const handleMoreMatchesLoaded = useCallback((newMatches: any[]) => {
+  const handleMoreMatchesLoaded = useCallback((_newMatches: any[]) => {
     // this is handled by MatchHistoryList internally now
   }, [])
   
