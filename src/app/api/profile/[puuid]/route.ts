@@ -6,12 +6,12 @@ import {
   getSummonerInfo,
   getChampionStats,
   calculateSummary,
-  getMatches,
+  getMatchesAsMatchData,
   getLongestWinStreak,
   calculateRecentlyPlayedWith,
   getProfileIcons,
   getUpdateStatus
-} from '@/lib/profile-queries'
+} from '@/lib/db'
 import type { ProfileData } from '@/types/profile'
 
 export async function GET(
@@ -33,6 +33,7 @@ export async function GET(
     }
     
     // parallel fetch all data
+    const currentName = { gameName: summonerInfo.gameName, tagLine: summonerInfo.tagLine }
     const [
       championStats,
       { matches, hasMore: _hasMore },
@@ -40,7 +41,7 @@ export async function GET(
       updateStatus
     ] = await Promise.all([
       getChampionStats(puuid, summonerInfo.profileData),
-      getMatches(puuid, 20, 0),
+      getMatchesAsMatchData(puuid, 20, 0, currentName),
       getLongestWinStreak(puuid),
       getUpdateStatus(puuid)
     ])
@@ -48,7 +49,7 @@ export async function GET(
     // get profile icons for teammates in matches
     const teammatePuuids = new Set<string>()
     for (const match of matches) {
-      for (const p of match.participants) {
+      for (const p of match.info.participants) {
         if (p.puuid !== puuid) {
           teammatePuuids.add(p.puuid)
         }

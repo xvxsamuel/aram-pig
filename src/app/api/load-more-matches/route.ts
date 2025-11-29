@@ -1,10 +1,10 @@
 // load more matches API - uses shared query functions
 import { NextResponse } from "next/server"
-import { getMatches } from "@/lib/profile-queries"
+import { getMatchesAsMatchData } from "@/lib/db"
 
 export async function POST(request: Request) {
   try {
-    const { puuid, offset, limit = 20 } = await request.json()
+    const { puuid, offset, limit = 20, currentName } = await request.json()
     
     if (!puuid) {
       return NextResponse.json(
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { matches, hasMore } = await getMatches(puuid, limit, offset)
+    const { matches, hasMore } = await getMatchesAsMatchData(puuid, limit, offset, currentName)
 
     return NextResponse.json({ matches, hasMore })
 

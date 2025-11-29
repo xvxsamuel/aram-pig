@@ -1,3 +1,4 @@
+// Region and platform code utilities
 export type RegionalCluster = 'europe' | 'americas' | 'asia' | 'sea'
 export type PlatformCode = 'na1' | 'br1' | 'la1' | 'la2' | 'kr' | 'jp1' | 'eun1' | 'euw1' | 'ru' | 'tr1' | 'me1' | 'oc1' | 'sg2' | 'tw2' | 'vn2'
 
@@ -19,7 +20,7 @@ const PLATFORM_DATA: Record<PlatformCode, { label: string; regional: RegionalClu
   vn2: { label: 'VN', regional: 'sea', tag: 'VN2' },
 }
 
-// region selector array don't use for others
+// region selector array
 export const REGIONS = Object.entries(PLATFORM_DATA).map(([code, data]) => ({
   code: code as PlatformCode,
   label: data.label,

@@ -1,7 +1,6 @@
-// helper to recalculate and store aggregated champion stats in profile_data
-// this is called after matches are stored to keep profile stats up to date
+// profile stats recalculation - aggregates match data into profile_data.champions
 
-import { createAdminClient } from './supabase'
+import { createAdminClient } from '../db/supabase'
 
 export interface ChampionProfileStats {
   games: number
@@ -28,7 +27,7 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
   // fetch all matches for this player (excluding remakes)
   const { data: matches, error: fetchError } = await supabase
     .from('summoner_matches')
-    .select('champion_name, win, match_data')
+    .select('match_id, champion_name, win, match_data')
     .eq('puuid', puuid)
   
   if (fetchError) {
@@ -40,6 +39,8 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
     console.log(`[UpdateProfile] No matches found for profile_data ${puuid}`)
     return
   }
+  
+  console.log(`[UpdateProfile] Found ${matches.length} matches for ${puuid}, aggregating stats...`)
   
   // aggregate stats by champion
   const championStats: Record<string, {
@@ -113,18 +114,24 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
   // count total matches (excluding remakes)
   const matchCount = Object.values(championStats).reduce((sum, s) => sum + s.games, 0)
   
+  // log final stats for debugging
+  console.log(`[UpdateProfile] Stats for ${puuid}: ${Object.keys(champions).length} champions, ${matchCount} games`)
+  console.log(`[UpdateProfile] Champions: ${Object.entries(champions).map(([c, s]) => `${c}(${s.games})`).join(', ')}`)
+  
   // update profile_data in summoners table
-  // first get existing profile_data to preserve other fields (like labels)
+  // IMPORTANT: Completely replace champions data, don't merge with old corrupted data
   const { data: existingSummoner } = await supabase
     .from('summoners')
     .select('profile_data')
     .eq('puuid', puuid)
     .single()
   
+  // preserve non-champion fields but fully replace champions
   const existingProfileData = existingSummoner?.profile_data || {}
+  const { champions: _oldChampions, ...otherProfileData } = existingProfileData as Record<string, unknown>
   
   const newProfileData = {
-    ...existingProfileData,
+    ...otherProfileData,
     champions,
     matchCount,
     lastCalculated: new Date().toISOString()

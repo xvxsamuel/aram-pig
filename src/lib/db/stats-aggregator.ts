@@ -1,18 +1,12 @@
-// ============================================================================
-// STATS AGGREGATOR - TypeScript-side aggregation for champion stats
-// ============================================================================
-// This module aggregates participant stats by champion+patch in memory,
-// reducing the number of DB operations from N (per participant) to M (per unique champion+patch).
-// For 1000 participants across ~80 champions, this reduces DB calls by ~90%.
+// Stats aggregator - TypeScript-side aggregation for champion stats
+// Reduces DB operations from N (per participant) to M (per unique champion+patch)
 
-// Boot item IDs that should be normalized to 99999 for combo keys
 const BOOT_IDS = new Set([1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158])
 
 function normalizeBootId(itemId: number): number {
   return BOOT_IDS.has(itemId) ? 99999 : itemId
 }
 
-// Create combo key from first 3 items (normalized, sorted, deduped)
 function createComboKey(items: number[]): string | null {
   const first3 = items.filter(id => id > 0).slice(0, 3)
   if (first3.length !== 3) return null
@@ -20,13 +14,11 @@ function createComboKey(items: number[]): string | null {
   const normalized = first3.map(normalizeBootId)
   const uniqueSorted = [...new Set(normalized)].sort((a, b) => a - b)
   
-  // need exactly 3 unique items for a valid combo
   if (uniqueSorted.length !== 3) return null
   
   return uniqueSorted.join('_')
 }
 
-// Create spell key (smaller ID first)
 function createSpellKey(spell1: number, spell2: number): string {
   return `${Math.min(spell1, spell2)}_${Math.max(spell1, spell2)}`
 }
@@ -35,13 +27,11 @@ function createSpellKey(spell1: number, spell2: number): string {
 // TYPES
 // ============================================================================
 
-// Stats for a single game entry (games=1, wins=0|1)
 interface GameStats {
   games: number
   wins: number
 }
 
-// Champion stats data structure - mirrors the JSONB structure in DB
 interface ChampionStatsData {
   games: number
   wins: number
@@ -54,7 +44,7 @@ interface ChampionStatsData {
     sumGameDuration: number
     sumDeaths: number
   }
-  items: Record<string, Record<string, GameStats>> // position -> itemId -> stats
+  items: Record<string, Record<string, GameStats>>
   runes: {
     primary: Record<string, GameStats>
     secondary: Record<string, GameStats>
@@ -74,7 +64,7 @@ interface ChampionStatsData {
   core: Record<string, {
     games: number
     wins: number
-    items: Record<string, Record<string, GameStats>> // itemId -> position -> stats
+    items: Record<string, Record<string, GameStats>>
     runes: {
       primary: Record<string, GameStats>
       secondary: Record<string, GameStats>
@@ -89,7 +79,6 @@ interface ChampionStatsData {
   }>
 }
 
-// Input: raw participant stats (from storeMatchData)
 export interface ParticipantStatsInput {
   champion_name: string
   patch: string
@@ -124,31 +113,25 @@ export interface ParticipantStatsInput {
 // ============================================================================
 
 export class StatsAggregator {
-  // Map of "champion_name|patch" -> aggregated stats
   private aggregated = new Map<string, ChampionStatsData>()
   private participantCount = 0
   
-  /** Get number of unique champion+patch combinations */
   getUniqueCount(): number {
     return this.aggregated.size
   }
   
-  // alias for getUniqueCount
   getChampionPatchCount(): number {
     return this.getUniqueCount()
   }
   
-  /** Get total number of participants added */
   getParticipantCount(): number {
     return this.participantCount
   }
   
-  /** Get total number of games aggregated (same as participant count) */
   getTotalGames(): number {
     return this.participantCount
   }
   
-  /** Add a participant's stats to the aggregator */
   add(input: ParticipantStatsInput): void {
     this.participantCount++
     const key = `${input.champion_name}|${input.patch}`
@@ -161,11 +144,9 @@ export class StatsAggregator {
     
     const win = input.win ? 1 : 0
     
-    // update top-level counters
     stats.games += 1
     stats.wins += win
     
-    // update champion stats sums
     stats.championStats.sumDamageToChampions += input.damage_to_champions
     stats.championStats.sumTotalDamage += input.total_damage
     stats.championStats.sumHealing += input.healing
@@ -174,7 +155,7 @@ export class StatsAggregator {
     stats.championStats.sumGameDuration += input.game_duration
     stats.championStats.sumDeaths += input.deaths
     
-    // update items by position
+    // items by position
     for (let i = 0; i < input.items.length && i < 6; i++) {
       const itemId = input.items[i]
       if (itemId > 0) {
@@ -187,7 +168,7 @@ export class StatsAggregator {
       }
     }
     
-    // update runes (primary)
+    // runes (primary)
     const primaryRunes = [input.keystone_id, input.rune1, input.rune2, input.rune3]
     for (const runeId of primaryRunes) {
       if (runeId > 0) {
@@ -198,7 +179,7 @@ export class StatsAggregator {
       }
     }
     
-    // update runes (secondary)
+    // runes (secondary)
     const secondaryRunes = [input.rune4, input.rune5]
     for (const runeId of secondaryRunes) {
       if (runeId > 0) {
@@ -209,7 +190,7 @@ export class StatsAggregator {
       }
     }
     
-    // update tertiary runes (stat perks)
+    // tertiary runes (stat perks)
     if (input.stat_perk0 > 0) {
       const key = input.stat_perk0.toString()
       if (!stats.runes.tertiary.offense[key]) stats.runes.tertiary.offense[key] = { games: 0, wins: 0 }
@@ -229,7 +210,7 @@ export class StatsAggregator {
       stats.runes.tertiary.defense[key].wins += win
     }
     
-    // update rune trees
+    // rune trees
     if (input.rune_tree_primary > 0) {
       const key = input.rune_tree_primary.toString()
       if (!stats.runes.tree.primary[key]) stats.runes.tree.primary[key] = { games: 0, wins: 0 }
@@ -243,27 +224,27 @@ export class StatsAggregator {
       stats.runes.tree.secondary[key].wins += win
     }
     
-    // update spells
+    // spells
     const spellKey = createSpellKey(input.spell1_id, input.spell2_id)
     if (!stats.spells[spellKey]) stats.spells[spellKey] = { games: 0, wins: 0 }
     stats.spells[spellKey].games += 1
     stats.spells[spellKey].wins += win
     
-    // update starting items
+    // starting items
     if (input.first_buy && input.first_buy !== '') {
       if (!stats.starting[input.first_buy]) stats.starting[input.first_buy] = { games: 0, wins: 0 }
       stats.starting[input.first_buy].games += 1
       stats.starting[input.first_buy].wins += win
     }
     
-    // update skill order
+    // skill order
     if (input.skill_order && input.skill_order !== '') {
       if (!stats.skills[input.skill_order]) stats.skills[input.skill_order] = { games: 0, wins: 0 }
       stats.skills[input.skill_order].games += 1
       stats.skills[input.skill_order].wins += win
     }
     
-    // update core combinations
+    // core combinations
     const comboKey = createComboKey(input.items)
     if (comboKey) {
       if (!stats.core[comboKey]) {
@@ -351,7 +332,6 @@ export class StatsAggregator {
     }
   }
   
-  /** Get all aggregated stats for flushing to DB */
   getAggregatedStats(): Array<{ champion_name: string; patch: string; data: ChampionStatsData }> {
     const result: Array<{ champion_name: string; patch: string; data: ChampionStatsData }> = []
     
@@ -363,7 +343,6 @@ export class StatsAggregator {
     return result
   }
   
-  /** Clear all aggregated data */
   clear(): void {
     this.aggregated.clear()
     this.participantCount = 0
@@ -397,9 +376,4 @@ export class StatsAggregator {
   }
 }
 
-// ============================================================================
-// MODULE-LEVEL INSTANCE
-// ============================================================================
-
-// Global aggregator instance for use across the application
 export const statsAggregator = new StatsAggregator()

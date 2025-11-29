@@ -6,16 +6,16 @@ import Link from 'next/link'
 import clsx from 'clsx'
 import { motion } from 'motion/react'
 import { ChevronDownIcon } from '@heroicons/react/24/solid'
-import type { MatchData } from '@/lib/riot-api'
+import type { MatchData } from '@/types/match'
 import {
   getChampionImageUrl,
   getSummonerSpellUrl,
   getItemImageUrl,
   getRuneImageUrl,
   getRuneStyleImageUrl,
-} from '@/lib/ddragon-client'
-import { getChampionUrlName } from '@/lib/champion-names'
-import { getKdaColor, getPigScoreColor } from '@/lib/winrate-colors'
+} from '@/lib/api/ddragon'
+import { getChampionUrlName } from '@/lib/api/champion-names'
+import { getKdaColor, getPigScoreColor } from '@/lib/ui'
 import MatchDetails from '@/components/match/MatchDetails'
 import Tooltip from '@/components/ui/Tooltip'
 

@@ -1,7 +1,7 @@
 "use client"
 import { useState, useRef, useEffect } from "react"
 import { clsx } from "clsx"
-import { REGIONS } from "@/lib/regions"
+import { REGIONS } from "@/lib/game"
 
 type Props = {
   value?: string

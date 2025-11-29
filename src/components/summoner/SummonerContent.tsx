@@ -12,7 +12,7 @@ import SummonerLoadingSkeleton from "./SummonerLoadingSkeleton"
 import RecentlyPlayedWithList from "./RecentlyPlayedWithList"
 import { useProfileData } from "@/hooks/useProfileData"
 import type { UpdateJobProgress } from "@/types/update-jobs"
-import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "@/lib/regions"
+import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "@/lib/game"
 
 // flash tab title to notify user when update completes
 function flashTabNotification(message: string, originalTitle: string) {
@@ -98,10 +98,13 @@ export default function SummonerContentV2({
     cooldownUntil,
     loading,
     refresh,
-    matchesAsLegacyFormat,
+    matches,
     setCooldown,
     setHasActiveJob
-  } = useProfileData({ puuid })
+  } = useProfileData({ 
+    puuid,
+    currentName: { gameName: summonerData.account.gameName, tagLine: summonerData.account.tagLine }
+  })
   
   // tab state
   const getTabFromHash = useCallback((): 'overview' | 'champions' | 'performance' => {
@@ -400,16 +403,17 @@ export default function SummonerContentV2({
         />
       </div>
       <MatchHistoryList
-        matches={matchesAsLegacyFormat}
+        matches={matches}
         puuid={puuid}
         region={region}
         ddragonVersion={ddragonVersion}
         championNames={championNames}
         onMatchesLoaded={handleMoreMatchesLoaded}
         initialLoading={loading}
+        currentName={{ gameName: summonerData.account.gameName, tagLine: summonerData.account.tagLine }}
       />
     </div>
-  ), [matchesAsLegacyFormat, puuid, region, ddragonVersion, championNames, champions, aggregateStats, summaryKda, topChampions, handleTabChange, handleMoreMatchesLoaded, loading, recentlyPlayedWith])
+  ), [matches, puuid, region, ddragonVersion, championNames, champions, aggregateStats, summaryKda, topChampions, handleTabChange, handleMoreMatchesLoaded, loading, recentlyPlayedWith, summonerData.account.gameName, summonerData.account.tagLine])
   
   const championsContent = useMemo(() => (
     <ChampionStatsList

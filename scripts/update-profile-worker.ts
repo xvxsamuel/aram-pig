@@ -2,13 +2,9 @@
 // handles large batch updates that would timeout on Vercel
 
 import { createClient } from '@supabase/supabase-js'
-import { getMatchById, getMatchTimeline } from '../src/lib/riot-api'
-import { waitForRateLimit } from '../src/lib/rate-limiter'
-import { calculatePigScoreWithBreakdown } from '../src/lib/pig-score-v2'
-import { extractAbilityOrder } from '../src/lib/ability-leveling'
-import { extractPatch, getPatchFromDate, isPatchAccepted } from '../src/lib/patch-utils'
-import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../src/lib/item-purchases'
-import { extractItemPurchases } from '../src/lib/item-purchase-history'
+import { getMatchById, getMatchTimeline, waitForRateLimit } from '../src/lib/api'
+import { calculatePigScoreWithBreakdown } from '../src/lib/scoring'
+import { extractAbilityOrder, extractPatch, getPatchFromDate, isPatchAccepted, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases } from '../src/lib/game'
 import itemsData from '../src/data/items.json'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!

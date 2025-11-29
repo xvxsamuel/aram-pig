@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '../../../lib/supabase'
-import { calculatePigScore } from '../../../lib/pig-score-v2'
+import { createAdminClient } from '@/lib/db'
+import { calculatePigScore } from '@/lib/scoring'
 
 // extract skill max order from ability order string (e.g., "Q W E Q W R Q W Q W R W W E E R E E" -> "qwe")
 function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefined): string | undefined {

@@ -3,9 +3,9 @@
 import { useMemo, useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getChampionImageUrl } from '@/lib/ddragon-client'
-import { getChampionDisplayName, getSortedChampionNames, getChampionUrlName } from '@/lib/champion-names'
-import { getWinrateColor, getKdaColor, getPigScoreColor } from '@/lib/winrate-colors'
+import { getChampionImageUrl } from '@/lib/api/ddragon'
+import { getChampionDisplayName, getSortedChampionNames, getChampionUrlName } from '@/lib/api/champion-names'
+import { getWinrateColor, getKdaColor, getPigScoreColor } from '@/lib/ui'
 
 type SortKey = 'games' | 'winrate' | 'kda' | 'damage' | 'pigScore'
 type SortDirection = 'asc' | 'desc'

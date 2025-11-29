@@ -1,10 +1,12 @@
-// client helpers
+// DDragon (Data Dragon) asset URL helpers
+import runesDataImport from '@/data/runes.json'
+
+const runesDataObj = runesDataImport as Record<string, { icon?: string }>
 
 let latestVersion: string | null = null
 
 export async function getLatestVersion(): Promise<string> {
   if (!latestVersion) {
-    // fetch directly from DDragon API instead of using RiotAPI
     const response = await fetch('https://ddragon.leagueoflegends.com/api/versions.json')
     const versions = await response.json()
     latestVersion = versions[0]
@@ -13,20 +15,17 @@ export async function getLatestVersion(): Promise<string> {
   return latestVersion!
 }
 
-// preload version on startup
 export async function preloadDDragonVersion(): Promise<void> {
   await getLatestVersion()
 }
 
 // normalize champion names for ddragon urls
 function normalizeChampionName(championName: string): string {
-  // special cases where api name differs from ddragon id
   const nameMap: Record<string, string> = {
     'FiddleSticks': 'Fiddlesticks',
-    'MonkeyKing': 'MonkeyKing', // wukong uses monkeyking
-    'Renata': 'Renata', // renata glasc
+    'MonkeyKing': 'MonkeyKing',
+    'Renata': 'Renata',
   }
-  
   return nameMap[championName] || championName
 }
 
@@ -53,7 +52,7 @@ export function getItemImageUrl(itemId: number, version: string): string {
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png`
 }
 
-// spells - maps riot api spell ids to ddragon file names
+// maps riot api spell ids to ddragon file names
 function getSpellName(spellId: number): string {
   const spellMap: Record<number, string> = {
     1: 'Boost',      // cleanse
@@ -74,11 +73,7 @@ function getSpellName(spellId: number): string {
   return spellMap[spellId] || 'Flash'
 }
 
-import runesDataImport from '../data/runes.json'
-const runesDataObj = runesDataImport as Record<string, { icon?: string }>
-
 export function getRuneImageUrl(perkId: number): string {
-  // get icon path from runes data
   const rune = runesDataObj[perkId]
   if (!rune || !rune.icon) {
     return ''
@@ -87,7 +82,6 @@ export function getRuneImageUrl(perkId: number): string {
 }
 
 export function getRuneStyleImageUrl(styleId: number): string {
-  // get icon path from runes data (tree styles)
   const style = runesDataObj[styleId]
   if (!style || !style.icon) {
     return ''

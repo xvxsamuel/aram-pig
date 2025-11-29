@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '../../../lib/supabase'
-import { getMatchTimeline, getMatchById } from '../../../lib/riot-api'
-import { calculatePigScoreWithBreakdown } from '../../../lib/pig-score-v2'
-import { extractAbilityOrder } from '../../../lib/ability-leveling'
-import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../../../lib/item-purchases'
-import { extractItemPurchases } from '../../../lib/item-purchase-history'
-import { isPatchAccepted } from '../../../lib/patch-utils'
+import { createAdminClient } from '@/lib/db'
+import { getMatchTimeline, getMatchById } from '@/lib/api'
+import { calculatePigScoreWithBreakdown } from '@/lib/scoring'
+import { extractAbilityOrder, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases, isPatchAccepted } from '@/lib/game'
 
 // in-memory lock to prevent concurrent processing of the same match (handles Strict Mode double-invoke)
 const processingLocks = new Map<string, Promise<{ data: any; status: number }>>()

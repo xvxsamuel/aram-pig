@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createAdminClient } from "../../../lib/supabase"
+import { createAdminClient } from '@/lib/db'
 import type { UpdateJobProgress } from "../../../types/update-jobs"
 
 // cleanup stale jobs

@@ -1,16 +1,11 @@
 import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
-import { createAdminClient } from '../../../lib/supabase';
-import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline} from '../../../lib/riot-api';
-import { checkRateLimit, type RequestType } from '../../../lib/rate-limiter';
-import type { PlatformCode } from '../../../lib/regions';
+import { createAdminClient } from '@/lib/db';
+import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline, checkRateLimit, type RequestType } from '@/lib/api';
+import type { PlatformCode } from '@/lib/game';
 import type { UpdateJob } from '../../../types/update-jobs';
-import { calculatePigScoreWithBreakdown } from '../../../lib/pig-score-v2';
-import { extractAbilityOrder } from '../../../lib/ability-leveling';
-import { extractPatch, getPatchFromDate, isPatchAccepted } from '../../../lib/patch-utils';
-import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../../../lib/item-purchases';
-import { extractItemPurchases, type ItemPurchaseEvent } from '../../../lib/item-purchase-history';
-import { recalculateProfileStatsForPlayers, getTrackedPlayersFromMatches } from '../../../lib/profile-stats';
+import { calculatePigScoreWithBreakdown, recalculateProfileStatsForPlayers, getTrackedPlayersFromMatches } from '@/lib/scoring';
+import { extractAbilityOrder, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases, type ItemPurchaseEvent, extractPatch, getPatchFromDate, isPatchAccepted } from '@/lib/game';
 import itemsData from '../../../data/items.json';
 
 // in-memory lock to prevent concurrent processing of same profile (handles Strict Mode double-invoke)

@@ -1,6 +1,6 @@
 // fetch player champion stats - uses shared query functions
 import { NextResponse } from 'next/server'
-import { getSummonerInfo, getChampionStats } from '@/lib/profile-queries'
+import { getSummonerInfo, getChampionStats } from '@/lib/db'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)

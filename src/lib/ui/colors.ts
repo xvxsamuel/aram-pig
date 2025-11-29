@@ -1,6 +1,7 @@
-// winrate color utility
-// 60% = accent-light, 40% = negative, 50% = white, interpolated between
+// winrate/kda/pig-score color utilities
+// uses oklch color space for perceptually uniform interpolation
 
+// winrate: 60% = accent-light, 40% = negative, 50% = white, interpolated between
 export function getWinrateColor(winrate: number): string {
   const midpoint = 50
   const topThreshold = 60
@@ -32,9 +33,7 @@ export function getWinrateColor(winrate: number): string {
   return `oklch(${l.toFixed(4)} ${c.toFixed(4)} ${h.toFixed(2)})`
 }
 
-// kda color utility
-// <3 = white, 3-4 = kda-3 (green), 4-5 = kda-4 (blue), 5+ = kda-5 (pink/magenta)
-
+// kda: <3 = white, 3-4 = kda-3 (green), 4-5 = kda-4 (blue), 5+ = kda-5 (pink/magenta)
 export function getKdaColor(kda: number): string {
   if (kda >= 5) return 'var(--color-kda-5)'
   if (kda >= 4) return 'var(--color-kda-4)'
@@ -42,9 +41,7 @@ export function getKdaColor(kda: number): string {
   return 'white'
 }
 
-// pig score color utility
-// 100 = accent-light, 0 = negative, 50 = white, interpolated between
-
+// pig score: 100 = accent-light, 0 = negative, 50 = white, interpolated between
 export function getPigScoreColor(score: number): string {
   const midpoint = 50
   const topThreshold = 100

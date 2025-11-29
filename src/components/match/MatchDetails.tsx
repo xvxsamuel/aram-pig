@@ -1,16 +1,16 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import type { MatchData } from "@/lib/riot-api"
+import type { MatchData } from "@/types/match"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
-import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl } from "@/lib/ddragon-client"
-import { getChampionUrlName } from "@/lib/champion-names"
-import { getKdaColor, getPigScoreColor } from "@/lib/winrate-colors"
+import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl } from "@/lib/api/ddragon"
+import { getChampionUrlName } from "@/lib/api/champion-names"
+import { getKdaColor, getPigScoreColor } from "@/lib/ui"
 import Tooltip from "@/components/ui/Tooltip"
 import runesData from "@/data/runes.json"
-import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "@/lib/regions"
+import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "@/lib/game"
 
 interface Props {
   match: MatchData

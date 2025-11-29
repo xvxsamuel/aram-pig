@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import type { RecentPlayer } from "@/types/profile"
-import { getWinrateColor } from "@/lib/winrate-colors"
+import { getWinrateColor } from "@/lib/ui"
 import ProfileCard from "@/components/ui/ProfileCard"
 
 interface Props {

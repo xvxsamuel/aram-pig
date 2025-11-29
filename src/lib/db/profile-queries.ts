@@ -1,14 +1,11 @@
-// reusable database query functions for profile data
-// centralizes all profile-related queries to avoid duplication
-
+// Profile database queries
 import { supabase } from './supabase'
 import type { 
   ChampionStats, 
-  ProfileSummary, 
-  ProfileMatch, 
-  MatchParticipant,
+  ProfileSummary,
   RecentPlayer 
 } from '@/types/profile'
+import type { MatchData } from '@/types/match'
 
 /**
  * Get summoner basic info from database
@@ -29,17 +26,18 @@ export async function getSummonerInfo(puuid: string) {
     profileIconId: data.profile_icon_id,
     summonerLevel: data.summoner_level,
     lastUpdated: data.last_updated,
-    profileData: data.profile_data as any
+    profileData: data.profile_data as Record<string, unknown>
   }
 }
 
 /**
  * Get champion stats - prefers cached profile_data, falls back to aggregation
  */
-export async function getChampionStats(puuid: string, profileData?: any): Promise<ChampionStats[]> {
+export async function getChampionStats(puuid: string, profileData?: Record<string, unknown>): Promise<ChampionStats[]> {
   // use cached data if available
-  if (profileData?.champions && Object.keys(profileData.champions).length > 0) {
-    return Object.entries(profileData.champions).map(([championName, stats]: [string, any]) => ({
+  const champData = profileData?.champions as Record<string, Record<string, number>> | undefined
+  if (champData && Object.keys(champData).length > 0) {
+    return Object.entries(champData).map(([championName, stats]) => ({
       championName,
       games: stats.games,
       wins: stats.wins,
@@ -48,7 +46,7 @@ export async function getChampionStats(puuid: string, profileData?: any): Promis
       deaths: Math.round(stats.avgDeaths * stats.games),
       assists: Math.round(stats.avgAssists * stats.games),
       totalDamage: Math.round(stats.avgDamage * stats.games),
-      averagePigScore: stats.avgPigScore
+      averagePigScore: stats.avgPigScore ?? null
     }))
   }
   
@@ -60,7 +58,7 @@ export async function getChampionStats(puuid: string, profileData?: any): Promis
   
   if (!matchStats || matchStats.length === 0) return []
   
-  const validMatches = matchStats.filter(m => !m.match_data?.isRemake)
+  const validMatches = matchStats.filter(m => !(m.match_data as Record<string, unknown>)?.isRemake)
   
   const championMap = new Map<string, {
     games: number
@@ -73,16 +71,18 @@ export async function getChampionStats(puuid: string, profileData?: any): Promis
   }>()
   
   for (const match of validMatches) {
+    const matchData = match.match_data as Record<string, unknown>
+    const stats = matchData?.stats as Record<string, number> | undefined
+    const pigScore = matchData?.pigScore as number | null | undefined
     const existing = championMap.get(match.champion_name)
-    const pigScore = match.match_data?.pigScore
     
     if (existing) {
       existing.games++
       existing.wins += match.win ? 1 : 0
-      existing.kills += match.match_data?.kills || 0
-      existing.deaths += match.match_data?.deaths || 0
-      existing.assists += match.match_data?.assists || 0
-      existing.totalDamage += match.match_data?.stats?.damage || 0
+      existing.kills += (matchData?.kills as number) || 0
+      existing.deaths += (matchData?.deaths as number) || 0
+      existing.assists += (matchData?.assists as number) || 0
+      existing.totalDamage += stats?.damage || 0
       if (pigScore !== null && pigScore !== undefined) {
         existing.pigScores.push(pigScore)
       }
@@ -90,10 +90,10 @@ export async function getChampionStats(puuid: string, profileData?: any): Promis
       championMap.set(match.champion_name, {
         games: 1,
         wins: match.win ? 1 : 0,
-        kills: match.match_data?.kills || 0,
-        deaths: match.match_data?.deaths || 0,
-        assists: match.match_data?.assists || 0,
-        totalDamage: match.match_data?.stats?.damage || 0,
+        kills: (matchData?.kills as number) || 0,
+        deaths: (matchData?.deaths as number) || 0,
+        assists: (matchData?.assists as number) || 0,
+        totalDamage: stats?.damage || 0,
         pigScores: pigScore !== null && pigScore !== undefined ? [pigScore] : []
       })
     }
@@ -140,14 +140,12 @@ export function calculateSummary(champions: ChampionStats[], longestWinStreak: n
   const totalDeaths = champions.reduce((sum, c) => sum + c.deaths, 0)
   const totalAssists = champions.reduce((sum, c) => sum + c.assists, 0)
   
-  // weighted average for pig score
   const gamesWithPigScore = champions.filter(c => c.averagePigScore !== null)
   const totalPigScoreWeight = gamesWithPigScore.reduce((sum, c) => sum + c.games, 0)
   const averagePigScore = totalPigScoreWeight > 0
     ? gamesWithPigScore.reduce((sum, c) => sum + (c.averagePigScore! * c.games), 0) / totalPigScoreWeight
     : null
   
-  // most played champion
   const mostPlayedChampion = [...champions].sort((a, b) => b.games - a.games)[0]?.championName || ''
   
   return {
@@ -166,60 +164,92 @@ export function calculateSummary(champions: ChampionStats[], longestWinStreak: n
 }
 
 /**
- * Transform DB participant row to MatchParticipant
+ * Transform DB participant to MatchData participant format
  */
-export function transformParticipant(p: any): MatchParticipant {
+function transformToMatchDataParticipant(
+  p: Record<string, unknown>, 
+  nameOverride?: { puuid: string, gameName: string, tagLine: string }
+): MatchData['info']['participants'][0] {
+  const matchData = p.match_data as Record<string, unknown> | undefined
+  const stats = matchData?.stats as Record<string, number> | undefined
+  const runes = matchData?.runes as {
+    primary?: { style?: number; perks?: number[] }
+    secondary?: { style?: number; perks?: number[] }
+    statPerks?: number[]
+  } | undefined
+  const items = matchData?.items as number[] | undefined
+  const spells = matchData?.spells as number[] | undefined
+  
+  const gameName = (nameOverride && p.puuid === nameOverride.puuid) 
+    ? nameOverride.gameName 
+    : ((p.riot_id_game_name as string) || '')
+  const tagLine = (nameOverride && p.puuid === nameOverride.puuid) 
+    ? nameOverride.tagLine 
+    : ((p.riot_id_tagline as string) || '')
+  
   return {
-    puuid: p.puuid,
-    riotIdGameName: p.riot_id_game_name || '',
-    riotIdTagline: p.riot_id_tagline || '',
-    championName: p.champion_name,
-    teamId: p.match_data?.teamId || 100,
-    win: p.win,
-    kills: p.match_data?.kills || 0,
-    deaths: p.match_data?.deaths || 0,
-    assists: p.match_data?.assists || 0,
-    champLevel: p.match_data?.level || 18,
-    totalDamageDealtToChampions: p.match_data?.stats?.damage || 0,
-    goldEarned: p.match_data?.stats?.gold || 0,
-    totalMinionsKilled: p.match_data?.stats?.cs || 0,
-    summoner1Id: p.match_data?.spells?.[0] || 0,
-    summoner2Id: p.match_data?.spells?.[1] || 0,
-    items: [
-      p.match_data?.items?.[0] || 0,
-      p.match_data?.items?.[1] || 0,
-      p.match_data?.items?.[2] || 0,
-      p.match_data?.items?.[3] || 0,
-      p.match_data?.items?.[4] || 0,
-      p.match_data?.items?.[5] || 0
-    ],
+    puuid: p.puuid as string,
+    summonerName: '',
+    riotIdGameName: gameName,
+    riotIdTagline: tagLine,
+    championName: p.champion_name as string,
+    championId: 0,
+    teamId: (matchData?.teamId as number) || 100,
+    win: p.win as boolean,
+    gameEndedInEarlySurrender: (matchData?.isRemake as boolean) || false,
+    kills: (matchData?.kills as number) || 0,
+    deaths: (matchData?.deaths as number) || 0,
+    assists: (matchData?.assists as number) || 0,
+    champLevel: (matchData?.level as number) || 18,
+    totalDamageDealtToChampions: stats?.damage || 0,
+    totalDamageDealt: stats?.totalDamageDealt || 0,
+    goldEarned: stats?.gold || 0,
+    totalMinionsKilled: stats?.cs || 0,
+    neutralMinionsKilled: 0,
+    summoner1Id: spells?.[0] || 0,
+    summoner2Id: spells?.[1] || 0,
+    item0: items?.[0] || 0,
+    item1: items?.[1] || 0,
+    item2: items?.[2] || 0,
+    item3: items?.[3] || 0,
+    item4: items?.[4] || 0,
+    item5: items?.[5] || 0,
     perks: {
-      primary: {
-        style: p.match_data?.runes?.primary?.style || 0,
-        perks: p.match_data?.runes?.primary?.perks || [0, 0, 0, 0]
+      statPerks: {
+        offense: runes?.statPerks?.[0] || 0,
+        flex: runes?.statPerks?.[1] || 0,
+        defense: runes?.statPerks?.[2] || 0
       },
-      secondary: {
-        style: p.match_data?.runes?.secondary?.style || 0,
-        perks: p.match_data?.runes?.secondary?.perks || [0, 0]
-      },
-      statPerks: p.match_data?.runes?.statPerks || [0, 0, 0]
+      styles: [
+        {
+          style: runes?.primary?.style || 0,
+          selections: (runes?.primary?.perks || [0, 0, 0, 0]).map((perk: number) => ({ perk }))
+        },
+        {
+          style: runes?.secondary?.style || 0,
+          selections: (runes?.secondary?.perks || [0, 0]).map((perk: number) => ({ perk }))
+        }
+      ]
     },
-    pigScore: p.match_data?.pigScore ?? null,
-    isRemake: p.match_data?.isRemake || false,
-    multiKills: {
-      double: p.match_data?.stats?.doubleKills || 0,
-      triple: p.match_data?.stats?.tripleKills || 0,
-      quadra: p.match_data?.stats?.quadraKills || 0,
-      penta: p.match_data?.stats?.pentaKills || 0
-    }
+    doubleKills: stats?.doubleKills || 0,
+    tripleKills: stats?.tripleKills || 0,
+    quadraKills: stats?.quadraKills || 0,
+    pentaKills: stats?.pentaKills || 0,
+    pigScore: (matchData?.pigScore as number) ?? undefined
   }
 }
 
 /**
- * Get matches for a player with all participants
+ * Get matches in MatchData format (for match history display)
  */
-export async function getMatches(puuid: string, limit: number = 20, offset: number = 0): Promise<{ matches: ProfileMatch[], hasMore: boolean }> {
-  // get match IDs for this player
+export async function getMatchesAsMatchData(
+  puuid: string, 
+  limit: number = 20, 
+  offset: number = 0,
+  currentName?: { gameName: string, tagLine: string }
+): Promise<{ matches: MatchData[], hasMore: boolean }> {
+  const nameOverride = currentName ? { puuid, gameName: currentName.gameName, tagLine: currentName.tagLine } : undefined
+  
   const { data: playerMatches } = await supabase
     .from('summoner_matches')
     .select('match_id, game_creation')
@@ -233,13 +263,11 @@ export async function getMatches(puuid: string, limit: number = 20, offset: numb
   
   const matchIds = playerMatches.map(m => m.match_id)
   
-  // get match metadata
   const { data: matchRecords } = await supabase
     .from('matches')
     .select('match_id, game_creation, game_duration')
     .in('match_id', matchIds)
   
-  // get all participants for these matches
   const { data: participants } = await supabase
     .from('summoner_matches')
     .select('*')
@@ -249,8 +277,7 @@ export async function getMatches(puuid: string, limit: number = 20, offset: numb
     return { matches: [], hasMore: false }
   }
   
-  // build match objects maintaining order
-  const matches: ProfileMatch[] = matchIds
+  const matches: MatchData[] = matchIds
     .map(matchId => {
       const match = matchRecords.find(m => m.match_id === matchId)
       const matchParticipants = participants.filter(p => p.match_id === matchId)
@@ -258,13 +285,22 @@ export async function getMatches(puuid: string, limit: number = 20, offset: numb
       if (!match || matchParticipants.length === 0) return null
       
       return {
-        matchId: match.match_id,
-        gameCreation: match.game_creation,
-        gameDuration: match.game_duration,
-        participants: matchParticipants.map(transformParticipant)
-      }
+        metadata: {
+          matchId: match.match_id,
+          participants: matchParticipants.map(p => p.puuid)
+        },
+        info: {
+          gameCreation: match.game_creation,
+          gameDuration: match.game_duration,
+          gameEndTimestamp: match.game_creation + (match.game_duration * 1000),
+          gameMode: 'ARAM',
+          gameVersion: '',
+          queueId: 450,
+          participants: matchParticipants.map(p => transformToMatchDataParticipant(p, nameOverride))
+        }
+      } as MatchData
     })
-    .filter((m): m is ProfileMatch => m !== null)
+    .filter((m): m is MatchData => m !== null)
   
   return { 
     matches, 
@@ -288,7 +324,8 @@ export async function getLongestWinStreak(puuid: string): Promise<number> {
   let current = 0
   
   for (const match of matches) {
-    if (match.match_data?.isRemake) continue
+    const matchData = match.match_data as Record<string, unknown> | undefined
+    if (matchData?.isRemake) continue
     
     if (match.win) {
       current++
@@ -305,17 +342,18 @@ export async function getLongestWinStreak(puuid: string): Promise<number> {
  * Get recently played with players from matches
  */
 export function calculateRecentlyPlayedWith(
-  matches: ProfileMatch[], 
+  matches: MatchData[], 
   currentPuuid: string,
   profileIcons: Record<string, number> = {}
 ): RecentPlayer[] {
   const playerMap = new Map<string, RecentPlayer>()
   
   for (const match of matches) {
-    const currentPlayer = match.participants.find(p => p.puuid === currentPuuid)
+    const participants = match.info.participants
+    const currentPlayer = participants.find(p => p.puuid === currentPuuid)
     if (!currentPlayer) continue
     
-    const teammates = match.participants.filter(
+    const teammates = participants.filter(
       p => p.teamId === currentPlayer.teamId && p.puuid !== currentPuuid
     )
     
@@ -372,7 +410,6 @@ export async function getProfileIcons(puuids: string[]): Promise<Record<string, 
  * Check update job status for a puuid
  */
 export async function getUpdateStatus(puuid: string): Promise<{ hasActiveJob: boolean; cooldownUntil: string | null }> {
-  // check for active job
   const { data: job } = await supabase
     .from('update_jobs')
     .select('status')
@@ -383,7 +420,6 @@ export async function getUpdateStatus(puuid: string): Promise<{ hasActiveJob: bo
   
   const hasActiveJob = !!job
   
-  // check cooldown from last_updated
   const { data: summoner } = await supabase
     .from('summoners')
     .select('last_updated')

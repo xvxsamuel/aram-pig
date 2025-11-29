@@ -2,20 +2,21 @@
 // provides single source of truth for all profile-related state
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { ProfileData, ProfileMatch, ChampionStats, ProfileSummary, RecentPlayer } from '@/types/profile'
-import type { MatchData } from '@/lib/riot-api'
+import type { ProfileData, ChampionStats, ProfileSummary, RecentPlayer } from '@/types/profile'
+import type { MatchData } from '@/types/match'
 
 interface UseProfileDataOptions {
   puuid: string
   initialData?: Partial<ProfileData>
   autoFetch?: boolean
+  currentName?: { gameName: string, tagLine: string }
 }
 
 interface UseProfileDataReturn {
   // data
   summary: ProfileSummary | null
   champions: ChampionStats[]
-  matches: ProfileMatch[]
+  matches: MatchData[]
   recentlyPlayedWith: RecentPlayer[]
   lastUpdated: string | null
   mostPlayedChampion: string
@@ -31,90 +32,17 @@ interface UseProfileDataReturn {
   
   // actions
   refresh: () => Promise<boolean>
-  loadMoreMatches: (offset: number) => Promise<{ matches: ProfileMatch[], hasMore: boolean }>
-  appendMatches: (newMatches: ProfileMatch[]) => void
+  loadMoreMatches: (offset: number) => Promise<{ matches: MatchData[], hasMore: boolean }>
+  appendMatches: (newMatches: MatchData[]) => void
   setCooldown: (until: string | null) => void
   setHasActiveJob: (active: boolean) => void
-  
-  // legacy format for components that need MatchData[]
-  matchesAsLegacyFormat: MatchData[]
 }
 
-// convert ProfileMatch to legacy MatchData format for backward compatibility
-function convertToLegacyFormat(matches: ProfileMatch[]): MatchData[] {
-  return matches.map(match => ({
-    metadata: {
-      matchId: match.matchId,
-      participants: match.participants.map(p => p.puuid)
-    },
-    info: {
-      gameCreation: match.gameCreation,
-      gameDuration: match.gameDuration,
-      gameEndTimestamp: match.gameCreation + (match.gameDuration * 1000),
-      gameMode: 'ARAM',
-      gameVersion: '',
-      queueId: 450,
-      participants: match.participants.map(p => ({
-        puuid: p.puuid,
-        summonerName: '',
-        riotIdGameName: p.riotIdGameName,
-        riotIdTagline: p.riotIdTagline,
-        championName: p.championName,
-        championId: 0,
-        teamId: p.teamId,
-        win: p.win,
-        gameEndedInEarlySurrender: p.isRemake,
-        kills: p.kills,
-        deaths: p.deaths,
-        assists: p.assists,
-        champLevel: p.champLevel,
-        totalDamageDealtToChampions: p.totalDamageDealtToChampions,
-        totalDamageDealt: 0,
-        totalDamageTaken: 0,
-        goldEarned: p.goldEarned,
-        totalMinionsKilled: p.totalMinionsKilled,
-        neutralMinionsKilled: 0,
-        summoner1Id: p.summoner1Id,
-        summoner2Id: p.summoner2Id,
-        item0: p.items[0] || 0,
-        item1: p.items[1] || 0,
-        item2: p.items[2] || 0,
-        item3: p.items[3] || 0,
-        item4: p.items[4] || 0,
-        item5: p.items[5] || 0,
-        item6: 0,
-        perks: {
-          statPerks: {
-            offense: p.perks.statPerks[0] || 0,
-            flex: p.perks.statPerks[1] || 0,
-            defense: p.perks.statPerks[2] || 0
-          },
-          styles: [
-            {
-              style: p.perks.primary.style,
-              selections: p.perks.primary.perks.map(perk => ({ perk }))
-            },
-            {
-              style: p.perks.secondary.style,
-              selections: p.perks.secondary.perks.map(perk => ({ perk }))
-            }
-          ]
-        },
-        doubleKills: p.multiKills.double,
-        tripleKills: p.multiKills.triple,
-        quadraKills: p.multiKills.quadra,
-        pentaKills: p.multiKills.penta,
-        pigScore: p.pigScore ?? undefined
-      }))
-    }
-  }))
-}
-
-export function useProfileData({ puuid, initialData, autoFetch = true }: UseProfileDataOptions): UseProfileDataReturn {
+export function useProfileData({ puuid, initialData, autoFetch = true, currentName }: UseProfileDataOptions): UseProfileDataReturn {
   // profile state
   const [summary, setSummary] = useState<ProfileSummary | null>(initialData?.summary || null)
   const [champions, setChampions] = useState<ChampionStats[]>(initialData?.champions || [])
-  const [matches, setMatches] = useState<ProfileMatch[]>(initialData?.matches || [])
+  const [matches, setMatches] = useState<MatchData[]>(initialData?.matches || [])
   const [recentlyPlayedWith, setRecentlyPlayedWith] = useState<RecentPlayer[]>(initialData?.recentlyPlayedWith || [])
   const [lastUpdated, setLastUpdated] = useState<string | null>(initialData?.summoner?.lastUpdated || null)
   
@@ -162,12 +90,12 @@ export function useProfileData({ puuid, initialData, autoFetch = true }: UseProf
   }, [puuid])
   
   // load more matches
-  const loadMoreMatches = useCallback(async (offset: number): Promise<{ matches: ProfileMatch[], hasMore: boolean }> => {
+  const loadMoreMatches = useCallback(async (offset: number): Promise<{ matches: MatchData[], hasMore: boolean }> => {
     try {
       const response = await fetch('/api/load-more-matches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ puuid, offset, limit: 20 })
+        body: JSON.stringify({ puuid, offset, limit: 20, currentName })
       })
       
       if (!response.ok) {
@@ -179,10 +107,10 @@ export function useProfileData({ puuid, initialData, autoFetch = true }: UseProf
       console.error('Load more matches error:', err)
       return { matches: [], hasMore: false }
     }
-  }, [puuid])
+  }, [puuid, currentName])
   
   // append matches (for infinite scroll)
-  const appendMatches = useCallback((newMatches: ProfileMatch[]) => {
+  const appendMatches = useCallback((newMatches: MatchData[]) => {
     setMatches(prev => [...prev, ...newMatches])
   }, [])
   
@@ -197,9 +125,6 @@ export function useProfileData({ puuid, initialData, autoFetch = true }: UseProf
   // derived values
   const mostPlayedChampion = summary?.mostPlayedChampion || ''
   const longestWinStreak = summary?.longestWinStreak || 0
-  
-  // legacy format conversion (memoized via useMemo equivalent)
-  const matchesAsLegacyFormat = convertToLegacyFormat(matches)
   
   return {
     summary,
@@ -217,7 +142,6 @@ export function useProfileData({ puuid, initialData, autoFetch = true }: UseProf
     loadMoreMatches,
     appendMatches,
     setCooldown: setCooldownUntil,
-    setHasActiveJob,
-    matchesAsLegacyFormat
+    setHasActiveJob
   }
 }

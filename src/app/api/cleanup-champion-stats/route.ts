@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '../../../lib/supabase';
-import { getLatestPatches, PATCHES_TO_KEEP } from '../../../lib/patch-utils';
+import { createAdminClient } from '@/lib/db';
+import { getLatestPatches, PATCHES_TO_KEEP } from '@/lib/game';
 
 // this endpoint should be called by a cron job to clean up old champion stats
 // it deletes all champion_stats entries for patches not in the latest N patches

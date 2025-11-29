@@ -1,8 +1,8 @@
 // unified tooltip data for items, runes, and summoner spells
 
-import itemsData from '../data/items.json'
-import runesData from '../data/runes.json'
-import summonerSpellsData from '../data/summoner-spells.json'
+import itemsData from '../../data/items.json'
+import runesData from '../../data/runes.json'
+import summonerSpellsData from '../../data/summoner-spells.json'
 
 export type ItemType = 'legendary' | 'boots' | 'component' | 'starter' | 'consumable' | 'other'
 
@@ -22,26 +22,26 @@ export interface TooltipData {
 
 // preloaded item data
 const itemMap = new Map<number, TooltipData>(
-  Object.entries(itemsData).map(([id, item]: [string, any]) => [
+  Object.entries(itemsData).map(([id, item]: [string, unknown]) => [
     parseInt(id),
     {
-      name: item.name,
-      description: item.description,
-      totalCost: item.totalCost,
-      itemType: item.itemType,
-      stats: item.stats
+      name: (item as Record<string, unknown>).name as string,
+      description: (item as Record<string, unknown>).description as string,
+      totalCost: (item as Record<string, unknown>).totalCost as number | undefined,
+      itemType: (item as Record<string, unknown>).itemType as ItemType | undefined,
+      stats: (item as Record<string, unknown>).stats as ItemStats | undefined
     } as TooltipData
   ])
 )
 
 // preloaded rune data
 const runeMap = new Map<number, TooltipData>(
-  Object.entries(runesData).map(([id, rune]: [string, any]) => [
+  Object.entries(runesData).map(([id, rune]: [string, unknown]) => [
     parseInt(id),
     {
-      name: rune.name,
-      description: rune.description,
-      icon: rune.icon,
+      name: (rune as Record<string, unknown>).name as string,
+      description: (rune as Record<string, unknown>).description as string,
+      icon: (rune as Record<string, unknown>).icon as string | undefined,
       stats: {}
     } as TooltipData
   ])
@@ -49,12 +49,12 @@ const runeMap = new Map<number, TooltipData>(
 
 // preloaded summoner spell data
 const summonerSpellMap = new Map<number, TooltipData>(
-  Object.entries(summonerSpellsData).map(([id, spell]: [string, any]) => [
+  Object.entries(summonerSpellsData).map(([id, spell]: [string, unknown]) => [
     parseInt(id),
     {
-      name: spell.name,
-      description: spell.description,
-      cooldown: spell.cooldown
+      name: (spell as Record<string, unknown>).name as string,
+      description: (spell as Record<string, unknown>).description as string,
+      cooldown: (spell as Record<string, unknown>).cooldown as number | undefined
     } as TooltipData
   ])
 )
@@ -78,6 +78,5 @@ export function getTooltipData(id: number, type: 'item' | 'rune' | 'summoner-spe
       return null
   }
 }
-
 
 export type { ItemType as TooltipType }

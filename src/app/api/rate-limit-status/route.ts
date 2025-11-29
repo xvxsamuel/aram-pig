@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { checkRateLimit } from '../../../lib/rate-limiter';
-import { createAdminClient } from '../../../lib/supabase';
+import { checkRateLimit } from '@/lib/api';
+import { createAdminClient } from '@/lib/db';
 
 // batch: 14 req/sec, 70 req/2min (all profile updates)
 const BATCH_CAPACITY = { short: 14, long: 70 };

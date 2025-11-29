@@ -4,7 +4,7 @@ import RegionSelector from "./RegionSelector"
 import { useState, useRef, useEffect } from "react"
 import { clsx } from "clsx"
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
-import { getDefaultTag } from "@/lib/regions"
+import { getDefaultTag } from "@/lib/game"
  
 type Props = { className?: string }
 

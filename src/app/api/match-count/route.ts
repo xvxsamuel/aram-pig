@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getMatchIdsByPuuid } from '../../../lib/riot-api';
-import { createAdminClient } from '../../../lib/supabase';
+import { getMatchIdsByPuuid } from '@/lib/api';
+import { createAdminClient } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {

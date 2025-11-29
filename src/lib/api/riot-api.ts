@@ -1,21 +1,20 @@
+// Riot API client wrapper
 import { RiotAPI, DDragon } from "@fightmegg/riot-api"
-import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "./regions"
-import { waitForRateLimit, type RequestType } from './rate-limiter'
-import { getLatestVersion } from './ddragon-client'
+import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "../game/regions"
+import { waitForRateLimit, type RequestType } from "./rate-limiter"
+import { getLatestVersion } from "./ddragon"
+import type { MatchData, MatchTimeline } from "@/types/match"
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY
 
 if (!RIOT_API_KEY) {
-  console.error("RIOT_API_KEY is not set in environment variables") // in case my key expires
+  console.error("RIOT_API_KEY is not set in environment variables")
 }
 
 const rAPI = new RiotAPI(RIOT_API_KEY!)
 const ddragon = new DDragon()
 
-// version
-
-
-// account-v1 endpoints, interchangable but split for rate limits
+// account-v1 endpoints
 const REGIONAL_TO_PLATFORM_ID: Record<RegionalCluster, string> = {
   americas: 'americas',
   europe: 'europe',
@@ -50,7 +49,6 @@ const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, string> = {
 }
 
 // helper to retry api calls if job id conflicts
-// don't retry on 404s (account not found)
 async function retryWithDelay<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -59,17 +57,17 @@ async function retryWithDelay<T>(
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fn()
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number }; message?: string }
       // don't retry on 404s - account doesn't exist
-      if (error?.response?.status === 404) {
+      if (err?.response?.status === 404) {
         throw error
       }
       
-      const isJobConflict = error?.message?.includes('A job with the same ID already exists')
+      const isJobConflict = err?.message?.includes('A job with the same ID already exists')
       const isLastAttempt = attempt === maxRetries - 1
       
       if (isJobConflict && !isLastAttempt) {
-        // wait before retrying
         await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)))
         continue
       }
@@ -87,20 +85,20 @@ export async function getAccountByRiotId(
   region: RegionalCluster,
   requestType: RequestType = 'overhead'
 ) {
-  // regional endpoints use regional cluster for rate limiting
   await waitForRateLimit(region, requestType);
   
   try {
     const account = await retryWithDelay(() => 
       rAPI.account.getByRiotId({
-        region: REGIONAL_TO_PLATFORM_ID[region] as any,
+        region: REGIONAL_TO_PLATFORM_ID[region] as Parameters<typeof rAPI.account.getByRiotId>[0]['region'],
         gameName,
         tagLine,
       })
     )
     return account
-  } catch (error: any) {
-    if (error?.response?.status === 404) {
+  } catch (error: unknown) {
+    const err = error as { response?: { status?: number } }
+    if (err?.response?.status === 404) {
       return null
     }
     throw error
@@ -112,19 +110,19 @@ export async function getSummonerByPuuid(
   platform: PlatformCode,
   requestType: RequestType = 'overhead'
 ) {
-  // platform-specific endpoint - each platform has separate rate limits
   await waitForRateLimit(platform, requestType);
   
   try {
     const summoner = await retryWithDelay(() =>
       rAPI.summoner.getByPUUID({
-        region: PLATFORM_CODE_TO_PLATFORM_ID[platform] as any,
+        region: PLATFORM_CODE_TO_PLATFORM_ID[platform] as Parameters<typeof rAPI.summoner.getByPUUID>[0]['region'],
         puuid,
       })
     )
     return summoner
-  } catch (error: any) {
-    if (error?.response?.status === 404) {
+  } catch (error: unknown) {
+    const err = error as { response?: { status?: number } }
+    if (err?.response?.status === 404) {
       return null
     }
     throw error
@@ -141,11 +139,10 @@ export async function getMatchIdsByPuuid(
   startTime?: number,
   endTime?: number
 ) {
-  // regional endpoint - use regional cluster for rate limiting
   await waitForRateLimit(region, requestType);
   
   const limitedCount = Math.min(count, 100)
-  const params: any = {
+  const params: Record<string, number> = {
     queue,
     count: limitedCount,
   }
@@ -156,7 +153,7 @@ export async function getMatchIdsByPuuid(
   
   const matchIds = await retryWithDelay(() =>
     rAPI.matchV5.getIdsByPuuid({
-      cluster: REGIONAL_TO_MATCH_ROUTING[region] as any,
+      cluster: REGIONAL_TO_MATCH_ROUTING[region] as Parameters<typeof rAPI.matchV5.getIdsByPuuid>[0]['cluster'],
       puuid,
       params,
     })
@@ -165,26 +162,23 @@ export async function getMatchIdsByPuuid(
 }
 
 export async function getMatchById(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
-  // regional endpoint
   await waitForRateLimit(region, requestType);
   
   const match = await retryWithDelay(() =>
     rAPI.matchV5.getMatchById({
-      cluster: REGIONAL_TO_MATCH_ROUTING[region] as any,
+      cluster: REGIONAL_TO_MATCH_ROUTING[region] as Parameters<typeof rAPI.matchV5.getMatchById>[0]['cluster'],
       matchId,
     })
   )
   return match as unknown as MatchData
 }
 
-// fetch match timeline for item purchase order
 export async function getMatchTimeline(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
-  // regional endpoint
   await waitForRateLimit(region, requestType);
   
   const timeline = await retryWithDelay(() =>
     rAPI.matchV5.getMatchTimelineById({
-      cluster: REGIONAL_TO_MATCH_ROUTING[region] as any,
+      cluster: REGIONAL_TO_MATCH_ROUTING[region] as Parameters<typeof rAPI.matchV5.getMatchTimelineById>[0]['cluster'],
       matchId,
     })
   )
@@ -195,107 +189,11 @@ export async function getMatchTimeline(matchId: string, region: RegionalCluster,
 export async function getMatchTimelineNoWait(matchId: string, region: RegionalCluster) {
   const timeline = await retryWithDelay(() =>
     rAPI.matchV5.getMatchTimelineById({
-      cluster: REGIONAL_TO_MATCH_ROUTING[region] as any,
+      cluster: REGIONAL_TO_MATCH_ROUTING[region] as Parameters<typeof rAPI.matchV5.getMatchTimelineById>[0]['cluster'],
       matchId,
     })
   )
   return timeline as unknown as MatchTimeline
-}
-
-export interface MatchTimeline {
-  metadata: {
-    matchId: string
-    participants: string[]
-  }
-  info: {
-    frames: TimelineFrame[]
-    frameInterval: number
-  }
-}
-
-export interface TimelineFrame {
-  timestamp: number
-  participantFrames: Record<string, any>
-  events: TimelineEvent[]
-}
-
-export interface TimelineEvent {
-  type: string
-  timestamp: number
-  participantId?: number
-  itemId?: number
-}
-
-export interface MatchData {
-  metadata: {
-    matchId: string
-    participants: string[] // array of PUUIDs !!!! not summoner names
-  }
-  info: {
-    gameCreation: number
-    gameDuration: number
-    gameEndTimestamp: number
-    gameMode: string
-    gameVersion: string
-    queueId: number
-    participants: ParticipantData[]
-  }
-}
-
-export interface ParticipantData {
-  puuid: string
-  summonerName: string
-  riotIdGameName: string
-  riotIdTagline: string
-  championName: string
-  championId: number
-  teamId: number
-  win: boolean
-  gameEndedInEarlySurrender: boolean
-  kills: number
-  deaths: number
-  assists: number
-  champLevel: number
-  totalDamageDealtToChampions: number
-  totalDamageDealt?: number
-  totalHealsOnTeammates?: number
-  totalDamageShieldedOnTeammates?: number
-  timeCCingOthers?: number
-  totalTimeSpentDead?: number
-  goldEarned: number
-  totalMinionsKilled: number
-  neutralMinionsKilled: number
-  summoner1Id: number
-  summoner2Id: number
-  doubleKills?: number
-  tripleKills?: number
-  quadraKills?: number
-  pentaKills?: number
-  item0: number
-  item1: number
-  item2: number
-  item3: number
-  item4: number
-  item5: number
-  pigScore?: number
-  pigScoreBreakdown?: Record<string, unknown>
-  labels?: string[]
-  firstItem?: number
-  secondItem?: number
-  thirdItem?: number
-  perks?: {
-    styles: Array<{
-      style: number
-      selections: Array<{
-        perk: number
-      }>
-    }>
-    statPerks: {
-      offense: number
-      flex: number
-      defense: number
-    }
-  }
 }
 
 export async function getSummonerByRiotId(
@@ -322,22 +220,7 @@ export async function getSummonerByRiotId(
   }
 }
 
-// ddragon helpers - normalize champion names for ddragon urls
-function normalizeChampionName(championName: string): string {
-  const nameMap: Record<string, string> = {
-    'FiddleSticks': 'Fiddlesticks',
-    'MonkeyKing': 'MonkeyKing',
-    'Renata': 'Renata',
-  }
-  return nameMap[championName] || championName
-}
-
 // async versions for server components
-export async function getChampionCenteredUrl(championName: string, skinNum: number = 0): Promise<string> {
-  const normalizedName = normalizeChampionName(championName)
-  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${normalizedName}_${skinNum}.jpg`
-}
-
 export async function getProfileIconUrl(iconId: number): Promise<string> {
   const version = await getLatestVersion()
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${iconId}.png`

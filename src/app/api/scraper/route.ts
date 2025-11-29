@@ -2,12 +2,10 @@
 // Protected by CRON_SECRET to prevent unauthorized access
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase'
-import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId } from '@/lib/riot-api'
-import { waitForRateLimit } from '@/lib/rate-limiter'
-import { storeMatchData, flushAggregatedStats, getStatsBufferCount } from '@/lib/match-storage'
-import { extractPatch } from '@/lib/patch-utils'
-import type { RegionalCluster, PlatformCode } from '@/lib/regions'
+import { createAdminClient, storeMatchData, flushAggregatedStats, getStatsBufferCount } from '@/lib/db'
+import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId, waitForRateLimit } from '@/lib/api'
+import { extractPatch } from '@/lib/game'
+import type { RegionalCluster, PlatformCode } from '@/lib/game'
 
 // Accept only current patch
 const ACCEPTED_PATCHES = ['25.23']

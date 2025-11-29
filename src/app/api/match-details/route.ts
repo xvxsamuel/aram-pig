@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '../../../lib/supabase'
-import { getMatchTimeline } from '../../../lib/riot-api'
-import { PLATFORM_TO_REGIONAL, PlatformCode } from '../../../lib/regions'
-import { extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy } from '../../../lib/item-purchases'
-import { extractItemPurchases } from '../../../lib/item-purchase-history'
-import { calculatePigScore } from '../../../lib/pig-score-v2'
+import { createAdminClient } from '@/lib/db'
+import { getMatchTimeline } from '@/lib/api'
+import { PLATFORM_TO_REGIONAL, PlatformCode, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases } from '@/lib/game'
+import { calculatePigScore } from '@/lib/scoring'
 
 export async function POST(request: Request) {
   try {

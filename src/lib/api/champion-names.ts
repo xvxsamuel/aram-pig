@@ -1,3 +1,5 @@
+// Champion name utilities - fetching and converting
+
 interface ChampionData {
   id: string
   name: string

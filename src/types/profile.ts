@@ -1,5 +1,7 @@
 // unified profile types used across API and frontend
 
+import type { MatchData } from '@/types/match'
+
 // champion stats for a single champion
 export interface ChampionStats {
   championName: string
@@ -39,47 +41,6 @@ export interface RecentPlayer {
   profileIconId: number
 }
 
-// match participant (simplified from Riot API format)
-export interface MatchParticipant {
-  puuid: string
-  riotIdGameName: string
-  riotIdTagline: string
-  championName: string
-  teamId: number
-  win: boolean
-  kills: number
-  deaths: number
-  assists: number
-  champLevel: number
-  totalDamageDealtToChampions: number
-  goldEarned: number
-  totalMinionsKilled: number
-  summoner1Id: number
-  summoner2Id: number
-  items: number[]
-  perks: {
-    primary: { style: number; perks: number[] }
-    secondary: { style: number; perks: number[] }
-    statPerks: number[]
-  }
-  pigScore: number | null
-  isRemake: boolean
-  multiKills: {
-    double: number
-    triple: number
-    quadra: number
-    penta: number
-  }
-}
-
-// match data structure
-export interface ProfileMatch {
-  matchId: string
-  gameCreation: number
-  gameDuration: number
-  participants: MatchParticipant[]
-}
-
 // complete profile data returned by API
 export interface ProfileData {
   // summoner info
@@ -96,7 +57,7 @@ export interface ProfileData {
   // per-champion stats
   champions: ChampionStats[]
   // recent matches (first 20)
-  matches: ProfileMatch[]
+  matches: MatchData[]
   // players frequently played with
   recentlyPlayedWith: RecentPlayer[]
   // update job status
@@ -111,7 +72,7 @@ export interface PartialProfileData {
   summoner: ProfileData['summoner']
   summary: ProfileSummary | null
   champions: ChampionStats[]
-  matches: ProfileMatch[]
+  matches: MatchData[]
   recentlyPlayedWith: RecentPlayer[]
   updateStatus: ProfileData['updateStatus']
 }

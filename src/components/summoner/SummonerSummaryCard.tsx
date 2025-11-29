@@ -1,6 +1,6 @@
 "use client"
 
-import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from "@/lib/winrate-colors"
+import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from "@/lib/ui"
 import ProfileCard from "@/components/ui/ProfileCard"
 
 interface AggregateStats {
@@ -115,9 +115,15 @@ export default function SummonerSummaryCard({
   onTabChange
 }: Props) {
   const formatStat = (num: number, decimals: number = 1): string => {
+    if (!isFinite(num) || isNaN(num)) return '0'
     const rounded = Number(num.toFixed(decimals))
     return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(decimals)
   }
+  
+  // check if we have actual data (games > 0)
+  const hasData = aggregateStats && aggregateStats.games > 0
+  const isLoading = championStatsLoading
+  const showEmptyState = !isLoading && !hasData
 
   return (
     <ProfileCard 
@@ -129,19 +135,24 @@ export default function SummonerSummaryCard({
           {/* PIG score arc */}
           <div className="flex items-center justify-start">
             <PigScoreArc 
-              score={aggregateStats?.averagePigScore} 
-              loading={championStatsLoading} 
+              score={hasData ? aggregateStats?.averagePigScore : null} 
+              loading={isLoading} 
             />
           </div>
           
           {/* KDA */}
           <div className="flex flex-col items-center justify-center">
-            {championStatsLoading ? (
+            {isLoading ? (
               <>
                 <div className="h-5 w-12 bg-abyss-500 rounded animate-pulse mb-1"></div>
                 <div className="h-3 w-16 bg-abyss-500 rounded animate-pulse"></div>
               </>
-            ) : aggregateStats ? (
+            ) : showEmptyState ? (
+              <>
+                <div className="h-5 w-12 bg-abyss-600 rounded mb-1"></div>
+                <div className="h-3 w-16 bg-abyss-600 rounded"></div>
+              </>
+            ) : hasData ? (
               <>
                 <span className="text-sm font-bold" style={{ color: getKdaColor(parseFloat(summaryKda)) }}>
                   {summaryKda} KDA
@@ -155,12 +166,17 @@ export default function SummonerSummaryCard({
           
           {/* Win Rate */}
           <div className="flex flex-col items-end justify-center">
-            {championStatsLoading ? (
+            {isLoading ? (
               <>
                 <div className="h-5 w-10 bg-abyss-500 rounded animate-pulse mb-1"></div>
                 <div className="h-3 w-14 bg-abyss-500 rounded animate-pulse"></div>
               </>
-            ) : aggregateStats ? (
+            ) : showEmptyState ? (
+              <>
+                <div className="h-5 w-10 bg-abyss-600 rounded mb-1"></div>
+                <div className="h-3 w-14 bg-abyss-600 rounded"></div>
+              </>
+            ) : hasData ? (
               <>
                 <span className="text-sm text-white">
                   {aggregateStats.wins}W / {aggregateStats.losses}L

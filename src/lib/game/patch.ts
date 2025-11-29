@@ -1,18 +1,17 @@
-// centralized patch utilities
-// handles patch version conversion and fetching from Riot's DDragon API
+// Patch version utilities
+// Handles patch version conversion and fetching from Riot's DDragon API
 
-// number of patches to keep detailed stats for
+// Number of patches to keep detailed stats for
 export const PATCHES_TO_KEEP = 3
 
 /**
  * Fetches the latest patch versions from Riot's Data Dragon API
  * Converts API patch format (15.x.x) to ARAM PIG format (25.x)
- * @param count - number of patches to return (default: PATCHES_TO_KEEP)
  */
 export async function getLatestPatches(count: number = PATCHES_TO_KEEP): Promise<string[]> {
   try {
     const response = await fetch('https://ddragon.leagueoflegends.com/api/versions.json', {
-      next: { revalidate: 3600 } // cache for 1 hour
+      next: { revalidate: 3600 }
     })
     
     if (!response.ok) {
@@ -21,30 +20,23 @@ export async function getLatestPatches(count: number = PATCHES_TO_KEEP): Promise
     
     const versions: string[] = await response.json()
     
-    // take first N versions and convert them
-    // example: "15.1.1" -> "25.1"
     const patches = versions.slice(0, count).map(version => {
       const parts = version.split('.')
       const major = parseInt(parts[0])
       const minor = parts[1]
-      
-      // convert 15.x -> 25.x (Riot's API year offset)
       const convertedMajor = major + 10
-      
       return `${convertedMajor}.${minor}`
     })
     
     return patches
   } catch (error) {
     console.error('Failed to fetch latest patches:', error)
-    // fallback to hardcoded recent patches if API fails
     return ['25.23', '25.22', '25.21'].slice(0, count)
   }
 }
 
 /**
  * Check if a patch is in the accepted list (latest patches)
- * This is async because it needs to fetch the latest patches from DDragon
  */
 export async function isPatchAccepted(patch: string): Promise<boolean> {
   const latestPatches = await getLatestPatches(PATCHES_TO_KEEP)
@@ -67,10 +59,7 @@ export function extractPatch(gameVersion: string): string {
   return apiPatch
 }
 
-/**
- * Get patch version from game creation timestamp
- * Uses hardcoded schedule as fallback when DDragon is unavailable
- */
+// Patch schedule for fallback date-based detection
 export const patchSchedule = [
   { patch: '25.1', start: new Date('2025-01-09').getTime() },
   { patch: '25.2', start: new Date('2025-01-23').getTime() },
@@ -111,6 +100,5 @@ export function getDateRangeForDays(days: 7 | 30 | 60): { start: Date; end: Date
   const end = new Date()
   const start = new Date()
   start.setDate(start.getDate() - days)
-  
   return { start, end }
 }

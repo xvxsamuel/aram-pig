@@ -1,11 +1,9 @@
 import { notFound } from "next/navigation"
-import { LABEL_TO_PLATFORM, getDefaultTag } from "@/lib/regions"
+import { LABEL_TO_PLATFORM, getDefaultTag } from "@/lib/game"
 import SummonerContent from "@/components/summoner/SummonerContent"
 import SummonerNotFound from "@/components/summoner/SummonerNotFound"
-import { getSummonerByRiotId, getProfileIconUrl } from "@/lib/riot-api"
-import { getLatestVersion } from "@/lib/ddragon-client"
-import { supabase } from "@/lib/supabase"
-import { fetchChampionNames } from "@/lib/champion-names"
+import { getSummonerByRiotId, getProfileIconUrl, getLatestVersion, fetchChampionNames } from "@/lib/api"
+import { supabase } from "@/lib/db"
 import type { Metadata } from 'next'
 
 interface Params {

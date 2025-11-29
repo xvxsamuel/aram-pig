@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { fetchChampionNames, getApiNameFromUrl } from '@/lib/champion-names'
-import { getLatestVersion } from '@/lib/ddragon-client'
+import { supabase } from '@/lib/db'
+import { fetchChampionNames, getApiNameFromUrl, getLatestVersion } from '@/lib/api'
 
 export async function GET(
   request: Request,

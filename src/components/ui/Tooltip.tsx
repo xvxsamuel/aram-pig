@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useMemo, memo } from 'react'
 import Image from 'next/image'
-import { getTooltipData, type TooltipType } from '@/lib/tooltip-data'
-import { cleanWikiMarkup } from '@/lib/wiki-markup-simple'
-import { getItemImageUrl, getLatestVersion } from '@/lib/ddragon-client'
+import { getTooltipData, cleanWikiMarkup, type TooltipType } from '@/lib/ui'
+import { getItemImageUrl, getLatestVersion } from '@/lib/api/ddragon'
 import SimpleTooltip from './SimpleTooltip'
 
 interface TooltipProps {

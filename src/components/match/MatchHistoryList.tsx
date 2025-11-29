@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { MatchData } from "@/lib/riot-api"
+import type { MatchData } from "@/types/match"
 import MatchHistoryItem from "@/components/match/MatchHistoryItem"
 import ChampionFilter from "@/components/filters/ChampionFilter"
 import ProfileCard from "@/components/ui/ProfileCard"
@@ -15,9 +15,10 @@ interface Props {
   championNames: Record<string, string>
   onMatchesLoaded?: (newMatches: MatchData[]) => void
   initialLoading?: boolean
+  currentName?: { gameName: string, tagLine: string }
 }
 
-export default function MatchHistoryList({ matches: initialMatches, puuid, region, ddragonVersion, championNames, onMatchesLoaded, initialLoading = false }: Props) {
+export default function MatchHistoryList({ matches: initialMatches, puuid, region, ddragonVersion, championNames, onMatchesLoaded, initialLoading = false, currentName }: Props) {
   const [matches, setMatches] = useState(initialMatches)
   const [championFilter, setChampionFilter] = useState("")
   const [loading, setLoading] = useState(false)
@@ -52,7 +53,8 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
         body: JSON.stringify({
           puuid,
           offset: matches.length,
-          limit: 20
+          limit: 20,
+          currentName
         })
       })
 
@@ -115,7 +117,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
               ))}
             </div>
             
-            {!championFilter && hasMore && (
+            {hasMore && (
               <button
                 onClick={loadMore}
                 disabled={loading}
