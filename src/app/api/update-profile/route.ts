@@ -1161,7 +1161,7 @@ async function processMatchesInBackground(
         .eq('match_id', matchId)
       
       if (participants) {
-        allParticipantPuuids.push(...participants.map(p => p.puuid))
+        allParticipantPuuids.push(...participants.map((p: { puuid: string }) => p.puuid))
       }
     }
     
