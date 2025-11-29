@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/db'
-import { getMatchTimeline } from '@/lib/api'
+import { getMatchTimeline } from '@/lib/riot/api'
 import { PLATFORM_TO_REGIONAL, PlatformCode, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases } from '@/lib/game'
 import { calculatePigScore } from '@/lib/scoring'
 

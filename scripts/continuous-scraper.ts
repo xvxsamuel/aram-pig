@@ -299,8 +299,8 @@ async function crawlSummoner(puuid: string, region: RegionalCluster): Promise<{ 
             toDelete.forEach(p => seedPool.delete(p))
           }
           
-          // Store match with batchStats=true (stats buffered in match-storage)
-          const result = await storeMatchData(matchData, region, false, true)
+          // Store match (stats buffered in memory with Welford's algorithm)
+          const result = await storeMatchData(matchData, region, false)
           if (result.success) {
             stored++
             // Add to cache after successful storage

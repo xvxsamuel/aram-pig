@@ -1,21 +1,19 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/db'
-import { getMatchTimeline, getMatchById } from '@/lib/api'
+import { createAdminClient, statsAggregator, flushAggregatedStats, type ParticipantStatsInput } from '@/lib/db'
+import { getMatchTimeline, getMatchById } from '@/lib/riot/api'
 import { calculatePigScoreWithBreakdown } from '@/lib/scoring'
 import { extractAbilityOrder, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases, isPatchAccepted } from '@/lib/game'
 
 // in-memory lock to prevent concurrent processing of the same match (handles Strict Mode double-invoke)
 const processingLocks = new Map<string, Promise<{ data: any; status: number }>>()
 
-// finished items are tier 3+ items (legendaries and boots)
+// finished items are legendaries and all boots (including tier 1)
 import itemsData from '../../../data/items.json'
 
 const finishedItems = new Set<number>()
 Object.entries(itemsData).forEach(([id, item]) => {
-  // include tier 3+ items (legendaries) and boots (tier 2 boots have depth 2)
-  const depth = (item as any).depth || 0
-  const isBoot = (item as any).tags?.includes('Boots')
-  if (depth >= 3 || (isBoot && depth >= 2)) {
+  const type = (item as any).itemType
+  if (type === 'legendary' || type === 'boots') {
     finishedItems.add(parseInt(id))
   }
 })
@@ -186,7 +184,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
     const patchAccepted = await isPatchAccepted(matchRecord.patch)
     const results: Record<string, number | null> = {}
     const updates: Array<{ puuid: string; updatedMatchData: any }> = []
-    const statsToIncrement: Array<any> = []
+    const statsToIncrement: ParticipantStatsInput[] = []
     
     // process each participant
     for (let idx = 0; idx < participants.length; idx++) {
@@ -299,32 +297,32 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
         }
         
         statsToIncrement.push({
-          p_champion_name: participant.champion_name,
-          p_patch: matchRecord.patch,
-          p_win: matchParticipant.win ? 1 : 0,
-          p_items: JSON.stringify(itemsForStats),
-          p_first_buy: (firstBuy.length > 0 ? formatFirstBuy(firstBuy) : '') ?? '',
-          p_keystone_id: runes.primary.perks[0] || 0,
-          p_rune1: runes.primary.perks[1] || 0,
-          p_rune2: runes.primary.perks[2] || 0,
-          p_rune3: runes.primary.perks[3] || 0,
-          p_rune4: runes.secondary.perks[0] || 0,
-          p_rune5: runes.secondary.perks[1] || 0,
-          p_rune_tree_primary: runes.primary.style,
-          p_rune_tree_secondary: runes.secondary.style,
-          p_stat_perk0: runes.statPerks[0],
-          p_stat_perk1: runes.statPerks[1],
-          p_stat_perk2: runes.statPerks[2],
-          p_spell1_id: matchParticipant.summoner1Id || 0,
-          p_spell2_id: matchParticipant.summoner2Id || 0,
-          p_skill_order: skillOrder,
-          p_damage_to_champions: matchParticipant.totalDamageDealtToChampions || 0,
-          p_total_damage: matchParticipant.totalDamageDealt || 0,
-          p_healing: matchParticipant.totalHealsOnTeammates || 0,
-          p_shielding: matchParticipant.totalDamageShieldedOnTeammates || 0,
-          p_cc_time: matchParticipant.timeCCingOthers || 0,
-          p_game_duration: matchRecord.game_duration || 0,
-          p_deaths: matchParticipant.deaths || 0
+          champion_name: participant.champion_name,
+          patch: matchRecord.patch,
+          win: matchParticipant.win,
+          items: itemsForStats,
+          first_buy: (firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null),
+          keystone_id: runes.primary.perks[0] || 0,
+          rune1: runes.primary.perks[1] || 0,
+          rune2: runes.primary.perks[2] || 0,
+          rune3: runes.primary.perks[3] || 0,
+          rune4: runes.secondary.perks[0] || 0,
+          rune5: runes.secondary.perks[1] || 0,
+          rune_tree_primary: runes.primary.style,
+          rune_tree_secondary: runes.secondary.style,
+          stat_perk0: runes.statPerks[0],
+          stat_perk1: runes.statPerks[1],
+          stat_perk2: runes.statPerks[2],
+          spell1_id: matchParticipant.summoner1Id || 0,
+          spell2_id: matchParticipant.summoner2Id || 0,
+          skill_order: skillOrder || null,
+          damage_to_champions: matchParticipant.totalDamageDealtToChampions || 0,
+          total_damage: matchParticipant.totalDamageDealt || 0,
+          healing: matchParticipant.totalHealsOnTeammates || 0,
+          shielding: matchParticipant.totalDamageShieldedOnTeammates || 0,
+          cc_time: matchParticipant.timeCCingOthers || 0,
+          game_duration: matchRecord.game_duration || 0,
+          deaths: matchParticipant.deaths || 0
         })
       }
     }
@@ -341,14 +339,18 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
     // increment champion stats for all participants (only once per match)
     let statsUpdated = 0
     if (statsToIncrement.length > 0 && !anyHasTimeline) {
-      console.log(`[EnrichMatch] Incrementing champion stats for ${statsToIncrement.length} participants...`)
+      console.log(`[EnrichMatch] Adding champion stats for ${statsToIncrement.length} participants to aggregator...`)
       for (const stats of statsToIncrement) {
-        const { error: statsError } = await supabase.rpc('increment_champion_stats', stats)
-        if (statsError) {
-          console.error(`[EnrichMatch] Error updating stats for ${stats.p_champion_name}:`, statsError)
-        } else {
-          statsUpdated++
-        }
+        statsAggregator.add(stats)
+        statsUpdated++
+      }
+      
+      // flush aggregated stats immediately since this is on-demand enrichment
+      const flushResult = await flushAggregatedStats()
+      if (!flushResult.success && flushResult.error) {
+        console.error(`[EnrichMatch] Failed to flush champion stats:`, flushResult.error)
+      } else {
+        console.log(`[EnrichMatch] Flushed ${flushResult.count} champion stats to database`)
       }
     }
     

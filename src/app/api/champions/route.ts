@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/db'
 
+// cache for 60s, serve stale for 5 minutes while revalidating
+const CACHE_CONTROL = 'public, s-maxage=60, stale-while-revalidate=300'
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const filter = searchParams.get('filter') || 'patch'
@@ -64,12 +67,14 @@ export async function GET(request: NextRequest) {
       champions.sort((a, b) => parseFloat(b.overall_winrate) - parseFloat(a.overall_winrate))
       
       // add total matches to response
-      return NextResponse.json({
+      const response = NextResponse.json({
         champions,
         total: totalCount,
         totalMatches: matchCount || 0,
         hasMore: offset + limit < totalCount
       })
+      response.headers.set('Cache-Control', CACHE_CONTROL)
+      return response
     } else {
       return NextResponse.json({
         champions: [],

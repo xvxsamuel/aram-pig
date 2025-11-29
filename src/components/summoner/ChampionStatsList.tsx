@@ -3,8 +3,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getChampionImageUrl } from '@/lib/api/ddragon'
-import { getChampionDisplayName, getSortedChampionNames, getChampionUrlName } from '@/lib/api/champion-names'
+import { getChampionImageUrl, getChampionDisplayName, getSortedChampionNames, getChampionUrlName } from '@/lib/ddragon'
 import { getWinrateColor, getKdaColor, getPigScoreColor } from '@/lib/ui'
 
 type SortKey = 'games' | 'winrate' | 'kda' | 'damage' | 'pigScore'

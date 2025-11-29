@@ -153,28 +153,51 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     ccTimePerMin: (championAvg.sumCCTime / totalGames) / avgGameDurationMinutes,
   }
   
+  // Get Welford stats for z-score calculations (if available)
+  const welford = championAvg.welford || null
+  
   // calculate performance penalties (skip if champion average is null/0)
   const penalties: { [key: string]: number } = {}
   
   if (championAvgPerMin.damageToChampionsPerMin > 0) {
-    const penalty = calculateStatPenalty(playerStats.damageToChampionsPerMin, championAvgPerMin.damageToChampionsPerMin, 20)
+    const penalty = calculateStatPenalty(
+      playerStats.damageToChampionsPerMin, 
+      championAvgPerMin.damageToChampionsPerMin, 
+      20,
+      welford?.damageToChampionsPerMin
+    )
     penalties['Damage to Champions'] = penalty
     score -= penalty
   }
   if (championAvgPerMin.totalDamagePerMin > 0) {
-    const penalty = calculateStatPenalty(playerStats.totalDamagePerMin, championAvgPerMin.totalDamagePerMin, 20)
+    const penalty = calculateStatPenalty(
+      playerStats.totalDamagePerMin, 
+      championAvgPerMin.totalDamagePerMin, 
+      20,
+      welford?.totalDamagePerMin
+    )
     penalties['Total Damage'] = penalty
     score -= penalty
   }
   // only penalize healing/shielding if champion actually heals/shields significantly (500+/min average)
   if (championAvgPerMin.healingShieldingPerMin >= 500) {
-    const penalty = calculateStatPenalty(playerStats.healingShieldingPerMin, championAvgPerMin.healingShieldingPerMin, 20)
+    const penalty = calculateStatPenalty(
+      playerStats.healingShieldingPerMin, 
+      championAvgPerMin.healingShieldingPerMin, 
+      20,
+      welford?.healingShieldingPerMin
+    )
     penalties['Healing/Shielding'] = penalty
     score -= penalty
   }
   // only penalize CC if champion has meaningful CC (3+ seconds/min average)
   if (championAvgPerMin.ccTimePerMin >= 3) {
-    const penalty = calculateStatPenalty(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, 20)
+    const penalty = calculateStatPenalty(
+      playerStats.ccTimePerMin, 
+      championAvgPerMin.ccTimePerMin, 
+      20,
+      welford?.ccTimePerMin
+    )
     penalties['CC Time'] = penalty
     score -= penalty
   }
@@ -289,11 +312,19 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
     ccTimePerMin: (championAvg.sumCCTime / totalGames) / avgGameDurationMinutes,
   }
   
+  // Get Welford stats for z-score calculations (if available)
+  const welford = championAvg.welford || null
+  
   const penalties: PigScoreBreakdown['penalties'] = []
   
   // damage to champions penalty
   if (championAvgPerMin.damageToChampionsPerMin > 0) {
-    const penalty = calculateStatPenalty(playerStats.damageToChampionsPerMin, championAvgPerMin.damageToChampionsPerMin, 20)
+    const penalty = calculateStatPenalty(
+      playerStats.damageToChampionsPerMin, 
+      championAvgPerMin.damageToChampionsPerMin, 
+      20,
+      welford?.damageToChampionsPerMin
+    )
     const percentOfAvg = (playerStats.damageToChampionsPerMin / championAvgPerMin.damageToChampionsPerMin) * 100
     penalties.push({
       name: 'Damage to Champions',
@@ -308,7 +339,12 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
   
   // total damage penalty
   if (championAvgPerMin.totalDamagePerMin > 0) {
-    const penalty = calculateStatPenalty(playerStats.totalDamagePerMin, championAvgPerMin.totalDamagePerMin, 20)
+    const penalty = calculateStatPenalty(
+      playerStats.totalDamagePerMin, 
+      championAvgPerMin.totalDamagePerMin, 
+      20,
+      welford?.totalDamagePerMin
+    )
     const percentOfAvg = (playerStats.totalDamagePerMin / championAvgPerMin.totalDamagePerMin) * 100
     penalties.push({
       name: 'Total Damage',
@@ -323,7 +359,12 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
   
   // healing/shielding penalty - only for champions that actually heal/shield (500+/min average)
   if (championAvgPerMin.healingShieldingPerMin >= 500) {
-    const penalty = calculateStatPenalty(playerStats.healingShieldingPerMin, championAvgPerMin.healingShieldingPerMin, 20)
+    const penalty = calculateStatPenalty(
+      playerStats.healingShieldingPerMin, 
+      championAvgPerMin.healingShieldingPerMin, 
+      20,
+      welford?.healingShieldingPerMin
+    )
     const percentOfAvg = (playerStats.healingShieldingPerMin / championAvgPerMin.healingShieldingPerMin) * 100
     penalties.push({
       name: 'Healing/Shielding',
@@ -338,7 +379,12 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
   
   // cc time penalty - only for champions with meaningful CC (3+s/min average)
   if (championAvgPerMin.ccTimePerMin >= 3) {
-    const penalty = calculateStatPenalty(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, 20)
+    const penalty = calculateStatPenalty(
+      playerStats.ccTimePerMin, 
+      championAvgPerMin.ccTimePerMin, 
+      20,
+      welford?.ccTimePerMin
+    )
     const percentOfAvg = (playerStats.ccTimePerMin / championAvgPerMin.ccTimePerMin) * 100
     penalties.push({
       name: 'CC Time',

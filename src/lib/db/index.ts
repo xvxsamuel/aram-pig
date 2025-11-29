@@ -28,6 +28,10 @@ export {
   StatsAggregator,
   statsAggregator,
   type ParticipantStatsInput,
+  type WelfordState,
+  getVariance,
+  getStdDev,
+  getZScore,
 } from './stats-aggregator'
 
 export {

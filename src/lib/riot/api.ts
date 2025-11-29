@@ -1,8 +1,8 @@
-// Riot API client wrapper
+// Riot API client wrapper (server-only)
 import { RiotAPI, DDragon } from "@fightmegg/riot-api"
-import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "../game/regions"
+import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "@/lib/game"
 import { waitForRateLimit, type RequestType } from "./rate-limiter"
-import { getLatestVersion } from "./ddragon"
+import { getLatestVersion } from "@/lib/ddragon"
 import type { MatchData, MatchTimeline } from "@/types/match"
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY

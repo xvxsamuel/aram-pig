@@ -1,10 +1,46 @@
 // PIG Score calculator - stat penalties
 import { createAdminClient } from '../db/supabase'
+import type { WelfordState } from '../db/stats-aggregator'
+import { getZScore, getStdDev } from '../db/stats-aggregator'
 
-// calculate penalty for a single stat based on performance vs average
-export function calculateStatPenalty(playerValue: number, avgValue: number, maxPenalty: number): number {
+// calculate penalty for a single stat based on z-score (how many stddevs below mean)
+// Uses Welford stats if available, falls back to simple ratio if not
+export function calculateStatPenalty(
+  playerValue: number, 
+  avgValue: number, 
+  maxPenalty: number,
+  welfordState?: WelfordState
+): number {
   if (avgValue <= 0) return 0
   
+  // If we have Welford stats with enough samples, use z-score based penalty
+  if (welfordState && welfordState.n >= 30) {
+    const stdDev = getStdDev(welfordState)
+    
+    // If stddev is meaningful (>5% of mean), use z-score
+    if (stdDev > welfordState.mean * 0.05) {
+      const zScore = getZScore(playerValue, welfordState)
+      
+      // No penalty if at or above mean
+      if (zScore >= 0) return 0
+      
+      // Penalty scales with how far below mean (in stddevs)
+      // -0.5 stddev = 15% penalty
+      // -1 stddev = 30% penalty  
+      // -1.5 stddev = 50% penalty
+      // -2 stddev = 75% penalty
+      // -2.5+ stddev = 100% penalty
+      const absZ = Math.abs(zScore)
+      if (absZ <= 0.5) return maxPenalty * 0.15 * (absZ / 0.5)
+      if (absZ <= 1.0) return maxPenalty * (0.15 + 0.15 * ((absZ - 0.5) / 0.5))
+      if (absZ <= 1.5) return maxPenalty * (0.30 + 0.20 * ((absZ - 1.0) / 0.5))
+      if (absZ <= 2.0) return maxPenalty * (0.50 + 0.25 * ((absZ - 1.5) / 0.5))
+      if (absZ <= 2.5) return maxPenalty * (0.75 + 0.25 * ((absZ - 2.0) / 0.5))
+      return maxPenalty
+    }
+  }
+  
+  // Fallback: simple ratio-based penalty (backwards compatible)
   const performanceRatio = playerValue / avgValue
   
   if (performanceRatio >= 1.0) return 0

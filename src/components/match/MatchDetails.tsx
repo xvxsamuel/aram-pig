@@ -5,8 +5,7 @@ import type { MatchData } from "@/types/match"
 import Image from "next/image"
 import Link from "next/link"
 import clsx from "clsx"
-import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl } from "@/lib/api/ddragon"
-import { getChampionUrlName } from "@/lib/api/champion-names"
+import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl, getChampionUrlName } from "@/lib/ddragon"
 import { getKdaColor, getPigScoreColor } from "@/lib/ui"
 import Tooltip from "@/components/ui/Tooltip"
 import runesData from "@/data/runes.json"
@@ -347,6 +346,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   width={32}
                   height={32}
                   className="w-full h-full scale-110 object-cover"
+                  unoptimized
                 />
               </div>
               <div className="absolute -bottom-0.5 -left-0.5 w-3.5 h-3.5 rounded-sm flex items-center justify-center text-[9px] font-bold bg-abyss-700 text-white">
@@ -357,18 +357,18 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
               <div className="flex flex-col gap-0.5">
                 <div className="flex gap-0.5">
                   <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
-                    <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" />
+                    <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" unoptimized />
                   </div>
                   <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
-                    <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="" width={14} height={14} className="w-full h-full" />
+                    <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="" width={14} height={14} className="w-full h-full" unoptimized />
                   </div>
                 </div>
                 <div className="flex gap-0.5">
                   <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
-                    <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" />
+                    <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" unoptimized />
                   </div>
                   <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
-                    <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="" width={14} height={14} className="w-full h-full p-0.5" />
+                    <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="" width={14} height={14} className="w-full h-full p-0.5" unoptimized />
                   </div>
                 </div>
               </div>
@@ -469,6 +469,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                       width={24}
                       height={24}
                       className="w-full h-full object-cover"
+                      unoptimized
                     />
                   </div>
                 </Tooltip>

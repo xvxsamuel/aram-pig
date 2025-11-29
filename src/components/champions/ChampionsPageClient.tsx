@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import useSWR from 'swr'
 import PatchFilter from '@/components/filters/PatchFilter'
 import ChampionTable from '@/components/champions/ChampionTable'
+
+const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 interface ChampionStats {
   champion_name: string
@@ -22,48 +24,24 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
   const filter = searchParams.get('filter')
   const patch = searchParams.get('patch')
   
-  const [champions, setChampions] = useState<ChampionStats[]>([])
-  const [loading, setLoading] = useState(true)
-  const [totalMatches, setTotalMatches] = useState(0)
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
-
-  useEffect(() => {
-    // only fetch if we have both filter and patch params
-    if (!filter || !patch) {
-      setLoading(true)
-      return
+  // SWR with stale-while-revalidate
+  const { data, isLoading } = useSWR(
+    filter && patch 
+      ? `/api/champions?offset=0&limit=200&filter=${filter}&patch=${patch}`
+      : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000,
+      keepPreviousData: true,
     }
-
-    const fetchData = async () => {
-      setLoading(true)
-      setChampions([]) // clear old data immediately
-      try {
-        const params = new URLSearchParams({
-          offset: '0',
-          limit: '200', // load all champions at once with indexed db
-          filter: filter,
-        })
-        if (patch) params.set('patch', patch)
-
-        const res = await fetch(`/api/champions?${params}`)
-        const data = await res.json()
-        
-        if (data.champions) {
-          setChampions(data.champions)
-          setTotalMatches(data.totalMatches || 0)
-          if (data.champions.length > 0) {
-            setLastUpdated(data.champions[0].last_calculated_at)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch champions:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [filter, patch])
+  )
+  
+  const champions: ChampionStats[] = data?.champions || []
+  const totalMatches: number = data?.totalMatches || 0
+  const lastUpdated = champions.length > 0 ? (champions[0] as any).last_calculated_at : null
+  const loading = isLoading && !data
 
   // calculate time since last update
   let timeAgo = 'Unknown'

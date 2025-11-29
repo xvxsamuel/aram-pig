@@ -2,8 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { getChampionImageUrl } from "@/lib/api/ddragon"
-import { getChampionDisplayName, getChampionUrlName } from "@/lib/api/champion-names"
+import { getChampionImageUrl, getChampionDisplayName, getChampionUrlName } from "@/lib/ddragon"
 import { getWinrateColor, getKdaColor, getPigScoreColor } from "@/lib/ui"
 import ProfileCard from "@/components/ui/ProfileCard"
 
@@ -80,6 +79,7 @@ export default function SummonerTopChampions({
                         width={40}
                         height={40}
                         className="w-full h-full object-cover scale-110"
+                        unoptimized
                       />
                     </div>
                     <div className="min-w-0 flex-1">

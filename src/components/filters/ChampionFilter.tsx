@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import Image from "next/image"
-import { getChampionImageUrl } from "@/lib/api/ddragon"
-import { getChampionDisplayName, getSortedChampionNames } from "@/lib/api/champion-names"
+import { getChampionImageUrl, getChampionDisplayName, getSortedChampionNames } from "@/lib/ddragon"
 
 interface Props {
   value: string
@@ -109,7 +108,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
                       width={24}
                       height={24}
                       className="w-full h-full object-cover"
-
+                      unoptimized
                     />
                   </div>
                   <span>{displayName}</span>

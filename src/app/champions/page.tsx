@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getLatestVersion, fetchChampionNames } from '@/lib/api'
+import { getLatestVersion, fetchChampionNames } from '@/lib/ddragon'
 import { getLatestPatches } from '@/lib/game'
 import ChampionsPageClient from '@/components/champions/ChampionsPageClient'
 

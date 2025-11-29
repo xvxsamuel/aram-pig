@@ -86,21 +86,18 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
   )
 
   return (
-    <div className="w-full xl:flex-1 xl:min-w-0 flex flex-col">
+    <div className="w-full xl:flex-1 xl:min-w-0">
       <ProfileCard 
         title="ARAM History" 
         headerRight={filterDropdown}
-        contentClassName="flex-1 flex flex-col"
       >
         {initialLoading ? (
-          <div className="flex-1 flex items-center justify-center py-20">
+          <div className="flex items-center justify-center py-20">
             <LoadingSpinner size="lg" />
           </div>
         ) : filteredMatches.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center text-text-muted py-8">
-              {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
-            </div>
+          <div className="text-center text-text-muted py-8">
+            {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
           </div>
         ) : (
           <>

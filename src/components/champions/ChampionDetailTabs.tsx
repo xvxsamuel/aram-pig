@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import clsx from 'clsx'
 import Tooltip from '@/components/ui/Tooltip'
-import { getItemImageUrl, getSummonerSpellUrl } from '@/lib/api/ddragon'
+import { getItemImageUrl, getSummonerSpellUrl } from '@/lib/ddragon'
 import { getWinrateColor } from '@/lib/ui'
 import runesData from '@/data/runes.json'
 

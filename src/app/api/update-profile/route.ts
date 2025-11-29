@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
-import { createAdminClient } from '@/lib/db';
-import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline, checkRateLimit, type RequestType } from '@/lib/api';
+import { createAdminClient, statsAggregator, flushAggregatedStats } from '@/lib/db';
+import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline } from '@/lib/riot/api';
+import { checkRateLimit, type RequestType } from '@/lib/riot/rate-limiter';
 import type { PlatformCode } from '@/lib/game';
 import type { UpdateJob } from '../../../types/update-jobs';
 import { calculatePigScoreWithBreakdown, recalculateProfileStatsForPlayers, getTrackedPlayersFromMatches } from '@/lib/scoring';
@@ -1078,40 +1079,36 @@ async function processMatchesInBackground(
                 statPerks: [participant.perks?.statPerks?.offense || 0, participant.perks?.statPerks?.flex || 0, participant.perks?.statPerks?.defense || 0]
               }
             
-              const { error: statsError } = await supabase.rpc('increment_champion_stats', {
-                p_champion_name: participant.championName,
-                p_patch: patchVersion,
-                p_win: participant.win ? 1 : 0,
-                p_items: JSON.stringify(itemsForStats),
-                p_first_buy: firstBuyForStats,
-                p_keystone_id: runes.primary.perks[0] || 0,
-                p_rune1: runes.primary.perks[1] || 0,
-                p_rune2: runes.primary.perks[2] || 0,
-                p_rune3: runes.primary.perks[3] || 0,
-                p_rune4: runes.secondary.perks[0] || 0,
-                p_rune5: runes.secondary.perks[1] || 0,
-                p_rune_tree_primary: runes.primary.style,
-                p_rune_tree_secondary: runes.secondary.style,
-                p_stat_perk0: runes.statPerks[0],
-                p_stat_perk1: runes.statPerks[1],
-                p_stat_perk2: runes.statPerks[2],
-                p_spell1_id: participant.summoner1Id || 0,
-                p_spell2_id: participant.summoner2Id || 0,
-                p_skill_order: skillOrder,
-                p_damage_to_champions: participant.totalDamageDealtToChampions || 0,
-                p_total_damage: participant.totalDamageDealt || 0,
-                p_healing: participant.totalHealsOnTeammates || 0,
-                p_shielding: participant.totalDamageShieldedOnTeammates || 0,
-                p_cc_time: participant.timeCCingOthers || 0,
-                p_game_duration: match.info.gameDuration || 0,
-                p_deaths: participant.deaths || 0
+              // Add to stats aggregator (batch processing with Welford's algorithm)
+              statsAggregator.add({
+                champion_name: participant.championName,
+                patch: patchVersion,
+                win: participant.win,
+                items: itemsForStats,
+                first_buy: firstBuyForStats || null,
+                keystone_id: runes.primary.perks[0] || 0,
+                rune1: runes.primary.perks[1] || 0,
+                rune2: runes.primary.perks[2] || 0,
+                rune3: runes.primary.perks[3] || 0,
+                rune4: runes.secondary.perks[0] || 0,
+                rune5: runes.secondary.perks[1] || 0,
+                rune_tree_primary: runes.primary.style,
+                rune_tree_secondary: runes.secondary.style,
+                stat_perk0: runes.statPerks[0],
+                stat_perk1: runes.statPerks[1],
+                stat_perk2: runes.statPerks[2],
+                spell1_id: participant.summoner1Id || 0,
+                spell2_id: participant.summoner2Id || 0,
+                skill_order: skillOrder || null,
+                damage_to_champions: participant.totalDamageDealtToChampions || 0,
+                total_damage: participant.totalDamageDealt || 0,
+                healing: participant.totalHealsOnTeammates || 0,
+                shielding: participant.totalDamageShieldedOnTeammates || 0,
+                cc_time: participant.timeCCingOthers || 0,
+                game_duration: match.info.gameDuration || 0,
+                deaths: participant.deaths || 0
               })
-            
-              if (statsError) {
-                console.error(`  Error updating champion stats for ${participant.championName}:`, statsError)
-              } else {
-                console.log(`  Updated champion stats for tracked user: ${participant.championName}`)
-              }
+              console.log(`  Added champion stats for tracked user: ${participant.championName}`)
             }
           } // end isPatchAccepted check
         }
@@ -1171,9 +1168,16 @@ async function processMatchesInBackground(
     // recalculate stats for all tracked players
     await recalculateProfileStatsForPlayers(trackedPlayers)
     
+    // flush aggregated champion stats to database
+    console.log('[UpdateProfile] Flushing aggregated champion stats...')
+    const flushResult = await flushAggregatedStats()
+    if (!flushResult.success && flushResult.error) {
+      console.error('[UpdateProfile] Failed to flush champion stats:', flushResult.error)
+    }
+    
     // mark job as completed
     await completeJob(supabase, jobId);
-    console.log(`[UpdateProfile] Job ${jobId} completed - fetched ${fetchedMatches} matches, calculated ${pigScoresCalculated} pig scores, updated ${trackedPlayers.length} player profiles`)
+    console.log(`[UpdateProfile] Job ${jobId} completed - fetched ${fetchedMatches} matches, calculated ${pigScoresCalculated} pig scores, updated ${trackedPlayers.length} player profiles, flushed ${flushResult.count} champion stats`)
   } catch (error: any) {
     console.error('[UpdateProfile] Background processing error:', error);
     await failJob(supabase, jobId, error.message || 'unknown error');

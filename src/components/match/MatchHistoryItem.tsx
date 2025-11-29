@@ -13,8 +13,8 @@ import {
   getItemImageUrl,
   getRuneImageUrl,
   getRuneStyleImageUrl,
-} from '@/lib/api/ddragon'
-import { getChampionUrlName } from '@/lib/api/champion-names'
+} from '@/lib/ddragon'
+import { getChampionUrlName } from '@/lib/ddragon'
 import { getKdaColor, getPigScoreColor } from '@/lib/ui'
 import MatchDetails from '@/components/match/MatchDetails'
 import Tooltip from '@/components/ui/Tooltip'

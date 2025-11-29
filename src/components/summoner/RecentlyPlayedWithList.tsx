@@ -38,6 +38,7 @@ export default function RecentlyPlayedWithList({ players, region, ddragonVersion
                   width={40}
                   height={40}
                   className="w-full h-full object-cover"
+                  unoptimized
                 />
               </div>
               

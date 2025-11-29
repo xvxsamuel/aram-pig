@@ -1,4 +1,4 @@
-// Redis/memory rate limiter for Riot API calls
+// Redis/memory rate limiter for Riot API calls (server-only)
 import { Redis } from '@upstash/redis'
 
 // redis off by default locally, enabled in production/CI

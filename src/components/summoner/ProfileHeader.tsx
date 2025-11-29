@@ -106,7 +106,7 @@ export default function ProfileHeader({
               fill
               className="object-cover"
               style={{ objectPosition: "center 25%" }}
-
+              unoptimized
               priority
             />
           </div>
@@ -182,7 +182,7 @@ export default function ProfileHeader({
                   width={120}
                   height={120}
                   className="w-full h-full object-cover"
-
+                  unoptimized
                   priority
                   onError={() => setIconError(true)}
                 />

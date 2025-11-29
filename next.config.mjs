@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: false, // disable double-invoke in dev (causes duplicate API calls)
   images: {
-    unoptimized: true, // disable image optimization for Vercel temporarily
+    qualities: [75, 90],
     remotePatterns: [
       {
         protocol: 'https',
@@ -10,10 +10,6 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-    formats: ['image/webp'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    qualities: [75, 90, 100],
   },
 }
  

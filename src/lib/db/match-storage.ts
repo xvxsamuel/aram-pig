@@ -3,7 +3,7 @@
 import { createAdminClient } from './supabase'
 import type { MatchData } from '@/types/match'
 import type { RegionalCluster } from '../game/regions'
-import { getMatchTimelineNoWait } from '../api/riot-api'
+import { getMatchTimelineNoWait } from '../riot/api'
 import { extractAbilityOrder } from '../game/ability-leveling'
 import { extractPatch, getPatchFromDate, isPatchAccepted } from '../game/patch'
 import { extractFirstBuy, formatFirstBuy } from '../game/items'
@@ -162,8 +162,7 @@ export interface ParticipantStatsData {
 export async function storeMatchData(
   matchData: MatchData,
   region?: RegionalCluster,
-  skipTimeline: boolean = false,
-  batchStats: boolean = false
+  skipTimeline: boolean = false
 ): Promise<{ success: boolean }> {
   const supabase = createAdminClient()
   
@@ -400,48 +399,12 @@ export async function storeMatchData(
     const patchAccepted = await isPatchAccepted(patchVersion)
     
     if (patchAccepted) {
-      if (batchStats) {
-        for (const stats of statsData) {
-          statsAggregator.add(stats)
-        }
-        console.log(`[STATS] Stored ${matchData.metadata.matchId} (+${statsData.length} participants, buffer: ${getStatsBufferCount()}, ${getAggregatedChampionCount()} champions)`)
-      } else {
-        for (const stats of statsData) {
-          const { error: statsError } = await supabase.rpc('increment_champion_stats', {
-            p_champion_name: stats.champion_name,
-            p_patch: stats.patch,
-            p_win: stats.win ? 1 : 0,
-            p_items: JSON.stringify(stats.items),
-            p_first_buy: stats.first_buy || '',
-            p_keystone_id: stats.keystone_id,
-            p_rune1: stats.rune1,
-            p_rune2: stats.rune2,
-            p_rune3: stats.rune3,
-            p_rune4: stats.rune4,
-            p_rune5: stats.rune5,
-            p_rune_tree_primary: stats.rune_tree_primary,
-            p_rune_tree_secondary: stats.rune_tree_secondary,
-            p_stat_perk0: stats.stat_perk0,
-            p_stat_perk1: stats.stat_perk1,
-            p_stat_perk2: stats.stat_perk2,
-            p_spell1_id: stats.spell1_id,
-            p_spell2_id: stats.spell2_id,
-            p_skill_order: stats.skill_order || '',
-            p_damage_to_champions: stats.damage_to_champions,
-            p_total_damage: stats.total_damage,
-            p_healing: stats.healing,
-            p_shielding: stats.shielding,
-            p_cc_time: stats.cc_time,
-            p_game_duration: stats.game_duration,
-            p_deaths: stats.deaths
-          })
-          
-          if (statsError) {
-            console.error('error updating champion stats:', statsError)
-          }
-        }
-        console.log(`[STATS] Stored ${matchData.metadata.matchId} (${trackedRows.length} tracked, ${participantRows.length - trackedRows.length} anonymous)`)
+      // Always use batch mode - stats are aggregated in memory with Welford's algorithm
+      // for proper mean/stddev calculation, then flushed periodically
+      for (const stats of statsData) {
+        statsAggregator.add(stats)
       }
+      console.log(`[STATS] Stored ${matchData.metadata.matchId} (+${statsData.length} participants, buffer: ${getStatsBufferCount()}, ${getAggregatedChampionCount()} champions)`)
     } else if (isRemake) {
       console.log(`[STATS] Stored ${matchData.metadata.matchId} (remake, stats skipped)`)
     } else {

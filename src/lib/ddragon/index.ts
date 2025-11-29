@@ -1,6 +1,4 @@
-// API module exports - CLIENT-SAFE ONLY
-// For server-only code (riot-api, rate-limiter), import directly from the file
-
+// DDragon utilities barrel export (all client-safe)
 export {
   getLatestVersion,
   preloadDDragonVersion,
@@ -11,7 +9,7 @@ export {
   getItemImageUrl,
   getRuneImageUrl,
   getRuneStyleImageUrl,
-} from './ddragon'
+} from './assets'
 
 export {
   fetchChampionNames,
@@ -19,4 +17,4 @@ export {
   getChampionUrlName,
   getApiNameFromUrl,
   getSortedChampionNames,
-} from './champion-names'
+} from './champions'

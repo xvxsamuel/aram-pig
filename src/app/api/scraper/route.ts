@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, storeMatchData, flushAggregatedStats, getStatsBufferCount } from '@/lib/db'
-import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId, waitForRateLimit } from '@/lib/api'
+import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId } from '@/lib/riot/api'
+import { waitForRateLimit } from '@/lib/riot/rate-limiter'
 import { extractPatch } from '@/lib/game'
 import type { RegionalCluster, PlatformCode } from '@/lib/game'
 
@@ -189,8 +190,8 @@ async function crawlSummoner(puuid: string, region: RegionalCluster): Promise<{ 
           }
         }
         
-        // Store match with batch stats
-        const result = await storeMatchData(matchData, region, false, true)
+        // Store match (stats buffered in memory with Welford's algorithm)
+        const result = await storeMatchData(matchData, region, false)
         if (result.success) {
           stored++
           crawlState.matchesStored++

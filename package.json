@@ -23,7 +23,8 @@
     "next": "latest",
     "nextjs-toploader": "^3.9.17",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "swr": "^2.3.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

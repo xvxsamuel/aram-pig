@@ -2,7 +2,8 @@ import { notFound } from "next/navigation"
 import { LABEL_TO_PLATFORM, getDefaultTag } from "@/lib/game"
 import SummonerContent from "@/components/summoner/SummonerContent"
 import SummonerNotFound from "@/components/summoner/SummonerNotFound"
-import { getSummonerByRiotId, getProfileIconUrl, getLatestVersion, fetchChampionNames } from "@/lib/api"
+import { getSummonerByRiotId, getProfileIconUrl } from "@/lib/riot/api"
+import { getLatestVersion, fetchChampionNames } from "@/lib/ddragon"
 import { supabase } from "@/lib/db"
 import type { Metadata } from 'next'
 

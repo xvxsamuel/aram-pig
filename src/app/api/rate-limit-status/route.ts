@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { checkRateLimit } from '@/lib/api';
+import { checkRateLimit } from '@/lib/riot/rate-limiter';
 import { createAdminClient } from '@/lib/db';
 
 // batch: 14 req/sec, 70 req/2min (all profile updates)

@@ -1,6 +1,7 @@
 // Stats aggregator - TypeScript-side aggregation for champion stats
 // Reduces DB operations from N (per participant) to M (per unique champion+patch)
 
+// all boots (tier 1 + tier 2) - normalized to 99999 for core combo grouping
 const BOOT_IDS = new Set([1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158])
 
 function normalizeBootId(itemId: number): number {
@@ -32,10 +33,36 @@ interface GameStats {
   wins: number
 }
 
+// Welford's online algorithm state for computing mean and variance
+export interface WelfordState {
+  n: number      // count
+  mean: number   // running mean
+  m2: number     // sum of squared deviations (for variance calculation)
+}
+
+// Calculate variance from Welford state (population variance)
+export function getVariance(state: WelfordState): number {
+  if (state.n < 2) return 0
+  return state.m2 / state.n
+}
+
+// Calculate standard deviation from Welford state
+export function getStdDev(state: WelfordState): number {
+  return Math.sqrt(getVariance(state))
+}
+
+// Calculate z-score (how many standard deviations from mean)
+export function getZScore(value: number, state: WelfordState): number {
+  const stdDev = getStdDev(state)
+  if (stdDev === 0) return 0
+  return (value - state.mean) / stdDev
+}
+
 interface ChampionStatsData {
   games: number
   wins: number
   championStats: {
+    // Legacy sum fields (kept for backwards compatibility)
     sumDamageToChampions: number
     sumTotalDamage: number
     sumHealing: number
@@ -43,6 +70,14 @@ interface ChampionStatsData {
     sumCCTime: number
     sumGameDuration: number
     sumDeaths: number
+    // Welford stats for per-minute values (for stddev calculation)
+    welford: {
+      damageToChampionsPerMin: WelfordState
+      totalDamagePerMin: WelfordState
+      healingShieldingPerMin: WelfordState
+      ccTimePerMin: WelfordState
+      deathsPerMin: WelfordState
+    }
   }
   items: Record<string, Record<string, GameStats>>
   runes: {
@@ -154,6 +189,25 @@ export class StatsAggregator {
     stats.championStats.sumCCTime += input.cc_time
     stats.championStats.sumGameDuration += input.game_duration
     stats.championStats.sumDeaths += input.deaths
+    
+    // Welford's algorithm for per-minute stats variance tracking
+    const gameDurationMinutes = input.game_duration / 60
+    if (gameDurationMinutes > 0) {
+      const perMinStats = {
+        damageToChampionsPerMin: input.damage_to_champions / gameDurationMinutes,
+        totalDamagePerMin: input.total_damage / gameDurationMinutes,
+        healingShieldingPerMin: (input.healing + input.shielding) / gameDurationMinutes,
+        ccTimePerMin: input.cc_time / gameDurationMinutes,
+        deathsPerMin: input.deaths / gameDurationMinutes
+      }
+      
+      // Update each Welford state
+      this.updateWelford(stats.championStats.welford.damageToChampionsPerMin, perMinStats.damageToChampionsPerMin)
+      this.updateWelford(stats.championStats.welford.totalDamagePerMin, perMinStats.totalDamagePerMin)
+      this.updateWelford(stats.championStats.welford.healingShieldingPerMin, perMinStats.healingShieldingPerMin)
+      this.updateWelford(stats.championStats.welford.ccTimePerMin, perMinStats.ccTimePerMin)
+      this.updateWelford(stats.championStats.welford.deathsPerMin, perMinStats.deathsPerMin)
+    }
     
     // items by position
     for (let i = 0; i < input.items.length && i < 6; i++) {
@@ -348,6 +402,20 @@ export class StatsAggregator {
     this.participantCount = 0
   }
   
+  // Welford's online algorithm: update running mean and M2 (sum of squared deviations)
+  private updateWelford(state: WelfordState, newValue: number): void {
+    state.n += 1
+    const delta = newValue - state.mean
+    state.mean += delta / state.n
+    const delta2 = newValue - state.mean
+    state.m2 += delta * delta2
+  }
+  
+  // Helper to create empty Welford state
+  private createEmptyWelford(): WelfordState {
+    return { n: 0, mean: 0, m2: 0 }
+  }
+  
   private createEmptyStats(): ChampionStatsData {
     return {
       games: 0,
@@ -359,7 +427,14 @@ export class StatsAggregator {
         sumShielding: 0,
         sumCCTime: 0,
         sumGameDuration: 0,
-        sumDeaths: 0
+        sumDeaths: 0,
+        welford: {
+          damageToChampionsPerMin: this.createEmptyWelford(),
+          totalDamagePerMin: this.createEmptyWelford(),
+          healingShieldingPerMin: this.createEmptyWelford(),
+          ccTimePerMin: this.createEmptyWelford(),
+          deathsPerMin: this.createEmptyWelford()
+        }
       },
       items: { '1': {}, '2': {}, '3': {}, '4': {}, '5': {}, '6': {} },
       runes: {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, memo } from 'react'
 import Image from 'next/image'
 import { getTooltipData, cleanWikiMarkup, type TooltipType } from '@/lib/ui'
-import { getItemImageUrl, getLatestVersion } from '@/lib/api/ddragon'
+import { getItemImageUrl, getLatestVersion } from '@/lib/ddragon'
 import SimpleTooltip from './SimpleTooltip'
 
 interface TooltipProps {
