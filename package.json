@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "scraper": "tsx --import ./scripts/load-env.ts scripts/continuous-scraper.ts"
   },
   "dependencies": {

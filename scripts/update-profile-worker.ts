@@ -2,9 +2,9 @@
 // handles large batch updates that would timeout on Vercel
 
 import { createClient } from '@supabase/supabase-js'
-import { getMatchById, getMatchTimeline, waitForRateLimit } from '../src/lib/api'
+import { getMatchById, getMatchTimeline } from '../src/lib/api'
 import { calculatePigScoreWithBreakdown } from '../src/lib/scoring'
-import { extractAbilityOrder, extractPatch, getPatchFromDate, isPatchAccepted, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases } from '../src/lib/game'
+import { extractAbilityOrder, extractPatch, getPatchFromDate, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases } from '../src/lib/game'
 import itemsData from '../src/data/items.json'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -13,7 +13,7 @@ const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY!
 const supabase = createClient(supabaseUrl, supabaseSecretKey)
 
 // helper to check if item is a finished item
-const isFinishedItem = (itemId: number): boolean => {
+const _isFinishedItem = (itemId: number): boolean => {
   const item = (itemsData as Record<string, any>)[itemId.toString()]
   if (!item) return false
   const type = item.itemType

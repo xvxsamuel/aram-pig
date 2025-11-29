@@ -85,7 +85,7 @@ const seedPoolByRegion = new Map<RegionalCluster, Set<string>>([
 ])
 
 // map platforms to regional clusters
-const PLATFORM_TO_REGION: Record<string, RegionalCluster> = {
+const _PLATFORM_TO_REGION: Record<string, RegionalCluster> = {
   na1: 'americas', br1: 'americas', la1: 'americas', la2: 'americas',
   euw1: 'europe', eun1: 'europe', tr1: 'europe', ru: 'europe',
   kr: 'asia', jp1: 'asia',
@@ -340,7 +340,7 @@ function loadState(): { stacks: Record<string, string[]>, visited: Record<string
       const state = JSON.parse(data)
       console.log('[CRAWLER] Loaded state from scraper-state.json')
       return { ...state, dry: state.dry || {}, seedPool: state.seedPool || {} }
-    } catch (error) {
+    } catch (_error) {
       console.log('[CRAWLER] Failed to load state, starting fresh')
     }
   }
@@ -613,8 +613,8 @@ async function main() {
   
   // Show final state summary
   const totalStackSize = Array.from(crawlStackByRegion.values()).reduce((sum, stack) => sum + stack.length, 0)
-  const totalVisited = Array.from(visitedPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
-  const totalDryRestored = Array.from(dryPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
+  const _totalVisited = Array.from(visitedPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
+  const _totalDryRestored = Array.from(dryPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
   if (totalStackSize === 0) {
     console.log('[CRAWLER] Warning: No PUUIDs in stacks. Will attempt to seed from pool or DB.')
   }

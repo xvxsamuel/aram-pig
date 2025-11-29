@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint'
 
 export default [
   {
-    ignores: ['node_modules/', '.next/', 'out/'],
+    ignores: ['node_modules/', '.next/', 'out/', 'dist/', 'next-env.d.ts'],
   },
   {
     plugins: {
@@ -20,7 +20,11 @@ export default [
   {
     rules: {
       // allow unused vars if prefixed with underscore
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { 
+        argsIgnorePattern: '^_', 
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }],
       // any is fine for internal api calls and background processes
       '@typescript-eslint/no-explicit-any': 'off',
     },
