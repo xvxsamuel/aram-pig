@@ -156,14 +156,12 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
     
     // try to use stored timeline first, otherwise fetch from Riot API
     let timeline = matchRecord.timeline_data
-    let timelineWasFetched = false
     
     if (!timeline) {
       console.log(`[EnrichMatch] Fetching timeline for ${matchId} from Riot API...`)
       
       try {
         timeline = await getMatchTimeline(matchId, region as any, 'overhead')
-        timelineWasFetched = true
       } catch (err) {
         console.error(`[EnrichMatch] Failed to fetch timeline:`, err)
         return { 

@@ -94,7 +94,7 @@ export async function GET(request: Request) {
     let teamTotalKills = 0
     let playerKills = 0
     let playerAssists = 0
-    let playerTeamId = participantData.match_data?.teamId
+    const playerTeamId = participantData.match_data?.teamId
     
     if (allParticipants && playerTeamId !== undefined) {
       for (const p of allParticipants) {
