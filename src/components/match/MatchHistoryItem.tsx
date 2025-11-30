@@ -52,8 +52,12 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
 
   const showBorder = isExpanded || isHovered
 
+  const matchLabel = `Match ${match.metadata.matchId.split('_')[1]}, ${participant.championName}, ${isRemake ? 'Remake' : isWin ? 'Victory' : 'Defeat'}, ${participant.kills}/${participant.deaths}/${participant.assists}`
+
   return (
-    <div 
+    <li 
+      role="listitem"
+      aria-label={matchLabel}
       className="relative rounded-lg p-px"
     >
       {/* animated gradient border */}
@@ -79,7 +83,8 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           role="button"
-          aria-label="Toggle match details"
+          aria-expanded={isExpanded}
+          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} match details`}
         >
         {/* main content */}
         <div
@@ -449,7 +454,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
         />
       )}
       </div>
-    </div>
+    </li>
   )
 }
 

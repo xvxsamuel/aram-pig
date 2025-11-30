@@ -100,10 +100,10 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
   try {
     const supabase = createAdminClient()
     
-    // get match record
+    // get match record (including stored timeline_data)
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
-      .select('game_duration, game_creation, patch')
+      .select('game_duration, game_creation, patch, timeline_data')
       .eq('match_id', matchId)
       .single()
     
@@ -111,9 +111,12 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
       return { data: { error: 'Match not found' }, status: 404 }
     }
     
-    // check if match is older than 30 days - no timeline available
+    // check if match is older than 30 days - no timeline available from Riot API
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
-    if (matchRecord.game_creation < thirtyDaysAgo) {
+    const isTooOld = matchRecord.game_creation < thirtyDaysAgo
+    
+    // if too old AND no stored timeline, we can't enrich
+    if (isTooOld && !matchRecord.timeline_data) {
       return { 
         data: { error: 'Match older than 30 days - timeline not available', tooOld: true },
         status: 400 
@@ -130,7 +133,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
       return { data: { error: 'No participants found' }, status: 404 }
     }
     
-    // check if already enriched (has timeline data)
+    // check if already enriched (has timeline data in participants)
     const anyHasTimeline = participants.some(p => 
       p.match_data?.abilityOrder || p.match_data?.buildOrder
     )
@@ -151,22 +154,42 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
       }
     }
     
-    console.log(`[EnrichMatch] Fetching timeline for ${matchId}...`)
-    
-    // fetch timeline from Riot API
-    let timeline
-    try {
-      timeline = await getMatchTimeline(matchId, region as any, 'overhead')
-    } catch (err) {
-      console.error(`[EnrichMatch] Failed to fetch timeline:`, err)
-      return { 
-        data: { error: 'Failed to fetch timeline from Riot API', rateLimited: true },
-        status: 503 
-      }
-    }
+    // try to use stored timeline first, otherwise fetch from Riot API
+    let timeline = matchRecord.timeline_data
+    let timelineWasFetched = false
     
     if (!timeline) {
-      return { data: { error: 'Timeline not available' }, status: 404 }
+      console.log(`[EnrichMatch] Fetching timeline for ${matchId} from Riot API...`)
+      
+      try {
+        timeline = await getMatchTimeline(matchId, region as any, 'overhead')
+        timelineWasFetched = true
+      } catch (err) {
+        console.error(`[EnrichMatch] Failed to fetch timeline:`, err)
+        return { 
+          data: { error: 'Failed to fetch timeline from Riot API', rateLimited: true },
+          status: 503 
+        }
+      }
+      
+      if (!timeline) {
+        return { data: { error: 'Timeline not available' }, status: 404 }
+      }
+      
+      // store the timeline for future use
+      const { error: timelineUpdateError } = await supabase
+        .from('matches')
+        .update({ timeline_data: timeline })
+        .eq('match_id', matchId)
+      
+      if (timelineUpdateError) {
+        console.error(`[EnrichMatch] Failed to store timeline:`, timelineUpdateError)
+        // continue anyway - we have the timeline in memory
+      } else {
+        console.log(`[EnrichMatch] Stored timeline for ${matchId}`)
+      }
+    } else {
+      console.log(`[EnrichMatch] Using stored timeline for ${matchId}`)
     }
     
     // we also need the full match data to get participant stats
@@ -185,6 +208,14 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
     const results: Record<string, number | null> = {}
     const updates: Array<{ puuid: string; updatedMatchData: any }> = []
     const statsToIncrement: ParticipantStatsInput[] = []
+    
+    // Pre-calculate team kills for kill participation
+    const teamKills: Record<number, number> = {}
+    if (matchData?.info?.participants) {
+      for (const p of matchData.info.participants) {
+        teamKills[p.teamId] = (teamKills[p.teamId] || 0) + (p.kills || 0)
+      }
+    }
     
     // process each participant
     for (let idx = 0; idx < participants.length; idx++) {
@@ -225,6 +256,9 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
             time_ccing_others: matchParticipant.timeCCingOthers || 0,
             game_duration: matchRecord.game_duration || 0,
             deaths: matchParticipant.deaths || 0,
+            kills: matchParticipant.kills || 0,
+            assists: matchParticipant.assists || 0,
+            teamTotalKills: teamKills[matchParticipant.teamId] || 0,
             item0: matchParticipant.item0 || 0,
             item1: matchParticipant.item1 || 0,
             item2: matchParticipant.item2 || 0,

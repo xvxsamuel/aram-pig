@@ -38,6 +38,17 @@ interface ParticipantDetails {
   loading: boolean
 }
 
+interface ItemPenaltyDetail {
+  slot: number
+  itemId: number
+  itemName?: string
+  penalty: number
+  reason: 'optimal' | 'suboptimal' | 'off-meta' | 'unknown' | 'boots'
+  playerWinrate?: number
+  topWinrate?: number
+  isInTop5: boolean
+}
+
 interface PigScoreBreakdown {
   finalScore: number
   playerStats: {
@@ -60,7 +71,17 @@ interface PigScoreBreakdown {
     playerValue?: number
     avgValue?: number
     percentOfAvg?: number
+    zScore?: number
+    targetZScore?: number
+    stdDev?: number
+    relevanceWeight?: number
   }[]
+  itemDetails?: ItemPenaltyDetail[]
+  scoringInfo?: {
+    targetZScore: number
+    meanPenaltyPercent: number
+    description: string
+  }
   totalGames: number
   patch: string
 }
@@ -1101,6 +1122,103 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     </div>
                   </div>
                 </div>
+
+                {/* Item Build Breakdown */}
+                {pigScoreBreakdown.itemDetails && pigScoreBreakdown.itemDetails.length > 0 && (
+                  <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
+                    <h3 className="text-sm font-semibold text-white mb-3">Item Build Analysis</h3>
+                    <div className="space-y-2">
+                      {pigScoreBreakdown.itemDetails.map((item, idx) => {
+                        const isGood = item.reason === 'optimal' || item.reason === 'boots'
+                        const isBad = item.reason === 'off-meta' || item.penalty >= 2
+                        const slotNames = ['1st Item', '2nd Item', '3rd Item']
+                        
+                        return (
+                          <div key={idx} className="flex items-center gap-3 py-1">
+                            <div className={clsx(
+                              "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                              isGood && "bg-accent-light",
+                              !isGood && !isBad && "bg-gold-light",
+                              isBad && "bg-negative"
+                            )} />
+                            <span className="text-xs text-text-muted w-16 flex-shrink-0">{slotNames[item.slot] || `Slot ${item.slot + 1}`}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                {item.itemId > 0 && (
+                                  <Image
+                                    src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/item/${item.itemId}.png`}
+                                    alt={`Item ${item.itemId}`}
+                                    width={20}
+                                    height={20}
+                                    className="rounded"
+                                    unoptimized
+                                  />
+                                )}
+                                <span className={clsx(
+                                  "text-xs",
+                                  isGood ? "text-accent-light" : isBad ? "text-negative" : "text-gold-light"
+                                )}>
+                                  {item.reason === 'optimal' ? 'Top 5 choice' : 
+                                   item.reason === 'boots' ? 'Boots (no penalty)' :
+                                   item.reason === 'suboptimal' ? `Suboptimal (-${item.penalty.toFixed(1)})` :
+                                   item.reason === 'off-meta' ? 'Off-meta pick' : 'Unknown item'}
+                                </span>
+                              </div>
+                              {item.playerWinrate !== undefined && item.topWinrate !== undefined && (
+                                <div className="text-[10px] text-text-muted mt-0.5">
+                                  {item.playerWinrate.toFixed(1)}% WR vs {item.topWinrate.toFixed(1)}% top WR
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Scoring Formula Info */}
+                {pigScoreBreakdown.scoringInfo && (
+                  <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
+                    <h3 className="text-sm font-semibold text-white mb-2">How PIG Score Works</h3>
+                    <p className="text-xs text-text-muted mb-3">
+                      {pigScoreBreakdown.scoringInfo.description}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="bg-abyss-800/50 rounded p-2">
+                        <div className="text-text-muted mb-1">Target Performance</div>
+                        <div className="text-white font-medium">Top ~16% (mean + 1σ)</div>
+                      </div>
+                      <div className="bg-abyss-800/50 rounded p-2">
+                        <div className="text-text-muted mb-1">Average = Penalty</div>
+                        <div className="text-gold-light font-medium">25% of max</div>
+                      </div>
+                    </div>
+                    
+                    {/* Z-Score details for stats that have them */}
+                    {pigScoreBreakdown.penalties.some(p => p.zScore !== undefined) && (
+                      <div className="mt-3 pt-3 border-t border-abyss-600">
+                        <div className="text-[11px] text-text-muted mb-2 uppercase tracking-wide">Your Z-Scores (vs other players)</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {pigScoreBreakdown.penalties
+                            .filter(p => p.zScore !== undefined)
+                            .map((p, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-xs">
+                                <span className="text-text-muted">{p.name}</span>
+                                <span className={clsx(
+                                  "font-mono tabular-nums",
+                                  (p.zScore ?? 0) >= 1 ? "text-accent-light" : 
+                                  (p.zScore ?? 0) >= 0 ? "text-gold-light" : "text-negative"
+                                )}>
+                                  {(p.zScore ?? 0) >= 0 ? '+' : ''}{p.zScore?.toFixed(2)}σ
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>

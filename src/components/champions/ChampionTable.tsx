@@ -95,36 +95,47 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
   return (
     <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
       {/* table header */}
-      <div className="grid grid-cols-[80px_80px_1fr_120px_120px_120px] gap-4 px-4 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
-        <div className="text-center transition-colors relative py-4">Rank</div>
-        <div className="py-4"></div>
+      <div className="flex items-stretch gap-3 px-3 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
+        <div className="w-14 flex items-center justify-center py-3">Rank</div>
         <button
           onClick={() => handleSort('champion')}
-          className="text-center hover:text-white transition-colors cursor-pointer relative py-4"
+          className={`w-32 flex items-center justify-center hover:text-white transition-colors cursor-pointer py-3 relative ${sortKey === 'champion' ? 'text-white' : ''}`}
         >
           Champion
-          {sortKey === 'champion' && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-1/2 -translate-x-1/2 w-[80px] h-0.5 bg-accent-light`} />}
+          {sortKey === 'champion' && (
+            <span className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`} />
+          )}
         </button>
+        <div className="flex-1" />
         <button
           onClick={() => handleSort('winrate')}
-          className="text-center hover:text-white transition-colors cursor-pointer relative py-4"
+          className={`w-20 sm:w-24 flex items-center justify-center hover:text-white transition-colors cursor-pointer py-3 relative ${(sortKey === 'winrate' || sortKey === null) ? 'text-white' : ''}`}
         >
-          Win Rate
-          {(sortKey === 'winrate' || sortKey === null) && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-1/2 -translate-x-1/2 w-[60px] h-0.5 bg-accent-light`} />}
+          <span className="hidden sm:inline">Win Rate</span>
+          <span className="sm:hidden">WR</span>
+          {(sortKey === 'winrate' || sortKey === null) && (
+            <span className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`} />
+          )}
         </button>
         <button
           onClick={() => handleSort('pickrate')}
-          className="text-center hover:text-white transition-colors cursor-pointer relative py-4"
+          className={`w-20 sm:w-24 flex items-center justify-center hover:text-white transition-colors cursor-pointer py-3 relative ${sortKey === 'pickrate' ? 'text-white' : ''}`}
         >
-          Pick Rate
-          {sortKey === 'pickrate' && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-1/2 -translate-x-1/2 w-[65px] h-0.5 bg-accent-light`} />}
+          <span className="hidden sm:inline">Pick Rate</span>
+          <span className="sm:hidden">PR</span>
+          {sortKey === 'pickrate' && (
+            <span className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`} />
+          )}
         </button>
         <button
           onClick={() => handleSort('matches')}
-          className="text-center hover:text-white transition-colors cursor-pointer relative py-4"
+          className={`w-20 sm:w-24 flex items-center justify-center hover:text-white transition-colors cursor-pointer py-3 relative ${sortKey === 'matches' ? 'text-white' : ''}`}
         >
-          Matches
-          {sortKey === 'matches' && <span className={`absolute ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'} left-1/2 -translate-x-1/2 w-[60px] h-0.5 bg-accent-light`} />}
+          <span className="hidden sm:inline">Matches</span>
+          <span className="sm:hidden">#</span>
+          {sortKey === 'matches' && (
+            <span className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`} />
+          )}
         </button>
       </div>
 
@@ -137,37 +148,40 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
             <Link
               key={`${champion.champion_name}-${index}`}
               href={`/champions/${getChampionUrlName(champion.champion_name, championNames)}`}
-              className="grid grid-cols-[80px_80px_1fr_120px_120px_120px] gap-4 p-4 border-b border-abyss-800 hover:bg-abyss-700 transition-colors group"
+              className="flex items-center gap-3 py-2 px-3 border-b border-abyss-800 hover:bg-gold-light/10 transition-colors"
             >
               {/* rank */}
-              <div className="text-center font-bold text-subtitle flex items-center justify-center">
-                  <h2 className="text-xl font-bold text-center">{index + 1}</h2>
+              <div className="w-14 text-center">
+                <h2 className="text-lg font-bold">{index + 1}</h2>
               </div>
               
-              {/* champion image */}
-              <div className="w-12 h-12 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-xl">
-                <div className="relative w-full h-full rounded-[inherit] overflow-hidden bg-accent-dark">
-                  <Image
-                    src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
-                    alt={champion.champion_name}
-                    width={48}
-                    height={48}
-                    className="w-full h-full object-cover scale-110"
-                    unoptimized
-                  />
-                  <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+              {/* champion icon + name */}
+              <div className="w-32 flex items-center gap-3">
+                <div className="w-10 h-10 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg flex-shrink-0">
+                  <div className="relative w-full h-full rounded-[inherit] overflow-hidden bg-accent-dark">
+                    <Image
+                      src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
+                      alt={champion.champion_name}
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-cover scale-110"
+                      unoptimized
+                    />
+                    <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                  </div>
                 </div>
+                <span className="font-medium text-sm truncate">
+                  {getChampionDisplayName(champion.champion_name, championNames)}
+                </span>
               </div>
               
-              {/* champion name */}
-              <div className="font-semibold flex items-center">
-                {getChampionDisplayName(champion.champion_name, championNames)}
-              </div>
+              {/* spacer */}
+              <div className="flex-1" />
               
               {/* win rate */}
-              <div className="text-center flex items-center justify-center">
+              <div className="w-20 sm:w-24 text-center">
                 <span 
-                  className="text-lg font-bold"
+                  className="font-bold"
                   style={{ color: getWinrateColor(champion.overall_winrate) }}
                 >
                   {Number(champion.overall_winrate).toFixed(2).replace(/\.?0+$/, '')}%
@@ -175,12 +189,12 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
               </div>
               
               {/* pick rate */}
-              <div className="text-center flex items-center justify-center text-subtitle">
+              <div className="w-20 sm:w-24 text-center text-subtitle text-sm">
                 {pickRate.toFixed(1)}%
               </div>
               
               {/* matches */}
-              <div className="text-center flex items-center justify-center text-subtitle">
+              <div className="w-20 sm:w-24 text-center text-subtitle text-sm">
                 {champion.games_analyzed.toLocaleString()}
               </div>
             </Link>

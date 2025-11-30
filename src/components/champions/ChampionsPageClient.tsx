@@ -83,40 +83,59 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
         {/* champion table or skeleton */}
         {loading || !filter || !patch ? (
           <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-            {/* table header */}
-            <div className="grid grid-cols-[80px_80px_1fr_120px_120px_120px] gap-4 px-4 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
-              <div className="text-center transition-colors relative py-4">Rank</div>
-              <div className="py-4"></div>
-              <div className="text-center py-4">Champion</div>
-              <div className="text-center py-4">Win Rate</div>
-              <div className="text-center py-4">Pick Rate</div>
-              <div className="text-center py-4">Matches</div>
+            {/* table header - matches ChampionTable */}
+            <div className="flex items-stretch gap-3 px-3 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
+              <div className="w-14 flex items-center justify-center py-3">Rank</div>
+              <div className="w-32 flex items-center justify-center py-3">Champion</div>
+              <div className="flex-1" />
+              <div className="w-20 sm:w-24 flex items-center justify-center py-3">
+                <span className="hidden sm:inline">Win Rate</span>
+                <span className="sm:hidden">WR</span>
+              </div>
+              <div className="w-20 sm:w-24 flex items-center justify-center py-3">
+                <span className="hidden sm:inline">Pick Rate</span>
+                <span className="sm:hidden">PR</span>
+              </div>
+              <div className="w-20 sm:w-24 flex items-center justify-center py-3">
+                <span className="hidden sm:inline">Matches</span>
+                <span className="sm:hidden">#</span>
+              </div>
             </div>
             
-            {/* skeleton rows */}
+            {/* skeleton rows - matches ChampionTable row structure */}
             <div>
               {Array.from({ length: 20 }).map((_, i) => (
                 <div 
                   key={`skeleton-${i}`}
-                  className="grid grid-cols-[80px_80px_1fr_120px_120px_120px] gap-4 p-4 border-b border-abyss-800 animate-pulse"
+                  className="flex items-center gap-3 py-2 px-3 border-b border-abyss-800 animate-pulse"
                 >
-                  <div className="flex items-center justify-center">
+                  {/* rank */}
+                  <div className="w-14 flex items-center justify-center">
                     <div className="w-6 h-6 bg-abyss-700 rounded" />
                   </div>
-                  <div className="flex items-center justify-center">
-                    <div className="w-12 h-12 bg-abyss-700 rounded-xl" />
+                  
+                  {/* champion icon + name */}
+                  <div className="w-32 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-abyss-700 rounded-lg flex-shrink-0" />
+                    <div className="w-20 h-4 bg-abyss-700 rounded" />
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-32 h-5 bg-abyss-700 rounded" />
+                  
+                  {/* spacer */}
+                  <div className="flex-1" />
+                  
+                  {/* win rate */}
+                  <div className="w-20 sm:w-24 flex items-center justify-center">
+                    <div className="w-14 h-4 bg-abyss-700 rounded" />
                   </div>
-                  <div className="flex items-center justify-center">
-                    <div className="w-16 h-5 bg-abyss-700 rounded" />
+                  
+                  {/* pick rate */}
+                  <div className="w-20 sm:w-24 flex items-center justify-center">
+                    <div className="w-10 h-4 bg-abyss-700 rounded" />
                   </div>
-                  <div className="flex items-center justify-center">
-                    <div className="w-12 h-5 bg-abyss-700 rounded" />
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <div className="w-16 h-5 bg-abyss-700 rounded" />
+                  
+                  {/* matches */}
+                  <div className="w-20 sm:w-24 flex items-center justify-center">
+                    <div className="w-12 h-4 bg-abyss-700 rounded" />
                   </div>
                 </div>
               ))}

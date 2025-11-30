@@ -96,12 +96,16 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
             <LoadingSpinner size="lg" />
           </div>
         ) : filteredMatches.length === 0 ? (
-          <div className="text-center text-text-muted py-8">
+          <div className="text-center text-text-muted py-16 text-lg">
             {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
           </div>
         ) : (
           <>
-            <div className={`space-y-2 ${(!championFilter && hasMore) ? '' : 'pb-2'}`}>
+            <ul 
+              role="list" 
+              aria-label={championFilter ? `Match history for ${championFilter}` : 'Match history'}
+              className={`space-y-2 ${(!championFilter && hasMore) ? '' : 'pb-2'}`}
+            >
               {filteredMatches.map((match) => (
                 <MatchHistoryItem 
                   key={match.metadata.matchId} 
@@ -112,12 +116,13 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
                   championNames={championNames}
                 />
               ))}
-            </div>
+            </ul>
             
             {hasMore && (
               <button
                 onClick={loadMore}
                 disabled={loading}
+                aria-label={loading ? 'Loading more matches' : 'Load more matches'}
                 className="w-full h-12 mt-2 mb-2 px-4 bg-gradient-to-t from-action-100 to-action-200 hover:brightness-130 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
               >
                 {loading ? (

@@ -87,7 +87,7 @@ export default function SummonerContentV2({
 }: Props) {
   const puuid = summonerData.account.puuid
   
-  // unified profile data hook
+  // unified profile data hook (auto-enrichment happens server-side)
   const {
     summary,
     champions,

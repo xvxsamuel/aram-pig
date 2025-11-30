@@ -1,14 +1,96 @@
 // PIG Score calculator - main scoring functions
 import { createAdminClient } from '../db/supabase'
+import type { WelfordState } from '../db/stats-aggregator'
+import { getStdDev, getZScore } from '../db/stats-aggregator'
 import {
   calculateStatPenalty,
   calculateDeathsPerMinutePenalty,
+  calculateKillParticipationPenalty,
   calculateItemPenalty,
+  calculateAllBuildPenalties,
   calculateKeystonePenalty,
   calculateSpellsPenalty,
   calculateSkillOrderPenalty,
-  calculateBuildOrderPenalty
+  calculateBuildOrderPenalty,
+  type ItemPenaltyDetail
 } from './penalties'
+
+// Target z-score for "perfect" performance (matches penalties.ts)
+const TARGET_Z_SCORE = 1.0
+
+// Determine relevant stats for a champion based on their data
+// Returns weights (0-1) for each stat based on how meaningful it is for this champion
+interface StatRelevance {
+  damageToChampions: number  // 0-1 weight
+  totalDamage: number
+  healingShielding: number
+  ccTime: number
+}
+
+function calculateStatRelevance(
+  championAvgPerMin: {
+    damageToChampionsPerMin: number
+    totalDamagePerMin: number
+    healingShieldingPerMin: number
+    ccTimePerMin: number
+  },
+  welford: {
+    damageToChampionsPerMin?: WelfordState
+    totalDamagePerMin?: WelfordState
+    healingShieldingPerMin?: WelfordState
+    ccTimePerMin?: WelfordState
+  } | null
+): StatRelevance {
+  // Base relevance on:
+  // 1. Whether the stat has a meaningful average (threshold-based)
+  // 2. Coefficient of variation (CV = stddev/mean) - higher CV means more skill expression
+  
+  const relevance: StatRelevance = {
+    damageToChampions: 1.0,  // always relevant - everyone should do damage
+    totalDamage: 1.0,        // always relevant
+    healingShielding: 0,
+    ccTime: 0
+  }
+  
+  // Healing/Shielding: only relevant if champion avg >= 300/min (lower threshold to catch more healers)
+  // Then scale weight by how much they heal relative to damage dealers
+  if (championAvgPerMin.healingShieldingPerMin >= 300) {
+    // Weight from 0.5 (300/min) to 1.0 (1500+/min)
+    const healWeight = Math.min(1.0, 0.5 + (championAvgPerMin.healingShieldingPerMin - 300) / 2400)
+    relevance.healingShielding = healWeight
+  }
+  
+  // CC Time: only relevant if champion avg >= 2 sec/min (lower threshold)
+  // Then scale weight by how much CC they have
+  if (championAvgPerMin.ccTimePerMin >= 2) {
+    // Weight from 0.5 (2 sec/min) to 1.0 (8+ sec/min)
+    const ccWeight = Math.min(1.0, 0.5 + (championAvgPerMin.ccTimePerMin - 2) / 12)
+    relevance.ccTime = ccWeight
+  }
+  
+  // Boost relevance if there's high variance (skill expression opportunity)
+  if (welford) {
+    // Damage stats: boost if CV > 0.3 (30% variation)
+    if (welford.damageToChampionsPerMin && welford.damageToChampionsPerMin.n >= 30) {
+      const cv = getStdDev(welford.damageToChampionsPerMin) / welford.damageToChampionsPerMin.mean
+      if (cv > 0.3) relevance.damageToChampions = Math.min(1.0, relevance.damageToChampions * (1 + cv * 0.5))
+    }
+    
+    // Healing: boost if high variance (some players really maximize it)
+    if (welford.healingShieldingPerMin && welford.healingShieldingPerMin.n >= 30 && relevance.healingShielding > 0) {
+      const cv = getStdDev(welford.healingShieldingPerMin) / welford.healingShieldingPerMin.mean
+      if (cv > 0.4) relevance.healingShielding = Math.min(1.0, relevance.healingShielding * (1 + cv * 0.3))
+    }
+    
+    // CC: boost if high variance
+    if (welford.ccTimePerMin && welford.ccTimePerMin.n >= 30 && relevance.ccTime > 0) {
+      const cv = getStdDev(welford.ccTimePerMin) / welford.ccTimePerMin.mean
+      if (cv > 0.4) relevance.ccTime = Math.min(1.0, relevance.ccTime * (1 + cv * 0.3))
+    }
+  }
+  
+  return relevance
+}
 
 export interface ParticipantData {
   championName: string
@@ -19,6 +101,9 @@ export interface ParticipantData {
   time_ccing_others: number
   game_duration: number
   deaths: number
+  kills?: number           // for kill participation
+  assists?: number         // for kill participation
+  teamTotalKills?: number  // total kills by player's team
   item0: number
   item1: number
   item2: number
@@ -41,6 +126,7 @@ export interface PigScoreBreakdown {
     healingShieldingPerMin: number
     ccTimePerMin: number
     deathsPerMin: number
+    killParticipation?: number  // 0-1 value
   }
   championAvgStats: {
     damageToChampionsPerMin: number
@@ -55,7 +141,17 @@ export interface PigScoreBreakdown {
     playerValue?: number
     avgValue?: number
     percentOfAvg?: number
+    zScore?: number           // NEW: z-score for the stat
+    targetZScore?: number     // NEW: target z-score (e.g., 1.0)
+    stdDev?: number           // NEW: standard deviation
+    relevanceWeight?: number  // NEW: stat relevance weight (0-1)
   }[]
+  itemDetails?: ItemPenaltyDetail[]  // NEW: per-item breakdown
+  scoringInfo: {                     // NEW: scoring formula info
+    targetZScore: number             // The z-score target (+1 stddev)
+    meanPenaltyPercent: number       // Penalty at mean (25%)
+    description: string              // Human-readable explanation
+  }
   totalGames: number
   patch: string
 }
@@ -156,46 +252,59 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   // Get Welford stats for z-score calculations (if available)
   const welford = championAvg.welford || null
   
-  // calculate performance penalties (skip if champion average is null/0)
+  // Calculate dynamic stat relevance for this champion
+  const relevance = calculateStatRelevance(championAvgPerMin, welford)
+  
+  // Base max penalty is 80 per damage stat, scaled by relevance weight
+  // Total performance penalty budget is ~160+ points across all stats
   const penalties: { [key: string]: number } = {}
   
+  // Damage to Champions - always relevant (weight 1.0)
   if (championAvgPerMin.damageToChampionsPerMin > 0) {
+    const maxPenalty = 80 * relevance.damageToChampions
     const penalty = calculateStatPenalty(
       playerStats.damageToChampionsPerMin, 
       championAvgPerMin.damageToChampionsPerMin, 
-      20,
+      maxPenalty,
       welford?.damageToChampionsPerMin
     )
     penalties['Damage to Champions'] = penalty
     score -= penalty
   }
+  
+  // Total Damage - always relevant (weight 1.0)
   if (championAvgPerMin.totalDamagePerMin > 0) {
+    const maxPenalty = 80 * relevance.totalDamage
     const penalty = calculateStatPenalty(
       playerStats.totalDamagePerMin, 
       championAvgPerMin.totalDamagePerMin, 
-      20,
+      maxPenalty,
       welford?.totalDamagePerMin
     )
     penalties['Total Damage'] = penalty
     score -= penalty
   }
-  // only penalize healing/shielding if champion actually heals/shields significantly (500+/min average)
-  if (championAvgPerMin.healingShieldingPerMin >= 500) {
+  
+  // Healing/Shielding - only if champion has meaningful healing (weighted)
+  if (relevance.healingShielding > 0) {
+    const maxPenalty = 40 * relevance.healingShielding
     const penalty = calculateStatPenalty(
       playerStats.healingShieldingPerMin, 
       championAvgPerMin.healingShieldingPerMin, 
-      20,
+      maxPenalty,
       welford?.healingShieldingPerMin
     )
     penalties['Healing/Shielding'] = penalty
     score -= penalty
   }
-  // only penalize CC if champion has meaningful CC (3+ seconds/min average)
-  if (championAvgPerMin.ccTimePerMin >= 3) {
+  
+  // CC Time - only if champion has meaningful CC (weighted)
+  if (relevance.ccTime > 0) {
+    const maxPenalty = 40 * relevance.ccTime
     const penalty = calculateStatPenalty(
       playerStats.ccTimePerMin, 
       championAvgPerMin.ccTimePerMin, 
-      20,
+      maxPenalty,
       welford?.ccTimePerMin
     )
     penalties['CC Time'] = penalty
@@ -231,6 +340,14 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   const deathsPenalty = calculateDeathsPerMinutePenalty(participant.deaths, gameDurationMinutes)
   penalties['Deaths/Min'] = deathsPenalty
   score -= deathsPenalty
+  
+  // calculate kill participation penalty (if data available)
+  if (participant.kills !== undefined && participant.assists !== undefined && participant.teamTotalKills !== undefined && participant.teamTotalKills > 0) {
+    const killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
+    const kpPenalty = calculateKillParticipationPenalty(killParticipation)
+    penalties['Kill Participation'] = kpPenalty
+    score -= kpPenalty
+  }
   
   // clamp score between 0 and 100
   const finalScore = Math.max(0, Math.min(100, Math.round(score)))
@@ -315,130 +432,179 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
   // Get Welford stats for z-score calculations (if available)
   const welford = championAvg.welford || null
   
+  // Calculate dynamic stat relevance for this champion
+  const relevance = calculateStatRelevance(championAvgPerMin, welford)
+  
   const penalties: PigScoreBreakdown['penalties'] = []
+  
+  // Helper to get z-score info for a stat
+  const getZScoreInfo = (playerValue: number, welfordState?: WelfordState) => {
+    if (!welfordState || welfordState.n < 30) return {}
+    const stdDev = getStdDev(welfordState)
+    if (stdDev <= welfordState.mean * 0.05) return {}
+    return {
+      zScore: getZScore(playerValue, welfordState),
+      targetZScore: TARGET_Z_SCORE,
+      stdDev
+    }
+  }
   
   // damage to champions penalty
   if (championAvgPerMin.damageToChampionsPerMin > 0) {
+    const maxPenalty = 80 * relevance.damageToChampions
     const penalty = calculateStatPenalty(
       playerStats.damageToChampionsPerMin, 
       championAvgPerMin.damageToChampionsPerMin, 
-      20,
+      maxPenalty,
       welford?.damageToChampionsPerMin
     )
     const percentOfAvg = (playerStats.damageToChampionsPerMin / championAvgPerMin.damageToChampionsPerMin) * 100
     penalties.push({
       name: 'Damage to Champions',
       penalty,
-      maxPenalty: 20,
+      maxPenalty,
       playerValue: playerStats.damageToChampionsPerMin,
       avgValue: championAvgPerMin.damageToChampionsPerMin,
-      percentOfAvg
+      percentOfAvg,
+      relevanceWeight: relevance.damageToChampions,
+      ...getZScoreInfo(playerStats.damageToChampionsPerMin, welford?.damageToChampionsPerMin)
     })
     score -= penalty
   }
   
   // total damage penalty
   if (championAvgPerMin.totalDamagePerMin > 0) {
+    const maxPenalty = 80 * relevance.totalDamage
     const penalty = calculateStatPenalty(
       playerStats.totalDamagePerMin, 
       championAvgPerMin.totalDamagePerMin, 
-      20,
+      maxPenalty,
       welford?.totalDamagePerMin
     )
     const percentOfAvg = (playerStats.totalDamagePerMin / championAvgPerMin.totalDamagePerMin) * 100
     penalties.push({
       name: 'Total Damage',
       penalty,
-      maxPenalty: 20,
+      maxPenalty,
       playerValue: playerStats.totalDamagePerMin,
       avgValue: championAvgPerMin.totalDamagePerMin,
-      percentOfAvg
+      percentOfAvg,
+      relevanceWeight: relevance.totalDamage,
+      ...getZScoreInfo(playerStats.totalDamagePerMin, welford?.totalDamagePerMin)
     })
     score -= penalty
   }
   
-  // healing/shielding penalty - only for champions that actually heal/shield (500+/min average)
-  if (championAvgPerMin.healingShieldingPerMin >= 500) {
+  // healing/shielding penalty - weighted by relevance
+  if (relevance.healingShielding > 0) {
+    const maxPenalty = 40 * relevance.healingShielding
     const penalty = calculateStatPenalty(
       playerStats.healingShieldingPerMin, 
       championAvgPerMin.healingShieldingPerMin, 
-      20,
+      maxPenalty,
       welford?.healingShieldingPerMin
     )
     const percentOfAvg = (playerStats.healingShieldingPerMin / championAvgPerMin.healingShieldingPerMin) * 100
     penalties.push({
       name: 'Healing/Shielding',
       penalty,
-      maxPenalty: 20,
+      maxPenalty,
       playerValue: playerStats.healingShieldingPerMin,
       avgValue: championAvgPerMin.healingShieldingPerMin,
-      percentOfAvg
+      percentOfAvg,
+      relevanceWeight: relevance.healingShielding,
+      ...getZScoreInfo(playerStats.healingShieldingPerMin, welford?.healingShieldingPerMin)
     })
     score -= penalty
   }
   
-  // cc time penalty - only for champions with meaningful CC (3+s/min average)
-  if (championAvgPerMin.ccTimePerMin >= 3) {
+  // cc time penalty - weighted by relevance
+  if (relevance.ccTime > 0) {
+    const maxPenalty = 40 * relevance.ccTime
     const penalty = calculateStatPenalty(
       playerStats.ccTimePerMin, 
       championAvgPerMin.ccTimePerMin, 
-      20,
+      maxPenalty,
       welford?.ccTimePerMin
     )
     const percentOfAvg = (playerStats.ccTimePerMin / championAvgPerMin.ccTimePerMin) * 100
     penalties.push({
       name: 'CC Time',
       penalty,
-      maxPenalty: 20,
+      maxPenalty,
       playerValue: playerStats.ccTimePerMin,
       avgValue: championAvgPerMin.ccTimePerMin,
-      percentOfAvg
+      percentOfAvg,
+      relevanceWeight: relevance.ccTime,
+      ...getZScoreInfo(playerStats.ccTimePerMin, welford?.ccTimePerMin)
     })
     score -= penalty
   }
   
-  // item penalty
-  const itemPenalty = await calculateItemPenalty(participant, championName)
-  penalties.push({ name: 'Items', penalty: itemPenalty, maxPenalty: 10 })
-  score -= itemPenalty
+  // Calculate all build penalties in ONE parallel batch (much faster!)
+  const buildPenalties = await calculateAllBuildPenalties(participant, championName)
+  
+  // item penalty with details
+  penalties.push({ name: 'Items', penalty: buildPenalties.itemPenalty, maxPenalty: 60 })
+  score -= buildPenalties.itemPenalty
   
   // keystone penalty
-  const keystonePenalty = await calculateKeystonePenalty(participant, championName)
-  penalties.push({ name: 'Keystone', penalty: keystonePenalty, maxPenalty: 10 })
-  score -= keystonePenalty
+  penalties.push({ name: 'Keystone', penalty: buildPenalties.keystonePenalty, maxPenalty: 20 })
+  score -= buildPenalties.keystonePenalty
   
   // spells penalty
-  const spellsPenalty = await calculateSpellsPenalty(participant, championName)
-  penalties.push({ name: 'Spells', penalty: spellsPenalty, maxPenalty: 5 })
-  score -= spellsPenalty
+  penalties.push({ name: 'Spells', penalty: buildPenalties.spellsPenalty, maxPenalty: 20 })
+  score -= buildPenalties.spellsPenalty
   
   // skill order penalty
-  const skillOrderPenalty = await calculateSkillOrderPenalty(participant, championName)
-  penalties.push({ name: 'Skill Order', penalty: skillOrderPenalty, maxPenalty: 8 })
-  score -= skillOrderPenalty
+  penalties.push({ name: 'Skill Order', penalty: buildPenalties.skillOrderPenalty, maxPenalty: 20 })
+  score -= buildPenalties.skillOrderPenalty
   
   // build order penalty
-  const buildOrderPenalty = await calculateBuildOrderPenalty(participant, championName)
-  penalties.push({ name: 'Build Order', penalty: buildOrderPenalty, maxPenalty: 8 })
-  score -= buildOrderPenalty
+  penalties.push({ name: 'Build Order', penalty: buildPenalties.buildOrderPenalty, maxPenalty: 20 })
+  score -= buildPenalties.buildOrderPenalty
   
   // deaths per minute penalty
   const deathsPenalty = calculateDeathsPerMinutePenalty(participant.deaths, gameDurationMinutes)
   penalties.push({ 
     name: 'Deaths/Min', 
     penalty: deathsPenalty, 
-    maxPenalty: 15,
+    maxPenalty: 30,
     playerValue: playerStats.deathsPerMin
   })
   score -= deathsPenalty
+  
+  // kill participation penalty (if data available)
+  let killParticipation: number | undefined
+  if (participant.kills !== undefined && participant.assists !== undefined && participant.teamTotalKills !== undefined && participant.teamTotalKills > 0) {
+    killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
+    const kpPenalty = calculateKillParticipationPenalty(killParticipation)
+    penalties.push({
+      name: 'Kill Participation',
+      penalty: kpPenalty,
+      maxPenalty: 40,
+      playerValue: killParticipation * 100,  // display as percentage
+      avgValue: 90  // target is 90%
+    })
+    score -= kpPenalty
+  }
   
   const finalScore = Math.max(0, Math.min(100, Math.round(score)))
   
   return {
     finalScore,
-    playerStats,
+    playerStats: {
+      ...playerStats,
+      killParticipation
+    },
     championAvgStats: championAvgPerMin,
     penalties,
+    itemDetails: buildPenalties.itemDetails,
+    scoringInfo: {
+      targetZScore: TARGET_Z_SCORE,
+      meanPenaltyPercent: 25,
+      description: `Performance is measured against other ${championName} players. Target: top ${Math.round((1 - 0.8413) * 100)}% (mean + 1 stddev). Players at the mean receive a 25% penalty per stat.`
+    },
     totalGames,
     patch: selectedStats.patch
   }

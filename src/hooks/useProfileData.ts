@@ -57,7 +57,7 @@ export function useProfileData({ puuid, initialData, autoFetch = true, currentNa
   // prevent double fetch
   const hasFetched = useRef(false)
   
-  // fetch profile data
+  // fetch profile data (auto-enrichment happens server-side)
   const refresh = useCallback(async (): Promise<boolean> => {
     try {
       setLoading(true)

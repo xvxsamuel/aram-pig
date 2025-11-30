@@ -84,6 +84,28 @@ export async function GET(request: Request) {
       )
     }
     
+    // Get all participants for this match to calculate team kills
+    const { data: allParticipants } = await supabase
+      .from('summoner_matches')
+      .select('puuid, match_data')
+      .eq('match_id', matchId)
+    
+    // Calculate team kills for kill participation
+    let teamTotalKills = 0
+    let playerKills = 0
+    let playerAssists = 0
+    let playerTeamId = participantData.match_data?.teamId
+    
+    if (allParticipants && playerTeamId !== undefined) {
+      for (const p of allParticipants) {
+        if (p.match_data?.teamId === playerTeamId) {
+          teamTotalKills += p.match_data?.kills || 0
+        }
+      }
+      playerKills = participantData.match_data?.kills || 0
+      playerAssists = participantData.match_data?.assists || 0
+    }
+    
     // calculate pig score with breakdown
     const breakdown = await calculatePigScoreWithBreakdown({
       championName: participantData.champion_name,
@@ -94,6 +116,9 @@ export async function GET(request: Request) {
       time_ccing_others: participantData.match_data.stats?.timeCCingOthers || 0,
       game_duration: matchRecord.game_duration,
       deaths: participantData.match_data.deaths || 0,
+      kills: playerKills,
+      assists: playerAssists,
+      teamTotalKills: teamTotalKills,
       item0: participantData.match_data.items?.[0] || 0,
       item1: participantData.match_data.items?.[1] || 0,
       item2: participantData.match_data.items?.[2] || 0,

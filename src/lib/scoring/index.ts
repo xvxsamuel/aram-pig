@@ -10,10 +10,14 @@ export {
   calculateStatPenalty,
   calculateDeathsPerMinutePenalty,
   calculateItemPenalty,
+  calculateItemPenaltyWithDetails,
+  calculateAllBuildPenalties,
   calculateKeystonePenalty,
   calculateSpellsPenalty,
   calculateSkillOrderPenalty,
-  calculateBuildOrderPenalty
+  calculateBuildOrderPenalty,
+  type ItemPenaltyDetail,
+  type AllPenaltiesResult
 } from './penalties'
 
 export {

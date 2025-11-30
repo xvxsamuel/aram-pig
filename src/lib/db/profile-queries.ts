@@ -13,7 +13,7 @@ import type { MatchData } from '@/types/match'
 export async function getSummonerInfo(puuid: string) {
   const { data, error } = await supabase
     .from('summoners')
-    .select('puuid, game_name, tag_line, profile_icon_id, summoner_level, last_updated, profile_data')
+    .select('puuid, game_name, tag_line, profile_icon_id, summoner_level, last_updated, profile_data, region')
     .eq('puuid', puuid)
     .single()
   
@@ -26,7 +26,8 @@ export async function getSummonerInfo(puuid: string) {
     profileIconId: data.profile_icon_id,
     summonerLevel: data.summoner_level,
     lastUpdated: data.last_updated,
-    profileData: data.profile_data as Record<string, unknown>
+    profileData: data.profile_data as Record<string, unknown>,
+    region: data.region as string | null
   }
 }
 

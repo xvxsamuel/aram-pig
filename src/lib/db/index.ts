@@ -38,3 +38,8 @@ export {
   getTrackedPuuids,
   invalidateTrackedPuuidsCache,
 } from './tracked-players'
+
+export {
+  autoEnrichRecentMatches,
+  getStoredTimeline,
+} from './auto-enrich'
