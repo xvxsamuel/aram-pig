@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -19,6 +19,45 @@ import { getKdaColor, getPigScoreColor } from '@/lib/ui'
 import MatchDetails from '@/components/match/MatchDetails'
 import Tooltip from '@/components/ui/Tooltip'
 
+// preload images for MatchDetails on hover
+function preloadMatchImages(match: MatchData, ddragonVersion: string) {
+  const urls: string[] = []
+  
+  for (const p of match.info.participants) {
+    // champion image
+    urls.push(getChampionImageUrl(p.championName, ddragonVersion))
+    
+    // summoner spells
+    urls.push(getSummonerSpellUrl(p.summoner1Id, ddragonVersion))
+    urls.push(getSummonerSpellUrl(p.summoner2Id, ddragonVersion))
+    
+    // keystone rune
+    if (p.perks?.styles?.[0]?.selections?.[0]?.perk) {
+      urls.push(getRuneImageUrl(p.perks.styles[0].selections[0].perk))
+    }
+    
+    // items
+    const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
+    for (const item of items) {
+      if (item && item > 0) {
+        urls.push(getItemImageUrl(item, ddragonVersion))
+      }
+    }
+  }
+  
+  // use link preload for better browser caching
+  for (const url of urls) {
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'image'
+    link.href = url
+    // avoid duplicate preloads
+    if (!document.querySelector(`link[href="${url}"]`)) {
+      document.head.appendChild(link)
+    }
+  }
+}
+
 interface Props {
   match: MatchData
   puuid: string
@@ -31,6 +70,16 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
+  const hasPreloaded = useRef(false)
+
+  // preload images on first hover
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true)
+    if (!hasPreloaded.current) {
+      hasPreloaded.current = true
+      preloadMatchImages(match, ddragonVersion)
+    }
+  }, [match, ddragonVersion])
 
   const participant = match.info.participants.find((p) => p.puuid === puuid)
   if (!participant) return null
@@ -80,7 +129,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
               setIsExpanded(true)
             }
           }}
-          onMouseEnter={() => setIsHovered(true)}
+          onMouseEnter={handleMouseEnter}
           onMouseLeave={() => setIsHovered(false)}
           role="button"
           aria-expanded={isExpanded}
