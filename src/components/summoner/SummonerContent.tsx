@@ -183,7 +183,7 @@ export default function SummonerContentV2({
     checkForActiveJob()
   }, [puuid, setCooldown, setHasActiveJob])
   
-  // poll job status
+  // poll job status and trigger continuation
   const pollJobStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/update-status", {
@@ -233,6 +233,24 @@ export default function SummonerContentV2({
               setStatusMessage("Failed to refresh data")
             }
           }, 1000)
+        } else if (data.job.status === 'processing') {
+          // job is still processing - trigger continuation by calling update-profile
+          // this will process the next chunk of matches
+          const decodedName = decodeURIComponent(name)
+          const summonerName = decodedName.replace("-", "#")
+          const [gameName, tagLine] = summonerName.includes("#") 
+            ? summonerName.split("#") 
+            : [summonerName, getDefaultTag(region.toUpperCase())]
+          
+          const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
+          const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : "americas"
+          
+          // fire and forget - next poll will see the updated progress
+          fetch("/api/update-profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ region: regionalCode, gameName, tagLine, platform: platformCode })
+          }).catch(() => {}) // ignore errors, next poll will retry
         }
       } else if (!data.hasActiveJob && jobProgress) {
         setJobProgress(null)
@@ -249,7 +267,7 @@ export default function SummonerContentV2({
       if (error.name === "AbortError" || error.message?.includes("fetch")) return
       console.error("Failed to poll job status:", error)
     }
-  }, [puuid, refresh, notifyEnabled, jobProgress, setCooldown, setHasActiveJob])
+  }, [puuid, refresh, notifyEnabled, jobProgress, setCooldown, setHasActiveJob, name, region])
   
   // polling interval
   useEffect(() => {

@@ -7,6 +7,9 @@ import { extractAbilityOrder, extractBuildOrder, extractFirstBuy, formatBuildOrd
 // in-memory lock to prevent concurrent processing of the same match (handles Strict Mode double-invoke)
 const processingLocks = new Map<string, Promise<{ data: any; status: number }>>()
 
+// Timeline data is available from Riot API for 365 days
+const TIMELINE_AVAILABILITY_DAYS = 365
+
 // finished items are legendaries and all boots (including tier 1)
 import itemsData from '../../../data/items.json'
 
@@ -111,14 +114,14 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
       return { data: { error: 'Match not found' }, status: 404 }
     }
     
-    // check if match is older than 30 days - no timeline available from Riot API
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
-    const isTooOld = matchRecord.game_creation < thirtyDaysAgo
+    // check if match is older than 365 days - no timeline available from Riot API
+    const timelineCutoff = Date.now() - (TIMELINE_AVAILABILITY_DAYS * 24 * 60 * 60 * 1000)
+    const isTooOld = matchRecord.game_creation < timelineCutoff
     
     // if too old AND no stored timeline, we can't enrich
     if (isTooOld && !matchRecord.timeline_data) {
       return { 
-        data: { error: 'Match older than 30 days - timeline not available', tooOld: true },
+        data: { error: 'Match older than 365 days - timeline not available', tooOld: true },
         status: 400 
       }
     }

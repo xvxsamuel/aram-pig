@@ -153,7 +153,9 @@ export interface PigScoreBreakdown {
     description: string              // Human-readable explanation
   }
   totalGames: number
-  patch: string
+  patch: string                      // patch used for champion stats
+  matchPatch?: string                // original match patch (if different from stats patch)
+  usedFallbackPatch: boolean         // true if stats patch differs from match patch
 }
 
 // calculate pig score based on performance vs patch champion averages
@@ -397,6 +399,7 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
   
   // Find matching patch with 100+ games, or fallback to any patch with 100+ games
   let selectedStats = championStats.find(s => s.patch === participant.patch && (s.data?.games || 0) >= 100)
+  const usedFallbackPatch = !selectedStats
   if (!selectedStats) {
     selectedStats = championStats.find(s => (s.data?.games || 0) >= 100)
   }
@@ -606,6 +609,8 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
       description: `Performance is measured against other ${championName} players. Target: top ${Math.round((1 - 0.8413) * 100)}% (mean + 1 stddev). Players at the mean receive a 25% penalty per stat.`
     },
     totalGames,
-    patch: selectedStats.patch
+    patch: selectedStats.patch,
+    matchPatch: usedFallbackPatch ? (participant.patch ?? undefined) : undefined,
+    usedFallbackPatch
   }
 }

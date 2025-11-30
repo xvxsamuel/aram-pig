@@ -1,4 +1,4 @@
-// Auto-enrichment for matches < 30 days old
+// Auto-enrichment for matches < 365 days old
 // Fetches timeline from Riot API and stores it in matches table
 
 import { createAdminClient } from './supabase'
@@ -9,6 +9,9 @@ import { PLATFORM_TO_REGIONAL, type PlatformCode } from '../game/regions'
 
 // Max matches to enrich per profile fetch (to avoid timeout)
 const MAX_ENRICHMENTS_PER_FETCH = 3
+
+// Timeline data is available from Riot API for 365 days
+const TIMELINE_AVAILABILITY_DAYS = 365
 
 // extract skill max order from ability order string
 function extractSkillOrderAbbreviation(abilityOrder: string): string {
@@ -39,7 +42,7 @@ function extractSkillOrderAbbreviation(abilityOrder: string): string {
 
 /**
  * Auto-enrich recent matches that don't have timeline data yet
- * Called during profile fetch for matches < 30 days old
+ * Called during profile fetch for matches < 365 days old
  * 
  * @param matchIds - Array of match IDs to check
  * @param region - Player's platform code (e.g., 'euw1')
@@ -54,17 +57,17 @@ export async function autoEnrichRecentMatches(
   const supabase = createAdminClient()
   const regionalCluster = PLATFORM_TO_REGIONAL[region] || 'europe'
   
-  // Calculate 30 day cutoff
-  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+  // Calculate cutoff for timeline availability
+  const timelineCutoff = Date.now() - (TIMELINE_AVAILABILITY_DAYS * 24 * 60 * 60 * 1000)
   
   // Find matches that need enrichment:
-  // 1. Game creation > 30 days ago
+  // 1. Game creation within timeline availability window
   // 2. No timeline_data stored yet
   const { data: matchesToEnrich } = await supabase
     .from('matches')
     .select('match_id, game_creation, game_duration, patch')
     .in('match_id', matchIds)
-    .gt('game_creation', thirtyDaysAgo)
+    .gt('game_creation', timelineCutoff)
     .is('timeline_data', null)
     .order('game_creation', { ascending: false })
     .limit(MAX_ENRICHMENTS_PER_FETCH)

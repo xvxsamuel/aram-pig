@@ -57,6 +57,7 @@ interface PigScoreBreakdown {
     healingShieldingPerMin: number
     ccTimePerMin: number
     deathsPerMin: number
+    killParticipation?: number
   }
   championAvgStats: {
     damageToChampionsPerMin: number
@@ -84,6 +85,8 @@ interface PigScoreBreakdown {
   }
   totalGames: number
   patch: string
+  matchPatch?: string
+  usedFallbackPatch?: boolean
 }
 
 export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin: _isWin, isRemake: _isRemake, defaultTab = 'overview', onTabChange }: Props) {
@@ -941,6 +944,11 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   </div>
                   <p className="text-xs text-text-muted mb-4">
                     Based on {pigScoreBreakdown.totalGames.toLocaleString()} games on patch {pigScoreBreakdown.patch}
+                    {pigScoreBreakdown.usedFallbackPatch && pigScoreBreakdown.matchPatch && (
+                      <span className="text-gold-light ml-1" title={`Match played on patch ${pigScoreBreakdown.matchPatch}, but no data available for that patch. Using closest available patch data.`}>
+                        (match: {pigScoreBreakdown.matchPatch} ⚠)
+                      </span>
+                    )}
                   </p>
                   
                   {/* Penalties Grid */}
