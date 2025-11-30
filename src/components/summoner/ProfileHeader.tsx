@@ -23,7 +23,6 @@ function getTimeAgo(timestamp: string | null): string {
 }
 
 interface Props {
-  profileIconId: number
   gameName: string
   tagLine: string
   summonerLevel: number
@@ -45,7 +44,6 @@ interface Props {
 }
 
 export default function ProfileHeader({ 
-  profileIconId: _profileIconId, 
   gameName, 
   tagLine, 
   summonerLevel,

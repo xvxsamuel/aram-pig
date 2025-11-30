@@ -447,8 +447,6 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
           currentPuuid={puuid} 
           ddragonVersion={ddragonVersion}
           region={region}
-          isWin={isWin}
-          isRemake={isRemake}
           defaultTab={selectedTab}
           onTabChange={setSelectedTab}
         />

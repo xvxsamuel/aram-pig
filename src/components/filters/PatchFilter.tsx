@@ -20,14 +20,13 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
   const visiblePatches = availablePatches.filter(p => !HIDDEN_PATCHES.includes(p))
   
   // load from localStorage or URL params
-  const [_currentFilter, setCurrentFilter] = useState<string>('')
+  const [, setCurrentFilter] = useState<string>('')
   const [currentPatch, setCurrentPatch] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // initialize from localStorage or defaults
   useEffect(() => {
-    const _savedFilter = localStorage.getItem('championFilter')
     const savedPatch = localStorage.getItem('championPatch')
     
     const urlFilter = searchParams.get('filter')

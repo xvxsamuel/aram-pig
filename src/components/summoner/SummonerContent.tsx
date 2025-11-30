@@ -391,7 +391,7 @@ export default function SummonerContentV2({
   }, [champions])
   
   // handle more matches loaded (for legacy component compatibility)
-  const handleMoreMatchesLoaded = useCallback((_newMatches: any[]) => {
+  const handleMoreMatchesLoaded = useCallback(() => {
     // this is handled by MatchHistoryList internally now
   }, [])
   
@@ -448,7 +448,6 @@ export default function SummonerContentV2({
       {showSkeleton ? (
         <>
           <ProfileHeader
-            profileIconId={summonerData.summoner.profileIconId}
             gameName={summonerData.account.gameName}
             tagLine={summonerData.account.tagLine}
             summonerLevel={summonerData.summoner.summonerLevel}
@@ -475,7 +474,6 @@ export default function SummonerContentV2({
       ) : (
         <>
           <ProfileHeader
-            profileIconId={summonerData.summoner.profileIconId}
             gameName={summonerData.account.gameName}
             tagLine={summonerData.account.tagLine}
             summonerLevel={summonerData.summoner.summonerLevel}

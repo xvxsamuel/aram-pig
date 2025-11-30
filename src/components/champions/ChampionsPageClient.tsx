@@ -155,9 +155,6 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
             champions={champions}
             ddragonVersion={ddragonVersion}
             championNames={championNames}
-            totalChampions={172}
-            filter={filter}
-            patch={patch}
           />
         )}
       </div>

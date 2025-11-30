@@ -554,7 +554,7 @@ async function continueProcessingJob(
           const match = await fetchMatch(region, matchId, requestType);
           
           const summonerMatchRecords = await Promise.all(
-            match.info.participants.map(async (p: any, index: number) => {
+            match.info.participants.map(async (p: any) => {
               const isTrackedUser = p.puuid === puuid;
               const isOlderThan30Days = existingMatch.game_creation < (Date.now() - 30 * 24 * 60 * 60 * 1000);
 

@@ -16,8 +16,6 @@ interface Props {
   currentPuuid: string
   ddragonVersion: string
   region: string
-  isWin: boolean
-  isRemake: boolean
   defaultTab?: 'overview' | 'build' | 'performance'
   onTabChange?: (tab: 'overview' | 'build' | 'performance') => void
 }
@@ -89,7 +87,7 @@ interface PigScoreBreakdown {
   usedFallbackPatch?: boolean
 }
 
-export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, isWin: _isWin, isRemake: _isRemake, defaultTab = 'overview', onTabChange }: Props) {
+export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, defaultTab = 'overview', onTabChange }: Props) {
   const [selectedTab, setSelectedTabState] = useState<'overview' | 'build' | 'performance'>(defaultTab)
   
   // sync tab when parent changes defaultTab (e.g., clicking PIG button when already expanded)
@@ -108,7 +106,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const [pigScoresFetched, setPigScoresFetched] = useState(false)
   const [pigScoreBreakdown, setPigScoreBreakdown] = useState<PigScoreBreakdown | null>(null)
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
-  const [_enrichError, setEnrichError] = useState<string | null>(null)
+  const [, setEnrichError] = useState<string | null>(null)
   const enrichFetchingRef = useRef(false) // prevent double-fetch
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
   

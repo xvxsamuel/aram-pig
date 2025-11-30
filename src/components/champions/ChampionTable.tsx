@@ -19,12 +19,9 @@ interface Props {
   champions: ChampionStats[]
   ddragonVersion: string
   championNames: Record<string, string>
-  totalChampions: number
-  filter: string
-  patch?: string
 }
 
-export default function ChampionTable({ champions, ddragonVersion, championNames, totalChampions: _totalChampions, filter: _filter, patch: _patch }: Props) {
+export default function ChampionTable({ champions, ddragonVersion, championNames }: Props) {
   const [allChampions, setAllChampions] = useState<ChampionStats[]>(champions)
 
   // Update when champions prop changes

@@ -494,8 +494,6 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {[1, 2, 3, 4, 5, 6].map((slotNum) => {
-                    const _slotIdx = slotNum - 1
-                    
                     // get combo object to access all itemStats with positions
                     const combo = allBuildData[selectedCombo]
                     const itemsInSlot: Array<{ itemId: number; games: number; winrate: number }> = []
@@ -1001,7 +999,7 @@ export default function ChampionDetailTabs({ itemsBySlot, bootsItems, starterIte
                           if (tierRunes.length === 0) return null
                           return (
                             <div key={tierKey} className="flex items-center gap-3">
-                              {tierRunes.slice(0, 3).map((rune, _idx) => {
+                              {tierRunes.slice(0, 3).map((rune) => {
                                 const runeInfo = (runesData as Record<string, any>)[rune.rune_id.toString()]
                                 return (
                                   <div key={rune.rune_id} className="flex items-center gap-2">
