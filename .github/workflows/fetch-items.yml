@@ -45,7 +45,7 @@ jobs:
           title: 'Update static Riot data (items, runes, spells)'
           body: |
             Automated update of static data files from Riot Data Dragon.
-            
+
             This PR was created automatically by the weekly fetch-items workflow.
           branch: update-static-data
           delete-branch: true

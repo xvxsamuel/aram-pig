@@ -5,11 +5,11 @@ import { calculatePigScore } from '@/lib/scoring'
 // extract skill max order from ability order string (e.g., "Q W E Q W R Q W Q W R W W E E R E E" -> "qwe")
 function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefined): string | undefined {
   if (!abilityOrder) return undefined
-  
+
   const abilities = abilityOrder.split(' ')
   const counts = { Q: 0, W: 0, E: 0, R: 0 }
   const maxOrder: string[] = []
-  
+
   for (const ability of abilities) {
     if (ability in counts) {
       counts[ability as keyof typeof counts]++
@@ -18,7 +18,7 @@ function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefin
       }
     }
   }
-  
+
   const result = maxOrder.join('')
   if (result.length < 2) return undefined
   if (result.length === 2) {
@@ -32,16 +32,13 @@ function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefin
 export async function POST(request: Request) {
   try {
     const { matchId, puuid } = await request.json()
-    
+
     if (!matchId || !puuid) {
-      return NextResponse.json(
-        { error: 'matchId and puuid are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'matchId and puuid are required' }, { status: 400 })
     }
-    
+
     const supabase = createAdminClient()
-    
+
     // Get the participant data
     const { data: participantData, error: participantError } = await supabase
       .from('summoner_matches')
@@ -49,46 +46,40 @@ export async function POST(request: Request) {
       .eq('match_id', matchId)
       .eq('puuid', puuid)
       .single()
-    
+
     if (participantError || !participantData) {
-      return NextResponse.json(
-        { error: 'Participant not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
     }
-    
+
     // Always return cached pig score if it exists
     if (participantData.match_data?.pigScore !== null && participantData.match_data?.pigScore !== undefined) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         pigScore: participantData.match_data.pigScore,
-        cached: true 
+        cached: true,
       })
     }
-    
+
     // Get match record for game_duration and game_creation
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
       .select('game_duration, game_creation')
       .eq('match_id', matchId)
       .single()
-    
+
     if (matchError || !matchRecord) {
-      return NextResponse.json(
-        { error: 'Match record not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Match record not found' }, { status: 404 })
     }
-    
+
     // Only calculate pig scores for matches within 30 days
     // Timeline data (needed for ability order, build order) is only available for 30 days
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
     if (matchRecord.game_creation < thirtyDaysAgo) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         pigScore: null,
-        reason: 'Match older than 30 days - timeline data not available'
+        reason: 'Match older than 30 days - timeline data not available',
       })
     }
-    
+
     // Calculate pig score
     const pigScore = await calculatePigScore({
       championName: participantData.champion_name,
@@ -111,31 +102,27 @@ export async function POST(request: Request) {
       spell1: participantData.match_data.spells?.[0] || 0,
       spell2: participantData.match_data.spells?.[1] || 0,
       skillOrder: extractSkillOrderFromAbilityOrder(participantData.match_data.abilityOrder),
-      buildOrder: participantData.match_data.buildOrder || undefined
+      buildOrder: participantData.match_data.buildOrder || undefined,
     })
-    
+
     // Store the calculated pig score
     if (pigScore !== null) {
       const updatedMatchData = {
         ...participantData.match_data,
-        pigScore
+        pigScore,
       }
-      
+
       await supabase
         .from('summoner_matches')
         .update({ match_data: updatedMatchData })
         .eq('match_id', matchId)
         .eq('puuid', puuid)
     }
-    
+
     return NextResponse.json({ pigScore, cached: false })
-    
   } catch (error) {
     console.error('Calculate pig score error:', error)
-    return NextResponse.json(
-      { error: 'Failed to calculate pig score' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to calculate pig score' }, { status: 500 })
   }
 }
 
@@ -143,63 +130,54 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const { matchId } = await request.json()
-    
+
     if (!matchId) {
-      return NextResponse.json(
-        { error: 'matchId is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'matchId is required' }, { status: 400 })
     }
-    
+
     const supabase = createAdminClient()
-    
+
     // Get all participants for this match
     const { data: participants, error: participantsError } = await supabase
       .from('summoner_matches')
       .select('puuid, match_data, patch, champion_name')
       .eq('match_id', matchId)
-    
+
     if (participantsError || !participants || participants.length === 0) {
-      return NextResponse.json(
-        { error: 'Match not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
-    
+
     // Get game_duration and game_creation from matches table
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
       .select('game_duration, game_creation')
       .eq('match_id', matchId)
       .single()
-    
+
     if (matchError || !matchRecord) {
-      return NextResponse.json(
-        { error: 'Match record not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Match record not found' }, { status: 404 })
     }
-    
+
     // Check if match is older than 30 days
-    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
     const isOlderThan30Days = matchRecord.game_creation < thirtyDaysAgo
-    
+
     const results: Record<string, number | null> = {}
     const updates: Array<{ puuid: string; pigScore: number }> = []
-    
+
     for (const participant of participants) {
       // Always return cached pig score if it exists
       if (participant.match_data?.pigScore !== null && participant.match_data?.pigScore !== undefined) {
         results[participant.puuid] = participant.match_data.pigScore
         continue
       }
-      
+
       // Skip calculation for old matches - timeline data not available
       if (isOlderThan30Days) {
         results[participant.puuid] = null
         continue
       }
-      
+
       // Calculate pig score
       const pigScore = await calculatePigScore({
         championName: participant.champion_name,
@@ -222,25 +200,25 @@ export async function PUT(request: Request) {
         spell1: participant.match_data.spells?.[0] || 0,
         spell2: participant.match_data.spells?.[1] || 0,
         skillOrder: extractSkillOrderFromAbilityOrder(participant.match_data.abilityOrder),
-        buildOrder: participant.match_data.buildOrder || undefined
+        buildOrder: participant.match_data.buildOrder || undefined,
       })
-      
+
       results[participant.puuid] = pigScore
-      
+
       if (pigScore !== null) {
         updates.push({ puuid: participant.puuid, pigScore })
       }
     }
-    
+
     // Batch update all participants
     for (const update of updates) {
       const participant = participants.find(p => p.puuid === update.puuid)
       if (participant) {
         const updatedMatchData = {
           ...participant.match_data,
-          pigScore: update.pigScore
+          pigScore: update.pigScore,
         }
-        
+
         await supabase
           .from('summoner_matches')
           .update({ match_data: updatedMatchData })
@@ -248,14 +226,10 @@ export async function PUT(request: Request) {
           .eq('puuid', update.puuid)
       }
     }
-    
+
     return NextResponse.json({ results, updated: updates.length })
-    
   } catch (error) {
     console.error('Batch calculate pig score error:', error)
-    return NextResponse.json(
-      { error: 'Failed to calculate pig scores' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to calculate pig scores' }, { status: 500 })
   }
 }

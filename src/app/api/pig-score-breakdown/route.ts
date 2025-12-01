@@ -5,11 +5,11 @@ import { calculatePigScoreWithBreakdown } from '@/lib/scoring'
 // extract skill max order from ability order string
 function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefined): string | undefined {
   if (!abilityOrder) return undefined
-  
+
   const abilities = abilityOrder.split(' ')
   const counts = { Q: 0, W: 0, E: 0, R: 0 }
   const maxOrder: string[] = []
-  
+
   for (const ability of abilities) {
     if (ability in counts) {
       counts[ability as keyof typeof counts]++
@@ -18,7 +18,7 @@ function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefin
       }
     }
   }
-  
+
   const result = maxOrder.join('')
   if (result.length < 2) return undefined
   if (result.length === 2) {
@@ -34,18 +34,15 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const matchId = searchParams.get('matchId')
     const puuid = searchParams.get('puuid')
-    
+
     if (!matchId || !puuid) {
-      return NextResponse.json(
-        { error: 'matchId and puuid are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'matchId and puuid are required' }, { status: 400 })
     }
-    
+
     const supabase = createAdminClient()
-    
+
     console.log(`[pig-score-breakdown] Request for matchId=${matchId}, puuid=${puuid.slice(0, 8)}...`)
-    
+
     // get participant data
     const { data: participantData, error: participantError } = await supabase
       .from('summoner_matches')
@@ -53,49 +50,43 @@ export async function GET(request: Request) {
       .eq('match_id', matchId)
       .eq('puuid', puuid)
       .single()
-    
+
     if (participantError || !participantData) {
       console.log(`[pig-score-breakdown] Participant not found`)
-      return NextResponse.json(
-        { error: 'Participant not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
     }
-    
+
     // check if breakdown is already cached in match_data
     if (participantData.match_data?.pigScoreBreakdown) {
       console.log(`[pig-score-breakdown] CACHE HIT - returning stored breakdown`)
       return NextResponse.json(participantData.match_data.pigScoreBreakdown)
     }
-    
+
     console.log(`[pig-score-breakdown] CACHE MISS - calculating breakdown for ${participantData.champion_name}...`)
-    
+
     // get game_duration from matches table
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
       .select('game_duration')
       .eq('match_id', matchId)
       .single()
-    
+
     if (matchError || !matchRecord) {
-      return NextResponse.json(
-        { error: 'Match record not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Match record not found' }, { status: 404 })
     }
-    
+
     // Get all participants for this match to calculate team kills
     const { data: allParticipants } = await supabase
       .from('summoner_matches')
       .select('puuid, match_data')
       .eq('match_id', matchId)
-    
+
     // Calculate team kills for kill participation
     let teamTotalKills = 0
     let playerKills = 0
     let playerAssists = 0
     const playerTeamId = participantData.match_data?.teamId
-    
+
     if (allParticipants && playerTeamId !== undefined) {
       for (const p of allParticipants) {
         if (p.match_data?.teamId === playerTeamId) {
@@ -105,7 +96,7 @@ export async function GET(request: Request) {
       playerKills = participantData.match_data?.kills || 0
       playerAssists = participantData.match_data?.assists || 0
     }
-    
+
     // calculate pig score with breakdown
     const breakdown = await calculatePigScoreWithBreakdown({
       championName: participantData.champion_name,
@@ -130,38 +121,32 @@ export async function GET(request: Request) {
       spell1: participantData.match_data.spells?.[0],
       spell2: participantData.match_data.spells?.[1],
       skillOrder: extractSkillOrderFromAbilityOrder(participantData.match_data.abilityOrder),
-      buildOrder: participantData.match_data.buildOrder
+      buildOrder: participantData.match_data.buildOrder,
     })
-    
+
     if (!breakdown) {
       console.log(`[pig-score-breakdown] Failed to calculate breakdown`)
-      return NextResponse.json(
-        { error: 'Could not calculate pig score breakdown' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Could not calculate pig score breakdown' }, { status: 500 })
     }
-    
+
     console.log(`[pig-score-breakdown] Calculated breakdown, caching to DB...`)
-    
+
     // cache the breakdown in match_data for future requests
     const updatedMatchData = {
       ...participantData.match_data,
-      pigScoreBreakdown: breakdown
+      pigScoreBreakdown: breakdown,
     }
-    
+
     await supabase
       .from('summoner_matches')
       .update({ match_data: updatedMatchData })
       .eq('match_id', matchId)
       .eq('puuid', puuid)
-    
+
     console.log(`[pig-score-breakdown] Done - calculated and cached new breakdown`)
     return NextResponse.json(breakdown)
   } catch (error) {
     console.error('Error calculating pig score breakdown:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

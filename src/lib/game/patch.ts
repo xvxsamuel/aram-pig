@@ -11,15 +11,15 @@ export const PATCHES_TO_KEEP = 3
 export async function getLatestPatches(count: number = PATCHES_TO_KEEP): Promise<string[]> {
   try {
     const response = await fetch('https://ddragon.leagueoflegends.com/api/versions.json', {
-      next: { revalidate: 3600 }
+      next: { revalidate: 3600 },
     })
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch versions: ${response.status}`)
     }
-    
+
     const versions: string[] = await response.json()
-    
+
     const patches = versions.slice(0, count).map(version => {
       const parts = version.split('.')
       const major = parseInt(parts[0])
@@ -27,7 +27,7 @@ export async function getLatestPatches(count: number = PATCHES_TO_KEEP): Promise
       const convertedMajor = major + 10
       return `${convertedMajor}.${minor}`
     })
-    
+
     return patches
   } catch (error) {
     console.error('Failed to fetch latest patches:', error)
@@ -51,11 +51,11 @@ export function extractPatch(gameVersion: string): string {
   if (!gameVersion) return 'unknown'
   const parts = gameVersion.split('.')
   const apiPatch = parts.slice(0, 2).join('.')
-  
+
   if (apiPatch.startsWith('15.')) {
     return '25.' + apiPatch.split('.')[1]
   }
-  
+
   return apiPatch
 }
 

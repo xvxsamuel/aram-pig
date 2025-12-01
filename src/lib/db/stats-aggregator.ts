@@ -11,12 +11,12 @@ function normalizeBootId(itemId: number): number {
 function createComboKey(items: number[]): string | null {
   const first3 = items.filter(id => id > 0).slice(0, 3)
   if (first3.length !== 3) return null
-  
+
   const normalized = first3.map(normalizeBootId)
   const uniqueSorted = [...new Set(normalized)].sort((a, b) => a - b)
-  
+
   if (uniqueSorted.length !== 3) return null
-  
+
   return uniqueSorted.join('_')
 }
 
@@ -35,9 +35,9 @@ interface GameStats {
 
 // Welford's online algorithm state for computing mean and variance
 export interface WelfordState {
-  n: number      // count
-  mean: number   // running mean
-  m2: number     // sum of squared deviations (for variance calculation)
+  n: number // count
+  mean: number // running mean
+  m2: number // sum of squared deviations (for variance calculation)
 }
 
 // Calculate variance from Welford state (population variance)
@@ -96,22 +96,25 @@ interface ChampionStatsData {
   spells: Record<string, GameStats>
   starting: Record<string, GameStats>
   skills: Record<string, GameStats>
-  core: Record<string, {
-    games: number
-    wins: number
-    items: Record<string, Record<string, GameStats>>
-    runes: {
-      primary: Record<string, GameStats>
-      secondary: Record<string, GameStats>
-      tertiary: {
-        offense: Record<string, GameStats>
-        flex: Record<string, GameStats>
-        defense: Record<string, GameStats>
+  core: Record<
+    string,
+    {
+      games: number
+      wins: number
+      items: Record<string, Record<string, GameStats>>
+      runes: {
+        primary: Record<string, GameStats>
+        secondary: Record<string, GameStats>
+        tertiary: {
+          offense: Record<string, GameStats>
+          flex: Record<string, GameStats>
+          defense: Record<string, GameStats>
+        }
       }
+      spells: Record<string, GameStats>
+      starting: Record<string, GameStats>
     }
-    spells: Record<string, GameStats>
-    starting: Record<string, GameStats>
-  }>
+  >
 }
 
 export interface ParticipantStatsInput {
@@ -150,38 +153,38 @@ export interface ParticipantStatsInput {
 export class StatsAggregator {
   private aggregated = new Map<string, ChampionStatsData>()
   private participantCount = 0
-  
+
   getUniqueCount(): number {
     return this.aggregated.size
   }
-  
+
   getChampionPatchCount(): number {
     return this.getUniqueCount()
   }
-  
+
   getParticipantCount(): number {
     return this.participantCount
   }
-  
+
   getTotalGames(): number {
     return this.participantCount
   }
-  
+
   add(input: ParticipantStatsInput): void {
     this.participantCount++
     const key = `${input.champion_name}|${input.patch}`
     let stats = this.aggregated.get(key)
-    
+
     if (!stats) {
       stats = this.createEmptyStats()
       this.aggregated.set(key, stats)
     }
-    
+
     const win = input.win ? 1 : 0
-    
+
     stats.games += 1
     stats.wins += win
-    
+
     stats.championStats.sumDamageToChampions += input.damage_to_champions
     stats.championStats.sumTotalDamage += input.total_damage
     stats.championStats.sumHealing += input.healing
@@ -189,7 +192,7 @@ export class StatsAggregator {
     stats.championStats.sumCCTime += input.cc_time
     stats.championStats.sumGameDuration += input.game_duration
     stats.championStats.sumDeaths += input.deaths
-    
+
     // Welford's algorithm for per-minute stats variance tracking
     const gameDurationMinutes = input.game_duration / 60
     if (gameDurationMinutes > 0) {
@@ -198,9 +201,9 @@ export class StatsAggregator {
         totalDamagePerMin: input.total_damage / gameDurationMinutes,
         healingShieldingPerMin: (input.healing + input.shielding) / gameDurationMinutes,
         ccTimePerMin: input.cc_time / gameDurationMinutes,
-        deathsPerMin: input.deaths / gameDurationMinutes
+        deathsPerMin: input.deaths / gameDurationMinutes,
       }
-      
+
       // Update each Welford state
       this.updateWelford(stats.championStats.welford.damageToChampionsPerMin, perMinStats.damageToChampionsPerMin)
       this.updateWelford(stats.championStats.welford.totalDamagePerMin, perMinStats.totalDamagePerMin)
@@ -208,7 +211,7 @@ export class StatsAggregator {
       this.updateWelford(stats.championStats.welford.ccTimePerMin, perMinStats.ccTimePerMin)
       this.updateWelford(stats.championStats.welford.deathsPerMin, perMinStats.deathsPerMin)
     }
-    
+
     // items by position
     for (let i = 0; i < input.items.length && i < 6; i++) {
       const itemId = input.items[i]
@@ -221,7 +224,7 @@ export class StatsAggregator {
         stats.items[pos][itemKey].wins += win
       }
     }
-    
+
     // runes (primary)
     const primaryRunes = [input.keystone_id, input.rune1, input.rune2, input.rune3]
     for (const runeId of primaryRunes) {
@@ -232,7 +235,7 @@ export class StatsAggregator {
         stats.runes.primary[runeKey].wins += win
       }
     }
-    
+
     // runes (secondary)
     const secondaryRunes = [input.rune4, input.rune5]
     for (const runeId of secondaryRunes) {
@@ -243,7 +246,7 @@ export class StatsAggregator {
         stats.runes.secondary[runeKey].wins += win
       }
     }
-    
+
     // tertiary runes (stat perks)
     if (input.stat_perk0 > 0) {
       const key = input.stat_perk0.toString()
@@ -263,7 +266,7 @@ export class StatsAggregator {
       stats.runes.tertiary.defense[key].games += 1
       stats.runes.tertiary.defense[key].wins += win
     }
-    
+
     // rune trees
     if (input.rune_tree_primary > 0) {
       const key = input.rune_tree_primary.toString()
@@ -277,27 +280,27 @@ export class StatsAggregator {
       stats.runes.tree.secondary[key].games += 1
       stats.runes.tree.secondary[key].wins += win
     }
-    
+
     // spells
     const spellKey = createSpellKey(input.spell1_id, input.spell2_id)
     if (!stats.spells[spellKey]) stats.spells[spellKey] = { games: 0, wins: 0 }
     stats.spells[spellKey].games += 1
     stats.spells[spellKey].wins += win
-    
+
     // starting items
     if (input.first_buy && input.first_buy !== '') {
       if (!stats.starting[input.first_buy]) stats.starting[input.first_buy] = { games: 0, wins: 0 }
       stats.starting[input.first_buy].games += 1
       stats.starting[input.first_buy].wins += win
     }
-    
+
     // skill order
     if (input.skill_order && input.skill_order !== '') {
       if (!stats.skills[input.skill_order]) stats.skills[input.skill_order] = { games: 0, wins: 0 }
       stats.skills[input.skill_order].games += 1
       stats.skills[input.skill_order].wins += win
     }
-    
+
     // core combinations
     const comboKey = createComboKey(input.items)
     if (comboKey) {
@@ -309,16 +312,16 @@ export class StatsAggregator {
           runes: {
             primary: {},
             secondary: {},
-            tertiary: { offense: {}, flex: {}, defense: {} }
+            tertiary: { offense: {}, flex: {}, defense: {} },
           },
           spells: {},
-          starting: {}
+          starting: {},
         }
       }
       const combo = stats.core[comboKey]
       combo.games += 1
       combo.wins += win
-      
+
       // combo items by position
       for (let i = 0; i < input.items.length && i < 6; i++) {
         const itemId = input.items[i]
@@ -331,7 +334,7 @@ export class StatsAggregator {
           combo.items[itemKey][pos].wins += win
         }
       }
-      
+
       // combo runes (primary)
       for (const runeId of primaryRunes) {
         if (runeId > 0) {
@@ -341,7 +344,7 @@ export class StatsAggregator {
           combo.runes.primary[runeKey].wins += win
         }
       }
-      
+
       // combo runes (secondary)
       for (const runeId of secondaryRunes) {
         if (runeId > 0) {
@@ -351,7 +354,7 @@ export class StatsAggregator {
           combo.runes.secondary[runeKey].wins += win
         }
       }
-      
+
       // combo tertiary runes
       if (input.stat_perk0 > 0) {
         const key = input.stat_perk0.toString()
@@ -371,12 +374,12 @@ export class StatsAggregator {
         combo.runes.tertiary.defense[key].games += 1
         combo.runes.tertiary.defense[key].wins += win
       }
-      
+
       // combo spells
       if (!combo.spells[spellKey]) combo.spells[spellKey] = { games: 0, wins: 0 }
       combo.spells[spellKey].games += 1
       combo.spells[spellKey].wins += win
-      
+
       // combo starting items
       if (input.first_buy && input.first_buy !== '') {
         if (!combo.starting[input.first_buy]) combo.starting[input.first_buy] = { games: 0, wins: 0 }
@@ -385,23 +388,23 @@ export class StatsAggregator {
       }
     }
   }
-  
+
   getAggregatedStats(): Array<{ champion_name: string; patch: string; data: ChampionStatsData }> {
     const result: Array<{ champion_name: string; patch: string; data: ChampionStatsData }> = []
-    
+
     for (const [key, data] of this.aggregated) {
       const [champion_name, patch] = key.split('|')
       result.push({ champion_name, patch, data })
     }
-    
+
     return result
   }
-  
+
   clear(): void {
     this.aggregated.clear()
     this.participantCount = 0
   }
-  
+
   // Welford's online algorithm: update running mean and M2 (sum of squared deviations)
   private updateWelford(state: WelfordState, newValue: number): void {
     state.n += 1
@@ -410,12 +413,12 @@ export class StatsAggregator {
     const delta2 = newValue - state.mean
     state.m2 += delta * delta2
   }
-  
+
   // Helper to create empty Welford state
   private createEmptyWelford(): WelfordState {
     return { n: 0, mean: 0, m2: 0 }
   }
-  
+
   private createEmptyStats(): ChampionStatsData {
     return {
       games: 0,
@@ -433,20 +436,20 @@ export class StatsAggregator {
           totalDamagePerMin: this.createEmptyWelford(),
           healingShieldingPerMin: this.createEmptyWelford(),
           ccTimePerMin: this.createEmptyWelford(),
-          deathsPerMin: this.createEmptyWelford()
-        }
+          deathsPerMin: this.createEmptyWelford(),
+        },
       },
       items: { '1': {}, '2': {}, '3': {}, '4': {}, '5': {}, '6': {} },
       runes: {
         primary: {},
         secondary: {},
         tertiary: { offense: {}, flex: {}, defense: {} },
-        tree: { primary: {}, secondary: {} }
+        tree: { primary: {}, secondary: {} },
       },
       spells: {},
       starting: {},
       skills: {},
-      core: {}
+      core: {},
     }
   }
 }

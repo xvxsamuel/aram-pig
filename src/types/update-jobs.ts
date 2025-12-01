@@ -1,6 +1,6 @@
 // types for update jobs system
 
-export type UpdateJobStatus = "pending" | "processing" | "completed" | "failed"
+export type UpdateJobStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 export interface UpdateJob {
   id: string

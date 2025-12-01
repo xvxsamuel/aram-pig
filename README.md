@@ -13,13 +13,17 @@ ARAM PIG provides detailed statistics, build recommendations, and performance tr
 ## Features
 
 ### Summoner Profiles
+
 Search for any summoner to view their ARAM match history, performance metrics, and trends over time. Track win rates, KDA, and overall performance in ARAM, using our PIG Score system.
 
 ### PIG Score
+
 A custom performance metric that evaluates player contribution beyond simple KDA. Accounting for many ARAM-specific statistics, the PIG Score compares player performance with comprehensive data about builds, damage, and more. Users can then see their PIG analysis and see which parts of their gameplay could be improved.
 
 ### Champion Statistics
+
 ARAMPig also allows users to browse comprehensive statistics for all champions in ARAM, including:
+
 - Win rates and pick rates
 - Optimal rune configurations
 - Recommended item builds and build orders
@@ -28,6 +32,7 @@ ARAMPig also allows users to browse comprehensive statistics for all champions i
 - Starter item choices
 
 ### Match History
+
 Detailed match breakdowns showing team compositions, item builds, damage graphs, and individual performance ratings for each game.
 
 ## Tech Stack

@@ -7,7 +7,6 @@ import NextTopLoader from 'nextjs-toploader'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
-
 const leagueSpartan = League_Spartan({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700', '800', '900'],
@@ -22,12 +21,14 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://arampig.lol'),
   title: 'ARAM PIG',
-  description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
+  description:
+    'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
   keywords: ['ARAM', 'League of Legends', 'LoL', 'Stats', 'Match History', 'ARAM Stats', 'League Stats'],
   authors: [{ name: 'ARAM PIG' }],
   openGraph: {
     title: 'ARAM PIG - League of Legends ARAM Stats',
-    description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
+    description:
+      'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
     url: 'https://arampig.lol',
     siteName: 'ARAM PIG',
     images: [
@@ -50,7 +51,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     title: 'ARAM PIG',
     capable: true,
-    statusBarStyle: 'default'
+    statusBarStyle: 'default',
   },
   icons: {
     icon: '/favicon.ico',
@@ -58,17 +59,16 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={leagueSpartan.variable}>
       <head>
         <link rel="preload" href="/bg.png" as="image" />
       </head>
-      <body className='min-h-screen antialiased font-light flex flex-col bg-abyss-700 text-white' style={{ fontFamily: 'var(--font-league-spartan), sans-serif' }}>
+      <body
+        className="min-h-screen antialiased font-light flex flex-col bg-abyss-700 text-white"
+        style={{ fontFamily: 'var(--font-league-spartan), sans-serif' }}
+      >
         <NextTopLoader
           color="#2299DD"
           height={3}

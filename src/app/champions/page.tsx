@@ -17,7 +17,7 @@ export default async function ChampionsPage() {
   const championNames = await fetchChampionNames(ddragonVersion)
 
   return (
-    <ChampionsPageClient 
+    <ChampionsPageClient
       availablePatches={availablePatches}
       ddragonVersion={ddragonVersion}
       championNames={championNames}

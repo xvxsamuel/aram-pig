@@ -1,14 +1,14 @@
 // Riot API client wrapper (server-only)
-import { RiotAPI, DDragon } from "@fightmegg/riot-api"
-import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from "@/lib/game"
-import { waitForRateLimit, type RequestType } from "./rate-limiter"
-import { getLatestVersion } from "@/lib/ddragon"
-import type { MatchData, MatchTimeline } from "@/types/match"
+import { RiotAPI, DDragon } from '@fightmegg/riot-api'
+import { PLATFORM_TO_REGIONAL, type PlatformCode, type RegionalCluster } from '@/lib/game'
+import { waitForRateLimit, type RequestType } from './rate-limiter'
+import { getLatestVersion } from '@/lib/ddragon'
+import type { MatchData, MatchTimeline } from '@/types/match'
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY
 
 if (!RIOT_API_KEY) {
-  console.error("RIOT_API_KEY is not set in environment variables")
+  console.error('RIOT_API_KEY is not set in environment variables')
 }
 
 const rAPI = new RiotAPI(RIOT_API_KEY!)
@@ -49,11 +49,7 @@ const PLATFORM_CODE_TO_PLATFORM_ID: Record<PlatformCode, string> = {
 }
 
 // helper to retry api calls if job id conflicts
-async function retryWithDelay<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  delayMs = 1000
-): Promise<T> {
+async function retryWithDelay<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 1000): Promise<T> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fn()
@@ -63,32 +59,32 @@ async function retryWithDelay<T>(
       if (err?.response?.status === 404) {
         throw error
       }
-      
+
       const isJobConflict = err?.message?.includes('A job with the same ID already exists')
       const isLastAttempt = attempt === maxRetries - 1
-      
+
       if (isJobConflict && !isLastAttempt) {
         await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)))
         continue
       }
-      
+
       throw error
     }
   }
-  
+
   throw new Error('Max retries reached')
 }
 
 export async function getAccountByRiotId(
-  gameName: string, 
-  tagLine: string, 
+  gameName: string,
+  tagLine: string,
   region: RegionalCluster,
   requestType: RequestType = 'overhead'
 ) {
-  await waitForRateLimit(region, requestType);
-  
+  await waitForRateLimit(region, requestType)
+
   try {
-    const account = await retryWithDelay(() => 
+    const account = await retryWithDelay(() =>
       rAPI.account.getByRiotId({
         region: REGIONAL_TO_PLATFORM_ID[region] as Parameters<typeof rAPI.account.getByRiotId>[0]['region'],
         gameName,
@@ -105,13 +101,9 @@ export async function getAccountByRiotId(
   }
 }
 
-export async function getSummonerByPuuid(
-  puuid: string, 
-  platform: PlatformCode,
-  requestType: RequestType = 'overhead'
-) {
-  await waitForRateLimit(platform, requestType);
-  
+export async function getSummonerByPuuid(puuid: string, platform: PlatformCode, requestType: RequestType = 'overhead') {
+  await waitForRateLimit(platform, requestType)
+
   try {
     const summoner = await retryWithDelay(() =>
       rAPI.summoner.getByPUUID({
@@ -139,18 +131,18 @@ export async function getMatchIdsByPuuid(
   startTime?: number,
   endTime?: number
 ) {
-  await waitForRateLimit(region, requestType);
-  
+  await waitForRateLimit(region, requestType)
+
   const limitedCount = Math.min(count, 100)
   const params: Record<string, number> = {
     queue,
     count: limitedCount,
   }
-  
+
   if (start > 0) params.start = start
   if (startTime) params.startTime = startTime
   if (endTime) params.endTime = endTime
-  
+
   const matchIds = await retryWithDelay(() =>
     rAPI.matchV5.getIdsByPuuid({
       cluster: REGIONAL_TO_MATCH_ROUTING[region] as Parameters<typeof rAPI.matchV5.getIdsByPuuid>[0]['cluster'],
@@ -162,8 +154,8 @@ export async function getMatchIdsByPuuid(
 }
 
 export async function getMatchById(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
-  await waitForRateLimit(region, requestType);
-  
+  await waitForRateLimit(region, requestType)
+
   const match = await retryWithDelay(() =>
     rAPI.matchV5.getMatchById({
       cluster: REGIONAL_TO_MATCH_ROUTING[region] as Parameters<typeof rAPI.matchV5.getMatchById>[0]['cluster'],
@@ -174,8 +166,8 @@ export async function getMatchById(matchId: string, region: RegionalCluster, req
 }
 
 export async function getMatchTimeline(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
-  await waitForRateLimit(region, requestType);
-  
+  await waitForRateLimit(region, requestType)
+
   const timeline = await retryWithDelay(() =>
     rAPI.matchV5.getMatchTimelineById({
       cluster: REGIONAL_TO_MATCH_ROUTING[region] as Parameters<typeof rAPI.matchV5.getMatchTimelineById>[0]['cluster'],
@@ -196,13 +188,9 @@ export async function getMatchTimelineNoWait(matchId: string, region: RegionalCl
   return timeline as unknown as MatchTimeline
 }
 
-export async function getSummonerByRiotId(
-  gameName: string,
-  tagLine: string,
-  platform: PlatformCode
-) {
+export async function getSummonerByRiotId(gameName: string, tagLine: string, platform: PlatformCode) {
   const regional = PLATFORM_TO_REGIONAL[platform]
-  
+
   const account = await getAccountByRiotId(gameName, tagLine, regional)
   if (!account) {
     return null

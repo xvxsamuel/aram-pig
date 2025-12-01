@@ -22,9 +22,9 @@ export async function preloadDDragonVersion(): Promise<void> {
 // normalize champion names for ddragon urls
 function normalizeChampionName(championName: string): string {
   const nameMap: Record<string, string> = {
-    'FiddleSticks': 'Fiddlesticks',
-    'MonkeyKing': 'MonkeyKing',
-    'Renata': 'Renata',
+    FiddleSticks: 'Fiddlesticks',
+    MonkeyKing: 'MonkeyKing',
+    Renata: 'Renata',
   }
   return nameMap[championName] || championName
 }
@@ -55,20 +55,20 @@ export function getItemImageUrl(itemId: number, version: string): string {
 // maps riot api spell ids to ddragon file names
 function getSpellName(spellId: number): string {
   const spellMap: Record<number, string> = {
-    1: 'Boost',      // cleanse
+    1: 'Boost', // cleanse
     3: 'Exhaust',
     4: 'Flash',
-    6: 'Haste',      // ghost
+    6: 'Haste', // ghost
     7: 'Heal',
     11: 'Smite',
     12: 'Teleport',
-    13: 'Mana',      // clarity
-    14: 'Dot',       // ignite
+    13: 'Mana', // clarity
+    14: 'Dot', // ignite
     21: 'Barrier',
     30: 'PoroRecall',
     31: 'PoroThrow',
-    32: 'Snowball',  // mark
-    39: 'Snowball',  // mark recast
+    32: 'Snowball', // mark
+    39: 'Snowball', // mark recast
   }
   return spellMap[spellId] || 'Flash'
 }

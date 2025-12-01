@@ -7,10 +7,7 @@ import type { MatchTimeline } from '@/types/match'
  * @param participantId - Participant ID (1-10)
  * @returns Formatted string like "Q W E Q Q R Q W Q W R W W E E R E E" or null if unavailable
  */
-export function extractAbilityOrder(
-  timeline: MatchTimeline | null | undefined,
-  participantId: number
-): string | null {
+export function extractAbilityOrder(timeline: MatchTimeline | null | undefined, participantId: number): string | null {
   if (!timeline?.info?.frames) {
     return null
   }
@@ -21,7 +18,13 @@ export function extractAbilityOrder(
     if (!frame.events) continue
 
     for (const event of frame.events) {
-      const evt = event as { type: string; participantId?: number; skillSlot?: number; levelUpType?: string; timestamp: number }
+      const evt = event as {
+        type: string
+        participantId?: number
+        skillSlot?: number
+        levelUpType?: string
+        timestamp: number
+      }
       if (
         evt.type === 'SKILL_LEVEL_UP' &&
         evt.participantId === participantId &&
@@ -30,7 +33,7 @@ export function extractAbilityOrder(
       ) {
         skillLevelUps.push({
           timestamp: evt.timestamp,
-          skillSlot: evt.skillSlot
+          skillSlot: evt.skillSlot,
         })
       }
     }
@@ -46,7 +49,7 @@ export function extractAbilityOrder(
     1: 'Q',
     2: 'W',
     3: 'E',
-    4: 'R'
+    4: 'R',
   }
 
   return skillLevelUps.map(levelUp => abilityMap[levelUp.skillSlot] || '?').join(' ')

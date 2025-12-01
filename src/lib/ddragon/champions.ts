@@ -17,24 +17,23 @@ export async function fetchChampionNames(version: string): Promise<Record<string
     return championDataCache
   }
   try {
-    const response = await fetch(
-      `https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/champion.json`,
-      { next: { revalidate: 86400 } }
-    )
-    
+    const response = await fetch(`https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/champion.json`, {
+      next: { revalidate: 86400 },
+    })
+
     if (!response.ok) {
       throw new Error(`Failed to fetch champion data: ${response.status}`)
     }
 
     const data: ChampionList = await response.json()
-    
+
     championDataCache = Object.fromEntries(
       Object.entries(data.data).map(([_key, champion]) => [champion.id, champion.name])
     )
 
     return championDataCache
   } catch (error) {
-    console.error("Error fetching champion names:", error)
+    console.error('Error fetching champion names:', error)
     return {}
   }
 }
@@ -50,21 +49,21 @@ export function getChampionUrlName(apiName: string, championNames: Record<string
 
 export function getApiNameFromUrl(urlName: string, championNames: Record<string, string>): string | null {
   const urlNormalized = urlName.toLowerCase().replace(/[^a-z0-9]/g, '')
-  
+
   // first, try to match against display names
   for (const [api, display] of Object.entries(championNames)) {
     if (display.toLowerCase().replace(/[^a-z0-9]/g, '') === urlNormalized) {
       return api
     }
   }
-  
+
   // if not found, try matching API names directly
   for (const api of Object.keys(championNames)) {
     if (api.toLowerCase() === urlNormalized) {
       return api
     }
   }
-  
+
   return null
 }
 

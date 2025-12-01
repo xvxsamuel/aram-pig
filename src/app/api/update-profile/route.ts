@@ -1,12 +1,30 @@
-import { NextResponse } from 'next/server';
-import { createAdminClient, statsAggregator, flushAggregatedStats } from '@/lib/db';
-import { getAccountByRiotId, getSummonerByPuuid, getMatchIdsByPuuid, getMatchById, getMatchTimeline } from '@/lib/riot/api';
-import { type RequestType } from '@/lib/riot/rate-limiter';
-import type { PlatformCode } from '@/lib/game';
-import type { UpdateJob } from '../../../types/update-jobs';
-import { calculatePigScoreWithBreakdown, recalculateProfileStatsForPlayers } from '@/lib/scoring';
-import { extractAbilityOrder, extractBuildOrder, extractFirstBuy, formatBuildOrder, formatFirstBuy, extractItemPurchases, type ItemPurchaseEvent, extractPatch, getPatchFromDate, isPatchAccepted } from '@/lib/game';
-import itemsData from '../../../data/items.json';
+import { NextResponse } from 'next/server'
+import { createAdminClient, statsAggregator, flushAggregatedStats } from '@/lib/db'
+import {
+  getAccountByRiotId,
+  getSummonerByPuuid,
+  getMatchIdsByPuuid,
+  getMatchById,
+  getMatchTimeline,
+} from '@/lib/riot/api'
+import { type RequestType } from '@/lib/riot/rate-limiter'
+import type { PlatformCode } from '@/lib/game'
+import type { UpdateJob } from '../../../types/update-jobs'
+import { calculatePigScoreWithBreakdown, recalculateProfileStatsForPlayers } from '@/lib/scoring'
+import {
+  extractAbilityOrder,
+  extractBuildOrder,
+  extractFirstBuy,
+  formatBuildOrder,
+  formatFirstBuy,
+  extractItemPurchases,
+  type ItemPurchaseEvent,
+  extractPatch,
+  getPatchFromDate,
+  isPatchAccepted,
+} from '@/lib/game'
+import { getKillDeathSummary } from '@/lib/game/kill-timeline'
+import itemsData from '../../../data/items.json'
 
 // in-memory lock to prevent concurrent processing of same profile (handles Strict Mode double-invoke)
 const processingLocks = new Map<string, Promise<Response>>()
@@ -22,11 +40,11 @@ const isFinishedItem = (itemId: number): boolean => {
 // helper to extract skill max order abbreviation (e.g., "qwe" for Q>W>E)
 function extractSkillOrderAbbreviation(abilityOrder: string): string {
   if (!abilityOrder || abilityOrder.length === 0) return ''
-  
+
   const abilities = abilityOrder.split(' ')
   const counts = { Q: 0, W: 0, E: 0, R: 0 }
   const maxOrder: string[] = []
-  
+
   for (const ability of abilities) {
     if (ability in counts) {
       counts[ability as keyof typeof counts]++
@@ -35,7 +53,7 @@ function extractSkillOrderAbbreviation(abilityOrder: string): string {
       }
     }
   }
-  
+
   const result = maxOrder.join('')
   if (result.length === 1) return ''
   if (result.length === 2) {
@@ -48,62 +66,62 @@ function extractSkillOrderAbbreviation(abilityOrder: string): string {
 
 // chunked processing configuration
 // Process 12 matches per chunk (~3s each = ~36s, well under 60s Vercel timeout)
-const CHUNK_SIZE = 12;
+const CHUNK_SIZE = 12
 
 async function fetchMatchIds(region: string, puuid: string, count?: number, requestType: RequestType = 'batch') {
-  const allMatchIds: string[] = [];
-  const maxPerRequest = 100;
-  let start = 0;
-  
+  const allMatchIds: string[] = []
+  const maxPerRequest = 100
+  let start = 0
+
   while (true) {
-    if (count && allMatchIds.length >= count) break;
-    
-    const batchCount = count ? Math.min(maxPerRequest, count - allMatchIds.length) : maxPerRequest;
-    
-    const batchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchCount, start, requestType);
-    
-    if (batchIds.length === 0) break;
-    
-    allMatchIds.push(...batchIds);
-    
-    if (batchIds.length < maxPerRequest) break;
-    
-    start += maxPerRequest;
+    if (count && allMatchIds.length >= count) break
+
+    const batchCount = count ? Math.min(maxPerRequest, count - allMatchIds.length) : maxPerRequest
+
+    const batchIds = await getMatchIdsByPuuid(puuid, region as any, 450, batchCount, start, requestType)
+
+    if (batchIds.length === 0) break
+
+    allMatchIds.push(...batchIds)
+
+    if (batchIds.length < maxPerRequest) break
+
+    start += maxPerRequest
   }
-  
-  return allMatchIds;
+
+  return allMatchIds
 }
 
 async function fetchMatch(region: string, matchId: string, requestType: RequestType = 'batch') {
-  return await getMatchById(matchId, region as any, requestType);
+  return await getMatchById(matchId, region as any, requestType)
 }
 
 // cleanup stale jobs before starting new one
 async function cleanupStaleJobs(supabase: any) {
-  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-  
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+
   // cleanup jobs older than 30 minutes
   await supabase
     .from('update_jobs')
     .update({
       status: 'failed',
       error_message: 'job timed out after 30 minutes',
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
     })
     .in('status', ['pending', 'processing'])
-    .lt('started_at', thirtyMinutesAgo);
-  
+    .lt('started_at', thirtyMinutesAgo)
+
   // cleanup processing jobs with no progress update in 5 minutes (likely orphaned)
   await supabase
     .from('update_jobs')
     .update({
       status: 'failed',
       error_message: 'job stalled - no progress in 5 minutes',
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
     })
     .eq('status', 'processing')
-    .lt('updated_at', fiveMinutesAgo);
+    .lt('updated_at', fiveMinutesAgo)
 }
 
 // check for existing active job
@@ -115,13 +133,19 @@ async function getActiveJob(supabase: any, puuid: string): Promise<UpdateJob | n
     .in('status', ['pending', 'processing'])
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
-  
-  return data;
+    .single()
+
+  return data
 }
 
 // create new job with pending matches
-async function createJob(supabase: any, puuid: string, matchIds: string[], region: string, etaSeconds: number): Promise<string> {
+async function createJob(
+  supabase: any,
+  puuid: string,
+  matchIds: string[],
+  region: string,
+  etaSeconds: number
+): Promise<string> {
   const { data, error } = await supabase
     .from('update_jobs')
     .insert({
@@ -132,32 +156,38 @@ async function createJob(supabase: any, puuid: string, matchIds: string[], regio
       eta_seconds: etaSeconds,
       pending_match_ids: matchIds,
       region: region,
-      started_at: new Date().toISOString()
+      started_at: new Date().toISOString(),
     })
     .select('id')
-    .single();
-  
+    .single()
+
   if (error) {
-    throw new Error(`failed to create job: ${error.message}`);
+    throw new Error(`failed to create job: ${error.message}`)
   }
-  
-  return data.id;
+
+  return data.id
 }
 
 // update job progress with remaining matches
-async function updateJobProgress(supabase: any, jobId: string, fetchedMatches: number, totalMatches: number, remainingMatchIds: string[]) {
+async function updateJobProgress(
+  supabase: any,
+  jobId: string,
+  fetchedMatches: number,
+  totalMatches: number,
+  remainingMatchIds: string[]
+) {
   // estimate ~3s per match for remaining
-  const etaSeconds = Math.ceil(remainingMatchIds.length * 3);
-  
+  const etaSeconds = Math.ceil(remainingMatchIds.length * 3)
+
   await supabase
     .from('update_jobs')
-    .update({ 
+    .update({
       fetched_matches: fetchedMatches,
       eta_seconds: etaSeconds,
       pending_match_ids: remainingMatchIds,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     })
-    .eq('id', jobId);
+    .eq('id', jobId)
 }
 
 // mark job as completed
@@ -167,9 +197,9 @@ async function completeJob(supabase: any, jobId: string) {
     .update({
       status: 'completed',
       pending_match_ids: [],
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
     })
-    .eq('id', jobId);
+    .eq('id', jobId)
 }
 
 // mark job as failed
@@ -179,45 +209,47 @@ async function failJob(supabase: any, jobId: string, errorMessage: string) {
     .update({
       status: 'failed',
       error_message: errorMessage,
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
     })
-    .eq('id', jobId);
+    .eq('id', jobId)
 }
 
 // check and calculate missing pig scores for recent matches (within 30 days)
 async function calculateMissingPigScores(supabase: any, puuid: string) {
-  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
-  
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+
   const { data: recentMatches, error: fetchError } = await supabase
     .from('summoner_matches')
-    .select('match_id, puuid, match_data, patch, champion_name, game_creation, matches!inner(game_duration, game_creation)')
+    .select(
+      'match_id, puuid, match_data, patch, champion_name, game_creation, matches!inner(game_duration, game_creation)'
+    )
     .eq('puuid', puuid)
     .gte('game_creation', thirtyDaysAgo)
     .order('game_creation', { ascending: false })
     .limit(30)
-  
+
   if (fetchError || !recentMatches) {
     console.error('[UpdateProfile] Error fetching recent matches for pig score calculation:', fetchError)
     return 0
   }
-  
+
   const matchesNeedingPigScore = recentMatches.filter((m: any) => {
     const hasPigScore = m.match_data?.pigScore !== null && m.match_data?.pigScore !== undefined
     const isRemake = m.match_data?.isRemake === true
     return !hasPigScore && !isRemake
   })
-  
+
   if (matchesNeedingPigScore.length === 0) {
     return 0
   }
-  
+
   console.log(`[UpdateProfile] Calculating pig scores for ${matchesNeedingPigScore.length} matches...`)
-  
+
   let calculated = 0
   for (const match of matchesNeedingPigScore) {
     try {
       const gameDuration = match.matches?.game_duration || 0
-      
+
       const breakdown = await calculatePigScoreWithBreakdown({
         championName: match.champion_name,
         damage_dealt_to_champions: match.match_data.stats?.damage || 0,
@@ -238,41 +270,38 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
         spell1: match.match_data.spells?.[0] || 0,
         spell2: match.match_data.spells?.[1] || 0,
         skillOrder: extractSkillOrderAbbreviation(match.match_data.abilityOrder || ''),
-        buildOrder: match.match_data.buildOrder || undefined
+        buildOrder: match.match_data.buildOrder || undefined,
       })
-      
+
       if (breakdown) {
         const updatedMatchData = {
           ...match.match_data,
           pigScore: breakdown.finalScore,
-          pigScoreBreakdown: breakdown
+          pigScoreBreakdown: breakdown,
         }
-        
+
         await supabase
           .from('summoner_matches')
           .update({ match_data: updatedMatchData })
           .eq('match_id', match.match_id)
           .eq('puuid', match.puuid)
-        
+
         calculated++
       }
     } catch (err) {
       console.error(`[UpdateProfile] Failed to calculate pig score for ${match.match_id}:`, err)
     }
   }
-  
+
   return calculated
 }
 
 export async function POST(request: Request) {
   try {
-    const { region, gameName, tagLine, platform } = await request.json();
-    
+    const { region, gameName, tagLine, platform } = await request.json()
+
     if (!region || !gameName || !tagLine || !platform) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // check if already processing this profile (handles Strict Mode double-invoke)
@@ -293,43 +322,50 @@ export async function POST(request: Request) {
       processingLocks.delete(lockKey)
     }
   } catch (error) {
-    console.error('[UpdateProfile] Error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('[UpdateProfile] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-async function processProfileUpdate(region: string, gameName: string, tagLine: string, platform: string): Promise<Response> {
-  let jobId: string | null = null;
+async function processProfileUpdate(
+  region: string,
+  gameName: string,
+  tagLine: string,
+  platform: string
+): Promise<Response> {
+  let jobId: string | null = null
   try {
-    const supabase = createAdminClient();
+    const supabase = createAdminClient()
 
     // cleanup stale jobs first
-    await cleanupStaleJobs(supabase);
+    await cleanupStaleJobs(supabase)
 
     // riot
-    const accountData = await getAccountByRiotId(gameName, tagLine, region as any);
+    const accountData = await getAccountByRiotId(gameName, tagLine, region as any)
     if (!accountData) {
-      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Account not found' }, { status: 404 })
     }
 
     // check for existing active job - if it has pending matches, continue processing
-    const existingJob = await getActiveJob(supabase, accountData.puuid);
+    const existingJob = await getActiveJob(supabase, accountData.puuid)
     if (existingJob) {
       // if job has pending matches, continue processing them
       if (existingJob.pending_match_ids && existingJob.pending_match_ids.length > 0) {
-        console.log(`[UpdateProfile] Resuming job ${existingJob.id} with ${existingJob.pending_match_ids.length} pending matches`)
-        return await continueProcessingJob(supabase, existingJob, region, accountData.puuid);
+        console.log(
+          `[UpdateProfile] Resuming job ${existingJob.id} with ${existingJob.pending_match_ids.length} pending matches`
+        )
+        return await continueProcessingJob(supabase, existingJob, region, accountData.puuid)
       }
-      
-      // job exists but no pending matches - it's completing
+
+      // job exists but no pending matches - finalize it now
+      console.log(`[UpdateProfile] Job ${existingJob.id} has no pending matches, finalizing...`)
+      await finalizeJob(supabase, existingJob.id, accountData.puuid)
       return NextResponse.json({
-        message: 'update already in progress',
+        message: 'Update completed',
         jobId: existingJob.id,
-        alreadyInProgress: true
-      });
+        newMatches: existingJob.total_matches,
+        completed: true,
+      })
     }
 
     // check for 5-minute cooldown
@@ -337,54 +373,47 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
       .from('summoners')
       .select('last_updated')
       .eq('puuid', accountData.puuid)
-      .single();
+      .single()
 
     if (existingSummoner?.last_updated) {
-      const lastUpdatedTime = new Date(existingSummoner.last_updated).getTime();
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      
+      const lastUpdatedTime = new Date(existingSummoner.last_updated).getTime()
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+
       if (lastUpdatedTime > fiveMinutesAgo) {
         return NextResponse.json({
           message: 'Profile updated recently, please wait',
           recentlyUpdated: true,
-          newMatches: 0
-        });
+          newMatches: 0,
+        })
       }
     }
 
-    const summonerData = await getSummonerByPuuid(accountData.puuid, platform as PlatformCode);
+    const summonerData = await getSummonerByPuuid(accountData.puuid, platform as PlatformCode)
     if (!summonerData) {
-      return NextResponse.json({ error: 'Summoner not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Summoner not found' }, { status: 404 })
     }
 
     // update summoner data
-    const { error: summonerError } = await supabase
-      .from('summoners')
-      .upsert({
-        puuid: accountData.puuid,
-        game_name: accountData.gameName,
-        tag_line: accountData.tagLine,
-        summoner_level: summonerData.summonerLevel,
-        profile_icon_id: summonerData.profileIconId,
-        region: platform,
-      });
+    const { error: summonerError } = await supabase.from('summoners').upsert({
+      puuid: accountData.puuid,
+      game_name: accountData.gameName,
+      tag_line: accountData.tagLine,
+      summoner_level: summonerData.summonerLevel,
+      profile_icon_id: summonerData.profileIconId,
+      region: platform,
+    })
 
     if (summonerError) {
-      console.error('Summoner upsert error:', summonerError);
-      return NextResponse.json(
-        { error: 'Failed to update summoner data' },
-        { status: 500 }
-      );
+      console.error('Summoner upsert error:', summonerError)
+      return NextResponse.json({ error: 'Failed to update summoner data' }, { status: 500 })
     }
 
     const { data: existingMatches } = await supabase
       .from('summoner_matches')
       .select('match_id')
-      .eq('puuid', accountData.puuid);
+      .eq('puuid', accountData.puuid)
 
-    const existingMatchIds = new Set(
-      existingMatches?.map((m: { match_id: string }) => m.match_id) || []
-    );
+    const existingMatchIds = new Set(existingMatches?.map((m: { match_id: string }) => m.match_id) || [])
 
     console.log(`[UpdateProfile] Found ${existingMatchIds.size} existing matches for puuid ${accountData.puuid}`)
 
@@ -395,56 +424,57 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
       .eq('puuid', accountData.puuid)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .single()
 
-    const lastJobFailed = lastJob?.status === 'failed';
-    const shouldSkipQuickCheck = lastJobFailed || existingMatchIds.size === 0;
+    const lastJobFailed = lastJob?.status === 'failed'
+    const shouldSkipQuickCheck = lastJobFailed || existingMatchIds.size === 0
 
     // Quick check: fetch match IDs and compare
     if (!shouldSkipQuickCheck) {
       console.log('[UpdateProfile] Quick check: fetching recent match IDs...')
-      const quickCheckIds = await fetchMatchIds(region, accountData.puuid, 100, 'overhead');
-      
-      const missingForPlayer = quickCheckIds.filter((id: string) => !existingMatchIds.has(id));
-      
+      const quickCheckIds = await fetchMatchIds(region, accountData.puuid, 100, 'overhead')
+
+      const missingForPlayer = quickCheckIds.filter((id: string) => !existingMatchIds.has(id))
+
       if (missingForPlayer.length === 0) {
         console.log('[UpdateProfile] No new matches found')
         const pigScoresCalculated = await calculateMissingPigScores(supabase, accountData.puuid)
-        
-        return NextResponse.json({ 
-          success: true, 
+
+        return NextResponse.json({
+          success: true,
           newMatches: 0,
           pigScoresCalculated,
-          message: pigScoresCalculated > 0 
-            ? `Profile is up to date, calculated ${pigScoresCalculated} pig scores`
-            : 'Profile is already up to date'
-        });
+          message:
+            pigScoresCalculated > 0
+              ? `Profile is up to date, calculated ${pigScoresCalculated} pig scores`
+              : 'Profile is already up to date',
+        })
       }
-      
+
       console.log(`[UpdateProfile] Quick check found ${missingForPlayer.length} new matches`)
     }
-    
+
     console.log('[UpdateProfile] Fetching full match history...')
-    const matchIds = await fetchMatchIds(region, accountData.puuid, undefined, 'batch');
-    
-    const newMatchIdsRaw = matchIds.filter((id: string) => !existingMatchIds.has(id));
-    const newMatchIds = [...new Set(newMatchIdsRaw)];
-    
+    const matchIds = await fetchMatchIds(region, accountData.puuid, undefined, 'batch')
+
+    const newMatchIdsRaw = matchIds.filter((id: string) => !existingMatchIds.has(id))
+    const newMatchIds = [...new Set(newMatchIdsRaw)]
+
     console.log(`[UpdateProfile] Found ${newMatchIds.length} new matches to process`)
-    
+
     if (newMatchIds.length === 0) {
       const pigScoresCalculated = await calculateMissingPigScores(supabase, accountData.puuid)
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         newMatches: 0,
         pigScoresCalculated,
-        message: 'Profile is already up to date'
-      });
+        message: 'Profile is already up to date',
+      })
     }
 
     // create job with all pending matches
-    const etaSeconds = Math.ceil(newMatchIds.length * 3);
-    jobId = await createJob(supabase, accountData.puuid, newMatchIds, region, etaSeconds);
+    const etaSeconds = Math.ceil(newMatchIds.length * 3)
+    jobId = await createJob(supabase, accountData.puuid, newMatchIds, region, etaSeconds)
     console.log(`[UpdateProfile] Created job ${jobId} for ${newMatchIds.length} matches`)
 
     // process first chunk immediately
@@ -461,105 +491,91 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       completed_at: null,
-      error_message: null
-    };
-
-    return await continueProcessingJob(supabase, job, region, accountData.puuid);
-
-  } catch (error: any) {
-    console.error('[UpdateProfile] Error:', error);
-    
-    if (jobId) {
-      const supabase = createAdminClient();
-      await failJob(supabase, jobId, error.message || 'unknown error');
+      error_message: null,
     }
-    
-    return NextResponse.json(
-      { error: error.message || 'Failed to update profile' },
-      { status: 500 }
-    );
+
+    return await continueProcessingJob(supabase, job, region, accountData.puuid)
+  } catch (error: any) {
+    console.error('[UpdateProfile] Error:', error)
+
+    if (jobId) {
+      const supabase = createAdminClient()
+      await failJob(supabase, jobId, error.message || 'unknown error')
+    }
+
+    return NextResponse.json({ error: error.message || 'Failed to update profile' }, { status: 500 })
   }
 }
 
 // continue processing an existing job - process one chunk and return
-async function continueProcessingJob(
-  supabase: any,
-  job: UpdateJob,
-  region: string,
-  puuid: string
-): Promise<Response> {
-  const pendingMatchIds = job.pending_match_ids || [];
-  
+async function continueProcessingJob(supabase: any, job: UpdateJob, region: string, puuid: string): Promise<Response> {
+  const pendingMatchIds = job.pending_match_ids || []
+
   if (pendingMatchIds.length === 0) {
     // no more matches - finalize job
-    await finalizeJob(supabase, job.id, puuid);
+    await finalizeJob(supabase, job.id, puuid)
     return NextResponse.json({
       message: 'Update completed',
       jobId: job.id,
       newMatches: job.total_matches,
-      completed: true
-    });
+      completed: true,
+    })
   }
 
   // take next chunk
-  const chunkToProcess = pendingMatchIds.slice(0, CHUNK_SIZE);
-  const remainingMatchIds = pendingMatchIds.slice(CHUNK_SIZE);
-  
-  console.log(`[UpdateProfile] Processing chunk of ${chunkToProcess.length} matches (${remainingMatchIds.length} remaining)`)
+  const chunkToProcess = pendingMatchIds.slice(0, CHUNK_SIZE)
+  const remainingMatchIds = pendingMatchIds.slice(CHUNK_SIZE)
 
-  const requestType: RequestType = 'batch';
-  const processedMatches = new Set<string>();
-  let fetchedInChunk = 0;
+  console.log(
+    `[UpdateProfile] Processing chunk of ${chunkToProcess.length} matches (${remainingMatchIds.length} remaining)`
+  )
+
+  const requestType: RequestType = 'batch'
+  const processedMatches = new Set<string>()
+  let fetchedInChunk = 0
 
   // batch pre-check for existing matches
   const [existingMatchesResult, existingUserRecordsResult] = await Promise.all([
-    supabase
-      .from('matches')
-      .select('match_id, game_creation, game_duration, patch')
-      .in('match_id', chunkToProcess),
-    supabase
-      .from('summoner_matches')
-      .select('match_id')
-      .eq('puuid', puuid)
-      .in('match_id', chunkToProcess)
-  ]);
+    supabase.from('matches').select('match_id, game_creation, game_duration, patch').in('match_id', chunkToProcess),
+    supabase.from('summoner_matches').select('match_id').eq('puuid', puuid).in('match_id', chunkToProcess),
+  ])
 
-  const existingMatchesMap = new Map<string, any>();
+  const existingMatchesMap = new Map<string, any>()
   for (const match of existingMatchesResult.data || []) {
-    existingMatchesMap.set(match.match_id, match);
+    existingMatchesMap.set(match.match_id, match)
   }
 
-  const userHasRecord = new Set<string>();
+  const userHasRecord = new Set<string>()
   for (const record of existingUserRecordsResult.data || []) {
-    userHasRecord.add(record.match_id);
+    userHasRecord.add(record.match_id)
   }
 
   try {
     for (const matchId of chunkToProcess) {
-      if (processedMatches.has(matchId)) continue;
-      processedMatches.add(matchId);
+      if (processedMatches.has(matchId)) continue
+      processedMatches.add(matchId)
 
       try {
-        const existingMatch = existingMatchesMap.get(matchId);
-        const existingUserRecord = userHasRecord.has(matchId);
+        const existingMatch = existingMatchesMap.get(matchId)
+        const existingUserRecord = userHasRecord.has(matchId)
 
         if (existingMatch && existingUserRecord) {
           // user already has this match
-          fetchedInChunk++;
-          continue;
+          fetchedInChunk++
+          continue
         }
 
         if (existingMatch) {
           // match exists but user doesn't have record - fetch and add user record only
-          const match = await fetchMatch(region, matchId, requestType);
-          
+          const match = await fetchMatch(region, matchId, requestType)
+
           const summonerMatchRecords = await Promise.all(
             match.info.participants.map(async (p: any) => {
-              const isTrackedUser = p.puuid === puuid;
-              const isOlderThan30Days = existingMatch.game_creation < (Date.now() - 30 * 24 * 60 * 60 * 1000);
+              const isTrackedUser = p.puuid === puuid
+              const isOlderThan30Days = existingMatch.game_creation < Date.now() - 30 * 24 * 60 * 60 * 1000
 
-              let pigScore = null;
-              let pigScoreBreakdown = null;
+              let pigScore = null
+              let pigScoreBreakdown = null
               if (isTrackedUser && !isOlderThan30Days && !p.gameEndedInEarlySurrender) {
                 try {
                   const breakdown = await calculatePigScoreWithBreakdown({
@@ -578,11 +594,11 @@ async function continueProcessingJob(
                     item4: p.item4,
                     item5: p.item5,
                     perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
-                    patch: existingMatch.patch
-                  });
+                    patch: existingMatch.patch,
+                  })
                   if (breakdown) {
-                    pigScore = breakdown.finalScore;
-                    pigScoreBreakdown = breakdown;
+                    pigScore = breakdown.finalScore
+                    pigScoreBreakdown = breakdown
                   }
                 } catch {}
               }
@@ -614,93 +630,91 @@ async function continueProcessingJob(
                     totalDamageDealt: p.totalDamageDealt || 0,
                     timeCCingOthers: p.timeCCingOthers || 0,
                     totalHealsOnTeammates: p.totalHealsOnTeammates || 0,
-                    totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0
+                    totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0,
                   },
                   items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5].filter((id: number) => id > 0),
                   spells: [p.summoner1Id || 0, p.summoner2Id || 0],
                   runes: {
                     primary: {
                       style: p.perks?.styles?.[0]?.style || 0,
-                      perks: p.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0,0,0,0]
+                      perks: p.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0, 0, 0, 0],
                     },
                     secondary: {
                       style: p.perks?.styles?.[1]?.style || 0,
-                      perks: p.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0,0]
+                      perks: p.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0, 0],
                     },
                     statPerks: [
                       p.perks?.statPerks?.offense || 0,
                       p.perks?.statPerks?.flex || 0,
-                      p.perks?.statPerks?.defense || 0
-                    ]
+                      p.perks?.statPerks?.defense || 0,
+                    ],
                   },
                   pigScore,
-                  pigScoreBreakdown
-                }
-              };
+                  pigScoreBreakdown,
+                },
+              }
             })
-          );
+          )
 
-          await supabase
-            .from('summoner_matches')
-            .insert(summonerMatchRecords)
-            .select();
+          await supabase.from('summoner_matches').insert(summonerMatchRecords).select()
 
-          fetchedInChunk++;
-          continue;
+          fetchedInChunk++
+          continue
         }
 
         // new match - fetch full data with timeline
-        const match = await fetchMatch(region, matchId, requestType);
-        
-        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-        const matchDate = match.info.gameCreation;
-        const isOlderThan30Days = matchDate < thirtyDaysAgo;
+        const match = await fetchMatch(region, matchId, requestType)
 
-        let timeline = null;
+        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+        const matchDate = match.info.gameCreation
+        const isOlderThan30Days = matchDate < thirtyDaysAgo
+
+        let timeline = null
         if (!isOlderThan30Days) {
           try {
-            timeline = await getMatchTimeline(matchId, region as any, requestType);
+            timeline = await getMatchTimeline(matchId, region as any, requestType)
           } catch {}
         }
 
-        const patchVersion = match.info.gameVersion 
+        const patchVersion = match.info.gameVersion
           ? extractPatch(match.info.gameVersion)
-          : getPatchFromDate(match.info.gameCreation);
+          : getPatchFromDate(match.info.gameCreation)
 
         // store match
-        await supabase
-          .from('matches')
-          .upsert({
-            match_id: match.metadata.matchId,
-            game_creation: match.info.gameCreation,
-            game_duration: match.info.gameDuration,
-            patch: patchVersion,
-          });
+        await supabase.from('matches').upsert({
+          match_id: match.metadata.matchId,
+          game_creation: match.info.gameCreation,
+          game_duration: match.info.gameDuration,
+          patch: patchVersion,
+        })
 
         // prepare participant records
         const summonerMatchRecords = await Promise.all(
           match.info.participants.map(async (p: any, index: number) => {
-            const participantId = index + 1;
-            const isTrackedUser = p.puuid === puuid;
+            const participantId = index + 1
+            const isTrackedUser = p.puuid === puuid
 
-            let abilityOrder = null;
-            let buildOrderStr = null;
-            let firstBuyStr = null;
-            let itemPurchases: ItemPurchaseEvent[] = [];
+            let abilityOrder = null
+            let buildOrderStr = null
+            let firstBuyStr = null
+            let itemPurchases: ItemPurchaseEvent[] = []
 
             if (!isOlderThan30Days && timeline) {
-              abilityOrder = extractAbilityOrder(timeline, participantId);
-              const buildOrder = extractBuildOrder(timeline, participantId);
-              const firstBuy = extractFirstBuy(timeline, participantId);
-              itemPurchases = extractItemPurchases(timeline, participantId);
-              buildOrderStr = buildOrder.length > 0 ? formatBuildOrder(buildOrder) : null;
-              firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null;
+              abilityOrder = extractAbilityOrder(timeline, participantId)
+              const buildOrder = extractBuildOrder(timeline, participantId)
+              const firstBuy = extractFirstBuy(timeline, participantId)
+              itemPurchases = extractItemPurchases(timeline, participantId)
+              buildOrderStr = buildOrder.length > 0 ? formatBuildOrder(buildOrder) : null
+              firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
             }
 
-            let pigScore = null;
-            let pigScoreBreakdown = null;
+            let pigScore = null
+            let pigScoreBreakdown = null
             if (isTrackedUser && !isOlderThan30Days && !p.gameEndedInEarlySurrender) {
               try {
+                // Get kill/death quality scores from timeline if available
+                const killDeathSummary = timeline ? getKillDeathSummary(timeline, participantId, p.teamId) : null
+
                 const breakdown = await calculatePigScoreWithBreakdown({
                   championName: p.championName,
                   damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
@@ -721,11 +735,13 @@ async function continueProcessingJob(
                   spell1: p.summoner1Id || 0,
                   spell2: p.summoner2Id || 0,
                   skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
-                  buildOrder: buildOrderStr || undefined
-                });
+                  buildOrder: buildOrderStr || undefined,
+                  killQualityScore: killDeathSummary?.killScore,
+                  deathQualityScore: killDeathSummary?.deathScore,
+                })
                 if (breakdown) {
-                  pigScore = breakdown.finalScore;
-                  pigScoreBreakdown = breakdown;
+                  pigScore = breakdown.finalScore
+                  pigScoreBreakdown = breakdown
                 }
               } catch {}
             }
@@ -757,72 +773,87 @@ async function continueProcessingJob(
                   totalDamageDealt: p.totalDamageDealt || 0,
                   timeCCingOthers: p.timeCCingOthers || 0,
                   totalHealsOnTeammates: p.totalHealsOnTeammates || 0,
-                  totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0
+                  totalDamageShieldedOnTeammates: p.totalDamageShieldedOnTeammates || 0,
                 },
                 items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5].filter((id: number) => id > 0),
                 spells: [p.summoner1Id || 0, p.summoner2Id || 0],
                 runes: {
                   primary: {
                     style: p.perks?.styles?.[0]?.style || 0,
-                    perks: p.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0,0,0,0]
+                    perks: p.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0, 0, 0, 0],
                   },
                   secondary: {
                     style: p.perks?.styles?.[1]?.style || 0,
-                    perks: p.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0,0]
+                    perks: p.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0, 0],
                   },
                   statPerks: [
                     p.perks?.statPerks?.offense || 0,
                     p.perks?.statPerks?.flex || 0,
-                    p.perks?.statPerks?.defense || 0
-                  ]
+                    p.perks?.statPerks?.defense || 0,
+                  ],
                 },
                 pigScore,
                 pigScoreBreakdown,
                 abilityOrder,
                 buildOrder: buildOrderStr,
                 firstBuy: firstBuyStr,
-                itemPurchases: itemPurchases.length > 0 ? itemPurchases : null
-              }
-            };
+                itemPurchases: itemPurchases.length > 0 ? itemPurchases : null,
+              },
+            }
           })
-        );
+        )
 
-        const { error: junctionError } = await supabase
-          .from('summoner_matches')
-          .insert(summonerMatchRecords);
+        const { error: junctionError } = await supabase.from('summoner_matches').insert(summonerMatchRecords)
 
         if (!junctionError) {
           // increment champion stats for tracked user
-          const isRemake = match.info.participants.some((p: any) => p.gameEndedInEarlySurrender);
-          if (await isPatchAccepted(patchVersion) && !isRemake) {
-            const trackedUserIdx = match.info.participants.findIndex((p: any) => p.puuid === puuid);
+          const isRemake = match.info.participants.some((p: any) => p.gameEndedInEarlySurrender)
+          if ((await isPatchAccepted(patchVersion)) && !isRemake) {
+            const trackedUserIdx = match.info.participants.findIndex((p: any) => p.puuid === puuid)
             if (trackedUserIdx !== -1) {
-              const participant = match.info.participants[trackedUserIdx];
-              const participantId = trackedUserIdx + 1;
+              const participant = match.info.participants[trackedUserIdx]
+              const participantId = trackedUserIdx + 1
 
-              let abilityOrderStr = null;
-              let buildOrderForStats: number[] = [];
-              let firstBuyForStats = '';
+              let abilityOrderStr = null
+              let buildOrderForStats: number[] = []
+              let firstBuyForStats = ''
 
               if (!isOlderThan30Days && timeline) {
-                abilityOrderStr = extractAbilityOrder(timeline, participantId);
-                const buildOrder = extractBuildOrder(timeline, participantId);
-                const firstBuy = extractFirstBuy(timeline, participantId);
-                buildOrderForStats = buildOrder.filter((id: number) => isFinishedItem(id)).slice(0, 6);
-                firstBuyForStats = (firstBuy.length > 0 ? formatFirstBuy(firstBuy) : '') ?? '';
+                abilityOrderStr = extractAbilityOrder(timeline, participantId)
+                const buildOrder = extractBuildOrder(timeline, participantId)
+                const firstBuy = extractFirstBuy(timeline, participantId)
+                buildOrderForStats = buildOrder.filter((id: number) => isFinishedItem(id)).slice(0, 6)
+                firstBuyForStats = (firstBuy.length > 0 ? formatFirstBuy(firstBuy) : '') ?? ''
               }
 
-              const skillOrder = abilityOrderStr ? extractSkillOrderAbbreviation(abilityOrderStr) : '';
-              const itemsForStats = buildOrderForStats.length > 0 
-                ? buildOrderForStats
-                : [participant.item0, participant.item1, participant.item2, participant.item3, participant.item4, participant.item5]
-                    .filter((id: number) => id > 0 && isFinishedItem(id));
+              const skillOrder = abilityOrderStr ? extractSkillOrderAbbreviation(abilityOrderStr) : ''
+              const itemsForStats =
+                buildOrderForStats.length > 0
+                  ? buildOrderForStats
+                  : [
+                      participant.item0,
+                      participant.item1,
+                      participant.item2,
+                      participant.item3,
+                      participant.item4,
+                      participant.item5,
+                    ].filter((id: number) => id > 0 && isFinishedItem(id))
 
               const runes = {
-                primary: { style: participant.perks?.styles?.[0]?.style || 0, perks: participant.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0,0,0,0] },
-                secondary: { style: participant.perks?.styles?.[1]?.style || 0, perks: participant.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0,0] },
-                statPerks: [participant.perks?.statPerks?.offense || 0, participant.perks?.statPerks?.flex || 0, participant.perks?.statPerks?.defense || 0]
-              };
+                primary: {
+                  style: participant.perks?.styles?.[0]?.style || 0,
+                  perks: participant.perks?.styles?.[0]?.selections?.map((s: any) => s.perk) || [0, 0, 0, 0],
+                },
+                secondary: {
+                  style: participant.perks?.styles?.[1]?.style || 0,
+                  perks: participant.perks?.styles?.[1]?.selections?.map((s: any) => s.perk) || [0, 0],
+                },
+                statPerks: [
+                  participant.perks?.statPerks?.offense || 0,
+                  participant.perks?.statPerks?.flex || 0,
+                  participant.perks?.statPerks?.defense || 0,
+                ],
+              }
 
               statsAggregator.add({
                 champion_name: participant.championName,
@@ -850,67 +881,60 @@ async function continueProcessingJob(
                 shielding: participant.totalDamageShieldedOnTeammates || 0,
                 cc_time: participant.timeCCingOthers || 0,
                 game_duration: match.info.gameDuration || 0,
-                deaths: participant.deaths || 0
-              });
+                deaths: participant.deaths || 0,
+              })
             }
           }
         }
 
-        fetchedInChunk++;
+        fetchedInChunk++
       } catch (err) {
-        console.error(`Failed to process match ${matchId}:`, err);
+        console.error(`Failed to process match ${matchId}:`, err)
       }
     }
 
     // update job progress
-    const totalFetched = job.fetched_matches + fetchedInChunk;
-    await updateJobProgress(supabase, job.id, totalFetched, job.total_matches, remainingMatchIds);
+    const totalFetched = job.fetched_matches + fetchedInChunk
+    await updateJobProgress(supabase, job.id, totalFetched, job.total_matches, remainingMatchIds)
 
     // return status - client will poll and trigger next chunk
-    const hasMore = remainingMatchIds.length > 0;
-    
+    const hasMore = remainingMatchIds.length > 0
+
     return NextResponse.json({
       message: hasMore ? 'Processing...' : 'Completing...',
       jobId: job.id,
       newMatches: job.total_matches,
       progress: totalFetched,
       remaining: remainingMatchIds.length,
-      hasMore
-    });
-
+      hasMore,
+    })
   } catch (error: any) {
-    console.error('[UpdateProfile] Chunk processing error:', error);
-    await failJob(supabase, job.id, error.message || 'unknown error');
-    return NextResponse.json(
-      { error: error.message || 'Failed to process matches' },
-      { status: 500 }
-    );
+    console.error('[UpdateProfile] Chunk processing error:', error)
+    await failJob(supabase, job.id, error.message || 'unknown error')
+    return NextResponse.json({ error: error.message || 'Failed to process matches' }, { status: 500 })
   }
 }
 
 // finalize job after all matches processed
 async function finalizeJob(supabase: any, jobId: string, puuid: string) {
-  console.log(`[UpdateProfile] Finalizing job ${jobId}...`);
+  console.log(`[UpdateProfile] Finalizing job ${jobId}...`)
 
   // update last_updated timestamp
-  await supabase
-    .from('summoners')
-    .update({ last_updated: new Date().toISOString() })
-    .eq('puuid', puuid);
+  await supabase.from('summoners').update({ last_updated: new Date().toISOString() }).eq('puuid', puuid)
 
   // calculate missing pig scores
-  const pigScoresCalculated = await calculateMissingPigScores(supabase, puuid);
+  const pigScoresCalculated = await calculateMissingPigScores(supabase, puuid)
 
   // recalculate profile champion stats
-  await recalculateProfileStatsForPlayers([puuid]);
+  await recalculateProfileStatsForPlayers([puuid])
 
   // flush aggregated champion stats
-  const flushResult = await flushAggregatedStats();
+  const flushResult = await flushAggregatedStats()
   if (!flushResult.success && flushResult.error) {
-    console.error('[UpdateProfile] Failed to flush champion stats:', flushResult.error);
+    console.error('[UpdateProfile] Failed to flush champion stats:', flushResult.error)
   }
 
   // complete job
-  await completeJob(supabase, jobId);
-  console.log(`[UpdateProfile] Job ${jobId} completed, ${pigScoresCalculated} pig scores calculated`);
+  await completeJob(supabase, jobId)
+  console.log(`[UpdateProfile] Job ${jobId} completed, ${pigScoresCalculated} pig scores calculated`)
 }

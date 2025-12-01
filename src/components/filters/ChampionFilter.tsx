@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useState, useRef, useEffect } from "react"
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
-import Image from "next/image"
-import { getChampionImageUrl, getChampionDisplayName, getSortedChampionNames } from "@/lib/ddragon"
+import { useState, useRef, useEffect } from 'react'
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import Image from 'next/image'
+import { getChampionImageUrl, getChampionDisplayName, getSortedChampionNames } from '@/lib/ddragon'
 
 interface Props {
   value: string
@@ -14,7 +14,7 @@ interface Props {
 
 export default function ChampionFilter({ value, onChange, championNames, ddragonVersion }: Props) {
   const [isOpen, setIsOpen] = useState(false)
-  const [searchInput, setSearchInput] = useState("")
+  const [searchInput, setSearchInput] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -24,17 +24,17 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
-        setSearchInput("")
+        setSearchInput('')
       }
     }
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-      return () => document.removeEventListener("mousedown", handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen])
 
-  const displayValue = value ? getChampionDisplayName(value, championNames) : "All Champions"
+  const displayValue = value ? getChampionDisplayName(value, championNames) : 'All Champions'
   const filteredChampions = allChampions.filter(champ => {
     const displayName = getChampionDisplayName(champ, championNames)
     return displayName.toLowerCase().includes(searchInput.toLowerCase())
@@ -48,7 +48,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
   const handleSelect = (champion: string) => {
     onChange(champion)
     setIsOpen(false)
-    setSearchInput("")
+    setSearchInput('')
   }
 
   return (
@@ -63,12 +63,14 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
               ref={inputRef}
               type="text"
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              onChange={e => setSearchInput(e.target.value)}
               placeholder="Search champions"
               className="text-xs flex-1 bg-transparent outline-none text-white placeholder:text-text-muted"
             />
           ) : (
-            <span className={`text-xs flex-1 text-left truncate ${value ? 'text-white' : 'text-text-muted font-light'}`}>
+            <span
+              className={`text-xs flex-1 text-left truncate ${value ? 'text-white' : 'text-text-muted font-light'}`}
+            >
               {displayValue}
             </span>
           )}
@@ -78,20 +80,23 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
 
       {isOpen && (
         <div className="absolute top-full mt-2 left-0 w-full bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-30 overflow-hidden">
-          <div className="max-h-64 overflow-y-auto" style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',
-            WebkitOverflowScrolling: 'touch',
-            willChange: 'scroll-position'
-          }}>
+          <div
+            className="max-h-64 overflow-y-auto"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',
+              WebkitOverflowScrolling: 'touch',
+              willChange: 'scroll-position',
+            }}
+          >
             <button
-              onClick={() => handleSelect("")}
+              onClick={() => handleSelect('')}
               className="w-full px-3 py-1.5 text-left text-xs hover:bg-gold-light/20 text-gold-light"
             >
               All Champions
             </button>
             <div className="h-px bg-gold-dark/20" />
-            {filteredChampions.map((champion) => {
+            {filteredChampions.map(champion => {
               const displayName = getChampionDisplayName(champion, championNames)
               return (
                 <button

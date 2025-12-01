@@ -35,19 +35,25 @@ interface Props {
   preloadedStats?: ChampionStats[]
 }
 
-export default function ChampionStatsList({ puuid, ddragonVersion, championNames, profileIconUrl, preloadedStats }: Props) {
+export default function ChampionStatsList({
+  puuid,
+  ddragonVersion,
+  championNames,
+  profileIconUrl,
+  preloadedStats,
+}: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('games')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [championStats, setChampionStats] = useState<ChampionStats[]>(preloadedStats || [])
   const [loading, setLoading] = useState(!preloadedStats)
-  
+
   // get all champion names sorted alphabetically for skeleton
   const allChampionNames = useMemo(() => getSortedChampionNames(championNames), [championNames])
 
   // fetch champion stats from api only if not preloaded
   useEffect(() => {
     if (preloadedStats) return // already have data
-    
+
     async function fetchStats() {
       try {
         const response = await fetch(`/api/player-champion-stats?puuid=${puuid}`)
@@ -61,7 +67,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
         setLoading(false)
       }
     }
-    
+
     fetchStats()
   }, [puuid, preloadedStats])
 
@@ -75,10 +81,10 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
     const totalDeaths = championStats.reduce((sum, c) => sum + c.deaths, 0)
     const totalAssists = championStats.reduce((sum, c) => sum + c.assists, 0)
     const totalDamage = championStats.reduce((sum, c) => sum + c.totalDamage, 0)
-    
+
     const gamesWithPigScore = championStats.filter(c => c.averagePigScore !== null)
     const totalPigScore = gamesWithPigScore.reduce((sum, c) => {
-      return sum + (c.averagePigScore! * c.games)
+      return sum + c.averagePigScore! * c.games
     }, 0)
     const totalPigScoreGames = gamesWithPigScore.reduce((sum, c) => sum + c.games, 0)
 
@@ -90,7 +96,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
       deaths: totalDeaths,
       assists: totalAssists,
       totalDamage,
-      averagePigScore: totalPigScoreGames > 0 ? totalPigScore / totalPigScoreGames : null
+      averagePigScore: totalPigScoreGames > 0 ? totalPigScore / totalPigScoreGames : null,
     }
   }, [championStats])
 
@@ -158,7 +164,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
         assists: 0,
         totalDamage: 0,
         averagePigScore: null,
-        isLoading: true
+        isLoading: true,
       }))
     }
     return sortedChampionStats.map(stat => ({ ...stat, isLoading: false }))
@@ -190,48 +196,53 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
               <th className="py-3 text-center font-normal">Rank</th>
               <th className="py-3 text-center font-normal">Champion</th>
               <th className="py-3 text-center font-normal">
-                <button 
-                  onClick={() => handleSort('winrate')}
-                  className="hover:text-white transition-colors relative"
-                >
+                <button onClick={() => handleSort('winrate')} className="hover:text-white transition-colors relative">
                   Winrate
-                  {sortKey === 'winrate' && <span className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[55px] h-0.5 bg-accent-light`} />}
+                  {sortKey === 'winrate' && (
+                    <span
+                      className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[55px] h-0.5 bg-accent-light`}
+                    />
+                  )}
                 </button>
               </th>
               <th className="py-3 text-center font-normal">
-                <button 
-                  onClick={() => handleSort('games')}
-                  className="hover:text-white transition-colors relative"
-                >
+                <button onClick={() => handleSort('games')} className="hover:text-white transition-colors relative">
                   Games
-                  {sortKey === 'games' && <span className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[50px] h-0.5 bg-accent-light`} />}
+                  {sortKey === 'games' && (
+                    <span
+                      className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[50px] h-0.5 bg-accent-light`}
+                    />
+                  )}
                 </button>
               </th>
               <th className="py-3 text-center font-normal">
-                <button 
-                  onClick={() => handleSort('kda')}
-                  className="hover:text-white transition-colors relative"
-                >
+                <button onClick={() => handleSort('kda')} className="hover:text-white transition-colors relative">
                   KDA
-                  {sortKey === 'kda' && <span className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[35px] h-0.5 bg-accent-light`} />}
+                  {sortKey === 'kda' && (
+                    <span
+                      className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[35px] h-0.5 bg-accent-light`}
+                    />
+                  )}
                 </button>
               </th>
               <th className="py-3 text-center font-normal">
-                <button 
-                  onClick={() => handleSort('damage')}
-                  className="hover:text-white transition-colors relative"
-                >
+                <button onClick={() => handleSort('damage')} className="hover:text-white transition-colors relative">
                   DMG
-                  {sortKey === 'damage' && <span className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[40px] h-0.5 bg-accent-light`} />}
+                  {sortKey === 'damage' && (
+                    <span
+                      className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[40px] h-0.5 bg-accent-light`}
+                    />
+                  )}
                 </button>
               </th>
               <th className="py-3 text-center font-normal">
-                <button 
-                  onClick={() => handleSort('pigScore')}
-                  className="hover:text-white transition-colors relative"
-                >
+                <button onClick={() => handleSort('pigScore')} className="hover:text-white transition-colors relative">
                   PIG
-                  {sortKey === 'pigScore' && <span className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[30px] h-0.5 bg-accent-light`} />}
+                  {sortKey === 'pigScore' && (
+                    <span
+                      className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[30px] h-0.5 bg-accent-light`}
+                    />
+                  )}
                 </button>
               </th>
             </tr>
@@ -240,13 +251,15 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
             {/* All Champions aggregate row */}
             {aggregateStats && (
               <tr className="bg-abyss-400">
-                <td className="py-2 px-2 text-center"><h2 className="text-xl font-bold text-gray-400">-</h2></td>
+                <td className="py-2 px-2 text-center">
+                  <h2 className="text-xl font-bold text-gray-400">-</h2>
+                </td>
                 <td className="py-2 pl-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg flex-shrink-0">
                       <div className="relative w-full h-full rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark flex items-center justify-center">
                         <Image
-                          src={profileIconUrl.replace(/\d+\.png$/, "29.png")}
+                          src={profileIconUrl.replace(/\d+\.png$/, '29.png')}
                           alt="All Champions"
                           width={40}
                           height={40}
@@ -263,7 +276,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                   <div className="flex items-center gap-3 justify-center">
                     <div className="w-32 h-5 rounded-sm overflow-hidden flex">
                       {aggregateStats.wins > 0 && (
-                        <div 
+                        <div
                           className="h-full bg-accent-light flex items-center justify-start px-1.5 text-white text-xs min-w-[28px]"
                           style={{ width: `${(aggregateStats.wins / aggregateStats.games) * 100}%` }}
                         >
@@ -271,7 +284,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                         </div>
                       )}
                       {aggregateStats.losses > 0 && (
-                        <div 
+                        <div
                           className="h-full bg-negative flex items-center justify-end px-1.5 text-white text-xs min-w-[28px]"
                           style={{ width: `${(aggregateStats.losses / aggregateStats.games) * 100}%` }}
                         >
@@ -279,28 +292,35 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                         </div>
                       )}
                     </div>
-                    <span className="text-sm" style={{ color: getWinrateColor((aggregateStats.wins / aggregateStats.games) * 100) }}>
+                    <span
+                      className="text-sm"
+                      style={{ color: getWinrateColor((aggregateStats.wins / aggregateStats.games) * 100) }}
+                    >
                       {((aggregateStats.wins / aggregateStats.games) * 100).toFixed(0)}%
                     </span>
                   </div>
                 </td>
                 <td className="py-2 text-center text-white text-sm">{aggregateStats.games}</td>
                 <td className="py-2 text-center">
-                  <div 
+                  <div
                     className="text-sm font-semibold whitespace-nowrap"
-                    style={{ color: getKdaColor(
-                      aggregateStats.deaths > 0 
-                        ? (aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths 
-                        : aggregateStats.kills + aggregateStats.assists
-                    ) }}
+                    style={{
+                      color: getKdaColor(
+                        aggregateStats.deaths > 0
+                          ? (aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths
+                          : aggregateStats.kills + aggregateStats.assists
+                      ),
+                    }}
                   >
-                    {aggregateStats.deaths > 0 
+                    {aggregateStats.deaths > 0
                       ? formatStat((aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths, 2)
-                      : formatStat(aggregateStats.kills + aggregateStats.assists, 2)
-                    } KDA
+                      : formatStat(aggregateStats.kills + aggregateStats.assists, 2)}{' '}
+                    KDA
                   </div>
                   <div className="text-white text-sm whitespace-nowrap">
-                    {formatStat(aggregateStats.kills / aggregateStats.games)} / {formatStat(aggregateStats.deaths / aggregateStats.games)} / {formatStat(aggregateStats.assists / aggregateStats.games)}
+                    {formatStat(aggregateStats.kills / aggregateStats.games)} /{' '}
+                    {formatStat(aggregateStats.deaths / aggregateStats.games)} /{' '}
+                    {formatStat(aggregateStats.assists / aggregateStats.games)}
                   </div>
                 </td>
                 <td className="py-2 text-center text-gray-300 text-sm">
@@ -320,17 +340,17 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
 
             {displayList.map((stats, index) => {
               const isLoading = 'isLoading' in stats && stats.isLoading
-              const kda = !isLoading && stats.deaths > 0 
-                ? ((stats.kills + stats.assists) / stats.deaths).toFixed(1)
-                : !isLoading ? (stats.kills + stats.assists).toFixed(1) : '0.0'
+              const kda =
+                !isLoading && stats.deaths > 0
+                  ? ((stats.kills + stats.assists) / stats.deaths).toFixed(1)
+                  : !isLoading
+                    ? (stats.kills + stats.assists).toFixed(1)
+                    : '0.0'
               const winRate = !isLoading && stats.games > 0 ? ((stats.wins / stats.games) * 100).toFixed(0) : '0'
               const avgDamage = !isLoading && stats.games > 0 ? Math.round(stats.totalDamage / stats.games) : 0
 
               return (
-                <tr 
-                  key={stats.championName}
-                  className={isLoading ? 'animate-pulse' : ''}
-                >
+                <tr key={stats.championName} className={isLoading ? 'animate-pulse' : ''}>
                   <td className="py-2 px-2 text-center">
                     {isLoading ? (
                       <div className="h-6 w-8 bg-abyss-500 rounded mx-auto"></div>
@@ -345,7 +365,10 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                         <div className="h-4 w-20 bg-abyss-500 rounded"></div>
                       </div>
                     ) : (
-                      <Link href={`/champions/${getChampionUrlName(stats.championName, championNames)}`} className="flex items-center gap-3 hover:brightness-125 transition-all">
+                      <Link
+                        href={`/champions/${getChampionUrlName(stats.championName, championNames)}`}
+                        className="flex items-center gap-3 hover:brightness-75 transition-all"
+                      >
                         <div className="w-10 h-10 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg flex-shrink-0">
                           <div className="relative w-full h-full rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark">
                             <Image
@@ -359,7 +382,9 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                             <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
                           </div>
                         </div>
-                        <span className="text-white font-medium text-sm truncate">{getChampionDisplayName(stats.championName, championNames)}</span>
+                        <span className="text-white font-medium text-sm truncate">
+                          {getChampionDisplayName(stats.championName, championNames)}
+                        </span>
                       </Link>
                     )}
                   </td>
@@ -373,7 +398,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                       <div className="flex items-center gap-3 justify-center">
                         <div className="w-32 h-5 rounded-sm overflow-hidden flex">
                           {stats.wins > 0 && (
-                            <div 
+                            <div
                               className="h-full bg-accent-light flex items-center justify-start px-1.5 text-white text-xs min-w-[28px]"
                               style={{ width: `${(stats.wins / stats.games) * 100}%` }}
                             >
@@ -381,7 +406,7 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                             </div>
                           )}
                           {stats.losses > 0 && (
-                            <div 
+                            <div
                               className="h-full bg-negative flex items-center justify-end px-1.5 text-white text-xs min-w-[28px]"
                               style={{ width: `${(stats.losses / stats.games) * 100}%` }}
                             >
@@ -396,22 +421,22 @@ export default function ChampionStatsList({ puuid, ddragonVersion, championNames
                     )}
                   </td>
                   <td className="py-2 text-center text-white text-sm">
-                    {isLoading ? (
-                      <div className="h-5 w-8 bg-abyss-500 rounded mx-auto"></div>
-                    ) : (
-                      stats.games
-                    )}
+                    {isLoading ? <div className="h-5 w-8 bg-abyss-500 rounded mx-auto"></div> : stats.games}
                   </td>
                   <td className="py-2 text-center">
                     {isLoading ? (
                       <div className="h-5 w-16 bg-abyss-500 rounded mx-auto"></div>
                     ) : (
                       <>
-                        <div className="text-sm font-semibold whitespace-nowrap" style={{ color: getKdaColor(parseFloat(kda)) }}>
+                        <div
+                          className="text-sm font-semibold whitespace-nowrap"
+                          style={{ color: getKdaColor(parseFloat(kda)) }}
+                        >
                           {formatStat(parseFloat(kda), 2)} KDA
                         </div>
                         <div className="text-white text-sm whitespace-nowrap">
-                          {formatStat(stats.kills / stats.games)} / {formatStat(stats.deaths / stats.games)} / {formatStat(stats.assists / stats.games)}
+                          {formatStat(stats.kills / stats.games)} / {formatStat(stats.deaths / stats.games)} /{' '}
+                          {formatStat(stats.assists / stats.games)}
                         </div>
                       </>
                     )}

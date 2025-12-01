@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import { useEffect, useState } from "react"
-import type { UpdateJobProgress } from "@/types/update-jobs"
-import LoadingSpinner from "@/components/ui/LoadingSpinner"
+import { useEffect, useState } from 'react'
+import type { UpdateJobProgress } from '@/types/update-jobs'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 interface Props {
   job: UpdateJobProgress
@@ -15,7 +15,7 @@ export default function FetchMessage({ job, region, notifyEnabled, onNotifyChang
   const [eta, setEta] = useState<number | null>(null)
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const hasStartedFetching = job.totalMatches > 0
-  
+
   console.log('FetchMessage rendering with:', { hasStartedFetching, job })
 
   // fetch eta when component mounts
@@ -45,7 +45,7 @@ export default function FetchMessage({ job, region, notifyEnabled, onNotifyChang
         setNotifyError('Notifications not supported in this browser.')
         return
       }
-      
+
       if (Notification.permission === 'granted') {
         setNotifyError(null)
         onNotifyChange(true)
@@ -54,18 +54,20 @@ export default function FetchMessage({ job, region, notifyEnabled, onNotifyChang
       } else {
         // use callback style for better firefox compatibility
         // firefox requires this to be called directly from user gesture
-        Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') {
-            setNotifyError(null)
-            onNotifyChange(true)
-          } else if (permission === 'denied') {
-            setNotifyError('Notifications blocked. Enable them in browser settings.')
-          } else {
-            setNotifyError('Notification permission was dismissed.')
-          }
-        }).catch(() => {
-          setNotifyError('Failed to request notification permissions.')
-        })
+        Notification.requestPermission()
+          .then(permission => {
+            if (permission === 'granted') {
+              setNotifyError(null)
+              onNotifyChange(true)
+            } else if (permission === 'denied') {
+              setNotifyError('Notifications blocked. Enable them in browser settings.')
+            } else {
+              setNotifyError('Notification permission was dismissed.')
+            }
+          })
+          .catch(() => {
+            setNotifyError('Failed to request notification permissions.')
+          })
       }
     } else {
       // disabling
@@ -81,9 +83,7 @@ export default function FetchMessage({ job, region, notifyEnabled, onNotifyChang
           <LoadingSpinner size={40} bgColor="bg-abyss-800" />
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold mb-1">
-              Our pigs are digging through this match history...
-            </h2>
+            <h2 className="text-xl font-bold mb-1">Our pigs are digging through this match history...</h2>
             {hasStartedFetching && (
               <p className="text-sm text-white mb-1">
                 {job.fetchedMatches} / {job.totalMatches} matches loaded ({job.progressPercentage}%)
@@ -93,7 +93,7 @@ export default function FetchMessage({ job, region, notifyEnabled, onNotifyChang
             <p className="text-xs text-text-muted mb-2">
               This may take a few minutes due to Riot API limits. The page will automatically refresh when complete.
             </p>
-            
+
             {hasStartedFetching && (
               <>
                 <label className="flex items-end gap-2 cursor-pointer select-none">
@@ -104,19 +104,23 @@ export default function FetchMessage({ job, region, notifyEnabled, onNotifyChang
                       onChange={handleNotifyToggle}
                       className="peer appearance-none w-4 h-4 rounded border border-gold-light bg-transparent cursor-pointer outline-none focus:outline-none focus:ring-0"
                     />
-                    <svg 
+                    <svg
                       className="absolute inset-0 w-4 h-4 pointer-events-none opacity-0 peer-checked:opacity-100 text-accent-light"
                       viewBox="0 0 16 16"
                       fill="none"
                     >
-                      <path d="M4 8l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path
+                        d="M4 8l3 3 5-6"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                   <span className="text-xs text-gold-light leading-none pb-px">Notify me when complete</span>
                 </label>
-                {notifyError && (
-                  <p className="text-xs text-text-muted mt-1">{notifyError}</p>
-                )}
+                {notifyError && <p className="text-xs text-text-muted mt-1">{notifyError}</p>}
               </>
             )}
           </div>

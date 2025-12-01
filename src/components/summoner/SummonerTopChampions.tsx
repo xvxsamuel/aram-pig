@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import Image from "next/image"
-import Link from "next/link"
-import { getChampionImageUrl, getChampionDisplayName, getChampionUrlName } from "@/lib/ddragon"
-import { getWinrateColor, getKdaColor, getPigScoreColor } from "@/lib/ui"
-import ProfileCard from "@/components/ui/ProfileCard"
+import Image from 'next/image'
+import Link from 'next/link'
+import { getChampionImageUrl, getChampionDisplayName, getChampionUrlName } from '@/lib/ddragon'
+import { getWinrateColor, getKdaColor, getPigScoreColor } from '@/lib/ui'
+import ProfileCard from '@/components/ui/ProfileCard'
 
 interface ChampionStats {
   championName: string
@@ -26,12 +26,12 @@ interface Props {
   onTabChange: (tab: 'overview' | 'champions' | 'performance') => void
 }
 
-export default function SummonerTopChampions({ 
+export default function SummonerTopChampions({
   championStats,
   topChampions,
-  ddragonVersion, 
+  ddragonVersion,
   championNames,
-  onTabChange
+  onTabChange,
 }: Props) {
   const formatStat = (num: number, decimals: number = 1): string => {
     const rounded = Number(num.toFixed(decimals))
@@ -39,13 +39,10 @@ export default function SummonerTopChampions({
   }
 
   return (
-    <ProfileCard 
-      title="Champions" 
-      onTitleClick={() => onTabChange('champions')}
-    >
+    <ProfileCard title="Champions" onTitleClick={() => onTabChange('champions')}>
       <div className="-mx-2 space-y-1">
-          {championStats.length === 0 ? (
-            // loading skeleton
+        {championStats.length === 0
+          ? // loading skeleton
             Array.from({ length: 7 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 py-2 px-2 animate-pulse">
                 <div className="w-8 h-8 bg-abyss-500 rounded"></div>
@@ -56,18 +53,15 @@ export default function SummonerTopChampions({
                 <div className="h-5 w-12 bg-abyss-500 rounded"></div>
               </div>
             ))
-          ) : (
-            topChampions.map((champ) => {
-              const kda = champ.deaths > 0 
-                ? ((champ.kills + champ.assists) / champ.deaths).toFixed(2)
-                : (champ.kills + champ.assists).toFixed(2)
+          : topChampions.map(champ => {
+              const kda =
+                champ.deaths > 0
+                  ? ((champ.kills + champ.assists) / champ.deaths).toFixed(2)
+                  : (champ.kills + champ.assists).toFixed(2)
               const winrate = (champ.wins / champ.games) * 100
-              
+
               return (
-                <div
-                  key={champ.championName}
-                  className="flex items-center gap-3 py-2 px-2 rounded-lg"
-                >
+                <div key={champ.championName} className="flex items-center gap-3 py-2 px-2 rounded-lg">
                   <Link
                     href={`/champions/${getChampionUrlName(champ.championName, championNames)}`}
                     className="flex items-center gap-3 min-w-0 flex-1 hover:brightness-75 transition-all"
@@ -86,7 +80,15 @@ export default function SummonerTopChampions({
                       <div className="text-sm font-medium text-white truncate">
                         {getChampionDisplayName(champ.championName, championNames)}
                       </div>
-                      <div className="text-xs" style={{ color: champ.averagePigScore !== null ? getPigScoreColor(champ.averagePigScore) : 'var(--color-text-muted)' }}>
+                      <div
+                        className="text-xs"
+                        style={{
+                          color:
+                            champ.averagePigScore !== null
+                              ? getPigScoreColor(champ.averagePigScore)
+                              : 'var(--color-text-muted)',
+                        }}
+                      >
                         {champ.averagePigScore !== null ? `${Math.round(champ.averagePigScore)} PIG` : '-'}
                       </div>
                     </div>
@@ -96,24 +98,19 @@ export default function SummonerTopChampions({
                       {kda} KDA
                     </div>
                     <div className="text-xs text-text-muted whitespace-nowrap">
-                      {formatStat(champ.kills / champ.games)} / {formatStat(champ.deaths / champ.games)} / {formatStat(champ.assists / champ.games)}
+                      {formatStat(champ.kills / champ.games)} / {formatStat(champ.deaths / champ.games)} /{' '}
+                      {formatStat(champ.assists / champ.games)}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 w-16">
-                    <div 
-                      className="text-sm font-bold"
-                      style={{ color: getWinrateColor(winrate) }}
-                    >
+                    <div className="text-sm font-bold" style={{ color: getWinrateColor(winrate) }}>
                       {winrate.toFixed(0)}%
                     </div>
-                    <div className="text-xs text-text-muted">
-                      {champ.games} Games
-                    </div>
+                    <div className="text-xs text-text-muted">{champ.games} Games</div>
                   </div>
                 </div>
               )
-            })
-          )}
+            })}
       </div>
     </ProfileCard>
   )

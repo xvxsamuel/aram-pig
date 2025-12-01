@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect, useCallback, ReactNode } from 'react'
 
@@ -47,7 +47,7 @@ export default function Tabs({
   // sync tab with URL hash on mount and handle browser back/forward
   useEffect(() => {
     if (!useUrlHash) return
-    
+
     const initialTab = getTabFromHash()
     if (initialTab !== selectedTab) {
       setSelectedTab(initialTab)
@@ -64,19 +64,22 @@ export default function Tabs({
     return () => window.removeEventListener('popstate', handlePopState)
   }, [useUrlHash, getTabFromHash, selectedTab])
 
-  const handleTabClick = useCallback((tabId: string) => {
-    setSelectedTab(tabId)
-    setRenderedTabs(prev => new Set([...prev, tabId]))
+  const handleTabClick = useCallback(
+    (tabId: string) => {
+      setSelectedTab(tabId)
+      setRenderedTabs(prev => new Set([...prev, tabId]))
 
-    if (useUrlHash) {
-      const defaultId = defaultTab || tabs[0]?.id
-      const newHash = tabId === defaultId ? '' : `#${tabId}`
-      const newUrl = window.location.pathname + window.location.search + newHash
-      window.history.pushState(null, '', newUrl)
-    }
+      if (useUrlHash) {
+        const defaultId = defaultTab || tabs[0]?.id
+        const newHash = tabId === defaultId ? '' : `#${tabId}`
+        const newUrl = window.location.pathname + window.location.search + newHash
+        window.history.pushState(null, '', newUrl)
+      }
 
-    onTabChange?.(tabId)
-  }, [useUrlHash, defaultTab, tabs, onTabChange])
+      onTabChange?.(tabId)
+    },
+    [useUrlHash, defaultTab, tabs, onTabChange]
+  )
 
   if (tabs.length === 0) return null
 
@@ -84,7 +87,7 @@ export default function Tabs({
     <div className={className}>
       {/* tab navigation */}
       <div className="flex gap-1">
-        {tabs.map((tab) => (
+        {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => handleTabClick(tab.id)}
@@ -99,23 +102,18 @@ export default function Tabs({
 
       {/* tab content */}
       <div className={contentClassName}>
-        {keepMounted ? (
-          // keep rendered tabs in DOM, hide with css
-          tabs.map((tab) => {
-            if (!renderedTabs.has(tab.id)) return null
-            return (
-              <div
-                key={tab.id}
-                className={selectedTab === tab.id ? '' : 'hidden'}
-              >
-                {tab.content}
-              </div>
-            )
-          })
-        ) : (
-          // only render selected tab
-          tabs.find(t => t.id === selectedTab)?.content
-        )}
+        {keepMounted
+          ? // keep rendered tabs in DOM, hide with css
+            tabs.map(tab => {
+              if (!renderedTabs.has(tab.id)) return null
+              return (
+                <div key={tab.id} className={selectedTab === tab.id ? '' : 'hidden'}>
+                  {tab.content}
+                </div>
+              )
+            })
+          : // only render selected tab
+            tabs.find(t => t.id === selectedTab)?.content}
       </div>
     </div>
   )

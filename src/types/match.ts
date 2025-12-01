@@ -13,8 +13,19 @@ export interface MatchTimeline {
 
 export interface TimelineFrame {
   timestamp: number
-  participantFrames: Record<string, unknown>
+  participantFrames: Record<string, ParticipantFrame>
   events: TimelineEvent[]
+}
+
+export interface ParticipantFrame {
+  participantId: number
+  currentGold: number
+  totalGold: number
+  level: number
+  xp: number
+  minionsKilled: number
+  jungleMinionsKilled: number
+  position: { x: number; y: number }
 }
 
 export interface TimelineEvent {
@@ -22,6 +33,23 @@ export interface TimelineEvent {
   timestamp: number
   participantId?: number
   itemId?: number
+  // kill event fields
+  killerId?: number
+  victimId?: number
+  assistingParticipantIds?: number[]
+  position?: { x: number; y: number }
+  bounty?: number
+  shutdownBounty?: number
+  victimDamageReceived?: Array<{
+    participantId: number
+    basic: boolean
+    magicDamage: number
+    physicalDamage: number
+    trueDamage: number
+    spellName: string
+    spellSlot: number
+    type: string
+  }>
 }
 
 export interface MatchData {

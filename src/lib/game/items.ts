@@ -24,31 +24,28 @@ function getItemCost(itemId: number): number {
 /**
  * Extract first buy (items purchased at game start in ARAM)
  */
-export function extractFirstBuy(
-  timeline: MatchTimeline | null | undefined,
-  participantId: number
-): number[] {
+export function extractFirstBuy(timeline: MatchTimeline | null | undefined, participantId: number): number[] {
   if (!timeline) return []
-  
+
   const allPurchases = extractItemPurchases(timeline, participantId)
-  
+
   const firstPurchaseTime = allPurchases.find(p => p.action === 'buy')?.timestamp ?? 0
   const cutoffTime = Math.min(firstPurchaseTime + STARTER_TIME_WINDOW, MAX_STARTER_TIME)
-  
+
   const firstBuyItems: number[] = []
   let totalGold = 0
-  
+
   for (const purchase of allPurchases) {
     if (purchase.action !== 'buy') continue
     if (purchase.timestamp > cutoffTime) break
-    
+
     const itemCost = getItemCost(purchase.itemId)
     if (totalGold + itemCost > ARAM_STARTING_GOLD) break
-    
+
     firstBuyItems.push(purchase.itemId)
     totalGold += itemCost
   }
-  
+
   return firstBuyItems
 }
 
@@ -65,16 +62,16 @@ export function formatFirstBuy(firstBuy: number[]): string | null {
  */
 export function parseFirstBuy(firstBuyString: string | null): number[] {
   if (!firstBuyString) return []
-  return firstBuyString.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id))
+  return firstBuyString
+    .split(',')
+    .map(id => parseInt(id, 10))
+    .filter(id => !isNaN(id))
 }
 
 /**
  * Extract build order from timeline (all items in purchase order)
  */
-export function extractBuildOrder(
-  timeline: MatchTimeline | null | undefined,
-  participantId: number
-): number[] {
+export function extractBuildOrder(timeline: MatchTimeline | null | undefined, participantId: number): number[] {
   if (!timeline?.info?.frames) return []
 
   const allItems: Array<{ timestamp: number; itemId: number }> = []
@@ -92,7 +89,7 @@ export function extractBuildOrder(
       ) {
         allItems.push({
           timestamp: evt.timestamp,
-          itemId: evt.itemId
+          itemId: evt.itemId,
         })
       }
     }
@@ -115,5 +112,8 @@ export function formatBuildOrder(buildOrder: number[]): string | null {
  */
 export function parseBuildOrder(buildOrderString: string | null): number[] {
   if (!buildOrderString) return []
-  return buildOrderString.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id))
+  return buildOrderString
+    .split(',')
+    .map(id => parseInt(id, 10))
+    .filter(id => !isNaN(id))
 }

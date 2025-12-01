@@ -24,15 +24,14 @@ export {
   getDateRangeForDays,
 } from './patch'
 
-export {
-  extractAbilityOrder,
-  formatAbilityOrder,
-} from './ability-leveling'
+export { extractAbilityOrder, formatAbilityOrder } from './ability-leveling'
 
 export {
   extractItemPurchases,
+  extractCompletedItems,
   getFinalItems,
   type ItemPurchaseEvent,
+  type CompletedItemEvent,
 } from './item-history'
 
 export {
@@ -43,3 +42,14 @@ export {
   formatBuildOrder,
   parseBuildOrder,
 } from './items'
+
+export {
+  extractKillEvents,
+  getPlayerKillDeathTimeline,
+  getKillDeathSummary,
+  type KillEvent,
+  type DeathAnalysis,
+  type KillAnalysis,
+  type PlayerKillDeathTimeline,
+  type KillDeathSummary,
+} from './kill-timeline'

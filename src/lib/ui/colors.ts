@@ -90,38 +90,38 @@ export function getPigScoreGradientColors(score: number): { dark: string; light:
   if (clamped >= midpoint) {
     // 50-100: gray -> blue
     const progress = (clamped - midpoint) / (topThreshold - midpoint)
-    
+
     // dark color: gray oklch(0.4 0 0) -> accent-dark oklch(0.45 0.08 223.64)
     const darkL = 0.4 + (0.45 - 0.4) * progress
     const darkC = 0 + (0.08 - 0) * progress
     const darkH = 223.64
-    
+
     // light color: light gray oklch(0.7 0 0) -> accent-light oklch(0.6537 0.118 223.64)
     const lightL = 0.7 + (0.6537 - 0.7) * progress
     const lightC = 0 + (0.118 - 0) * progress
     const lightH = 223.64
-    
+
     return {
       dark: `oklch(${darkL.toFixed(4)} ${darkC.toFixed(4)} ${darkH.toFixed(2)})`,
-      light: `oklch(${lightL.toFixed(4)} ${lightC.toFixed(4)} ${lightH.toFixed(2)})`
+      light: `oklch(${lightL.toFixed(4)} ${lightC.toFixed(4)} ${lightH.toFixed(2)})`,
     }
   } else {
     // 0-50: red -> gray
     const progress = clamped / midpoint // 0 at score=0, 1 at score=50
-    
+
     // dark color: negative-dark oklch(0.45 0.15 17.95) -> gray oklch(0.4 0 0)
     const darkL = 0.45 + (0.4 - 0.45) * progress
     const darkC = 0.15 + (0 - 0.15) * progress
     const darkH = 17.95
-    
+
     // light color: negative oklch(0.62 0.20 17.95) -> light gray oklch(0.7 0 0)
     const lightL = 0.62 + (0.7 - 0.62) * progress
-    const lightC = 0.20 + (0 - 0.20) * progress
+    const lightC = 0.2 + (0 - 0.2) * progress
     const lightH = 17.95
-    
+
     return {
       dark: `oklch(${darkL.toFixed(4)} ${darkC.toFixed(4)} ${darkH.toFixed(2)})`,
-      light: `oklch(${lightL.toFixed(4)} ${lightC.toFixed(4)} ${lightH.toFixed(2)})`
+      light: `oklch(${lightL.toFixed(4)} ${lightC.toFixed(4)} ${lightH.toFixed(2)})`,
     }
   }
 }

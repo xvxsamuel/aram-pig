@@ -29,8 +29,8 @@ const itemMap = new Map<number, TooltipData>(
       description: (item as Record<string, unknown>).description as string,
       totalCost: (item as Record<string, unknown>).totalCost as number | undefined,
       itemType: (item as Record<string, unknown>).itemType as ItemType | undefined,
-      stats: (item as Record<string, unknown>).stats as ItemStats | undefined
-    } as TooltipData
+      stats: (item as Record<string, unknown>).stats as ItemStats | undefined,
+    } as TooltipData,
   ])
 )
 
@@ -42,8 +42,8 @@ const runeMap = new Map<number, TooltipData>(
       name: (rune as Record<string, unknown>).name as string,
       description: (rune as Record<string, unknown>).description as string,
       icon: (rune as Record<string, unknown>).icon as string | undefined,
-      stats: {}
-    } as TooltipData
+      stats: {},
+    } as TooltipData,
   ])
 )
 
@@ -54,8 +54,8 @@ const summonerSpellMap = new Map<number, TooltipData>(
     {
       name: (spell as Record<string, unknown>).name as string,
       description: (spell as Record<string, unknown>).description as string,
-      cooldown: (spell as Record<string, unknown>).cooldown as number | undefined
-    } as TooltipData
+      cooldown: (spell as Record<string, unknown>).cooldown as number | undefined,
+    } as TooltipData,
   ])
 )
 

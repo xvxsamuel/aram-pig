@@ -1,7 +1,7 @@
-"use client"
-import { useState, useRef, useEffect } from "react"
-import { clsx } from "clsx"
-import { REGIONS } from "@/lib/game"
+'use client'
+import { useState, useRef, useEffect } from 'react'
+import { clsx } from 'clsx'
+import { REGIONS } from '@/lib/game'
 
 type Props = {
   value?: string
@@ -9,11 +9,7 @@ type Props = {
   className?: string
 }
 
-export default function RegionSelector({
-  value = "EUW",
-  onChange,
-  className = "",
-}: Props) {
+export default function RegionSelector({ value = 'EUW', onChange, className = '' }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -25,8 +21,8 @@ export default function RegionSelector({
     }
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-      return () => document.removeEventListener("mousedown", handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen])
 
@@ -44,10 +40,10 @@ export default function RegionSelector({
         aria-haspopup="menu"
         aria-expanded={isOpen}
         className={clsx(
-          "w-12 h-6 flex items-center justify-center rounded-full",
-          "bg-gradient-to-t from-action-200 to-action-100",
-          "cursor-pointer outline-none",
-          "font-bold text-[14px] text-white",
+          'w-12 h-6 flex items-center justify-center rounded-full',
+          'bg-gradient-to-t from-action-200 to-action-100',
+          'cursor-pointer outline-none',
+          'font-bold text-[14px] text-white',
           className
         )}
       >
@@ -56,18 +52,21 @@ export default function RegionSelector({
 
       {isOpen && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-16 bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-50 overflow-hidden">
-          <div className="max-h-64 overflow-y-auto" style={{ 
-            scrollbarWidth: "thin",
-            scrollbarColor: "var(--color-gold-dark) var(--color-accent-dark)",
-          }}>
-            {REGIONS.map((region: typeof REGIONS[number]) => (
+          <div
+            className="max-h-64 overflow-y-auto"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',
+            }}
+          >
+            {REGIONS.map((region: (typeof REGIONS)[number]) => (
               <button
                 key={region.code}
                 type="button"
                 onClick={() => handleSelect(region.label)}
                 className={clsx(
-                  "w-full px-3 py-1.5 text-center text-white hover:bg-accent-light/20 font-bold text-xs",
-                  value === region.label && "bg-accent-light/20"
+                  'w-full px-3 py-1.5 text-center text-white hover:bg-accent-light/20 font-bold text-xs',
+                  value === region.label && 'bg-accent-light/20'
                 )}
               >
                 {region.label}

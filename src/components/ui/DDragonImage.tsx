@@ -1,6 +1,6 @@
 /**
  * DDragonImage - Wrapper for Next.js Image optimized for DDragon assets
- * 
+ *
  * DDragon images are already optimized PNGs from Riot, so we:
  * - Always use unoptimized={true} to skip Next.js image optimization
  * - Provide consistent defaults for common use cases
@@ -17,38 +17,46 @@ const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com'
 // Champion name normalization for DDragon URLs
 function normalizeChampionName(championName: string): string {
   const nameMap: Record<string, string> = {
-    'FiddleSticks': 'Fiddlesticks',
-    'MonkeyKing': 'MonkeyKing',
-    'Renata': 'Renata',
+    FiddleSticks: 'Fiddlesticks',
+    MonkeyKing: 'MonkeyKing',
+    Renata: 'Renata',
   }
   return nameMap[championName] || championName
 }
 
 // URL builders
 export const ddragonUrls = {
-  champion: (name: string, version: string) => 
+  champion: (name: string, version: string) =>
     `${DDRAGON_BASE}/cdn/${version}/img/champion/${normalizeChampionName(name)}.png`,
-  
-  championCentered: (name: string, skinNum = 0) => 
+
+  championCentered: (name: string, skinNum = 0) =>
     `${DDRAGON_BASE}/cdn/img/champion/centered/${normalizeChampionName(name)}_${skinNum}.jpg`,
-  
-  profileIcon: (iconId: number, version: string) => 
-    `${DDRAGON_BASE}/cdn/${version}/img/profileicon/${iconId}.png`,
-  
-  item: (itemId: number, version: string) => 
-    `${DDRAGON_BASE}/cdn/${version}/img/item/${itemId}.png`,
-  
+
+  profileIcon: (iconId: number, version: string) => `${DDRAGON_BASE}/cdn/${version}/img/profileicon/${iconId}.png`,
+
+  item: (itemId: number, version: string) => `${DDRAGON_BASE}/cdn/${version}/img/item/${itemId}.png`,
+
   spell: (spellId: number, version: string) => {
     const spellMap: Record<number, string> = {
-      1: 'Boost', 3: 'Exhaust', 4: 'Flash', 6: 'Haste', 7: 'Heal',
-      11: 'Smite', 12: 'Teleport', 13: 'Mana', 14: 'Dot', 21: 'Barrier',
-      30: 'PoroRecall', 31: 'PoroThrow', 32: 'Snowball', 39: 'Snowball',
+      1: 'Boost',
+      3: 'Exhaust',
+      4: 'Flash',
+      6: 'Haste',
+      7: 'Heal',
+      11: 'Smite',
+      12: 'Teleport',
+      13: 'Mana',
+      14: 'Dot',
+      21: 'Barrier',
+      30: 'PoroRecall',
+      31: 'PoroThrow',
+      32: 'Snowball',
+      39: 'Snowball',
     }
     return `${DDRAGON_BASE}/cdn/${version}/img/spell/Summoner${spellMap[spellId] || 'Flash'}.png`
   },
-  
-  rune: (iconPath: string) => 
-    iconPath ? `${DDRAGON_BASE}/cdn/img/${iconPath}` : '',
+
+  rune: (iconPath: string) => (iconPath ? `${DDRAGON_BASE}/cdn/img/${iconPath}` : ''),
 }
 
 interface DDragonImageProps extends Omit<ImageProps, 'src' | 'unoptimized'> {
@@ -58,36 +66,30 @@ interface DDragonImageProps extends Omit<ImageProps, 'src' | 'unoptimized'> {
 
 /**
  * DDragonImage component - use this for all DDragon (Riot) images
- * 
+ *
  * Benefits:
  * - Always skips Next.js image optimization (DDragon images are pre-optimized)
  * - Handles load errors gracefully with optional fallback
  * - Consistent props across the app
- * 
+ *
  * @example
- * <DDragonImage 
- *   src={ddragonUrls.champion('Ahri', '14.1.1')} 
- *   alt="Ahri" 
- *   width={64} 
- *   height={64} 
+ * <DDragonImage
+ *   src={ddragonUrls.champion('Ahri', '14.1.1')}
+ *   alt="Ahri"
+ *   width={64}
+ *   height={64}
  * />
  */
-export default function DDragonImage({ 
-  src, 
-  alt, 
-  fallback,
-  className = '',
-  ...props 
-}: DDragonImageProps) {
+export default function DDragonImage({ src, alt, fallback, className = '', ...props }: DDragonImageProps) {
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  
+
   // Use fallback if error occurred
   const imageSrc = error && fallback ? fallback : src
-  
+
   // Don't render if no src
   if (!imageSrc) return null
-  
+
   return (
     <Image
       src={imageSrc}
@@ -135,7 +137,7 @@ interface ItemImageProps {
 
 export function ItemImage({ itemId, version, size = 32, className = '' }: ItemImageProps) {
   if (!itemId || itemId <= 0) return null
-  
+
   return (
     <DDragonImage
       src={ddragonUrls.item(itemId, version)}
@@ -174,16 +176,8 @@ interface RuneImageProps {
 
 export function RuneImage({ iconPath, size = 24, className = '' }: RuneImageProps) {
   if (!iconPath) return null
-  
-  return (
-    <DDragonImage
-      src={ddragonUrls.rune(iconPath)}
-      alt="Rune"
-      width={size}
-      height={size}
-      className={className}
-    />
-  )
+
+  return <DDragonImage src={ddragonUrls.rune(iconPath)} alt="Rune" width={size} height={size} className={className} />
 }
 
 interface ProfileIconImageProps {

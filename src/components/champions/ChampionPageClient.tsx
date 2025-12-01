@@ -9,11 +9,12 @@ import PatchFilter from '@/components/filters/PatchFilter'
 import itemsData from '@/data/items.json'
 
 // SWR fetcher
-const fetcher = (url: string) => fetch(url).then(res => {
-  if (res.status === 404) return null
-  if (!res.ok) throw new Error('Failed to fetch champion data')
-  return res.json()
-})
+const fetcher = (url: string) =>
+  fetch(url).then(res => {
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error('Failed to fetch champion data')
+    return res.json()
+  })
 
 interface ChampionStatsResponse {
   championName: string
@@ -81,16 +82,16 @@ const isFinishedItem = (itemId: number): boolean => {
   return type === 'legendary' || type === 'boots'
 }
 
-export default function ChampionPageClient({ 
-  championName, 
-  displayName, 
-  apiName, 
+export default function ChampionPageClient({
+  championName,
+  displayName,
+  apiName,
   ddragonVersion,
   availablePatches,
-  selectedPatch 
+  selectedPatch,
 }: Props) {
   const currentPatch = selectedPatch || availablePatches[0]
-  
+
   // SWR with stale-while-revalidate caching
   const { data, error, isLoading } = useSWR<ChampionStatsResponse | null>(
     `/api/champion-stats/${championName}?patch=${currentPatch}`,
@@ -102,7 +103,7 @@ export default function ChampionPageClient({
       keepPreviousData: true, // Keep showing old data while loading new patch
     }
   )
-  
+
   // loading state
   if (isLoading && !data) {
     return (
@@ -124,7 +125,7 @@ export default function ChampionPageClient({
       </main>
     )
   }
-  
+
   // error state
   if (error) {
     return (
@@ -138,7 +139,7 @@ export default function ChampionPageClient({
       </main>
     )
   }
-  
+
   // no data state
   if (!data) {
     return (
@@ -181,14 +182,22 @@ export default function ChampionPageClient({
       </main>
     )
   }
-  
+
   const totalGames = data.overview.games
-  
+
   // transform API response to component props format
-  const itemsBySlot: Record<number, Array<{ item_id: number; games: number; wins: number; winrate: number; pickrate: number }>> = {
-    0: [], 1: [], 2: [], 3: [], 4: [], 5: []
+  const itemsBySlot: Record<
+    number,
+    Array<{ item_id: number; games: number; wins: number; winrate: number; pickrate: number }>
+  > = {
+    0: [],
+    1: [],
+    2: [],
+    3: [],
+    4: [],
+    5: [],
   }
-  
+
   // map slot1-slot6 to 0-5
   for (let slot = 1; slot <= 6; slot++) {
     const slotKey = `slot${slot}` as keyof typeof data.topItems
@@ -201,16 +210,16 @@ export default function ChampionPageClient({
           games: item.games,
           wins: item.wins,
           winrate: item.winrate,
-          pickrate: totalGames > 0 ? (item.games / totalGames) * 100 : 0
+          pickrate: totalGames > 0 ? (item.games / totalGames) * 100 : 0,
         }))
     }
   }
-  
+
   // aggregate boots across all slots
   const bootsMap = new Map<number, { games: number; wins: number }>()
   let totalBootsGames = 0
   let totalBootsWins = 0
-  
+
   if (data.raw?.items) {
     for (let slot = 1; slot <= 6; slot++) {
       const slotData = data.raw.items[slot.toString()]
@@ -221,7 +230,7 @@ export default function ChampionPageClient({
             const existing = bootsMap.get(id) || { games: 0, wins: 0 }
             bootsMap.set(id, {
               games: existing.games + (stats.games || 0),
-              wins: existing.wins + (stats.wins || 0)
+              wins: existing.wins + (stats.wins || 0),
             })
             totalBootsGames += stats.games || 0
             totalBootsWins += stats.wins || 0
@@ -230,16 +239,15 @@ export default function ChampionPageClient({
       }
     }
   }
-  
-  const bootsItems = Array.from(bootsMap.entries())
-    .map(([item_id, d]) => ({
-      item_id,
-      games: d.games,
-      wins: d.wins,
-      winrate: d.games > 0 ? (d.wins / d.games) * 100 : 0,
-      pickrate: totalGames > 0 ? (d.games / totalGames) * 100 : 0
-    }))
-  
+
+  const bootsItems = Array.from(bootsMap.entries()).map(([item_id, d]) => ({
+    item_id,
+    games: d.games,
+    wins: d.wins,
+    winrate: d.games > 0 ? (d.wins / d.games) * 100 : 0,
+    pickrate: totalGames > 0 ? (d.games / totalGames) * 100 : 0,
+  }))
+
   // "no boots" stat
   const noBootsGames = totalGames - totalBootsGames
   const noBootsWins = data.overview.wins - totalBootsWins
@@ -249,11 +257,11 @@ export default function ChampionPageClient({
       games: noBootsGames,
       wins: noBootsWins,
       winrate: (noBootsWins / noBootsGames) * 100,
-      pickrate: (noBootsGames / totalGames) * 100
+      pickrate: (noBootsGames / totalGames) * 100,
     })
   }
   bootsItems.sort((a, b) => b.pickrate - a.pickrate)
-  
+
   // starter items
   const starterItems = data.topStarters.map(s => ({
     starter_build: s.key,
@@ -261,47 +269,55 @@ export default function ChampionPageClient({
     games: s.games,
     wins: s.wins,
     winrate: s.winrate,
-    pickrate: totalGames > 0 ? (s.games / totalGames) * 100 : 0
+    pickrate: totalGames > 0 ? (s.games / totalGames) * 100 : 0,
   }))
-  
+
   // rune stats (simplified - same for all primary slots)
-  const runeStats: Record<number, Array<{ rune_id: number; games: number; wins: number; winrate: number; pickrate: number }>> = {
-    0: [], 1: [], 2: [], 3: [], 4: [], 5: []
+  const runeStats: Record<
+    number,
+    Array<{ rune_id: number; games: number; wins: number; winrate: number; pickrate: number }>
+  > = {
+    0: [],
+    1: [],
+    2: [],
+    3: [],
+    4: [],
+    5: [],
   }
-  
+
   const primaryRunes = data.topRunes.primary.map(r => ({
     rune_id: parseInt(r.key),
     games: r.games,
     wins: r.wins,
     winrate: r.winrate,
-    pickrate: totalGames > 0 ? (r.games / totalGames) * 100 : 0
+    pickrate: totalGames > 0 ? (r.games / totalGames) * 100 : 0,
   }))
-  
+
   runeStats[0] = primaryRunes
   runeStats[1] = primaryRunes
   runeStats[2] = primaryRunes
   runeStats[3] = primaryRunes
-  
+
   const secondaryRunes = data.topRunes.secondary.map(r => ({
     rune_id: parseInt(r.key),
     games: r.games,
     wins: r.wins,
     winrate: r.winrate,
-    pickrate: totalGames > 0 ? (r.games / totalGames) * 100 : 0
+    pickrate: totalGames > 0 ? (r.games / totalGames) * 100 : 0,
   }))
-  
+
   runeStats[4] = secondaryRunes
   runeStats[5] = secondaryRunes
-  
+
   // ability leveling
   const abilityLevelingStats = data.topSkillOrders.slice(0, 5).map(s => ({
     ability_order: s.key,
     games: s.games,
     wins: s.wins,
     winrate: s.winrate,
-    pickrate: totalGames > 0 ? (s.games / totalGames) * 100 : 0
+    pickrate: totalGames > 0 ? (s.games / totalGames) * 100 : 0,
   }))
-  
+
   // summoner spells
   const summonerSpellStats = data.topSpells.map(s => {
     const spellIds = s.key.split('_').map(id => parseInt(id))
@@ -311,16 +327,16 @@ export default function ChampionPageClient({
       games: s.games,
       wins: s.wins,
       winrate: s.winrate,
-      pickrate: totalGames > 0 ? (s.games / totalGames) * 100 : 0
+      pickrate: totalGames > 0 ? (s.games / totalGames) * 100 : 0,
     }
   })
-  
+
   // core builds (from raw data for full item position info)
   const allBuildData = data.raw?.core
     ? Object.entries(data.raw.core as Record<string, any>)
         .map(([comboKey, comboData]: [string, any]) => {
           const normalizedItems = comboKey.split('_').map(id => parseInt(id))
-          
+
           const actualBoots: number[] = []
           if (comboData.items && typeof comboData.items === 'object') {
             Object.keys(comboData.items).forEach(itemId => {
@@ -328,9 +344,9 @@ export default function ChampionPageClient({
               if (isBootsItem(id)) actualBoots.push(id)
             })
           }
-          
+
           const comboItemStats: Record<number, { positions: Record<number, { games: number; wins: number }> }> = {}
-          
+
           if (comboData.items && typeof comboData.items === 'object') {
             Object.entries(comboData.items).forEach(([itemId, stats]: [string, any]) => {
               const positions: Record<number, { games: number; wins: number }> = {}
@@ -339,14 +355,14 @@ export default function ChampionPageClient({
                 if (!isNaN(slotNum) && slotNum >= 1 && slotNum <= 6 && typeof slotStats === 'object') {
                   positions[slotNum] = {
                     games: slotStats.games || 0,
-                    wins: slotStats.wins || 0
+                    wins: slotStats.wins || 0,
                   }
                 }
               })
               comboItemStats[parseInt(itemId)] = { positions }
             })
           }
-          
+
           return {
             normalizedItems,
             actualBoots,
@@ -355,12 +371,12 @@ export default function ChampionPageClient({
             itemStats: comboItemStats,
             runes: comboData.runes || undefined,
             spells: comboData.spells || undefined,
-            starting: comboData.starting || undefined
+            starting: comboData.starting || undefined,
           }
         })
         .sort((a, b) => b.games - a.games)
     : []
-  
+
   return (
     <main className="min-h-screen bg-accent-darker text-white">
       <div className="max-w-6xl mx-auto px-12 py-8">

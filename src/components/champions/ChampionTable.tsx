@@ -42,7 +42,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
     if (sortKey === null) {
       return allChampions
     }
-    
+
     return [...allChampions].sort((a, b) => {
       let comparison = 0
 
@@ -100,18 +100,22 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
         >
           Champion
           {sortKey === 'champion' && (
-            <span className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`} />
+            <span
+              className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`}
+            />
           )}
         </button>
         <div className="flex-1" />
         <button
           onClick={() => handleSort('winrate')}
-          className={`w-20 sm:w-24 flex items-center justify-center hover:text-white transition-colors cursor-pointer py-3 relative ${(sortKey === 'winrate' || sortKey === null) ? 'text-white' : ''}`}
+          className={`w-20 sm:w-24 flex items-center justify-center hover:text-white transition-colors cursor-pointer py-3 relative ${sortKey === 'winrate' || sortKey === null ? 'text-white' : ''}`}
         >
           <span className="hidden sm:inline">Win Rate</span>
           <span className="sm:hidden">WR</span>
           {(sortKey === 'winrate' || sortKey === null) && (
-            <span className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`} />
+            <span
+              className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`}
+            />
           )}
         </button>
         <button
@@ -121,7 +125,9 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
           <span className="hidden sm:inline">Pick Rate</span>
           <span className="sm:hidden">PR</span>
           {sortKey === 'pickrate' && (
-            <span className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`} />
+            <span
+              className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`}
+            />
           )}
         </button>
         <button
@@ -131,7 +137,9 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
           <span className="hidden sm:inline">Matches</span>
           <span className="sm:hidden">#</span>
           {sortKey === 'matches' && (
-            <span className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`} />
+            <span
+              className={`absolute left-0 right-0 h-0.5 bg-accent-light ${sortDirection === 'desc' ? 'bottom-0' : 'top-0'}`}
+            />
           )}
         </button>
       </div>
@@ -140,7 +148,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
       <div>
         {sortedChampions.map((champion, index) => {
           const pickRate = totalGames > 0 ? (champion.games_analyzed / totalGames) * 100 : 0
-          
+
           return (
             <Link
               key={`${champion.champion_name}-${index}`}
@@ -151,7 +159,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
               <div className="w-14 text-center">
                 <h2 className="text-lg font-bold">{index + 1}</h2>
               </div>
-              
+
               {/* champion icon + name */}
               <div className="w-32 flex items-center gap-3">
                 <div className="w-10 h-10 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg flex-shrink-0">
@@ -171,25 +179,23 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
                   {getChampionDisplayName(champion.champion_name, championNames)}
                 </span>
               </div>
-              
+
               {/* spacer */}
               <div className="flex-1" />
-              
+
               {/* win rate */}
               <div className="w-20 sm:w-24 text-center">
-                <span 
-                  className="font-bold"
-                  style={{ color: getWinrateColor(champion.overall_winrate) }}
-                >
-                  {Number(champion.overall_winrate).toFixed(2).replace(/\.?0+$/, '')}%
+                <span className="font-bold" style={{ color: getWinrateColor(champion.overall_winrate) }}>
+                  {Number(champion.overall_winrate)
+                    .toFixed(2)
+                    .replace(/\.?0+$/, '')}
+                  %
                 </span>
               </div>
-              
+
               {/* pick rate */}
-              <div className="w-20 sm:w-24 text-center text-subtitle text-sm">
-                {pickRate.toFixed(1)}%
-              </div>
-              
+              <div className="w-20 sm:w-24 text-center text-subtitle text-sm">{pickRate.toFixed(1)}%</div>
+
               {/* matches */}
               <div className="w-20 sm:w-24 text-center text-subtitle text-sm">
                 {champion.games_analyzed.toLocaleString()}

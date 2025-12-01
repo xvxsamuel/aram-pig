@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
@@ -15,10 +15,10 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  
+
   // filter out hidden patches
   const visiblePatches = availablePatches.filter(p => !HIDDEN_PATCHES.includes(p))
-  
+
   // load from localStorage or URL params
   const [, setCurrentFilter] = useState<string>('')
   const [currentPatch, setCurrentPatch] = useState<string | null>(null)
@@ -28,21 +28,21 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
   // initialize from localStorage or defaults
   useEffect(() => {
     const savedPatch = localStorage.getItem('championPatch')
-    
+
     const urlFilter = searchParams.get('filter')
     const urlPatch = searchParams.get('patch')
-    
+
     // Only support patch filtering now
     const filter = 'patch'
     const patch = urlPatch || savedPatch || (visiblePatches.length > 0 ? visiblePatches[0] : null)
-    
+
     setCurrentFilter(filter)
     setCurrentPatch(patch)
-    
+
     // save to localStorage
     localStorage.setItem('championFilter', 'patch')
     if (patch) localStorage.setItem('championPatch', patch)
-    
+
     // if URL params are missing, update URL with defaults
     if (!urlFilter || !urlPatch) {
       const params = new URLSearchParams(searchParams.toString())
@@ -67,14 +67,14 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
 
   const handleFilterChange = (patch: string) => {
     const params = new URLSearchParams(searchParams.toString())
-    
+
     params.set('filter', 'patch')
     params.set('patch', patch)
     localStorage.setItem('championFilter', 'patch')
     localStorage.setItem('championPatch', patch)
     setCurrentFilter('patch')
     setCurrentPatch(patch)
-    
+
     // stay on current page (champions list or detail)
     router.push(`${pathname}?${params.toString()}`)
     setIsOpen(false)
@@ -117,9 +117,7 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
                   key={patch}
                   onClick={() => handleFilterChange(patch)}
                   className={`w-full px-4 py-2 text-left hover:bg-accent-light/20 transition-colors text-sm ${
-                    currentPatch === patch
-                      ? 'bg-accent-light/20 text-accent-light'
-                      : 'text-white'
+                    currentPatch === patch ? 'bg-accent-light/20 text-accent-light' : 'text-white'
                   }`}
                 >
                   Patch {patch}
@@ -127,9 +125,7 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
               ))}
             </>
           ) : (
-            <div className="px-4 py-3 text-sm text-subtitle">
-              No patches available
-            </div>
+            <div className="px-4 py-3 text-sm text-subtitle">No patches available</div>
           )}
         </div>
       )}

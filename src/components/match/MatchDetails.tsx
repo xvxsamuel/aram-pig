@@ -1,15 +1,23 @@
-"use client"
+'use client'
 
-import { useState, useEffect, useRef } from "react"
-import type { MatchData } from "@/types/match"
-import Image from "next/image"
-import Link from "next/link"
-import clsx from "clsx"
-import { getChampionImageUrl, getItemImageUrl, getRuneImageUrl, getRuneStyleImageUrl, getSummonerSpellUrl, getChampionUrlName } from "@/lib/ddragon"
-import { getKdaColor, getPigScoreColor } from "@/lib/ui"
-import Tooltip from "@/components/ui/Tooltip"
-import runesData from "@/data/runes.json"
-import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from "@/lib/game"
+import { useState, useEffect, useRef } from 'react'
+import type { MatchData } from '@/types/match'
+import Image from 'next/image'
+import Link from 'next/link'
+import clsx from 'clsx'
+import {
+  getChampionImageUrl,
+  getItemImageUrl,
+  getRuneImageUrl,
+  getRuneStyleImageUrl,
+  getSummonerSpellUrl,
+  getChampionUrlName,
+} from '@/lib/ddragon'
+import { getKdaColor, getPigScoreColor } from '@/lib/ui'
+import Tooltip from '@/components/ui/Tooltip'
+import SimpleTooltip from '@/components/ui/SimpleTooltip'
+import runesData from '@/data/runes.json'
+import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from '@/lib/game'
 
 interface Props {
   match: MatchData
@@ -26,6 +34,36 @@ interface ItemTimelineEvent {
   itemId: number
 }
 
+interface CompletedItem {
+  itemId: number
+  timestamp: number
+  itemName: string
+  itemType: 'legendary' | 'boots' | 'mythic' | 'other'
+}
+
+interface KillEvent {
+  t: number // timestamp in seconds
+  gold: number // victim gold
+  tf: boolean // teamfight
+  pos?: number // position score 0-100 (higher = in enemy territory/pushing)
+  value?: number // quality value 0-100
+}
+
+interface DeathEvent {
+  t: number
+  gold: number // player gold at death
+  tf: boolean
+  pos?: number // position score 0-100 (higher = in enemy territory/pushing)
+  value?: number // quality value 0-100
+}
+
+interface KillDeathTimeline {
+  kills: KillEvent[]
+  deaths: DeathEvent[]
+  deathScore: number
+  killScore: number
+}
+
 interface ParticipantDetails {
   puuid: string
   build_order: string | null
@@ -33,6 +71,8 @@ interface ParticipantDetails {
   first_buy: string | null
   pig_score: number | null
   item_timeline: ItemTimelineEvent[]
+  completed_items: CompletedItem[]
+  kill_death_timeline: KillDeathTimeline | null
   loading: boolean
 }
 
@@ -63,22 +103,24 @@ interface PigScoreBreakdown {
     healingShieldingPerMin: number
     ccTimePerMin: number
   }
-  penalties: {
+  componentScores: {
+    performance: number
+    build: number
+    kda: number
+  }
+  metrics: {
     name: string
-    penalty: number
-    maxPenalty: number
+    score: number
+    weight: number
     playerValue?: number
     avgValue?: number
     percentOfAvg?: number
     zScore?: number
-    targetZScore?: number
-    stdDev?: number
-    relevanceWeight?: number
   }[]
   itemDetails?: ItemPenaltyDetail[]
   scoringInfo?: {
-    targetZScore: number
-    meanPenaltyPercent: number
+    targetPercentile: number
+    averageScore: number
     description: string
   }
   totalGames: number
@@ -87,14 +129,21 @@ interface PigScoreBreakdown {
   usedFallbackPatch?: boolean
 }
 
-export default function MatchDetails({ match, currentPuuid, ddragonVersion, region, defaultTab = 'overview', onTabChange }: Props) {
+export default function MatchDetails({
+  match,
+  currentPuuid,
+  ddragonVersion,
+  region,
+  defaultTab = 'overview',
+  onTabChange,
+}: Props) {
   const [selectedTab, setSelectedTabState] = useState<'overview' | 'build' | 'performance'>(defaultTab)
-  
+
   // sync tab when parent changes defaultTab (e.g., clicking PIG button when already expanded)
   useEffect(() => {
     setSelectedTabState(defaultTab)
   }, [defaultTab])
-  
+
   // helper to update tab and notify parent
   const setSelectedTab = (tab: 'overview' | 'build' | 'performance') => {
     setSelectedTabState(tab)
@@ -109,19 +158,20 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const [, setEnrichError] = useState<string | null>(null)
   const enrichFetchingRef = useRef(false) // prevent double-fetch
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
-  
-  // check if match is within 30 days
-  const isWithin30Days = (Date.now() - match.info.gameCreation) < (30 * 24 * 60 * 60 * 1000)
+
+  // check if match is within 365 days (timeline data availability from Riot API)
+  const isWithin365Days = Date.now() - match.info.gameCreation < 365 * 24 * 60 * 60 * 1000
+
+  // check if game was a remake (no PIG score for remakes)
+  const isRemake = currentPlayer?.gameEndedInEarlySurrender ?? false
 
   // enrich match with timeline data and pig scores when component mounts (for recent matches)
   useEffect(() => {
-    if (!isWithin30Days || pigScoresFetched || enrichFetchingRef.current) return
-    
+    if (!isWithin365Days || isRemake || pigScoresFetched || enrichFetchingRef.current) return
+
     // check if ALL players already have pig scores (match already enriched)
-    const allHavePigScores = match.info.participants.every(p => 
-      p.pigScore !== null && p.pigScore !== undefined
-    )
-    
+    const allHavePigScores = match.info.participants.every(p => p.pigScore !== null && p.pigScore !== undefined)
+
     if (allHavePigScores) {
       // use cached pig scores from match data
       const cached: Record<string, number | null> = {}
@@ -132,24 +182,24 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
       setPigScoresFetched(true)
       return
     }
-    
+
     enrichFetchingRef.current = true // prevent concurrent fetches
     setLoadingPigScores(true)
     setPigScoresFetched(true) // mark as fetched to prevent re-runs
     setEnrichError(null)
-    
+
     // convert region label (euw, na) to regional cluster (europe, americas)
     const platform = LABEL_TO_PLATFORM[region.toUpperCase()]
     const regionalCluster = platform ? PLATFORM_TO_REGIONAL[platform] : region
-    
+
     // use new enrich-match endpoint to fetch timeline, calculate pig scores, and update stats
     fetch('/api/enrich-match', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         matchId: match.metadata.matchId,
-        region: regionalCluster
-      })
+        region: regionalCluster,
+      }),
     })
       .then(res => {
         if (!res.ok) {
@@ -176,9 +226,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         fetch('/api/calculate-pig-score', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ matchId: match.metadata.matchId })
+          body: JSON.stringify({ matchId: match.metadata.matchId }),
         })
-          .then(res => res.ok ? res.json() : null)
+          .then(res => (res.ok ? res.json() : null))
           .then(data => {
             if (data?.results) {
               setPigScores(data.results)
@@ -188,14 +238,22 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           .catch(() => {}) // ignore fallback errors
       })
       .finally(() => setLoadingPigScores(false))
-  }, [match.metadata.matchId, match.info.participants, match.info.gameCreation, isWithin30Days, pigScoresFetched, region])
+  }, [
+    match.metadata.matchId,
+    match.info.participants,
+    match.info.gameCreation,
+    isWithin365Days,
+    isRemake,
+    pigScoresFetched,
+    region,
+  ])
 
   // fetch pig score breakdown when performance tab is selected
   useEffect(() => {
     if (selectedTab === 'performance' && !pigScoreBreakdown && !loadingBreakdown) {
       setLoadingBreakdown(true)
       fetch(`/api/pig-score-breakdown?matchId=${match.metadata.matchId}&puuid=${currentPuuid}`)
-        .then(res => res.ok ? res.json() : null)
+        .then(res => (res.ok ? res.json() : null))
         .then(data => {
           if (data && !data.error) {
             setPigScoreBreakdown(data)
@@ -209,7 +267,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   // separate teams
   const team100 = match.info.participants.filter(p => p.teamId === 100)
   const team200 = match.info.participants.filter(p => p.teamId === 200)
-  
+
   const team100Won = team100[0]?.win || false
   const team200Won = team200[0]?.win || false
 
@@ -218,12 +276,15 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   // Calculate max values for bars
   const allParticipants = match.info.participants
   const maxDamageDealt = Math.max(...allParticipants.map(p => p.totalDamageDealtToChampions || 0))
-  
-  // Check if any participant has a pig score (only show PIG column if within 30 days OR scores exist OR loading)
-  const hasPigScores = isWithin30Days || loadingPigScores || allParticipants.some(p => 
-    (pigScores[p.puuid] ?? p.pigScore) !== null && (pigScores[p.puuid] ?? p.pigScore) !== undefined
-  )
-  
+
+  // Check if any participant has a pig score (only show PIG column if within 365 days, not a remake, OR scores exist OR loading)
+  const hasPigScores =
+    (isWithin365Days && !isRemake) ||
+    loadingPigScores ||
+    allParticipants.some(
+      p => (pigScores[p.puuid] ?? p.pigScore) !== null && (pigScores[p.puuid] ?? p.pigScore) !== undefined
+    )
+
   // Check if ALL participants have pig scores (for MOG/TRY display)
   const allHavePigScores = allParticipants.every(p => {
     const score = pigScores[p.puuid] ?? p.pigScore
@@ -250,26 +311,26 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
     const score = getPigScore(puuid)
     const rankIndex = sortedByScore.findIndex(p => p.puuid === puuid)
     const rank = rankIndex + 1
-    
+
     // Only show MOG/TRY if all players have pig scores
     let badge = null
     if (allHavePigScores && score !== null) {
       const winningTeamId = allParticipants.find(p => p.win)?.teamId
       const isWinningTeam = teamId === winningTeamId
-      
+
       const teamPlayers = allParticipants.filter(p => p.teamId === teamId)
       const highestInTeam = teamPlayers.reduce((prev, current) => {
-          const prevScore = getPigScore(prev.puuid) ?? 0
-          const currScore = getPigScore(current.puuid) ?? 0
-          return currScore > prevScore ? current : prev
+        const prevScore = getPigScore(prev.puuid) ?? 0
+        const currScore = getPigScore(current.puuid) ?? 0
+        return currScore > prevScore ? current : prev
       })
-      
+
       if (highestInTeam.puuid === puuid) {
-          if (isWinningTeam) badge = "MOG"
-          else badge = "TRY"
+        if (isWinningTeam) badge = 'MOG'
+        else badge = 'TRY'
       }
     }
-    
+
     return { rank, badge, score }
   }
 
@@ -277,18 +338,22 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   const loadParticipantDetails = async (puuid: string) => {
     // skip if already loading or loaded
     if (participantDetails.has(puuid)) return
-    
-    // m  ark as loading
-    setParticipantDetails(prev => new Map(prev).set(puuid, {
-      puuid,
-      build_order: null,
-      ability_order: null,
-      first_buy: null,
-      pig_score: null,
-      item_timeline: [],
-      loading: true
-    }))
-    
+
+    // mark as loading
+    setParticipantDetails(prev =>
+      new Map(prev).set(puuid, {
+        puuid,
+        build_order: null,
+        ability_order: null,
+        first_buy: null,
+        pig_score: null,
+        item_timeline: [],
+        completed_items: [],
+        kill_death_timeline: null,
+        loading: true,
+      })
+    )
+
     try {
       const response = await fetch('/api/match-details', {
         method: 'POST',
@@ -296,68 +361,73 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         body: JSON.stringify({
           matchId: match.metadata.matchId,
           puuid,
-          region: region.toUpperCase()
-        })
+        }),
       })
-      
+
       if (response.ok) {
         const data = await response.json()
-        setParticipantDetails(prev => new Map(prev).set(puuid, {
-          puuid,
-          build_order: data.build_order,
-          ability_order: data.ability_order,
-          first_buy: data.first_buy,
-          pig_score: data.pig_score,
-          item_timeline: data.item_timeline || [],
-          loading: false
-        }))
+        setParticipantDetails(prev =>
+          new Map(prev).set(puuid, {
+            puuid,
+            build_order: data.build_order,
+            ability_order: data.ability_order,
+            first_buy: data.first_buy,
+            pig_score: data.pig_score,
+            item_timeline: data.item_timeline || [],
+            completed_items: data.completed_items || [],
+            kill_death_timeline: data.kill_death_timeline || null,
+            loading: false,
+          })
+        )
       }
     } catch (error) {
       console.error('Failed to load participant details:', error)
-      setParticipantDetails(prev => new Map(prev).set(puuid, {
-        puuid,
-        build_order: null,
-        ability_order: null,
-        first_buy: null,
-        pig_score: null,
-        item_timeline: [],
-        loading: false
-      }))
+      setParticipantDetails(prev =>
+        new Map(prev).set(puuid, {
+          puuid,
+          build_order: null,
+          ability_order: null,
+          first_buy: null,
+          pig_score: null,
+          item_timeline: [],
+          completed_items: [],
+          kill_death_timeline: null,
+          loading: false,
+        })
+      )
     }
   }
-  
-  // load details for current player when switching to build tab
+
+  // load details for current player when switching to build or performance tab
   useEffect(() => {
-    if (selectedTab === 'build' && currentPlayer) {
+    if ((selectedTab === 'build' || selectedTab === 'performance') && currentPlayer) {
       loadParticipantDetails(currentPlayer.puuid)
     }
   }, [selectedTab, match.metadata.matchId])
 
   const renderPlayerRow = (p: any, isCurrentPlayer: boolean, isWinningTeam: boolean) => {
     const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
-    const kda = p.deaths === 0 ? "Perfect" : ((p.kills + p.assists) / p.deaths).toFixed(2)
+    const kda = p.deaths === 0 ? 'Perfect' : ((p.kills + p.assists) / p.deaths).toFixed(2)
     const playerName = p.riotIdGameName || p.summonerName
-    const playerTag = p.riotIdTagline || ""
+    const playerTag = p.riotIdTagline || ''
     const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
-    
+
     const { rank, badge, score } = getRankInfo(p.puuid, p.teamId)
-    
+
     const damageDealtPct = maxDamageDealt > 0 ? (p.totalDamageDealtToChampions / maxDamageDealt) * 100 : 0
 
     return (
-      <tr 
-        key={p.puuid} 
+      <tr
+        key={p.puuid}
         className={clsx(
-          "border-b border-abyss-900/25 last:border-b-0",
-          isWinningTeam 
-            ? (isCurrentPlayer ? "bg-win-light" : "bg-win") 
-            : (isCurrentPlayer ? "bg-loss-light" : "bg-loss")
+          'border-b border-abyss-900/25 last:border-b-0',
+          isWinningTeam ? (isCurrentPlayer ? 'bg-win-light' : 'bg-win') : isCurrentPlayer ? 'bg-loss-light' : 'bg-loss'
         )}
       >
         {/* champion & player info */}
         <td className="py-1.5 pl-3 pr-2">
           <div className="flex items-center gap-1.5">
-            <Link 
+            <Link
               href={`/champions/${getChampionUrlName(p.championName, {})}`}
               className="relative flex-shrink-0 hover:brightness-75 transition-all"
             >
@@ -379,26 +449,52 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
               <div className="flex flex-col gap-0.5">
                 <div className="flex gap-0.5">
                   <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
-                    <Image src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" unoptimized />
+                    <Image
+                      src={getSummonerSpellUrl(p.summoner1Id, ddragonVersion)}
+                      alt=""
+                      width={14}
+                      height={14}
+                      className="w-full h-full"
+                      unoptimized
+                    />
                   </div>
                   <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
-                    <Image src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)} alt="" width={14} height={14} className="w-full h-full" unoptimized />
+                    <Image
+                      src={getRuneImageUrl(p.perks?.styles[0]?.selections[0]?.perk)}
+                      alt=""
+                      width={14}
+                      height={14}
+                      className="w-full h-full"
+                      unoptimized
+                    />
                   </div>
                 </div>
                 <div className="flex gap-0.5">
                   <div className="w-3.5 h-3.5 rounded overflow-hidden bg-abyss-800">
-                    <Image src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)} alt="" width={14} height={14} className="w-full h-full" unoptimized />
+                    <Image
+                      src={getSummonerSpellUrl(p.summoner2Id, ddragonVersion)}
+                      alt=""
+                      width={14}
+                      height={14}
+                      className="w-full h-full"
+                      unoptimized
+                    />
                   </div>
                   <div className="w-3.5 h-3.5 rounded-full overflow-hidden bg-abyss-800">
-                    <Image src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)} alt="" width={14} height={14} className="w-full h-full p-0.5" unoptimized />
+                    <Image
+                      src={getRuneStyleImageUrl(p.perks?.styles[1]?.style)}
+                      alt=""
+                      width={14}
+                      height={14}
+                      className="w-full h-full p-0.5"
+                      unoptimized
+                    />
                   </div>
                 </div>
               </div>
               <div className="gap-1">
                 {isCurrentPlayer ? (
-                  <span className="text-xs font-medium text-white truncate">
-                    {playerName}
-                  </span>
+                  <span className="text-xs font-medium text-white truncate">{playerName}</span>
                 ) : (
                   <Link
                     href={profileUrl}
@@ -417,18 +513,19 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           <td className="py-1.25 text-center">
             {score !== null ? (
               <div className="flex flex-col items-center">
-                <span 
-                  className="text-sm font-bold tabular-nums"
-                  style={{ color: getPigScoreColor(score) }}
-                >
+                <span className="text-sm font-bold tabular-nums" style={{ color: getPigScoreColor(score) }}>
                   {Math.round(score)}
                 </span>
-                <span className={clsx(
-                  "text-[10px]",
-                  badge === "MOG" ? "text-gold-light font-base" : 
-                  badge === "TRY" ? "text-gold-light font-base" : 
-                  "text-text-muted"
-                )}>
+                <span
+                  className={clsx(
+                    'text-[10px]',
+                    badge === 'MOG'
+                      ? 'text-gold-light font-base'
+                      : badge === 'TRY'
+                        ? 'text-gold-light font-base'
+                        : 'text-text-muted'
+                  )}
+                >
                   {badge || `#${rank}`}
                 </span>
               </div>
@@ -444,11 +541,12 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         <td className="py-1.5 text-center">
           <div className="flex flex-col items-center">
             <div className="text-xs tabular-nums whitespace-nowrap">
-              {p.kills} <span className="text-text-muted">/</span> <span className="text-white">{p.deaths}</span> <span className="text-text-muted">/</span> {p.assists}
+              {p.kills} <span className="text-text-muted">/</span> <span className="text-white">{p.deaths}</span>{' '}
+              <span className="text-text-muted">/</span> {p.assists}
             </div>
-            <span 
+            <span
               className="text-xs font-semibold whitespace-nowrap"
-              style={{ color: kda === "Perfect" ? getKdaColor(99) : getKdaColor(Number(kda)) }}
+              style={{ color: kda === 'Perfect' ? getKdaColor(99) : getKdaColor(Number(kda)) }}
             >
               {kda}
             </span>
@@ -460,10 +558,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           <div className="flex flex-col items-center gap-1">
             <span className="text-xs text-white tabular-nums">{formatDamage(p.totalDamageDealtToChampions)}</span>
             <div className="w-12 h-1.5 bg-abyss-800/75 rounded-sm overflow-hidden">
-              <div 
-                className="h-full bg-negative rounded-full" 
-                style={{ width: `${damageDealtPct}%` }}
-              />
+              <div className="h-full bg-negative rounded-full" style={{ width: `${damageDealtPct}%` }} />
             </div>
           </div>
         </td>
@@ -481,7 +576,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         {/* Items */}
         <td className="py-1">
           <div className="flex gap-0.5 justify-center">
-            {items.map((item, idx) => (
+            {items.map((item, idx) =>
               item > 0 ? (
                 <Tooltip key={idx} id={item} type="item">
                   <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
@@ -498,7 +593,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
               ) : (
                 <div key={idx} className="w-6 h-6 rounded bg-abyss-800/50 border border-gold-dark/50" />
               )
-            ))}
+            )}
           </div>
         </td>
       </tr>
@@ -506,14 +601,14 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
   }
 
   const isPlayerInTeam100 = team100.some(p => p.puuid === currentPuuid)
-  const teamsToRender = isPlayerInTeam100 
+  const teamsToRender = isPlayerInTeam100
     ? [
         { players: team100, won: team100Won, name: 'Blue Team', isFirst: true },
-        { players: team200, won: team200Won, name: 'Red Team', isFirst: false }
+        { players: team200, won: team200Won, name: 'Red Team', isFirst: false },
       ]
     : [
         { players: team200, won: team200Won, name: 'Red Team', isFirst: true },
-        { players: team100, won: team100Won, name: 'Blue Team', isFirst: false }
+        { players: team100, won: team100Won, name: 'Blue Team', isFirst: false },
       ]
 
   return (
@@ -523,10 +618,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         <button
           onClick={() => setSelectedTab('overview')}
           className={clsx(
-            "flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px",
+            'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px',
             selectedTab === 'overview'
-              ? "border-accent-light text-white"
-              : "border-transparent text-text-muted hover:text-white"
+              ? 'border-accent-light text-white'
+              : 'border-transparent text-text-muted hover:text-white'
           )}
         >
           Overview
@@ -534,10 +629,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         <button
           onClick={() => setSelectedTab('build')}
           className={clsx(
-            "flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px",
+            'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px',
             selectedTab === 'build'
-              ? "border-accent-light text-white"
-              : "border-transparent text-text-muted hover:text-white"
+              ? 'border-accent-light text-white'
+              : 'border-transparent text-text-muted hover:text-white'
           )}
         >
           Build
@@ -545,10 +640,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         <button
           onClick={() => setSelectedTab('performance')}
           className={clsx(
-            "flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px",
+            'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px',
             selectedTab === 'performance'
-              ? "border-accent-light text-white"
-              : "border-transparent text-text-muted hover:text-white"
+              ? 'border-accent-light text-white'
+              : 'border-transparent text-text-muted hover:text-white'
           )}
         >
           Performance
@@ -560,12 +655,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
         {selectedTab === 'overview' ? (
           <div className="flex flex-col">
             {teamsToRender.map((team, teamIdx) => (
-              <div 
-                key={team.name}
-                className={clsx(
-                  teamIdx === 0 && "border-b border-abyss-500/50"
-                )}
-              >
+              <div key={team.name} className={clsx(teamIdx === 0 && 'border-b border-abyss-500/50')}>
                 <table className="w-full table-fixed">
                   <colgroup>
                     <col className="w-[28%]" />
@@ -578,10 +668,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   <thead>
                     <tr className="text-[10px] text-text-muted border-b border-abyss-700 bg-abyss-700">
                       <th className="py-1.5 pl-3 text-left font-normal">
-                        <span className={clsx(
-                          "text-sm font-semibold",
-                          team.won ? "text-accent-light" : "text-negative"
-                        )}>
+                        <span
+                          className={clsx('text-sm font-semibold', team.won ? 'text-accent-light' : 'text-negative')}
+                        >
                           {team.won ? 'Victory' : 'Defeat'}
                         </span>
                         <span className="text-xs text-text-muted ml-1.5">({team.name})</span>
@@ -593,9 +682,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                       <th className="py-1.5 text-center font-normal">Items</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {team.players.map(p => renderPlayerRow(p, p.puuid === currentPuuid, team.won))}
-                  </tbody>
+                  <tbody>{team.players.map(p => renderPlayerRow(p, p.puuid === currentPuuid, team.won))}</tbody>
                 </table>
               </div>
             ))}
@@ -604,9 +691,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           <div className="p-4 space-y-4">
             {currentPlayer && (
               <>
-                {/* Item Builds - grouped by time */}
+                {/* Items Timeline with Components */}
                 <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
-                  <h3 className="text-xs font-medium text-text-muted mb-3">Item Builds</h3>
+                  <h3 className="text-xs font-medium text-text-muted mb-3">Items</h3>
                   {(() => {
                     const details = participantDetails.get(currentPlayer.puuid)
                     if (details?.loading) {
@@ -617,80 +704,90 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         </div>
                       )
                     }
-                    
-                    // group purchases by time intervals (2-3 min windows)
-                    const purchases = (details?.item_timeline || []).filter(e => e.type === 'ITEM_PURCHASED')
-                    
-                    if (purchases.length === 0) {
-                      // fallback: show final items
+
+                    const itemTimeline = details?.item_timeline || []
+
+                    if (itemTimeline.length === 0) {
+                      // fallback: show final items without timestamps
                       return (
-                        <div className="flex gap-1.5 items-center flex-wrap">
-                          {[currentPlayer.item0, currentPlayer.item1, currentPlayer.item2, currentPlayer.item3, currentPlayer.item4, currentPlayer.item5]
+                        <div className="flex gap-2 items-center flex-wrap">
+                          {[
+                            currentPlayer.item0,
+                            currentPlayer.item1,
+                            currentPlayer.item2,
+                            currentPlayer.item3,
+                            currentPlayer.item4,
+                            currentPlayer.item5,
+                          ]
                             .filter(itemId => itemId > 0)
                             .map((itemId, idx) => (
                               <Tooltip key={idx} id={itemId} type="item">
-                                <div className="w-9 h-9 rounded border border-gold-dark overflow-hidden bg-abyss-800">
+                                <div className="w-10 h-10 rounded border border-gold-dark overflow-hidden bg-abyss-800">
                                   <Image
                                     src={getItemImageUrl(itemId, ddragonVersion)}
                                     alt={`Item ${itemId}`}
-                                    width={36}
-                                    height={36}
+                                    width={40}
+                                    height={40}
                                     className="w-full h-full object-cover"
                                     unoptimized
                                   />
                                 </div>
                               </Tooltip>
                             ))}
+                          <span className="text-xs text-text-muted ml-2">(Timeline unavailable)</span>
                         </div>
                       )
                     }
-                    
-                    // group items by 2-minute intervals
-                    const groups: { time: number; items: number[] }[] = []
-                    let currentGroup: { time: number; items: number[] } | null = null
-                    const INTERVAL = 2 * 60 * 1000 // 2 minutes
-                    
-                    for (const purchase of purchases) {
-                      if (!currentGroup || purchase.timestamp - currentGroup.time > INTERVAL) {
-                        if (currentGroup) groups.push(currentGroup)
-                        currentGroup = { time: purchase.timestamp, items: [purchase.itemId] }
-                      } else {
-                        currentGroup.items.push(purchase.itemId)
+
+                    // group items by minute and filter to only purchases
+                    const purchases = itemTimeline.filter(e => e.type === 'ITEM_PURCHASED')
+
+                    // group by minute (round down to nearest minute)
+                    const groupedByMinute = new Map<number, typeof purchases>()
+                    for (const event of purchases) {
+                      const minute = Math.floor(event.timestamp / 60000)
+                      if (!groupedByMinute.has(minute)) {
+                        groupedByMinute.set(minute, [])
                       }
+                      groupedByMinute.get(minute)!.push(event)
                     }
-                    if (currentGroup) groups.push(currentGroup)
-                    
-                    const formatMin = (ms: number) => `${Math.floor(ms / 60000)} min`
-                    
+
+                    // sort groups by minute
+                    const sortedGroups = Array.from(groupedByMinute.entries()).sort((a, b) => a[0] - b[0])
+
                     return (
-                      <div className="flex items-start gap-2 overflow-x-auto pb-2">
-                        {groups.map((group, gIdx) => (
-                          <div key={gIdx} className="flex items-center gap-2">
-                            {gIdx > 0 && (
-                              <span className="text-text-muted text-lg">&gt;</span>
-                            )}
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="flex flex-col gap-0.5 p-1.5 bg-abyss-800/50 rounded border border-gold-dark/30">
-                                {group.items.slice(0, 4).map((itemId, iIdx) => (
-                                  <Tooltip key={iIdx} id={itemId} type="item">
-                                    <div className="w-8 h-8 rounded border border-gold-dark overflow-hidden bg-abyss-800">
+                      <div className="flex flex-wrap gap-4">
+                        {sortedGroups.map(([minute, items]) => (
+                          <div key={minute} className="flex flex-col items-center gap-1.5">
+                            <div className="flex gap-1 items-center">
+                              {items
+                                .map((item, idx) => (
+                                  <Tooltip key={idx} id={item.itemId} type="item">
+                                    <div className="w-8 h-8 rounded border border-gold-dark/50 overflow-hidden bg-abyss-800 relative">
                                       <Image
-                                        src={getItemImageUrl(itemId, ddragonVersion)}
-                                        alt={`Item ${itemId}`}
+                                        src={getItemImageUrl(item.itemId, ddragonVersion)}
+                                        alt={`Item ${item.itemId}`}
                                         width={32}
                                         height={32}
                                         className="w-full h-full object-cover"
                                         unoptimized
                                       />
+                                      {items.filter(i => i.itemId === item.itemId).length > 1 &&
+                                        items.indexOf(item) === items.findIndex(i => i.itemId === item.itemId) && (
+                                          <span className="absolute -bottom-0.5 -right-0.5 text-[9px] bg-abyss-900 text-white px-1 rounded-sm font-bold">
+                                            {items.filter(i => i.itemId === item.itemId).length}
+                                          </span>
+                                        )}
                                     </div>
                                   </Tooltip>
-                                ))}
-                                {group.items.length > 4 && (
-                                  <div className="text-[10px] text-text-muted text-center">+{group.items.length - 4}</div>
-                                )}
-                              </div>
-                              <span className="text-[10px] text-text-muted">{formatMin(group.time)}</span>
+                                ))
+                                .filter((_el, idx) => {
+                                  // dedupe by finding first occurrence of each itemId
+                                  const itemId = items[idx].itemId
+                                  return items.findIndex(i => i.itemId === itemId) === idx
+                                })}
                             </div>
+                            <span className="text-[10px] text-text-muted tabular-nums">{minute} min</span>
                           </div>
                         ))}
                       </div>
@@ -704,7 +801,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   {(() => {
                     const details = participantDetails.get(currentPlayer.puuid)
                     const abilityOrder = details?.ability_order
-                    
+
                     if (details?.loading) {
                       return (
                         <div className="flex items-center gap-2 text-xs text-text-muted">
@@ -713,13 +810,13 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         </div>
                       )
                     }
-                    
+
                     if (!abilityOrder) {
                       return <span className="text-xs text-text-muted">No skill data available</span>
                     }
-                    
+
                     const abilities = abilityOrder.split(' ')
-                    
+
                     // determine skill max order (Q, W, E first maxed)
                     const counts = { Q: 0, W: 0, E: 0 }
                     const maxOrder: string[] = []
@@ -737,13 +834,13 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                     const remaining = ['Q', 'W', 'E'].filter(a => !maxOrder.includes(a))
                     remaining.sort((a, b) => counts[b as keyof typeof counts] - counts[a as keyof typeof counts])
                     maxOrder.push(...remaining)
-                    
+
                     const abilityTextColors: Record<string, string> = {
                       Q: 'text-kda-3',
                       W: 'text-kda-4',
                       E: 'text-kda-5',
                     }
-                    
+
                     return (
                       <div className="space-y-3">
                         {/* Max order display */}
@@ -751,24 +848,26 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                           {maxOrder.map((ability, idx) => (
                             <div key={ability} className="flex items-center gap-1.5">
                               {idx > 0 && <span className="text-text-muted text-sm">&gt;</span>}
-                              <div className={clsx(
-                                "w-7 h-7 rounded border bg-abyss-800 flex items-center justify-center text-xs font-bold",
-                                ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
-                                abilityTextColors[ability]
-                              )}>
+                              <div
+                                className={clsx(
+                                  'w-7 h-7 rounded border bg-abyss-800 flex items-center justify-center text-xs font-bold',
+                                  ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
+                                  abilityTextColors[ability]
+                                )}
+                              >
                                 {ability === 'R' ? <h2 className="text-xs">{ability}</h2> : ability}
                               </div>
                             </div>
                           ))}
                         </div>
-                        
+
                         {/* full sequence */}
                         <div className="flex flex-wrap gap-1">
                           {abilities.map((ability, idx) => (
-                            <div 
+                            <div
                               key={idx}
                               className={clsx(
-                                "w-6 h-6 rounded border bg-abyss-800 text-[12px] font-bold flex items-center justify-center",
+                                'w-6 h-6 rounded border bg-abyss-800 text-[12px] font-bold flex items-center justify-center',
                                 ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
                                 abilityTextColors[ability]
                               )}
@@ -806,7 +905,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                                   />
                                 </div>
                               )}
-                              <span className="text-[10px] text-gold-light font-medium">{treeInfo?.name || 'Primary'}</span>
+                              <span className="text-[10px] text-gold-light font-medium">
+                                {treeInfo?.name || 'Primary'}
+                              </span>
                             </>
                           )
                         })()}
@@ -852,7 +953,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         })}
                       </div>
                     </div>
-                    
+
                     {/* Secondary Tree */}
                     <div>
                       <div className="flex items-center gap-2 mb-2">
@@ -873,7 +974,9 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                                   />
                                 </div>
                               )}
-                              <span className="text-[10px] text-text-muted font-medium">{treeInfo?.name || 'Secondary'}</span>
+                              <span className="text-[10px] text-text-muted font-medium">
+                                {treeInfo?.name || 'Secondary'}
+                              </span>
                             </>
                           )
                         })()}
@@ -899,21 +1002,25 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         })}
                       </div>
                     </div>
-                    
+
                     {/* Stat Shards */}
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-[10px] text-text-muted font-medium">Shards</span>
                       </div>
                       <div className="flex gap-1.5">
-                        {[currentPlayer.perks?.statPerks?.offense,
+                        {[
+                          currentPlayer.perks?.statPerks?.offense,
                           currentPlayer.perks?.statPerks?.flex,
-                          currentPlayer.perks?.statPerks?.defense]
-                          .map((shardId, idx) => (
-                            <div key={idx} className="w-6 h-6 rounded-full bg-abyss-800 border border-gold-dark/50 flex items-center justify-center">
-                              <span className="text-[9px] text-text-muted font-medium">+</span>
-                            </div>
-                          ))}
+                          currentPlayer.perks?.statPerks?.defense,
+                        ].map((shardId, idx) => (
+                          <div
+                            key={idx}
+                            className="w-6 h-6 rounded-full bg-abyss-800 border border-gold-dark/50 flex items-center justify-center"
+                          >
+                            <span className="text-[9px] text-text-muted font-medium">+</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -923,7 +1030,7 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
           </div>
         ) : (
           <div className="p-4 space-y-4">
-            {(loadingBreakdown || !pigScoreBreakdown) ? (
+            {loadingBreakdown || !pigScoreBreakdown ? (
               <div className="min-h-[200px] flex items-center justify-center">
                 <div className="w-6 h-6 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
               </div>
@@ -934,7 +1041,10 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-white">PIG Score Breakdown</h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold tabular-nums" style={{ color: getPigScoreColor(pigScoreBreakdown.finalScore) }}>
+                      <span
+                        className="text-2xl font-bold tabular-nums"
+                        style={{ color: getPigScoreColor(pigScoreBreakdown.finalScore) }}
+                      >
                         {pigScoreBreakdown.finalScore}
                       </span>
                       <span className="text-xs text-text-muted">/ 100</span>
@@ -943,53 +1053,109 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   <p className="text-xs text-text-muted mb-4">
                     Based on {pigScoreBreakdown.totalGames.toLocaleString()} games on patch {pigScoreBreakdown.patch}
                     {pigScoreBreakdown.usedFallbackPatch && pigScoreBreakdown.matchPatch && (
-                      <span className="text-gold-light ml-1" title={`Match played on patch ${pigScoreBreakdown.matchPatch}, but no data available for that patch. Using closest available patch data.`}>
+                      <span
+                        className="text-gold-light ml-1"
+                        title={`Match played on patch ${pigScoreBreakdown.matchPatch}, but no data available for that patch. Using closest available patch data.`}
+                      >
                         (match: {pigScoreBreakdown.matchPatch} ⚠)
                       </span>
                     )}
                   </p>
-                  
-                  {/* Penalties Grid */}
+
+                  {/* Component Scores Summary */}
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-2 text-center">
+                      <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Performance</div>
+                      <div
+                        className={clsx(
+                          'text-lg font-bold',
+                          pigScoreBreakdown.componentScores.performance >= 85
+                            ? 'text-accent-light'
+                            : pigScoreBreakdown.componentScores.performance >= 70
+                              ? 'text-gold-light'
+                              : 'text-negative'
+                        )}
+                      >
+                        {pigScoreBreakdown.componentScores.performance}
+                      </div>
+                    </div>
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-2 text-center">
+                      <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Build</div>
+                      <div
+                        className={clsx(
+                          'text-lg font-bold',
+                          pigScoreBreakdown.componentScores.build >= 85
+                            ? 'text-accent-light'
+                            : pigScoreBreakdown.componentScores.build >= 70
+                              ? 'text-gold-light'
+                              : 'text-negative'
+                        )}
+                      >
+                        {pigScoreBreakdown.componentScores.build}
+                      </div>
+                    </div>
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-2 text-center">
+                      <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">KDA</div>
+                      <div
+                        className={clsx(
+                          'text-lg font-bold',
+                          pigScoreBreakdown.componentScores.kda >= 85
+                            ? 'text-accent-light'
+                            : pigScoreBreakdown.componentScores.kda >= 70
+                              ? 'text-gold-light'
+                              : 'text-negative'
+                        )}
+                      >
+                        {pigScoreBreakdown.componentScores.kda}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Metrics Grid */}
                   <div className="space-y-2.5">
-                    {pigScoreBreakdown.penalties.map((p, idx) => {
-                      const isGood = p.penalty === 0
-                      const isBad = p.penalty >= p.maxPenalty * 0.5
+                    {pigScoreBreakdown.metrics.map((m, idx) => {
+                      const isGood = m.score >= 85
+                      const isBad = m.score < 50
                       const isModerate = !isGood && !isBad
-                      
+
                       return (
                         <div key={idx} className="flex items-center gap-3">
                           {/* Status indicator */}
-                          <div className={clsx(
-                            "w-1.5 h-1.5 rounded-full flex-shrink-0",
-                            isGood && "bg-accent-light",
-                            isModerate && "bg-gold-light",
-                            isBad && "bg-negative"
-                          )} />
-                          
+                          <div
+                            className={clsx(
+                              'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                              isGood && 'bg-accent-light',
+                              isModerate && 'bg-gold-light',
+                              isBad && 'bg-negative'
+                            )}
+                          />
+
                           {/* Stat name */}
-                          <span className="text-xs text-white w-36 flex-shrink-0">{p.name}</span>
-                          
+                          <span className="text-xs text-white w-36 flex-shrink-0">{m.name}</span>
+
                           {/* Progress bar */}
                           <div className="flex-1 h-1.5 bg-abyss-800 rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className={clsx(
-                                "h-full rounded-full transition-all",
-                                isGood && "bg-gradient-to-r from-accent-light/80 to-accent-light",
-                                isModerate && "bg-gradient-to-r from-gold-dark to-gold-light",
-                                isBad && "bg-gradient-to-r from-negative/80 to-negative"
+                                'h-full rounded-full transition-all',
+                                isGood && 'bg-gradient-to-r from-accent-light/80 to-accent-light',
+                                isModerate && 'bg-gradient-to-r from-gold-dark to-gold-light',
+                                isBad && 'bg-gradient-to-r from-negative/80 to-negative'
                               )}
-                              style={{ width: `${Math.max(5, 100 - (p.penalty / p.maxPenalty) * 100)}%` }}
+                              style={{ width: `${Math.max(5, m.score)}%` }}
                             />
                           </div>
-                          
-                          {/* Penalty value */}
-                          <span className={clsx(
-                            "text-xs font-mono w-12 text-right tabular-nums",
-                            isGood && "text-accent-light",
-                            isModerate && "text-gold-light",
-                            isBad && "text-negative"
-                          )}>
-                            {p.penalty === 0 ? 'MAX' : `-${p.penalty.toFixed(1)}`}
+
+                          {/* Score value */}
+                          <span
+                            className={clsx(
+                              'text-xs font-mono w-12 text-right tabular-nums',
+                              isGood && 'text-accent-light',
+                              isModerate && 'text-gold-light',
+                              isBad && 'text-negative'
+                            )}
+                          >
+                            {m.score.toFixed(0)}
                           </span>
                         </div>
                       )
@@ -997,13 +1163,304 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                   </div>
                 </div>
 
+                {/* Kill/Death Timeline */}
+                {(() => {
+                  const details = participantDetails.get(currentPuuid)
+                  const timeline = details?.kill_death_timeline
+                  const gameDurationSec = match.info.gameDuration
+
+                  if (!timeline || (timeline.kills.length === 0 && timeline.deaths.length === 0)) {
+                    return null
+                  }
+
+                  // combine all events into a sorted timeline
+                  const events: Array<{
+                    type: 'kill' | 'death' | 'assist'
+                    t: number
+                    gold?: number
+                    tf?: boolean
+                    pos?: number
+                    value?: number
+                  }> = [
+                    ...timeline.kills.map(k => ({ type: 'kill' as const, ...k })),
+                    ...timeline.deaths.map(d => ({ type: 'death' as const, ...d })),
+                  ].sort((a, b) => a.t - b.t)
+
+                  const formatTime = (secs: number) => {
+                    const mins = Math.floor(secs / 60)
+                    const s = secs % 60
+                    return `${mins}:${s.toString().padStart(2, '0')}`
+                  }
+
+                  return (
+                    <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-white">Kill/Death Timeline</h3>
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-accent-light"></span>
+                            <span className="text-text-muted">{timeline.kills.length} kills</span>
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-negative"></span>
+                            <span className="text-text-muted">{timeline.deaths.length} deaths</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quality Scores */}
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className="bg-abyss-800/50 rounded p-2">
+                          <div className="text-[10px] text-text-muted mb-1">Kill Quality</div>
+                          <div className="flex items-baseline gap-1.5">
+                            <span
+                              className={clsx(
+                                'text-lg font-bold tabular-nums',
+                                timeline.killScore >= 70
+                                  ? 'text-accent-light'
+                                  : timeline.killScore >= 50
+                                    ? 'text-gold-light'
+                                    : 'text-negative'
+                              )}
+                            >
+                              {timeline.killScore}
+                            </span>
+                            <span className="text-[10px] text-text-muted">/100</span>
+                          </div>
+                        </div>
+                        <div className="bg-abyss-800/50 rounded p-2">
+                          <div className="text-[10px] text-text-muted mb-1">Death Quality</div>
+                          <div className="flex items-baseline gap-1.5">
+                            <span
+                              className={clsx(
+                                'text-lg font-bold tabular-nums',
+                                timeline.deathScore >= 70
+                                  ? 'text-accent-light'
+                                  : timeline.deathScore >= 50
+                                    ? 'text-gold-light'
+                                    : 'text-negative'
+                              )}
+                            >
+                              {timeline.deathScore}
+                            </span>
+                            <span className="text-[10px] text-text-muted">/100</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Visual Timeline Bar */}
+                      <div className="relative h-8 bg-abyss-800 rounded-lg mb-3 overflow-visible">
+                        {/* Minute markers - major (labeled) and minor (unlabeled) */}
+                        {(() => {
+                          const gameMins = Math.ceil(gameDurationSec / 60)
+                          const markers: React.ReactNode[] = []
+
+                          // generate markers every minute
+                          for (let min = 0; min <= gameMins; min++) {
+                            const pct = ((min * 60) / gameDurationSec) * 100
+                            if (pct > 100) continue
+
+                            const isMajor = min % 5 === 0 // 0, 5, 10, 15, 20...
+
+                            markers.push(
+                              <div
+                                key={min}
+                                className={clsx(
+                                  'absolute',
+                                  isMajor
+                                    ? 'h-full border-l border-abyss-500'
+                                    : 'h-2/3 top-1/2 -translate-y-1/2 border-l border-abyss-600/50'
+                                )}
+                                style={{ left: `${pct}%` }}
+                              >
+                                {isMajor && (
+                                  <span className="absolute -bottom-4 left-0 -translate-x-1/2 text-[9px] text-text-muted tabular-nums">
+                                    {min}m
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          }
+
+                          return markers
+                        })()}
+
+                        {/* Event markers */}
+                        {events.map((event, idx) => {
+                          const leftPct = (event.t / gameDurationSec) * 100
+                          const isKill = event.type === 'kill'
+                          const value = event.value ?? 50
+
+                          // color based on value: high value = bright, low value = dim
+                          const getValueColor = (v: number, isKill: boolean) => {
+                            if (isKill) {
+                              return v >= 70 ? 'text-accent-light' : v >= 40 ? 'text-gold-light' : 'text-text-muted'
+                            } else {
+                              // for deaths, high value = good death (teamfight, low gold)
+                              return v >= 70 ? 'text-gold-light' : v >= 40 ? 'text-negative' : 'text-negative'
+                            }
+                          }
+
+                          return (
+                            <SimpleTooltip
+                              key={`${event.type}-${idx}`}
+                              content={
+                                <div className="text-xs min-w-[120px]">
+                                  <div
+                                    className={clsx(
+                                      'font-semibold mb-1.5 flex items-center justify-between',
+                                      isKill ? 'text-accent-light' : 'text-negative'
+                                    )}
+                                  >
+                                    <span>
+                                      {isKill ? 'Kill' : 'Death'} at {formatTime(event.t)}
+                                    </span>
+                                    <span
+                                      className={clsx(
+                                        'ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                        isKill
+                                          ? value >= 70
+                                            ? 'bg-accent-light/20'
+                                            : value >= 40
+                                              ? 'bg-gold-light/20'
+                                              : 'bg-abyss-600'
+                                          : value >= 70
+                                            ? 'bg-gold-light/20'
+                                            : 'bg-negative/20',
+                                        getValueColor(value, isKill)
+                                      )}
+                                    >
+                                      {value}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    {event.gold !== undefined && (
+                                      <div className="text-text-muted flex justify-between">
+                                        <span>{isKill ? 'Victim gold:' : 'Your gold:'}</span>
+                                        <span className="text-gold-light">{event.gold.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {event.pos !== undefined && (
+                                      <div className="text-text-muted flex justify-between">
+                                        <span>Position:</span>
+                                        <span
+                                          className={clsx(
+                                            event.pos >= 60
+                                              ? 'text-accent-light'
+                                              : event.pos <= 40
+                                                ? 'text-negative'
+                                                : 'text-text-muted'
+                                          )}
+                                        >
+                                          {event.pos >= 60 ? 'Pushing' : event.pos <= 40 ? 'At base' : 'Mid-lane'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {event.tf && (
+                                      <div className="text-blue-400">Teamfight {isKill ? 'kill' : 'death'}</div>
+                                    )}
+                                    {!isKill && event.gold !== undefined && event.gold > 1500 && (
+                                      <div className="text-negative text-[10px]">High gold at death</div>
+                                    )}
+                                  </div>
+                                </div>
+                              }
+                            >
+                              <div
+                                className="absolute top-1/2 -translate-y-1/2 cursor-pointer transition-transform hover:scale-125 z-10"
+                                style={{ left: `${leftPct}%` }}
+                              >
+                                <div
+                                  className={clsx(
+                                    'w-3 h-3 rounded-full border-2 -ml-1.5',
+                                    isKill
+                                      ? 'bg-accent-light border-accent-light/50'
+                                      : 'bg-negative border-negative/50',
+                                    event.tf && 'ring-2 ring-blue-400/50'
+                                  )}
+                                />
+                              </div>
+                            </SimpleTooltip>
+                          )
+                        })}
+                      </div>
+
+                      {/* Event List */}
+                      <div className="space-y-1.5 mt-6 max-h-32 overflow-y-auto">
+                        {events.map((event, idx) => {
+                          const isKill = event.type === 'kill'
+                          const value = event.value ?? 50
+                          const pos = event.pos
+                          return (
+                            <div key={`list-${event.type}-${idx}`} className="flex items-center gap-2 text-xs">
+                              <span className="text-text-muted w-10 text-right tabular-nums">
+                                {formatTime(event.t)}
+                              </span>
+                              <span
+                                className={clsx('w-1.5 h-1.5 rounded-full', isKill ? 'bg-accent-light' : 'bg-negative')}
+                              />
+                              <span
+                                className={clsx('font-medium w-10', isKill ? 'text-accent-light' : 'text-negative')}
+                              >
+                                {isKill ? 'Kill' : 'Death'}
+                              </span>
+                              <span
+                                className={clsx(
+                                  'w-8 text-center tabular-nums font-medium rounded px-1',
+                                  isKill
+                                    ? value >= 70
+                                      ? 'text-accent-light bg-accent-light/10'
+                                      : value >= 40
+                                        ? 'text-gold-light bg-gold-light/10'
+                                        : 'text-text-muted bg-abyss-600/50'
+                                    : value >= 70
+                                      ? 'text-gold-light bg-gold-light/10'
+                                      : 'text-negative bg-negative/10'
+                                )}
+                              >
+                                {value}
+                              </span>
+                              {event.gold !== undefined && event.gold > 0 && (
+                                <span className="text-text-muted">
+                                  <span className="text-gold-light">{event.gold.toLocaleString()}g</span>
+                                </span>
+                              )}
+                              {pos !== undefined && (
+                                <span
+                                  className={clsx(
+                                    'px-1.5 py-0.5 text-[10px] rounded',
+                                    pos >= 60
+                                      ? 'bg-accent-light/20 text-accent-light'
+                                      : pos <= 40
+                                        ? 'bg-negative/20 text-negative'
+                                        : 'bg-abyss-600/50 text-text-muted'
+                                  )}
+                                >
+                                  {pos >= 60 ? 'PUSH' : pos <= 40 ? 'BASE' : 'MID'}
+                                </span>
+                              )}
+                              {event.tf && (
+                                <span className="px-1.5 py-0.5 text-[10px] bg-blue-500/20 text-blue-400 rounded">
+                                  TF
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Detailed Stats Comparison */}
                 <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
                   <h3 className="text-sm font-semibold text-white mb-4">Stats vs Champion Average</h3>
                   <div className="grid grid-cols-2 gap-3">
                     {/* Damage to Champions */}
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
-                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Damage to Champions /min</div>
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">
+                        Damage to Champions /min
+                      </div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.damageToChampionsPerMin.toFixed(0)}
@@ -1013,22 +1470,30 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         </span>
                       </div>
                       {(() => {
-                        const p = pigScoreBreakdown.penalties.find(p => p.name === 'Damage to Champions')
-                        if (!p?.percentOfAvg) return null
+                        const m = pigScoreBreakdown.metrics.find(m => m.name === 'Damage to Champions')
+                        if (!m?.percentOfAvg) return null
                         return (
-                          <div className={clsx(
-                            "text-xs mt-1 font-medium",
-                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-gold-light" : "text-negative"
-                          )}>
-                            {p.percentOfAvg.toFixed(0)}% of average
+                          <div
+                            className={clsx(
+                              'text-xs mt-1 font-medium',
+                              m.percentOfAvg >= 100
+                                ? 'text-accent-light'
+                                : m.percentOfAvg >= 80
+                                  ? 'text-gold-light'
+                                  : 'text-negative'
+                            )}
+                          >
+                            {m.percentOfAvg.toFixed(0)}% of average
                           </div>
                         )
                       })()}
                     </div>
-                    
+
                     {/* Total Damage */}
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
-                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Total Damage /min</div>
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">
+                        Total Damage /min
+                      </div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.totalDamagePerMin.toFixed(0)}
@@ -1038,22 +1503,30 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         </span>
                       </div>
                       {(() => {
-                        const p = pigScoreBreakdown.penalties.find(p => p.name === 'Total Damage')
-                        if (!p?.percentOfAvg) return null
+                        const m = pigScoreBreakdown.metrics.find(m => m.name === 'Total Damage')
+                        if (!m?.percentOfAvg) return null
                         return (
-                          <div className={clsx(
-                            "text-xs mt-1 font-medium",
-                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-gold-light" : "text-negative"
-                          )}>
-                            {p.percentOfAvg.toFixed(0)}% of average
+                          <div
+                            className={clsx(
+                              'text-xs mt-1 font-medium',
+                              m.percentOfAvg >= 100
+                                ? 'text-accent-light'
+                                : m.percentOfAvg >= 80
+                                  ? 'text-gold-light'
+                                  : 'text-negative'
+                            )}
+                          >
+                            {m.percentOfAvg.toFixed(0)}% of average
                           </div>
                         )
                       })()}
                     </div>
-                    
+
                     {/* Healing/Shielding */}
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
-                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Healing + Shielding /min</div>
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">
+                        Healing + Shielding /min
+                      </div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.healingShieldingPerMin.toFixed(0)}
@@ -1063,19 +1536,25 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         </span>
                       </div>
                       {(() => {
-                        const p = pigScoreBreakdown.penalties.find(p => p.name === 'Healing/Shielding')
-                        if (!p?.percentOfAvg) return null
+                        const m = pigScoreBreakdown.metrics.find(m => m.name === 'Healing/Shielding')
+                        if (!m?.percentOfAvg) return null
                         return (
-                          <div className={clsx(
-                            "text-xs mt-1 font-medium",
-                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-gold-light" : "text-negative"
-                          )}>
-                            {p.percentOfAvg.toFixed(0)}% of average
+                          <div
+                            className={clsx(
+                              'text-xs mt-1 font-medium',
+                              m.percentOfAvg >= 100
+                                ? 'text-accent-light'
+                                : m.percentOfAvg >= 80
+                                  ? 'text-gold-light'
+                                  : 'text-negative'
+                            )}
+                          >
+                            {m.percentOfAvg.toFixed(0)}% of average
                           </div>
                         )
                       })()}
                     </div>
-                    
+
                     {/* CC Time */}
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
                       <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">CC Time /min</div>
@@ -1088,39 +1567,47 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         </span>
                       </div>
                       {(() => {
-                        const p = pigScoreBreakdown.penalties.find(p => p.name === 'CC Time')
-                        if (!p?.percentOfAvg) return null
+                        const m = pigScoreBreakdown.metrics.find(m => m.name === 'CC Time')
+                        if (!m?.percentOfAvg) return null
                         return (
-                          <div className={clsx(
-                            "text-xs mt-1 font-medium",
-                            p.percentOfAvg >= 100 ? "text-accent-light" : p.percentOfAvg >= 80 ? "text-gold-light" : "text-negative"
-                          )}>
-                            {p.percentOfAvg.toFixed(0)}% of average
+                          <div
+                            className={clsx(
+                              'text-xs mt-1 font-medium',
+                              m.percentOfAvg >= 100
+                                ? 'text-accent-light'
+                                : m.percentOfAvg >= 80
+                                  ? 'text-gold-light'
+                                  : 'text-negative'
+                            )}
+                          >
+                            {m.percentOfAvg.toFixed(0)}% of average
                           </div>
                         )
                       })()}
                     </div>
-                    
+
                     {/* Deaths per Min */}
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3 col-span-2">
-                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">Deaths per Minute</div>
+                      <div className="text-[11px] text-text-muted mb-1.5 uppercase tracking-wide">
+                        Deaths per Minute
+                      </div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-lg font-bold text-white tabular-nums">
                           {pigScoreBreakdown.playerStats.deathsPerMin.toFixed(2)}
                         </span>
-                        <span className="text-xs text-text-muted">
-                          (optimal: 0.5-0.7)
-                        </span>
+                        <span className="text-xs text-text-muted">(optimal: 0.5-0.7)</span>
                       </div>
                       {(() => {
                         const dpm = pigScoreBreakdown.playerStats.deathsPerMin
                         const isOptimal = dpm >= 0.5 && dpm <= 0.7
                         const isTooFew = dpm < 0.5
                         return (
-                          <div className={clsx(
-                            "text-xs mt-1 font-medium",
-                            isOptimal ? "text-accent-light" : isTooFew ? "text-gold-light" : "text-negative"
-                          )}>
+                          <div
+                            className={clsx(
+                              'text-xs mt-1 font-medium',
+                              isOptimal ? 'text-accent-light' : isTooFew ? 'text-gold-light' : 'text-negative'
+                            )}
+                          >
                             {isOptimal ? 'Optimal engagement' : isTooFew ? 'Could engage more' : 'Too many deaths'}
                           </div>
                         )
@@ -1138,16 +1625,20 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                         const isGood = item.reason === 'optimal' || item.reason === 'boots'
                         const isBad = item.reason === 'off-meta' || item.penalty >= 2
                         const slotNames = ['1st Item', '2nd Item', '3rd Item']
-                        
+
                         return (
                           <div key={idx} className="flex items-center gap-3 py-1">
-                            <div className={clsx(
-                              "w-1.5 h-1.5 rounded-full flex-shrink-0",
-                              isGood && "bg-accent-light",
-                              !isGood && !isBad && "bg-gold-light",
-                              isBad && "bg-negative"
-                            )} />
-                            <span className="text-xs text-text-muted w-16 flex-shrink-0">{slotNames[item.slot] || `Slot ${item.slot + 1}`}</span>
+                            <div
+                              className={clsx(
+                                'w-1.5 h-1.5 rounded-full flex-shrink-0',
+                                isGood && 'bg-accent-light',
+                                !isGood && !isBad && 'bg-gold-light',
+                                isBad && 'bg-negative'
+                              )}
+                            />
+                            <span className="text-xs text-text-muted w-16 flex-shrink-0">
+                              {slotNames[item.slot] || `Slot ${item.slot + 1}`}
+                            </span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 {item.itemId > 0 && (
@@ -1160,14 +1651,21 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                                     unoptimized
                                   />
                                 )}
-                                <span className={clsx(
-                                  "text-xs",
-                                  isGood ? "text-accent-light" : isBad ? "text-negative" : "text-gold-light"
-                                )}>
-                                  {item.reason === 'optimal' ? 'Top 5 choice' : 
-                                   item.reason === 'boots' ? 'Boots (no penalty)' :
-                                   item.reason === 'suboptimal' ? `Suboptimal (-${item.penalty.toFixed(1)})` :
-                                   item.reason === 'off-meta' ? 'Off-meta pick' : 'Unknown item'}
+                                <span
+                                  className={clsx(
+                                    'text-xs',
+                                    isGood ? 'text-accent-light' : isBad ? 'text-negative' : 'text-gold-light'
+                                  )}
+                                >
+                                  {item.reason === 'optimal'
+                                    ? 'Top 5 choice'
+                                    : item.reason === 'boots'
+                                      ? 'Boots (no penalty)'
+                                      : item.reason === 'suboptimal'
+                                        ? `Suboptimal (-${item.penalty.toFixed(1)})`
+                                        : item.reason === 'off-meta'
+                                          ? 'Off-meta pick'
+                                          : 'Unknown item'}
                                 </span>
                               </div>
                               {item.playerWinrate !== undefined && item.topWinrate !== undefined && (
@@ -1187,36 +1685,42 @@ export default function MatchDetails({ match, currentPuuid, ddragonVersion, regi
                 {pigScoreBreakdown.scoringInfo && (
                   <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
                     <h3 className="text-sm font-semibold text-white mb-2">How PIG Score Works</h3>
-                    <p className="text-xs text-text-muted mb-3">
-                      {pigScoreBreakdown.scoringInfo.description}
-                    </p>
+                    <p className="text-xs text-text-muted mb-3">{pigScoreBreakdown.scoringInfo.description}</p>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div className="bg-abyss-800/50 rounded p-2">
                         <div className="text-text-muted mb-1">Target Performance</div>
                         <div className="text-white font-medium">Top ~16% (mean + 1σ)</div>
                       </div>
                       <div className="bg-abyss-800/50 rounded p-2">
-                        <div className="text-text-muted mb-1">Average = Penalty</div>
-                        <div className="text-gold-light font-medium">25% of max</div>
+                        <div className="text-text-muted mb-1">Average = Score</div>
+                        <div className="text-gold-light font-medium">70 points</div>
                       </div>
                     </div>
-                    
+
                     {/* Z-Score details for stats that have them */}
-                    {pigScoreBreakdown.penalties.some(p => p.zScore !== undefined) && (
+                    {pigScoreBreakdown.metrics.some(m => m.zScore !== undefined) && (
                       <div className="mt-3 pt-3 border-t border-abyss-600">
-                        <div className="text-[11px] text-text-muted mb-2 uppercase tracking-wide">Your Z-Scores (vs other players)</div>
+                        <div className="text-[11px] text-text-muted mb-2 uppercase tracking-wide">
+                          Your Z-Scores (vs other players)
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
-                          {pigScoreBreakdown.penalties
-                            .filter(p => p.zScore !== undefined)
-                            .map((p, idx) => (
+                          {pigScoreBreakdown.metrics
+                            .filter(m => m.zScore !== undefined)
+                            .map((m, idx) => (
                               <div key={idx} className="flex items-center justify-between text-xs">
-                                <span className="text-text-muted">{p.name}</span>
-                                <span className={clsx(
-                                  "font-mono tabular-nums",
-                                  (p.zScore ?? 0) >= 1 ? "text-accent-light" : 
-                                  (p.zScore ?? 0) >= 0 ? "text-gold-light" : "text-negative"
-                                )}>
-                                  {(p.zScore ?? 0) >= 0 ? '+' : ''}{p.zScore?.toFixed(2)}σ
+                                <span className="text-text-muted">{m.name}</span>
+                                <span
+                                  className={clsx(
+                                    'font-mono tabular-nums',
+                                    (m.zScore ?? 0) >= 1
+                                      ? 'text-accent-light'
+                                      : (m.zScore ?? 0) >= 0
+                                        ? 'text-gold-light'
+                                        : 'text-negative'
+                                  )}
+                                >
+                                  {(m.zScore ?? 0) >= 0 ? '+' : ''}
+                                  {m.zScore?.toFixed(2)}σ
                                 </span>
                               </div>
                             ))}

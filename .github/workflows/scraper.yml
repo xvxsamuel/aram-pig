@@ -97,16 +97,16 @@ jobs:
           echo "SCRAPER_THROTTLE=${SCRAPER_THROTTLE}"
           echo "Time: $(date -u)"
           echo "========================================"
-          
+
           # Run scraper with timeout
           timeout ${DURATION}m npm run scraper || EXIT_CODE=$?
-          
+
           if [ "${EXIT_CODE:-0}" -eq 124 ]; then
             echo "Scraper stopped by timeout (expected behavior)"
           elif [ "${EXIT_CODE:-0}" -ne 0 ]; then
             echo "Scraper exited with code $EXIT_CODE"
           fi
-          
+
           echo "========================================"
           echo "Scraper finished at $(date -u)"
           echo "========================================"
@@ -133,7 +133,7 @@ jobs:
           echo "========================================"
           echo "SCRAPER RUN SUMMARY"
           echo "========================================"
-          
+
           # Extract total matches from the last summary in logs (grep from npm output)
           echo ""
           echo "Match Statistics:"
@@ -141,7 +141,7 @@ jobs:
             MATCH_COUNT=$(cat scripts/match-cache.json | jq 'length' 2>/dev/null || echo "0")
             echo "  Known matches in cache: $MATCH_COUNT"
           fi
-          
+
           echo ""
           echo "State by Region:"
           if [ -f scripts/scraper-state.json ]; then
@@ -151,6 +151,6 @@ jobs:
           else
             echo "  WARNING: No scraper state file found"
           fi
-          
+
           echo ""
           echo "========================================"

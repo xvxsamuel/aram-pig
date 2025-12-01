@@ -22,20 +22,20 @@ import Tooltip from '@/components/ui/Tooltip'
 // preload images for MatchDetails on hover
 function preloadMatchImages(match: MatchData, ddragonVersion: string) {
   const urls: string[] = []
-  
+
   for (const p of match.info.participants) {
     // champion image
     urls.push(getChampionImageUrl(p.championName, ddragonVersion))
-    
+
     // summoner spells
     urls.push(getSummonerSpellUrl(p.summoner1Id, ddragonVersion))
     urls.push(getSummonerSpellUrl(p.summoner2Id, ddragonVersion))
-    
+
     // keystone rune
     if (p.perks?.styles?.[0]?.selections?.[0]?.perk) {
       urls.push(getRuneImageUrl(p.perks.styles[0].selections[0].perk))
     }
-    
+
     // items
     const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
     for (const item of items) {
@@ -44,7 +44,7 @@ function preloadMatchImages(match: MatchData, ddragonVersion: string) {
       }
     }
   }
-  
+
   // use link preload for better browser caching
   for (const url of urls) {
     const link = document.createElement('link')
@@ -81,16 +81,15 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
     }
   }, [match, ddragonVersion])
 
-  const participant = match.info.participants.find((p) => p.puuid === puuid)
+  const participant = match.info.participants.find(p => p.puuid === puuid)
   if (!participant) return null
 
   // check if game was a remake
   const isRemake = participant.gameEndedInEarlySurrender
   const isWin = participant.win
-  const kda = participant.deaths === 0 
-    ? "Perfect"
-    : ((participant.kills + participant.assists) / participant.deaths).toFixed(2)
-  
+  const kda =
+    participant.deaths === 0 ? 'Perfect' : ((participant.kills + participant.assists) / participant.deaths).toFixed(2)
+
   const gameDurationMinutes = Math.floor(match.info.gameDuration / 60)
   const gameDurationSeconds = match.info.gameDuration % 60
   const gameDate = new Date(match.info.gameCreation)
@@ -104,11 +103,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
   const matchLabel = `Match ${match.metadata.matchId.split('_')[1]}, ${participant.championName}, ${isRemake ? 'Remake' : isWin ? 'Victory' : 'Defeat'}, ${participant.kills}/${participant.deaths}/${participant.assists}`
 
   return (
-    <li 
-      role="listitem"
-      aria-label={matchLabel}
-      className="relative rounded-lg p-px"
-    >
+    <li role="listitem" aria-label={matchLabel} className="relative rounded-lg p-px">
       {/* animated gradient border */}
       <motion.div
         className="absolute inset-0 rounded-lg bg-gradient-to-b from-gold-light to-gold-dark"
@@ -116,10 +111,10 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
         animate={{ opacity: showBorder ? 1 : 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
       />
-      
+
       {/* content wrapper */}
       <div className="relative rounded-lg overflow-hidden bg-abyss-600">
-        <div 
+        <div
           className="group flex cursor-pointer"
           onClick={() => {
             if (isExpanded) {
@@ -135,58 +130,46 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
           aria-expanded={isExpanded}
           aria-label={`${isExpanded ? 'Collapse' : 'Expand'} match details`}
         >
-        {/* main content */}
-        <div
-          className={clsx(
-            "flex-1",
-            isExpanded ? "rounded-tl-lg" : "rounded-l-lg",
-            isRemake
-              ? "bg-remake"
-              : isWin 
-                ? "bg-win" 
-                : "bg-loss"
-          )}
-        >
-          <div className="flex items-center justify-between px-4 py-2 min-h-[84px]">
-            {/* game result & info */}
-            <div className="flex flex-col justify-center gap-2.5 w-16 flex-shrink-0">
-              <div>
-                <div className={clsx(
-                  "text-sm font-bold tracking-wide",
-                  isRemake 
-                    ? "text-text-muted"
-                    : isWin ? "text-victory" : "text-defeat"
-                )}>
-                  {isRemake ? "REMAKE" : isWin ? "VICTORY" : "DEFEAT"}
+          {/* main content */}
+          <div
+            className={clsx(
+              'flex-1',
+              isExpanded ? 'rounded-tl-lg' : 'rounded-l-lg',
+              isRemake ? 'bg-remake' : isWin ? 'bg-win' : 'bg-loss'
+            )}
+          >
+            <div className="flex items-center justify-between px-4 py-2 min-h-[84px]">
+              {/* game result & info */}
+              <div className="flex flex-col justify-center gap-2.5 w-16 flex-shrink-0">
+                <div>
+                  <div
+                    className={clsx(
+                      'text-sm font-bold tracking-wide',
+                      isRemake ? 'text-text-muted' : isWin ? 'text-victory' : 'text-defeat'
+                    )}
+                  >
+                    {isRemake ? 'REMAKE' : isWin ? 'VICTORY' : 'DEFEAT'}
+                  </div>
+                  <div className="text-xs text-text-muted">{timeAgo}</div>
                 </div>
                 <div className="text-xs text-text-muted">
-                  {timeAgo}
+                  {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, '0')}
                 </div>
               </div>
-              <div className="text-xs text-text-muted">
-                {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, "0")}
-              </div>
-            </div>
 
-            {/* champion icon with spells & runes */}
-            {(() => {
-              const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
-              const labels: string[] = participant.labels || []
-              const hasLabels = labels.length > 0
-              
-              return (
-                <div className={clsx(
-                  "flex gap-1 flex-shrink-0",
-                  hasLabels ? "items-end" : "items-center"
-                )}>
+              {/* champion icon with spells & runes */}
+              {(() => {
+                const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
+                const labels: string[] = participant.labels || []
+                const hasLabels = labels.length > 0
+
+                return (
+                  <div className={clsx('flex gap-1 flex-shrink-0', hasLabels ? 'items-end' : 'items-center')}>
                     {/* champion icon column w/ pig score */}
-                    <div className={clsx(
-                      "flex flex-col items-center w-[54px]",
-                      hasLabels ? "self-stretch" : "gap-1"
-                    )}>
-                      <Link 
+                    <div className={clsx('flex flex-col items-center w-[54px]', hasLabels ? 'self-stretch' : 'gap-1')}>
+                      <Link
                         href={`/champions/${getChampionUrlName(participant.championName, championNames)}`}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
                       >
                         <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg">
                           <div className="relative w-12 h-12 rounded-[calc(0.5rem-1px)] overflow-hidden bg-abyss-800">
@@ -207,14 +190,11 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                           </div>
                         </div>
                       </Link>
-                      
+
                       {hasPigScore && (
-                        <div className={clsx(
-                          "flex flex-col items-center w-full",
-                          hasLabels && "mt-auto"
-                        )}>
+                        <div className={clsx('flex flex-col items-center w-full', hasLabels && 'mt-auto')}>
                           <button
-                            onClick={(e) => {
+                            onClick={e => {
                               e.stopPropagation()
                               setSelectedTab('performance')
                               setIsExpanded(true)
@@ -231,12 +211,9 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                         </div>
                       )}
                     </div>
-                    
+
                     {/* spells & runes */}
-                    <div className={clsx(
-                      "flex gap-1",
-                      hasLabels ? "items-end" : "items-center"
-                    )}>
+                    <div className={clsx('flex gap-1', hasLabels ? 'items-end' : 'items-center')}>
                       <div className="flex flex-col gap-0.5">
                         <Tooltip id={participant.summoner1Id} type="summoner-spell">
                           <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
@@ -263,7 +240,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                           </div>
                         </Tooltip>
                       </div>
-                      
+
                       <div className="flex flex-col gap-0.5">
                         {participant.perks?.styles?.[0]?.selections?.[0]?.perk && (
                           <Tooltip id={participant.perks.styles[0].selections[0].perk} type="rune">
@@ -295,7 +272,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                         )}
                       </div>
                     </div>
-                    
+
                     {hasLabels && (
                       <div className="flex items-end gap-0.5 self-stretch flex-wrap">
                         {labels.map((label, idx) => (
@@ -312,22 +289,16 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 )
               })()}
 
-            {/* kda */}
-            <div className="flex flex-col justify-center items-center flex-shrink-0">
+              {/* kda */}
+              <div className="flex flex-col justify-center items-center flex-shrink-0">
                 <div className="flex items-baseline gap-0.5">
-                  <span className="text-lg font-bold text-white tabular-nums">
-                    {participant.kills}
-                  </span>
+                  <span className="text-lg font-bold text-white tabular-nums">{participant.kills}</span>
                   <span className="text-text-muted text-sm">/</span>
-                  <span className="text-lg font-bold text-negative tabular-nums">
-                    {participant.deaths}
-                  </span>
+                  <span className="text-lg font-bold text-negative tabular-nums">{participant.deaths}</span>
                   <span className="text-text-muted text-sm">/</span>
-                  <span className="text-lg font-bold text-white tabular-nums">
-                    {participant.assists}
-                  </span>
+                  <span className="text-lg font-bold text-white tabular-nums">{participant.assists}</span>
                 </div>
-                <div 
+                <div
                   className="text-xs font-semibold"
                   style={{ color: kda === 'Perfect' ? getKdaColor(99) : getKdaColor(Number(kda)) }}
                 >
@@ -336,170 +307,153 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 <div className="text-xs text-text-muted">
                   {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
                 </div>
-            </div>
-
-            {/* items */}
-            <div className="flex-shrink-0 flex justify-center items-center">
-              <div className="grid grid-cols-3 grid-rows-2 gap-0.5">
-                {[
-                  participant.item0,
-                  participant.item1,
-                  participant.item2,
-                  participant.item3,
-                  participant.item4,
-                  participant.item5,
-                ].map((itemId, idx) => (
-                  itemId > 0 ? (
-                    <Tooltip key={idx} id={itemId} type="item">
-                      <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
-                        <Image
-                          src={getItemImageUrl(itemId, ddragonVersion)}
-                          alt={`Item ${itemId}`}
-                          width={28}
-                          height={28}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    </Tooltip>
-                  ) : (
-                    <div key={idx} className="w-7 h-7 rounded bg-abyss-800/50 border border-gold-dark/50" />
-                  )
-                ))}
-              </div>
-            </div>
-
-            {/* teams - hidden on small screens */}
-            <div className="hidden lg:flex gap-1.5 flex-shrink-0">
-              <div className="flex flex-col gap-0.5 w-24">
-                {team1.map((p, idx) => {
-                  const playerName = p.riotIdGameName || p.summonerName
-                  const playerTag = p.riotIdTagline || "EUW"
-                  const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
-                  const isCurrentUser = p.puuid === puuid
-                  
-                  return (
-                    <div key={idx} className="flex items-center gap-1">
-                      <div
-                        className={clsx(
-                          "w-4 h-4 rounded flex-shrink-0",
-                          isCurrentUser && "ring-1 ring-gold-light"
-                        )}
-                      >
-                        <Image
-                          src={getChampionImageUrl(p.championName, ddragonVersion)}
-                          alt={p.championName}
-                          width={16}
-                          height={16}
-                          className="w-full h-full object-cover rounded"
-                          unoptimized
-                        />
-                      </div>
-                      {isCurrentUser ? (
-                        <span
-                          className="text-xs truncate min-w-0 flex-1 text-white font-medium"
-                          title={playerName}
-                        >
-                          {playerName}
-                        </span>
-                      ) : (
-                        <Link 
-                          href={profileUrl}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-xs truncate min-w-0 flex-1 transition-colors text-text-muted font-normal hover:text-gold-light"
-                          title={playerName}
-                        >
-                          {playerName}
-                        </Link>
-                      )}
-                    </div>
-                  )
-                })}
               </div>
 
-              <div className="flex flex-col gap-0.5 w-24">
-                {team2.map((p, idx) => {
-                  const playerName = p.riotIdGameName || p.summonerName
-                  const playerTag = p.riotIdTagline || "EUW"
-                  const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
-                  const isCurrentUser = p.puuid === puuid
-                  
-                  return (
-                    <div key={idx} className="flex items-center gap-1">
-                      <div
-                        className={clsx(
-                          "w-4 h-4 rounded flex-shrink-0",
-                          isCurrentUser && "ring-1 ring-gold-light"
+              {/* items */}
+              <div className="flex-shrink-0 flex justify-center items-center">
+                <div className="grid grid-cols-3 grid-rows-2 gap-0.5">
+                  {[
+                    participant.item0,
+                    participant.item1,
+                    participant.item2,
+                    participant.item3,
+                    participant.item4,
+                    participant.item5,
+                  ].map((itemId, idx) =>
+                    itemId > 0 ? (
+                      <Tooltip key={idx} id={itemId} type="item">
+                        <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
+                          <Image
+                            src={getItemImageUrl(itemId, ddragonVersion)}
+                            alt={`Item ${itemId}`}
+                            width={28}
+                            height={28}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      </Tooltip>
+                    ) : (
+                      <div key={idx} className="w-7 h-7 rounded bg-abyss-800/50 border border-gold-dark/50" />
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* teams - hidden on small screens */}
+              <div className="hidden lg:flex gap-1.5 flex-shrink-0">
+                <div className="flex flex-col gap-0.5 w-24">
+                  {team1.map((p, idx) => {
+                    const playerName = p.riotIdGameName || p.summonerName
+                    const playerTag = p.riotIdTagline || 'EUW'
+                    const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
+                    const isCurrentUser = p.puuid === puuid
+
+                    return (
+                      <div key={idx} className="flex items-center gap-1">
+                        <div
+                          className={clsx('w-4 h-4 rounded flex-shrink-0', isCurrentUser && 'ring-1 ring-gold-light')}
+                        >
+                          <Image
+                            src={getChampionImageUrl(p.championName, ddragonVersion)}
+                            alt={p.championName}
+                            width={16}
+                            height={16}
+                            className="w-full h-full object-cover rounded"
+                            unoptimized
+                          />
+                        </div>
+                        {isCurrentUser ? (
+                          <span className="text-xs truncate min-w-0 flex-1 text-white font-medium" title={playerName}>
+                            {playerName}
+                          </span>
+                        ) : (
+                          <Link
+                            href={profileUrl}
+                            onClick={e => e.stopPropagation()}
+                            className="text-xs truncate min-w-0 flex-1 transition-colors text-text-muted font-normal hover:text-gold-light"
+                            title={playerName}
+                          >
+                            {playerName}
+                          </Link>
                         )}
-                      >
-                        <Image
-                          src={getChampionImageUrl(p.championName, ddragonVersion)}
-                          alt={p.championName}
-                          width={16}
-                          height={16}
-                          className="w-full h-full object-cover rounded"
-                          unoptimized
-                        />
                       </div>
-                      {isCurrentUser ? (
-                        <span
-                          className="text-xs truncate min-w-0 flex-1 text-white font-medium"
-                          title={playerName}
+                    )
+                  })}
+                </div>
+
+                <div className="flex flex-col gap-0.5 w-24">
+                  {team2.map((p, idx) => {
+                    const playerName = p.riotIdGameName || p.summonerName
+                    const playerTag = p.riotIdTagline || 'EUW'
+                    const profileUrl = `/${region}/${encodeURIComponent(playerName)}-${encodeURIComponent(playerTag)}`
+                    const isCurrentUser = p.puuid === puuid
+
+                    return (
+                      <div key={idx} className="flex items-center gap-1">
+                        <div
+                          className={clsx('w-4 h-4 rounded flex-shrink-0', isCurrentUser && 'ring-1 ring-gold-light')}
                         >
-                          {playerName}
-                        </span>
-                      ) : (
-                        <Link 
-                          href={profileUrl}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-xs truncate min-w-0 flex-1 transition-colors text-text-muted font-normal hover:text-gold-light"
-                          title={playerName}
-                        >
-                          {playerName}
-                        </Link>
-                      )}
-                    </div>
-                  )
-                })}
+                          <Image
+                            src={getChampionImageUrl(p.championName, ddragonVersion)}
+                            alt={p.championName}
+                            width={16}
+                            height={16}
+                            className="w-full h-full object-cover rounded"
+                            unoptimized
+                          />
+                        </div>
+                        {isCurrentUser ? (
+                          <span className="text-xs truncate min-w-0 flex-1 text-white font-medium" title={playerName}>
+                            {playerName}
+                          </span>
+                        ) : (
+                          <Link
+                            href={profileUrl}
+                            onClick={e => e.stopPropagation()}
+                            className="text-xs truncate min-w-0 flex-1 transition-colors text-text-muted font-normal hover:text-gold-light"
+                            title={playerName}
+                          >
+                            {playerName}
+                          </Link>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* expand button */}
+          <div
+            className={clsx(
+              'flex items-end justify-center w-10 pb-2',
+              isExpanded ? 'rounded-tr-lg' : 'rounded-r-lg',
+              isRemake ? 'bg-remake' : isWin ? 'bg-win-light' : 'bg-loss-light'
+            )}
+          >
+            <div className="gold-border-group p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
+              <div className="relative z-10 w-6 h-6 rounded-full bg-abyss-700 flex items-center justify-center">
+                <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.1 }}>
+                  <ChevronDownIcon className="w-4 h-4 text-gold-light" />
+                </motion.div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* expand button */}
-        <div className={clsx(
-          "flex items-end justify-center w-10 pb-2",
-          isExpanded ? "rounded-tr-lg" : "rounded-r-lg",
-          isRemake
-            ? "bg-remake"
-            : isWin 
-              ? "bg-win-light" 
-              : "bg-loss-light"
-        )}>
-          <div className="gold-border-group p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
-            <div className="relative z-10 w-6 h-6 rounded-full bg-abyss-700 flex items-center justify-center">
-              <motion.div
-                animate={{ rotate: isExpanded ? 180 : 0 }}
-                transition={{ duration: 0.1 }}
-              >
-                <ChevronDownIcon className="w-4 h-4 text-gold-light" />
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* detailed match breakdown */}
-      {isExpanded && (
-        <MatchDetails 
-          match={match} 
-          currentPuuid={puuid} 
-          ddragonVersion={ddragonVersion}
-          region={region}
-          defaultTab={selectedTab}
-          onTabChange={setSelectedTab}
-        />
-      )}
+        {/* detailed match breakdown */}
+        {isExpanded && (
+          <MatchDetails
+            match={match}
+            currentPuuid={puuid}
+            ddragonVersion={ddragonVersion}
+            region={region}
+            defaultTab={selectedTab}
+            onTabChange={setSelectedTab}
+          />
+        )}
       </div>
     </li>
   )
@@ -515,5 +469,5 @@ function getTimeAgo(date: Date): string {
   if (diffDays > 0) return `${diffDays}d ago`
   if (diffHours > 0) return `${diffHours}h ago`
   if (diffMins > 0) return `${diffMins}m ago`
-  return "Just now"
+  return 'Just now'
 }

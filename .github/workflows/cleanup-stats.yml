@@ -18,21 +18,21 @@ jobs:
           # remove trailing slash from URL if present
           SITE_URL="${{ secrets.NEXT_PUBLIC_SITE_URL }}"
           SITE_URL="${SITE_URL%/}"
-          
+
           # Use --location-trusted to follow redirects while preserving auth header
           response=$(curl -s -w "\n%{http_code}" --location-trusted -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${SITE_URL}/api/cleanup-champion-stats")
-          
+
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
-          
+
           echo "Response: $body"
           echo "HTTP Status: $http_code"
-          
+
           if [ "$http_code" -ne 200 ]; then
             echo "Cleanup failed with status $http_code"
             exit 1
           fi
-          
+
           echo "Cleanup completed successfully"

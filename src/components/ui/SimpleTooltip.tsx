@@ -10,7 +10,12 @@ interface SimpleTooltipProps {
   forceVisible?: boolean
 }
 
-export default function SimpleTooltip({ content, children, position = 'top', forceVisible = false }: SimpleTooltipProps) {
+export default function SimpleTooltip({
+  content,
+  children,
+  position = 'top',
+  forceVisible = false,
+}: SimpleTooltipProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const [mounted, setMounted] = useState(false)
@@ -46,32 +51,33 @@ export default function SimpleTooltip({ content, children, position = 'top', for
     }
   }, [isVisible, position])
 
-  const tooltipContent = isVisible && mounted ? createPortal(
-    <div
-      className="fixed pointer-events-none"
-      style={{
-        left: `${tooltipPosition.x}px`,
-        top: `${tooltipPosition.y}px`,
-        transform: position === 'top' 
-          ? 'translate(-50%, calc(-100% - 8px))'
-          : 'translate(-50%, 8px)',
-        zIndex: 99999
-      }}
-    >
-      <div className="bg-abyss-900 border border-gold-dark/80 rounded-lg px-3 py-2 shadow-xl max-w-[90vw] overflow-x-auto">
-        {content}
-      </div>
-      {/* triangle */}
-      <div 
-        className={`absolute left-1/2 -translate-x-1/2 ${
-          position === 'top' ? 'top-full -mt-px' : 'bottom-full -mb-px rotate-180'
-        }`}
-      >
-        <div className="border-8 border-transparent border-t-gold-dark/80" />
-      </div>
-    </div>,
-    document.body
-  ) : null
+  const tooltipContent =
+    isVisible && mounted
+      ? createPortal(
+          <div
+            className="fixed pointer-events-none"
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`,
+              transform: position === 'top' ? 'translate(-50%, calc(-100% - 8px))' : 'translate(-50%, 8px)',
+              zIndex: 99999,
+            }}
+          >
+            <div className="bg-abyss-900 border border-gold-dark/80 rounded-lg px-3 py-2 shadow-xl max-w-[90vw] overflow-x-auto">
+              {content}
+            </div>
+            {/* triangle */}
+            <div
+              className={`absolute left-1/2 -translate-x-1/2 ${
+                position === 'top' ? 'top-full -mt-px' : 'bottom-full -mb-px rotate-180'
+              }`}
+            >
+              <div className="border-8 border-transparent border-t-gold-dark/80" />
+            </div>
+          </div>,
+          document.body
+        )
+      : null
 
   return (
     <>

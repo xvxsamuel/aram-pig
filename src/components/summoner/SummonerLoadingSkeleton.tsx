@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import ProfileCard from "@/components/ui/ProfileCard"
-import LoadingSpinner from "@/components/ui/LoadingSpinner"
+import ProfileCard from '@/components/ui/ProfileCard'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 // skeleton row for champions list
 function ChampionRowSkeleton() {
@@ -57,12 +57,10 @@ export default function SummonerLoadingSkeleton() {
 
       {/* Match History with spinner */}
       <div className="w-full xl:flex-1 xl:min-w-0 flex flex-col">
-        <ProfileCard 
-          title="ARAM History" 
+        <ProfileCard
+          title="ARAM History"
           contentClassName="flex-1 flex flex-col"
-          headerRight={
-            <div className="h-7 w-48 bg-abyss-500 rounded-xl animate-pulse"></div>
-          }
+          headerRight={<div className="h-7 w-48 bg-abyss-500 rounded-xl animate-pulse"></div>}
         >
           <div className="flex-1 flex items-center justify-center py-20">
             <LoadingSpinner size="lg" />

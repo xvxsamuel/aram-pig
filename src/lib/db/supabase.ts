@@ -11,7 +11,7 @@ let adminClient: SupabaseClient | null = null
 
 export function createAdminClient() {
   if (typeof window !== 'undefined') {
-    throw new Error('createAdminClient() can only be used on the server side') 
+    throw new Error('createAdminClient() can only be used on the server side')
   }
   if (!adminClient) {
     adminClient = createSupabaseClient(supabaseUrl, supabaseSecretKey)

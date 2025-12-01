@@ -3,7 +3,7 @@ export {
   calculatePigScore,
   calculatePigScoreWithBreakdown,
   type ParticipantData,
-  type PigScoreBreakdown
+  type PigScoreBreakdown,
 } from './calculator'
 
 export {
@@ -17,7 +17,7 @@ export {
   calculateSkillOrderPenalty,
   calculateBuildOrderPenalty,
   type ItemPenaltyDetail,
-  type AllPenaltiesResult
+  type AllPenaltiesResult,
 } from './penalties'
 
 export {
@@ -25,5 +25,5 @@ export {
   recalculateProfileStatsForPlayers,
   getTrackedPlayersFromMatches,
   type ChampionProfileStats,
-  type ProfileChampions
+  type ProfileChampions,
 } from './profile-stats'

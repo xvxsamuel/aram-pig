@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import SimpleTooltip from "@/components/ui/SimpleTooltip"
+import { useState, useEffect } from 'react'
+import SimpleTooltip from '@/components/ui/SimpleTooltip'
 
 interface Props {
   region: string
@@ -51,12 +51,12 @@ export default function UpdateButton({ hasActiveJob, onUpdateStarted, cooldownUn
   const isDisabled = hasActiveJob || isOnCooldown
 
   const buttonContent = (
-    <button 
+    <button
       onClick={handleUpdate}
       disabled={isDisabled}
       className={`w-32 px-6 py-2 bg-gradient-to-t rounded-lg font-semibold transition-all ${
-        isDisabled 
-          ? 'from-gray-600 to-gray-500 cursor-not-allowed opacity-60' 
+        isDisabled
+          ? 'from-gray-600 to-gray-500 cursor-not-allowed opacity-60'
           : 'from-action-100 to-action-200 hover:brightness-130 cursor-pointer'
       }`}
       data-update-button
@@ -69,10 +69,7 @@ export default function UpdateButton({ hasActiveJob, onUpdateStarted, cooldownUn
   if (statusMessage) {
     return (
       <div className="relative">
-        <SimpleTooltip 
-          content={<span className="text-sm text-white">{statusMessage}</span>}
-          forceVisible={showTooltip}
-        >
+        <SimpleTooltip content={<span className="text-sm text-white">{statusMessage}</span>} forceVisible={showTooltip}>
           {buttonContent}
         </SimpleTooltip>
       </div>
@@ -83,18 +80,12 @@ export default function UpdateButton({ hasActiveJob, onUpdateStarted, cooldownUn
   if (isOnCooldown) {
     return (
       <div className="relative">
-        <SimpleTooltip 
-          content={<span className="text-sm text-white">Please wait before updating again</span>}
-        >
+        <SimpleTooltip content={<span className="text-sm text-white">Please wait before updating again</span>}>
           {buttonContent}
         </SimpleTooltip>
       </div>
     )
   }
 
-  return (
-    <div className="relative">
-      {buttonContent}
-    </div>
-  )
+  return <div className="relative">{buttonContent}</div>
 }

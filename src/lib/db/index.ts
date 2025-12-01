@@ -1,8 +1,5 @@
 // DB module exports
-export {
-  supabase,
-  createAdminClient,
-} from './supabase'
+export { supabase, createAdminClient } from './supabase'
 
 export {
   getSummonerInfo,
@@ -34,12 +31,6 @@ export {
   getZScore,
 } from './stats-aggregator'
 
-export {
-  getTrackedPuuids,
-  invalidateTrackedPuuidsCache,
-} from './tracked-players'
+export { getTrackedPuuids, invalidateTrackedPuuidsCache } from './tracked-players'
 
-export {
-  autoEnrichRecentMatches,
-  getStoredTimeline,
-} from './auto-enrich'
+export { autoEnrichRecentMatches, getStoredTimeline } from './auto-enrich'

@@ -1,6 +1,21 @@
 // Region and platform code utilities
 export type RegionalCluster = 'europe' | 'americas' | 'asia' | 'sea'
-export type PlatformCode = 'na1' | 'br1' | 'la1' | 'la2' | 'kr' | 'jp1' | 'eun1' | 'euw1' | 'ru' | 'tr1' | 'me1' | 'oc1' | 'sg2' | 'tw2' | 'vn2'
+export type PlatformCode =
+  | 'na1'
+  | 'br1'
+  | 'la1'
+  | 'la2'
+  | 'kr'
+  | 'jp1'
+  | 'eun1'
+  | 'euw1'
+  | 'ru'
+  | 'tr1'
+  | 'me1'
+  | 'oc1'
+  | 'sg2'
+  | 'tw2'
+  | 'vn2'
 
 const PLATFORM_DATA: Record<PlatformCode, { label: string; regional: RegionalCluster; tag: string }> = {
   na1: { label: 'NA', regional: 'americas', tag: 'NA1' },
@@ -25,24 +40,28 @@ export const REGIONS = Object.entries(PLATFORM_DATA).map(([code, data]) => ({
   code: code as PlatformCode,
   label: data.label,
   regional: data.regional,
-  tag: data.tag
+  tag: data.tag,
 }))
 
-export const PLATFORM_TO_REGIONAL: Record<PlatformCode, RegionalCluster> = 
-  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [k, v.regional])) as Record<PlatformCode, RegionalCluster>
+export const PLATFORM_TO_REGIONAL: Record<PlatformCode, RegionalCluster> = Object.fromEntries(
+  Object.entries(PLATFORM_DATA).map(([k, v]) => [k, v.regional])
+) as Record<PlatformCode, RegionalCluster>
 
-export const PLATFORM_TO_LABEL: Record<PlatformCode, string> = 
-  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([k, v]) => [k, v.label])) as Record<PlatformCode, string>
+export const PLATFORM_TO_LABEL: Record<PlatformCode, string> = Object.fromEntries(
+  Object.entries(PLATFORM_DATA).map(([k, v]) => [k, v.label])
+) as Record<PlatformCode, string>
 
-export const LABEL_TO_PLATFORM: Record<string, PlatformCode> =
-  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([_k, v]) => [v.label, _k])) as Record<string, PlatformCode>
+export const LABEL_TO_PLATFORM: Record<string, PlatformCode> = Object.fromEntries(
+  Object.entries(PLATFORM_DATA).map(([_k, v]) => [v.label, _k])
+) as Record<string, PlatformCode>
 
-export const LABEL_TO_TAG: Record<string, string> =
-  Object.fromEntries(Object.entries(PLATFORM_DATA).map(([_k, v]) => [v.label, v.tag])) as Record<string, string>
+export const LABEL_TO_TAG: Record<string, string> = Object.fromEntries(
+  Object.entries(PLATFORM_DATA).map(([_k, v]) => [v.label, v.tag])
+) as Record<string, string>
 
-export const REGION_OPTIONS = Object.entries(PLATFORM_DATA).map(([code, data]) => ({ 
-  value: code as PlatformCode, 
-  label: data.label 
+export const REGION_OPTIONS = Object.entries(PLATFORM_DATA).map(([code, data]) => ({
+  value: code as PlatformCode,
+  label: data.label,
 }))
 
 export function getDefaultTag(regionLabel: string): string {

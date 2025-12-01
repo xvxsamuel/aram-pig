@@ -1,6 +1,6 @@
-"use client"
+'use client'
 
-import { ReactNode } from "react"
+import { ReactNode } from 'react'
 
 interface Props {
   title: string
@@ -19,22 +19,24 @@ interface Props {
  * standardized card component for profile page boxes.
  * provides consistent title styling, border, padding, and divider.
  */
-export default function ProfileCard({ 
-  title, 
-  children, 
+export default function ProfileCard({
+  title,
+  children,
   onTitleClick,
-  contentClassName = "",
+  contentClassName = '',
   hideDivider = false,
-  headerRight
+  headerRight,
 }: Props) {
   const TitleElement = onTitleClick ? 'button' : 'div'
   const hasFlex = contentClassName.includes('flex')
-  
+
   return (
-    <div className={`bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden ${hasFlex ? 'flex-1 flex flex-col' : ''}`}>
+    <div
+      className={`bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden ${hasFlex ? 'flex-1 flex flex-col' : ''}`}
+    >
       <div className={`px-4.5 py-2 ${hasFlex ? 'flex-1 flex flex-col' : ''}`}>
         <div className="flex items-center justify-between gap-4 pb-1.5 relative z-20">
-          <TitleElement 
+          <TitleElement
             onClick={onTitleClick}
             className={`text-lg bold text-left flex-shrink-0 ${onTitleClick ? 'cursor-pointer transition-colors hover:text-gold-light' : ''}`}
           >
@@ -42,12 +44,8 @@ export default function ProfileCard({
           </TitleElement>
           {headerRight}
         </div>
-        {!hideDivider && (
-          <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-3 -mx-4.5" />
-        )}
-        <div className={`pb-1 ${contentClassName}`}>
-          {children}
-        </div>
+        {!hideDivider && <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent mb-3 -mx-4.5" />}
+        <div className={`pb-1 ${contentClassName}`}>{children}</div>
       </div>
     </div>
   )

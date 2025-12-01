@@ -1,11 +1,11 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import type { MatchData } from "@/types/match"
-import MatchHistoryItem from "@/components/match/MatchHistoryItem"
-import ChampionFilter from "@/components/filters/ChampionFilter"
-import ProfileCard from "@/components/ui/ProfileCard"
-import LoadingSpinner from "@/components/ui/LoadingSpinner"
+import { useState, useEffect } from 'react'
+import type { MatchData } from '@/types/match'
+import MatchHistoryItem from '@/components/match/MatchHistoryItem'
+import ChampionFilter from '@/components/filters/ChampionFilter'
+import ProfileCard from '@/components/ui/ProfileCard'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 interface Props {
   matches: MatchData[]
@@ -15,25 +15,32 @@ interface Props {
   championNames: Record<string, string>
   onMatchesLoaded?: (newMatches: MatchData[]) => void
   initialLoading?: boolean
-  currentName?: { gameName: string, tagLine: string }
+  currentName?: { gameName: string; tagLine: string }
 }
 
-export default function MatchHistoryList({ matches: initialMatches, puuid, region, ddragonVersion, championNames, onMatchesLoaded, initialLoading = false, currentName }: Props) {
+export default function MatchHistoryList({
+  matches: initialMatches,
+  puuid,
+  region,
+  ddragonVersion,
+  championNames,
+  onMatchesLoaded,
+  initialLoading = false,
+  currentName,
+}: Props) {
   const [matches, setMatches] = useState(initialMatches)
-  const [championFilter, setChampionFilter] = useState("")
+  const [championFilter, setChampionFilter] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialMatches.length >= 20)
-  
+
   // sync local state when parent passes new matches
   useEffect(() => {
     setMatches(initialMatches)
     setHasMore(initialMatches.length >= 20)
   }, [initialMatches])
-  
+
   // filter out matches with no participants at all (shouldn't happen, but safety check)
-  const validMatches = matches.filter(match => 
-    match.info.participants && match.info.participants.length > 0
-  )
+  const validMatches = matches.filter(match => match.info.participants && match.info.participants.length > 0)
 
   const filteredMatches = championFilter
     ? validMatches.filter(match => {
@@ -44,22 +51,22 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
 
   const loadMore = async () => {
     if (loading) return
-    
+
     setLoading(true)
     try {
-      const response = await fetch("/api/load-more-matches", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/load-more-matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           puuid,
           offset: matches.length,
           limit: 20,
-          currentName
-        })
+          currentName,
+        }),
       })
 
       if (!response.ok) {
-        throw new Error("failed to load more matches")
+        throw new Error('failed to load more matches')
       }
 
       const data = await response.json()
@@ -70,7 +77,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
         onMatchesLoaded(data.matches)
       }
     } catch (error) {
-      console.error("Error loading more matches:", error)
+      console.error('Error loading more matches:', error)
     } finally {
       setLoading(false)
     }
@@ -87,29 +94,26 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
 
   return (
     <div className="w-full xl:flex-1 xl:min-w-0">
-      <ProfileCard 
-        title="ARAM History" 
-        headerRight={filterDropdown}
-      >
+      <ProfileCard title="ARAM History" headerRight={filterDropdown}>
         {initialLoading ? (
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner size="lg" />
           </div>
         ) : filteredMatches.length === 0 ? (
           <div className="text-center text-text-muted py-16 text-lg">
-            {championFilter ? `No matches found for ${championFilter}`: 'No ARAM matches found'}
+            {championFilter ? `No matches found for ${championFilter}` : 'No ARAM matches found'}
           </div>
         ) : (
           <>
-            <ul 
-              role="list" 
+            <ul
+              role="list"
               aria-label={championFilter ? `Match history for ${championFilter}` : 'Match history'}
-              className={`space-y-2 ${(!championFilter && hasMore) ? '' : 'pb-2'}`}
+              className={`space-y-2 ${!championFilter && hasMore ? '' : 'pb-2'}`}
             >
-              {filteredMatches.map((match) => (
-                <MatchHistoryItem 
-                  key={match.metadata.matchId} 
-                  match={match} 
+              {filteredMatches.map(match => (
+                <MatchHistoryItem
+                  key={match.metadata.matchId}
+                  match={match}
                   puuid={puuid}
                   region={region}
                   ddragonVersion={ddragonVersion}
@@ -117,7 +121,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
                 />
               ))}
             </ul>
-            
+
             {hasMore && (
               <button
                 onClick={loadMore}
@@ -137,7 +141,7 @@ export default function MatchHistoryList({ matches: initialMatches, puuid, regio
                 )}
               </button>
             )}
-          </>  
+          </>
         )}
       </ProfileCard>
     </div>

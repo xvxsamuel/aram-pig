@@ -10,13 +10,13 @@ export async function GET(request: NextRequest) {
   const patch = searchParams.get('patch')
   const offset = parseInt(searchParams.get('offset') || '0')
   const limit = parseInt(searchParams.get('limit') || '20')
-  
+
   const supabase = createAdminClient()
-  
+
   try {
     let champions: any[] = []
     let totalCount = 0
-    
+
     // patch-based filtering w JSONB structure
     if (filter === 'patch' && patch) {
       // Get actual match count for this patch
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         .from('matches')
         .select('*', { count: 'exact', head: true })
         .eq('patch', patch)
-      
+
       // fetch champions sorted by winrate in db
       const { data, error, count } = await supabase
         .from('champion_stats')
@@ -34,20 +34,20 @@ export async function GET(request: NextRequest) {
         .order('wins', { ascending: false })
         .order('games', { ascending: false })
         .range(offset, offset + limit - 1)
-      
+
       if (error) {
         console.error('Database error:', error)
         throw error
       }
-      
+
       console.log(`Found ${data?.length || 0} champions for patch ${patch} (total: ${count})`)
-      
+
       totalCount = count || 0
-      
+
       // calculate winrate on client
       champions = (data || []).map(row => {
         const winrate = row.games > 0 ? (row.wins / row.games) * 100 : 0
-        
+
         return {
           champion_name: row.champion_name,
           overall_winrate: winrate.toFixed(2),
@@ -62,16 +62,16 @@ export async function GET(request: NextRequest) {
           avg_gold_earned: 0,
         }
       })
-      
+
       // sort by winrate (just in case)
       champions.sort((a, b) => parseFloat(b.overall_winrate) - parseFloat(a.overall_winrate))
-      
+
       // add total matches to response
       const response = NextResponse.json({
         champions,
         total: totalCount,
         totalMatches: matchCount || 0,
-        hasMore: offset + limit < totalCount
+        hasMore: offset + limit < totalCount,
       })
       response.headers.set('Cache-Control', CACHE_CONTROL)
       return response
@@ -81,14 +81,11 @@ export async function GET(request: NextRequest) {
         total: 0,
         totalMatches: 0,
         hasMore: false,
-        error: 'Only patch-based filtering is supported'
+        error: 'Only patch-based filtering is supported',
       })
     }
   } catch (error) {
     console.error('Error fetching champions:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch champions' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch champions' }, { status: 500 })
   }
 }
