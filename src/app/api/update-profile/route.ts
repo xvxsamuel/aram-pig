@@ -736,7 +736,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
                   spell2: p.summoner2Id || 0,
                   skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
                   buildOrder: buildOrderStr || undefined,
-                  killQualityScore: killDeathSummary?.killScore,
+                  takedownQualityScore: killDeathSummary?.takedownScore,
                   deathQualityScore: killDeathSummary?.deathScore,
                 })
                 if (breakdown) {

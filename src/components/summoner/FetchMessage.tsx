@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import type { UpdateJobProgress } from '@/types/update-jobs'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
@@ -12,25 +12,38 @@ interface Props {
 }
 
 export default function FetchMessage({ job, region, notifyEnabled, onNotifyChange }: Props) {
-  const [eta, setEta] = useState<number | null>(null)
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const hasStartedFetching = job.totalMatches > 0
 
   console.log('FetchMessage rendering with:', { hasStartedFetching, job })
 
-  // fetch eta when component mounts
-  useEffect(() => {
-    if (region && job.totalMatches > 0) {
-      fetch(`/api/rate-limit-status?region=${region}&matchCount=${job.totalMatches - job.fetchedMatches}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.etaSeconds) {
-            setEta(data.etaSeconds)
-          }
-        })
-        .catch(err => console.error('failed to fetch eta:', err))
+  // Calculate ETA based on actual progress speed
+  const eta = useMemo(() => {
+    if (!hasStartedFetching || !job.startedAt) return null
+
+    const remaining = job.totalMatches - job.fetchedMatches
+    if (remaining <= 0) return 0
+
+    // If we have actual progress, calculate based on actual speed
+    if (job.fetchedMatches > 0) {
+      const elapsedMs = Date.now() - new Date(job.startedAt).getTime()
+      const elapsedSeconds = elapsedMs / 1000
+
+      // Calculate actual rate (matches per second)
+      const rate = job.fetchedMatches / elapsedSeconds
+
+      // Estimate remaining time
+      if (rate > 0) {
+        return Math.ceil(remaining / rate)
+      }
     }
-  }, [region, job.totalMatches, job.fetchedMatches])
+
+    // Fallback: estimate based on ~2 seconds per match (realistic ARAM match fetch time)
+    return Math.ceil(remaining * 2)
+  }, [hasStartedFetching, job.startedAt, job.fetchedMatches, job.totalMatches])
+
+  // Only show notify option if ETA > 2 minutes (120 seconds)
+  const showNotifyOption = eta !== null && eta > 120
 
   const formatEta = (seconds: number) => {
     if (seconds < 60) return `~${seconds}s`
@@ -87,14 +100,14 @@ export default function FetchMessage({ job, region, notifyEnabled, onNotifyChang
             {hasStartedFetching && (
               <p className="text-sm text-white mb-1">
                 {job.fetchedMatches} / {job.totalMatches} matches loaded ({job.progressPercentage}%)
-                {eta !== null && ` • ETA: ${formatEta(eta)}`}
+                {eta !== null && eta > 0 && ` • ETA: ${formatEta(eta)}`}
               </p>
             )}
             <p className="text-xs text-text-muted mb-2">
               This may take a few minutes due to Riot API limits. The page will automatically refresh when complete.
             </p>
 
-            {hasStartedFetching && (
+            {hasStartedFetching && showNotifyOption && (
               <>
                 <label className="flex items-end gap-2 cursor-pointer select-none">
                   <div className="relative w-4 h-4 flex-shrink-0">

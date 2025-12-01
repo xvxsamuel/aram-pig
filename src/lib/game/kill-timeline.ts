@@ -1,111 +1,153 @@
 // Kill/death timeline extraction for PIG score analysis
+// Scoring system:
+// - Death quality based on POSITION (zone-based) and TRADES
+// - Takedown quality (kills + assists treated the same) = inverse of enemy death quality
 import type { MatchTimeline, ParticipantFrame } from '@/types/match'
 
 export interface KillEvent {
   timestamp: number
   killerId: number
   victimId: number
+  killerTeamId: number
+  victimTeamId: number
   assistingParticipantIds: number[]
   position: { x: number; y: number }
   bounty: number
   shutdownBounty: number
-  // contextual data
-  victimGold: number // gold victim had at time of death (more gold = longer alive = worse death)
+  victimGold: number
   victimLevel: number
   killerGold: number
   killerLevel: number
-  // proximity analysis
-  nearbyDeaths: number // deaths within 3 seconds and 1500 units (teamfight indicator)
-  isTeamfightDeath: boolean
+  nearbyAllyDeaths: number // ally deaths within window (same team as victim)
+  nearbyEnemyDeaths: number // enemy deaths within window (same team as killer = trades)
+  isTeamfight: boolean
 }
 
 export interface DeathAnalysis {
   timestamp: number
-  gold: number // how much gold player had (long map time indicator)
+  gold: number
   level: number
   wasTeamfight: boolean
-  nearbyTeamDeaths: number
+  wasTrade: boolean // did our team get kills around same time?
+  tradeKills: number // how many enemy kills near this death
   killedBy: number
   assists: number[]
   position: { x: number; y: number }
-  // grading factors
-  goldPenalty: number // 0-1, higher gold = higher penalty (died with full pockets)
-  teamfightBonus: number // 0-1, teamfight deaths are less punishing
-  positionScore: number // 0-1, dying in enemy territory = good (diving), own territory = bad
+  zone: 'behind_turret' | 'at_turret' | 'neutral' | 'pushing' | 'diving'
+  zoneScore: number // 0-100, 100 = best position to die (diving)
 }
 
-export interface KillAnalysis {
+export interface TakedownAnalysis {
   timestamp: number
   victimId: number
   victimGold: number
   victimLevel: number
-  wasTeamfightKill: boolean
-  assists: number[]
+  wasTeamfight: boolean
+  wasKill: boolean // true if kill, false if assist (for display only, scored the same)
   bounty: number
   position: { x: number; y: number }
-  // grading factors
-  goldValue: number // 0-1, killing high-gold target = more valuable
-  positionScore: number // 0-1, killing in own territory = good (defending), enemy territory = meh
+  quality: number // 0-100, based on enemy death quality (inverse)
 }
 
 export interface PlayerKillDeathTimeline {
   participantId: number
-  kills: KillAnalysis[]
+  takedowns: TakedownAnalysis[] // kills and assists combined
   deaths: DeathAnalysis[]
-  assists: Array<{ timestamp: number; killerId: number; victimId: number }>
-  // aggregate scores
-  deathQualityScore: number // 0-100, how "good" were the deaths (teamfights, low gold)
-  killQualityScore: number // 0-100, how valuable were the kills
+  deathQualityScore: number // 0-100, 100 = all good deaths, 0 = all bad deaths
+  takedownQualityScore: number // 0-100, based on enemy death quality
 }
 
+// Timing constants
+const TRADE_TIME_WINDOW = 6000 // 6 seconds - if ally gets a kill within this, it's a trade
 const TEAMFIGHT_TIME_WINDOW = 5000 // 5 seconds
-const TEAMFIGHT_DISTANCE = 2000 // units
-const HIGH_GOLD_THRESHOLD = 2500 // gold threshold for "full pockets"
+const TEAMFIGHT_DISTANCE = 2500 // units
 
-// ARAM map coordinates (Howling Abyss runs diagonally)
-// Blue base (team 100): ~(2500, 2500) - bottom left
-// Red base (team 200): ~(12500, 12500) - top right
-// Map center: ~(7500, 7500)
-const ARAM_BLUE_BASE = { x: 2500, y: 2500 }
-const ARAM_RED_BASE = { x: 12500, y: 12500 }
-// const ARAM_MAP_LENGTH = 14142 // diagonal distance between bases (unused for now)
+// ARAM map coordinates (Howling Abyss - diagonal lane)
+// Map bounds: min {x: -28, y: -19}, max {x: 12849, y: 12858}
+// Blue nexus is at bottom-left, Red nexus is at top-right
+const ARAM_BLUE_BASE = { x: 400, y: 400 }
+const ARAM_RED_BASE = { x: 12400, y: 12400 }
 
 function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): number {
   return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2))
 }
 
 /**
- * Calculate position score for death/kill
- * Returns 0-1 where higher = more aggressive play (in enemy territory)
- * - For deaths: 1 = died in enemy territory (diving = good), 0 = died at own base (bad)
- * - For kills: 1 = killed in enemy territory (pushing/diving = good), 0 = killed at own base (getting pushed = bad)
+ * Get position along the ARAM lane (0 = blue base, 1 = red base)
  */
-function getPositionScore(position: { x: number; y: number }, teamId: number): number {
+function getLanePosition(position: { x: number; y: number }): number {
   const distToBlue = distance(position, ARAM_BLUE_BASE)
   const distToRed = distance(position, ARAM_RED_BASE)
+  return distToBlue / (distToBlue + distToRed)
+}
 
-  // normalize to 0-1 (0 = at blue base, 1 = at red base)
-  const positionRatio = distToBlue / (distToBlue + distToRed)
+/**
+ * Determine the zone where death occurred relative to player's team
+ * Returns zone name and a score (0-100, higher = better place to die)
+ *
+ * Zone definitions (normalized so 0 = own base, 1 = enemy base):
+ * - 0.00 - 0.25: Behind your turret (TERRIBLE) - score 0-15
+ * - 0.25 - 0.40: At your turret line (BAD) - score 15-35
+ * - 0.40 - 0.60: Neutral zone (MODERATE) - score 35-55
+ * - 0.60 - 0.80: Pushing/enemy territory (OK) - score 55-75
+ * - 0.80 - 1.00: Diving/near enemy turret (GOOD) - score 75-95
+ */
+function getDeathZone(
+  position: { x: number; y: number },
+  teamId: number
+): { zone: 'behind_turret' | 'at_turret' | 'neutral' | 'pushing' | 'diving'; score: number } {
+  const lanePos = getLanePosition(position)
 
-  if (teamId === 100) {
-    // blue team: being near red base (high ratio) = aggressive/good
-    return positionRatio
+  // Normalize so 0 = own base, 1 = enemy base for both teams
+  const normalizedPos = teamId === 100 ? lanePos : 1 - lanePos
+
+  if (normalizedPos < 0.25) {
+    // Behind turret - worst place to die (getting pushed hard)
+    const score = normalizedPos * 60 // 0 at base, 15 at 0.25
+    return { zone: 'behind_turret', score: Math.round(score) }
+  } else if (normalizedPos < 0.4) {
+    // At turret line - bad, this is where you get pushed and die
+    const progress = (normalizedPos - 0.25) / 0.15
+    const score = 15 + progress * 20
+    return { zone: 'at_turret', score: Math.round(score) }
+  } else if (normalizedPos < 0.6) {
+    // Neutral zone - not great but not terrible
+    const progress = (normalizedPos - 0.4) / 0.2
+    const score = 35 + progress * 20
+    return { zone: 'neutral', score: Math.round(score) }
+  } else if (normalizedPos < 0.8) {
+    // Pushing - you were in enemy territory, ok to die here
+    const progress = (normalizedPos - 0.6) / 0.2
+    const score = 55 + progress * 20
+    return { zone: 'pushing', score: Math.round(score) }
   } else {
-    // red team: being near blue base (low ratio) = aggressive/good
-    return 1 - positionRatio
+    // Diving - near enemy turret, great place to die (means you were diving)
+    const progress = (normalizedPos - 0.8) / 0.2
+    const score = 75 + progress * 20
+    return { zone: 'diving', score: Math.round(score) }
   }
 }
 
 /**
  * Extract all kill events with contextual data
  */
-export function extractKillEvents(timeline: MatchTimeline): KillEvent[] {
+export function extractKillEvents(
+  timeline: MatchTimeline,
+  participantTeams: Map<number, number>
+): KillEvent[] {
   if (!timeline?.info?.frames) return []
 
   const killEvents: KillEvent[] = []
-  const allKillTimestamps: Array<{ timestamp: number; position: { x: number; y: number }; victimId: number }> = []
+  const allKills: Array<{
+    timestamp: number
+    position: { x: number; y: number }
+    victimId: number
+    killerId: number
+    victimTeamId: number
+    killerTeamId: number
+  }> = []
 
-  // first pass: collect all kill events
+  // First pass: collect all kill events
   for (const frame of timeline.info.frames) {
     const participantFrames = frame.participantFrames || {}
 
@@ -116,16 +158,24 @@ export function extractKillEvents(timeline: MatchTimeline): KillEvent[] {
       const victimFrame = participantFrames[String(event.victimId)] as ParticipantFrame | undefined
       const killerFrame = participantFrames[String(event.killerId)] as ParticipantFrame | undefined
 
-      allKillTimestamps.push({
+      const victimTeamId = participantTeams.get(event.victimId) || 100
+      const killerTeamId = participantTeams.get(event.killerId) || 200
+
+      allKills.push({
         timestamp: event.timestamp,
         position: event.position || { x: 0, y: 0 },
         victimId: event.victimId,
+        killerId: event.killerId,
+        victimTeamId,
+        killerTeamId,
       })
 
       killEvents.push({
         timestamp: event.timestamp,
         killerId: event.killerId,
         victimId: event.victimId,
+        killerTeamId,
+        victimTeamId,
         assistingParticipantIds: event.assistingParticipantIds || [],
         position: event.position || { x: 0, y: 0 },
         bounty: event.bounty || 300,
@@ -134,22 +184,33 @@ export function extractKillEvents(timeline: MatchTimeline): KillEvent[] {
         victimLevel: victimFrame?.level || 1,
         killerGold: killerFrame?.currentGold || 0,
         killerLevel: killerFrame?.level || 1,
-        nearbyDeaths: 0,
-        isTeamfightDeath: false,
+        nearbyAllyDeaths: 0,
+        nearbyEnemyDeaths: 0,
+        isTeamfight: false,
       })
     }
   }
 
-  // second pass: calculate nearby deaths for teamfight detection
+  // Second pass: calculate nearby deaths for teamfight/trade detection
   for (const kill of killEvents) {
-    kill.nearbyDeaths = allKillTimestamps.filter(
+    // Count ally deaths (same team as victim) - indicates teamfight
+    kill.nearbyAllyDeaths = allKills.filter(
       k =>
         k.victimId !== kill.victimId &&
+        k.victimTeamId === kill.victimTeamId &&
         Math.abs(k.timestamp - kill.timestamp) <= TEAMFIGHT_TIME_WINDOW &&
         distance(k.position, kill.position) <= TEAMFIGHT_DISTANCE
     ).length
 
-    kill.isTeamfightDeath = kill.nearbyDeaths >= 2 // 3+ deaths nearby = teamfight
+    // Count enemy deaths (killer's team dying = trades for victim's team)
+    kill.nearbyEnemyDeaths = allKills.filter(
+      k =>
+        k.victimTeamId === kill.killerTeamId &&
+        Math.abs(k.timestamp - kill.timestamp) <= TRADE_TIME_WINDOW
+    ).length
+
+    // Teamfight = multiple deaths on either side within window
+    kill.isTeamfight = kill.nearbyAllyDeaths >= 1 || kill.nearbyEnemyDeaths >= 1
   }
 
   return killEvents
@@ -157,135 +218,110 @@ export function extractKillEvents(timeline: MatchTimeline): KillEvent[] {
 
 /**
  * Get kill/death timeline analysis for a specific player
+ * Treats kills and assists the same as "takedowns" - no KDA hunting incentive
  */
 export function getPlayerKillDeathTimeline(
   timeline: MatchTimeline,
   participantId: number,
-  teamId: number // 100 or 200
+  teamId: number,
+  participantTeams: Map<number, number>
 ): PlayerKillDeathTimeline {
-  const killEvents = extractKillEvents(timeline)
+  const killEvents = extractKillEvents(timeline, participantTeams)
 
   const deaths: DeathAnalysis[] = []
-  const kills: KillAnalysis[] = []
-  const assists: Array<{ timestamp: number; killerId: number; victimId: number }> = []
-
-  // find max gold in game for normalization
-  let maxGoldSeen = HIGH_GOLD_THRESHOLD
-  for (const frame of timeline.info?.frames || []) {
-    for (const [, pf] of Object.entries(frame.participantFrames || {})) {
-      const pFrame = pf as ParticipantFrame
-      if (pFrame.currentGold > maxGoldSeen) {
-        maxGoldSeen = pFrame.currentGold
-      }
-    }
-  }
+  const takedowns: TakedownAnalysis[] = []
+  const processedKillTimestamps = new Set<number>() // avoid double-counting kill+assist on same event
 
   for (const kill of killEvents) {
-    // player died
+    // Player died
     if (kill.victimId === participantId) {
-      // gold penalty: dying with lots of gold is bad (0 = no gold, 1 = lots of gold)
-      const goldPenalty = Math.min(kill.victimGold / maxGoldSeen, 1)
+      const { zone, score: zoneScore } = getDeathZone(kill.position, teamId)
 
-      // teamfight bonus: dying in teamfight is less punishing (0 = solo death, 1 = big teamfight)
-      const teamfightBonus = kill.isTeamfightDeath ? Math.min(kill.nearbyDeaths / 4, 1) : 0
-
-      // position score: dying in enemy territory = aggressive play (good), own territory = bad
-      const positionScore = getPositionScore(kill.position, teamId)
+      // Check if it was a trade (our team got kills around same time)
+      const wasTrade = kill.nearbyEnemyDeaths > 0
+      const tradeKills = kill.nearbyEnemyDeaths
 
       deaths.push({
         timestamp: kill.timestamp,
         gold: kill.victimGold,
         level: kill.victimLevel,
-        wasTeamfight: kill.isTeamfightDeath,
-        nearbyTeamDeaths: kill.nearbyDeaths,
+        wasTeamfight: kill.isTeamfight,
+        wasTrade,
+        tradeKills,
         killedBy: kill.killerId,
         assists: kill.assistingParticipantIds,
         position: kill.position,
-        goldPenalty,
-        teamfightBonus,
-        positionScore,
+        zone,
+        zoneScore,
       })
     }
 
-    // player got a kill
-    if (kill.killerId === participantId) {
-      // gold value: killing someone with lots of gold is more valuable
-      const goldValue = Math.min(kill.victimGold / maxGoldSeen, 1)
+    // Player got a takedown (kill OR assist - treated the same)
+    const isKill = kill.killerId === participantId
+    const isAssist = kill.assistingParticipantIds.includes(participantId)
 
-      // position score: killing in enemy territory = pushing/diving (good), own territory = getting pushed
-      const positionScore = getPositionScore(kill.position, teamId)
+    if ((isKill || isAssist) && !processedKillTimestamps.has(kill.timestamp)) {
+      processedKillTimestamps.add(kill.timestamp)
 
-      kills.push({
+      // Takedown quality = inverse of where the enemy died from their perspective
+      const enemyDeathZone = getDeathZone(kill.position, kill.victimTeamId)
+      // If enemy died in a bad spot for them (low score), it's a good takedown for us
+      const quality = 100 - enemyDeathZone.score
+
+      takedowns.push({
         timestamp: kill.timestamp,
         victimId: kill.victimId,
         victimGold: kill.victimGold,
         victimLevel: kill.victimLevel,
-        wasTeamfightKill: kill.isTeamfightDeath,
-        assists: kill.assistingParticipantIds,
+        wasTeamfight: kill.isTeamfight,
+        wasKill: isKill, // for display only
         bounty: kill.bounty + kill.shutdownBounty,
         position: kill.position,
-        goldValue,
-        positionScore,
-      })
-    }
-
-    // player assisted
-    if (kill.assistingParticipantIds.includes(participantId)) {
-      assists.push({
-        timestamp: kill.timestamp,
-        killerId: kill.killerId,
-        victimId: kill.victimId,
+        quality,
       })
     }
   }
 
-  // calculate aggregate scores
-  let deathQualityScore = 100 // start at 100, subtract for bad deaths
+  // Calculate aggregate death quality score
+  let deathQualityScore = 100 // Perfect if no deaths
   if (deaths.length > 0) {
-    let totalDeathPenalty = 0
+    let totalDeathScore = 0
     for (const death of deaths) {
-      // base penalty for dying
-      let penalty = 8
+      let deathValue = death.zoneScore // Base value from position (0-95)
 
-      // additional penalty for dying with gold (up to +8)
-      penalty += death.goldPenalty * 8
+      // Bonus for trades - if we got kills, the death is more justified
+      if (death.wasTrade) {
+        // Trading is good, especially in enemy territory
+        // 1-for-1 trade in diving zone = basically perfect (90+)
+        // 1-for-1 trade at turret = acceptable (boost to ~60)
+        const tradeBonus = Math.min(death.tradeKills * 25, 50) // up to +50 for trades
+        deathValue = Math.min(95, deathValue + tradeBonus)
+      }
 
-      // reduce penalty for teamfight deaths (up to -6)
-      penalty -= death.teamfightBonus * 6
+      // Teamfight deaths are more acceptable even without direct trades
+      if (death.wasTeamfight && !death.wasTrade) {
+        // Small bonus for dying in teamfight (chaos happens)
+        deathValue = Math.min(95, deathValue + 15)
+      }
 
-      // reduce penalty for aggressive position deaths (diving) (up to -5)
-      penalty -= death.positionScore * 5
-
-      totalDeathPenalty += Math.max(penalty, 2) // minimum 2 points per death
+      totalDeathScore += deathValue
     }
-    deathQualityScore = Math.max(0, 100 - totalDeathPenalty)
+    deathQualityScore = Math.round(totalDeathScore / deaths.length)
   }
 
-  let killQualityScore = 50 // neutral starting point
-  if (kills.length > 0) {
-    let totalKillValue = 0
-    for (const kill of kills) {
-      // base value for kill
-      let value = 4
-
-      // bonus for high-gold kills (+4 max) - denying enemy resources
-      value += kill.goldValue * 4
-
-      // bonus for defensive kills (+2 max) - protecting your side
-      value += kill.positionScore * 2
-
-      totalKillValue += value
-    }
-    killQualityScore = Math.min(100, 50 + totalKillValue)
+  // Calculate takedown quality score (inverse of enemy death quality)
+  let takedownQualityScore = 50 // Neutral if no takedowns
+  if (takedowns.length > 0) {
+    const totalTakedownQuality = takedowns.reduce((sum, t) => sum + t.quality, 0)
+    takedownQualityScore = Math.round(totalTakedownQuality / takedowns.length)
   }
 
   return {
     participantId,
-    kills,
+    takedowns,
     deaths,
-    assists,
     deathQualityScore,
-    killQualityScore,
+    takedownQualityScore,
   }
 }
 
@@ -293,69 +329,74 @@ export function getPlayerKillDeathTimeline(
  * Get simplified kill/death summary for storage
  */
 export interface KillDeathSummary {
-  kills: Array<{
+  takedowns: Array<{
     t: number // timestamp in seconds
     gold: number // victim gold
     tf: boolean // teamfight
-    pos: number // 0-100 position score (higher = killed in enemy territory/pushing)
-    value: number // 0-100 quality value based on victim gold
+    wasKill: boolean // true if kill, false if assist (display only)
+    pos: number // 0-100 lane position (0 = blue base, 100 = red base)
+    value: number // 0-100 takedown quality
   }>
   deaths: Array<{
     t: number
     gold: number // player gold at death
-    tf: boolean
-    pos: number // 0-100 position score (higher = died in enemy territory/pushing)
-    value: number // 0-100 quality value (lower = worse death)
+    tf: boolean // teamfight
+    trade: boolean // was it a trade
+    tradeKills: number // how many enemies died
+    zone: string // zone name
+    pos: number // 0-100 lane position
+    value: number // 0-100 death quality (100 = good death, 0 = bad death)
   }>
-  deathScore: number
-  killScore: number
+  deathScore: number // average death quality
+  takedownScore: number // average takedown quality
 }
 
-export function getKillDeathSummary(timeline: MatchTimeline, participantId: number, teamId: number): KillDeathSummary {
-  const analysis = getPlayerKillDeathTimeline(timeline, participantId, teamId)
+export function getKillDeathSummary(
+  timeline: MatchTimeline,
+  participantId: number,
+  teamId: number,
+  participantTeams?: Map<number, number>
+): KillDeathSummary {
+  // Build participant teams map if not provided
+  const teams = participantTeams || new Map<number, number>()
+  if (!participantTeams) {
+    // In ARAM, participants 1-5 are team 100, 6-10 are team 200
+    for (let i = 1; i <= 5; i++) teams.set(i, 100)
+    for (let i = 6; i <= 10; i++) teams.set(i, 200)
+  }
+
+  const analysis = getPlayerKillDeathTimeline(timeline, participantId, teamId, teams)
 
   return {
-    kills: analysis.kills.map(k => {
-      // kills in ARAM are mostly teamfight cleanup - base value is neutral (50)
-      // slight bonus for catching high-gold enemies (they made a mistake)
-      // bonus for defensive kills (protecting your side)
-      let value = 50
-      if (!k.wasTeamfightKill) {
-        value += k.goldValue * 10 // bonus for high-gold pick
-      }
-      value += k.positionScore * 5 // bonus for defending own side
-
-      return {
-        t: Math.floor(k.timestamp / 1000),
-        gold: k.victimGold,
-        tf: k.wasTeamfightKill,
-        pos: Math.round(k.positionScore * 100),
-        value: Math.round(Math.min(70, value)), // cap at 70 - kills aren't super differentiated
-      }
-    }),
+    takedowns: analysis.takedowns.map(t => ({
+      t: Math.floor(t.timestamp / 1000),
+      gold: t.victimGold,
+      tf: t.wasTeamfight,
+      wasKill: t.wasKill,
+      pos: Math.round(getLanePosition(t.position) * 100),
+      value: t.quality,
+    })),
     deaths: analysis.deaths.map(d => {
-      // base death value: 50 (neutral)
-      // teamfight deaths: +10 bonus (acceptable)
-      // high gold penalty: -20 (bad to die with full pockets)
-      // position bonus: +15 for diving (aggressive death is ok), -15 for dying at base
-      let value = 50
-      if (d.wasTeamfight) {
-        value += 10 // teamfight deaths are fine
-      } else {
-        value -= d.goldPenalty * 20 // non-teamfight deaths with gold are bad
+      // Calculate final death value with trade bonus
+      let value = d.zoneScore
+      if (d.wasTrade) {
+        value = Math.min(95, value + d.tradeKills * 25)
+      } else if (d.wasTeamfight) {
+        value = Math.min(95, value + 15)
       }
-      // position modifier: dying in enemy territory = good (diving), own territory = bad
-      value += (d.positionScore - 0.5) * 30 // -15 to +15 based on position
 
       return {
         t: Math.floor(d.timestamp / 1000),
         gold: d.gold,
         tf: d.wasTeamfight,
-        pos: Math.round(d.positionScore * 100),
-        value: Math.round(Math.max(20, Math.min(75, value))), // clamp 20-75
+        trade: d.wasTrade,
+        tradeKills: d.tradeKills,
+        zone: d.zone,
+        pos: Math.round(getLanePosition(d.position) * 100),
+        value: Math.round(value),
       }
     }),
-    deathScore: Math.round(analysis.deathQualityScore),
-    killScore: Math.round(analysis.killQualityScore),
+    deathScore: analysis.deathQualityScore,
+    takedownScore: analysis.takedownQualityScore,
   }
 }

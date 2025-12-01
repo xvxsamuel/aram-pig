@@ -2,15 +2,7 @@
 import { createAdminClient } from '../db/supabase'
 import type { WelfordState } from '../db/stats-aggregator'
 import { getStdDev, getZScore } from '../db/stats-aggregator'
-import {
-  calculateStatScore,
-  zScoreToScore,
-  calculateDeathsScore,
-  calculateKillParticipationScore,
-  calculateBuildChoiceScore,
-  calculateAllBuildPenalties,
-  type ItemPenaltyDetail,
-} from './penalties'
+import { calculateStatScore, calculateAllBuildPenalties, type ItemPenaltyDetail } from './penalties'
 
 // Determine relevant stats for a champion based on their data
 // Returns weights (0-1) for each stat based on how meaningful it is for this champion
@@ -111,7 +103,7 @@ export interface ParticipantData {
   skillOrder?: string // e.g., "qew" or "qwe"
   buildOrder?: string // comma-separated item IDs in purchase order
   // Kill/Death quality scores from timeline analysis (0-100)
-  killQualityScore?: number // how valuable were the kills (position, gold denied)
+  takedownQualityScore?: number // how valuable were the takedowns (kills+assists treated the same)
   deathQualityScore?: number // how good were the deaths (teamfight, low gold, diving)
 }
 
@@ -133,9 +125,9 @@ export interface PigScoreBreakdown {
   }
   // Component scores (0-100 each, then weighted)
   componentScores: {
-    performance: number // 60% weight - damage, healing, CC stats
+    performance: number // 50% weight - damage, healing, CC stats
     build: number // 20% weight - items, runes, spells, skills
-    kda: number // 20% weight - deaths, KP, kill/death quality
+    timeline: number // 30% weight - kill/death quality from position/trades
   }
   // Detailed breakdown of each metric
   metrics: {
@@ -258,7 +250,7 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   // Weighted average of performance scores
   const totalPerfWeight = performanceScores.reduce((sum, s) => sum + s.weight, 0)
   const performanceScore =
-    totalPerfWeight > 0 ? performanceScores.reduce((sum, s) => sum + s.score * s.weight, 0) / totalPerfWeight : 70
+    totalPerfWeight > 0 ? performanceScores.reduce((sum, s) => sum + s.score * s.weight, 0) / totalPerfWeight : 50
 
   // ============================================================================
   // BUILD COMPONENT (20% of final score)
@@ -278,45 +270,27 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     itemScore * 0.4 + keystoneScore * 0.2 + spellsScore * 0.15 + skillOrderScore * 0.15 + buildOrderScore * 0.1
 
   // ============================================================================
-  // KDA COMPONENT (20% of final score)
+  // TIMELINE COMPONENT (30% of final score)
+  // Kill/death quality based on position zones and trade detection
   // ============================================================================
-  const kdaScores: { score: number; weight: number }[] = []
+  let timelineScore = 50 // Default average score if no timeline data
 
-  // Deaths score
-  const deathsScore = calculateDeathsScore(participant.deaths, gameDurationMinutes)
-  kdaScores.push({ score: deathsScore, weight: 0.3 })
-
-  // Kill participation score
-  if (
-    participant.kills !== undefined &&
-    participant.assists !== undefined &&
-    participant.teamTotalKills !== undefined &&
-    participant.teamTotalKills > 0
-  ) {
-    const killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
-    const kpScore = calculateKillParticipationScore(killParticipation)
-    kdaScores.push({ score: kpScore, weight: 0.3 })
+  if (participant.takedownQualityScore !== undefined && participant.deathQualityScore !== undefined) {
+    // Both scores available - weight death quality more (60%) since it's more controllable
+    timelineScore = participant.deathQualityScore * 0.6 + participant.takedownQualityScore * 0.4
+  } else if (participant.deathQualityScore !== undefined) {
+    // Only death quality available
+    timelineScore = participant.deathQualityScore
+  } else if (participant.takedownQualityScore !== undefined) {
+    // Only takedown quality available
+    timelineScore = participant.takedownQualityScore
   }
-
-  // Kill quality score (if available from timeline)
-  if (participant.killQualityScore !== undefined) {
-    kdaScores.push({ score: participant.killQualityScore, weight: 0.2 })
-  }
-
-  // Death quality score (if available from timeline)
-  if (participant.deathQualityScore !== undefined) {
-    kdaScores.push({ score: participant.deathQualityScore, weight: 0.2 })
-  }
-
-  // Weighted average of KDA scores
-  const totalKdaWeight = kdaScores.reduce((sum, s) => sum + s.weight, 0)
-  const kdaScore = totalKdaWeight > 0 ? kdaScores.reduce((sum, s) => sum + s.score * s.weight, 0) / totalKdaWeight : 70
 
   // ============================================================================
   // FINAL SCORE (weighted average of components)
   // ============================================================================
-  // Performance: 60%, Build: 20%, KDA: 20%
-  const finalScore = Math.round(performanceScore * 0.6 + buildScore * 0.2 + kdaScore * 0.2)
+  // Performance: 50%, Build: 20%, Timeline: 30%
+  const finalScore = Math.round(performanceScore * 0.5 + buildScore * 0.2 + timelineScore * 0.3)
 
   return Math.max(0, Math.min(100, finalScore))
 }
@@ -477,7 +451,7 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
   // Weighted average of performance scores
   const totalPerfWeight = performanceScores.reduce((sum, s) => sum + s.weight, 0)
   const performanceScore =
-    totalPerfWeight > 0 ? performanceScores.reduce((sum, s) => sum + s.score * s.weight, 0) / totalPerfWeight : 70
+    totalPerfWeight > 0 ? performanceScores.reduce((sum, s) => sum + s.score * s.weight, 0) / totalPerfWeight : 50
 
   // ============================================================================
   // BUILD COMPONENT (20% of final score)
@@ -503,22 +477,13 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
     itemScore * 0.4 + keystoneScore * 0.2 + spellsScore * 0.15 + skillOrderScore * 0.15 + buildOrderScore * 0.1
 
   // ============================================================================
-  // KDA COMPONENT (20% of final score)
+  // TIMELINE COMPONENT (30% of final score)
+  // Kill/death quality based on position zones and trade detection
   // ============================================================================
-  const kdaScores: { score: number; weight: number }[] = []
-
-  // Deaths score
-  const deathsScoreVal = calculateDeathsScore(participant.deaths, gameDurationMinutes)
-  kdaScores.push({ score: deathsScoreVal, weight: 0.3 })
-  metrics.push({
-    name: 'Deaths',
-    score: deathsScoreVal,
-    weight: 0.3,
-    playerValue: playerStats.deathsPerMin,
-  })
-
-  // Kill participation score
+  let timelineScore = 50 // Default average score if no timeline data
   let killParticipation: number | undefined
+
+  // Calculate kill participation for display (not used in score anymore)
   if (
     participant.kills !== undefined &&
     participant.assists !== undefined &&
@@ -526,38 +491,51 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
     participant.teamTotalKills > 0
   ) {
     killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
-    const kpScore = calculateKillParticipationScore(killParticipation)
-    kdaScores.push({ score: kpScore, weight: 0.3 })
+  }
+
+  if (participant.takedownQualityScore !== undefined && participant.deathQualityScore !== undefined) {
+    // Both scores available - weight death quality more (60%) since it's more controllable
+    timelineScore = participant.deathQualityScore * 0.6 + participant.takedownQualityScore * 0.4
     metrics.push({
-      name: 'Kill Participation',
-      score: kpScore,
-      weight: 0.3,
-      playerValue: killParticipation * 100,
-      avgValue: 90,
+      name: 'Death Quality',
+      score: participant.deathQualityScore,
+      weight: 0.6,
+    })
+    metrics.push({
+      name: 'Takedown Quality',
+      score: participant.takedownQualityScore,
+      weight: 0.4,
+    })
+  } else if (participant.deathQualityScore !== undefined) {
+    // Only death quality available
+    timelineScore = participant.deathQualityScore
+    metrics.push({
+      name: 'Death Quality',
+      score: participant.deathQualityScore,
+      weight: 1.0,
+    })
+  } else if (participant.takedownQualityScore !== undefined) {
+    // Only takedown quality available
+    timelineScore = participant.takedownQualityScore
+    metrics.push({
+      name: 'Takedown Quality',
+      score: participant.takedownQualityScore,
+      weight: 1.0,
+    })
+  } else {
+    // No timeline data - add placeholder metric
+    metrics.push({
+      name: 'Timeline',
+      score: 50,
+      weight: 1.0,
     })
   }
-
-  // Kill quality score (if available from timeline)
-  if (participant.killQualityScore !== undefined) {
-    kdaScores.push({ score: participant.killQualityScore, weight: 0.2 })
-    metrics.push({ name: 'Kill Quality', score: participant.killQualityScore, weight: 0.2 })
-  }
-
-  // Death quality score (if available from timeline)
-  if (participant.deathQualityScore !== undefined) {
-    kdaScores.push({ score: participant.deathQualityScore, weight: 0.2 })
-    metrics.push({ name: 'Death Quality', score: participant.deathQualityScore, weight: 0.2 })
-  }
-
-  // Weighted average of KDA scores
-  const totalKdaWeight = kdaScores.reduce((sum, s) => sum + s.weight, 0)
-  const kdaScore = totalKdaWeight > 0 ? kdaScores.reduce((sum, s) => sum + s.score * s.weight, 0) / totalKdaWeight : 70
 
   // ============================================================================
   // FINAL SCORE (weighted average of components)
   // ============================================================================
-  // Performance: 60%, Build: 20%, KDA: 20%
-  const finalScore = Math.round(performanceScore * 0.6 + buildScore * 0.2 + kdaScore * 0.2)
+  // Performance: 50%, Build: 20%, Timeline: 30%
+  const finalScore = Math.round(performanceScore * 0.5 + buildScore * 0.2 + timelineScore * 0.3)
 
   return {
     finalScore: Math.max(0, Math.min(100, finalScore)),
@@ -569,14 +547,14 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
     componentScores: {
       performance: Math.round(performanceScore),
       build: Math.round(buildScore),
-      kda: Math.round(kdaScore),
+      timeline: Math.round(timelineScore),
     },
     metrics,
     itemDetails: buildPenalties.itemDetails,
     scoringInfo: {
-      targetPercentile: 84,
-      averageScore: 70,
-      description: `Score is based on percentile performance vs other ${championName} players. 70 = average (50th percentile), 100 = excellent (84th percentile, top 16%).`,
+      targetPercentile: 98,
+      averageScore: 50,
+      description: `Score is based on percentile performance vs other ${championName} players. 50 = average (50th percentile), 100 = excellent (98th percentile, top 2%).`,
     },
     totalGames,
     patch: selectedStats.patch,

@@ -274,7 +274,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
             spell2: matchParticipant.summoner2Id || 0,
             skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
             buildOrder: buildOrderStr || undefined,
-            killQualityScore: killDeathSummary.killScore,
+            takedownQualityScore: killDeathSummary.takedownScore,
             deathQualityScore: killDeathSummary.deathScore,
           })
 

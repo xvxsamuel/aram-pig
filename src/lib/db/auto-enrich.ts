@@ -173,7 +173,7 @@ export async function autoEnrichRecentMatches(matchIds: string[], region: Platfo
             spell2: matchParticipant.summoner2Id,
             skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
             buildOrder: buildOrder ?? undefined,
-            killQualityScore: killDeathSummary.killScore,
+            takedownQualityScore: killDeathSummary.takedownScore,
             deathQualityScore: killDeathSummary.deathScore,
           })
           pigScore = breakdown?.finalScore ?? null

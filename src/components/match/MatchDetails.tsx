@@ -41,10 +41,11 @@ interface CompletedItem {
   itemType: 'legendary' | 'boots' | 'mythic' | 'other'
 }
 
-interface KillEvent {
+interface TakedownEvent {
   t: number // timestamp in seconds
   gold: number // victim gold
   tf: boolean // teamfight
+  wasKill: boolean // true = kill, false = assist (display only)
   pos?: number // position score 0-100 (higher = in enemy territory/pushing)
   value?: number // quality value 0-100
 }
@@ -58,10 +59,10 @@ interface DeathEvent {
 }
 
 interface KillDeathTimeline {
-  kills: KillEvent[]
+  takedowns: TakedownEvent[]
   deaths: DeathEvent[]
   deathScore: number
-  killScore: number
+  takedownScore: number
 }
 
 interface ParticipantDetails {
@@ -137,12 +138,34 @@ export default function MatchDetails({
   defaultTab = 'overview',
   onTabChange,
 }: Props) {
-  const [selectedTab, setSelectedTabState] = useState<'overview' | 'build' | 'performance'>(defaultTab)
+  const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
+
+  // check if match is within 30 days (timeline data availability from Riot API)
+  const isWithin30Days = Date.now() - match.info.gameCreation < 30 * 24 * 60 * 60 * 1000
+
+  // check if current player already has a PIG score (from previous calculation)
+  const hasExistingPigScore = currentPlayer?.pigScore !== null && currentPlayer?.pigScore !== undefined
+
+  // check if game was a remake (no PIG score for remakes)
+  const isRemake = currentPlayer?.gameEndedInEarlySurrender ?? false
+
+  // Check if performance tab should be available (within 30 days OR has existing score)
+  const canShowPerformanceTab = (isWithin30Days && !isRemake) || hasExistingPigScore
+
+  // Determine initial tab - fall back to overview if performance not available
+  const getValidTab = (tab: 'overview' | 'build' | 'performance') => {
+    if (tab === 'performance' && !canShowPerformanceTab) return 'overview'
+    return tab
+  }
+
+  const [selectedTab, setSelectedTabState] = useState<'overview' | 'build' | 'performance'>(() =>
+    getValidTab(defaultTab)
+  )
 
   // sync tab when parent changes defaultTab (e.g., clicking PIG button when already expanded)
   useEffect(() => {
-    setSelectedTabState(defaultTab)
-  }, [defaultTab])
+    setSelectedTabState(getValidTab(defaultTab))
+  }, [defaultTab, canShowPerformanceTab])
 
   // helper to update tab and notify parent
   const setSelectedTab = (tab: 'overview' | 'build' | 'performance') => {
@@ -157,17 +180,10 @@ export default function MatchDetails({
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
   const [, setEnrichError] = useState<string | null>(null)
   const enrichFetchingRef = useRef(false) // prevent double-fetch
-  const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
-
-  // check if match is within 365 days (timeline data availability from Riot API)
-  const isWithin365Days = Date.now() - match.info.gameCreation < 365 * 24 * 60 * 60 * 1000
-
-  // check if game was a remake (no PIG score for remakes)
-  const isRemake = currentPlayer?.gameEndedInEarlySurrender ?? false
 
   // enrich match with timeline data and pig scores when component mounts (for recent matches)
   useEffect(() => {
-    if (!isWithin365Days || isRemake || pigScoresFetched || enrichFetchingRef.current) return
+    if (!isWithin30Days || isRemake || pigScoresFetched || enrichFetchingRef.current) return
 
     // check if ALL players already have pig scores (match already enriched)
     const allHavePigScores = match.info.participants.every(p => p.pigScore !== null && p.pigScore !== undefined)
@@ -242,7 +258,7 @@ export default function MatchDetails({
     match.metadata.matchId,
     match.info.participants,
     match.info.gameCreation,
-    isWithin365Days,
+    isWithin30Days,
     isRemake,
     pigScoresFetched,
     region,
@@ -277,9 +293,9 @@ export default function MatchDetails({
   const allParticipants = match.info.participants
   const maxDamageDealt = Math.max(...allParticipants.map(p => p.totalDamageDealtToChampions || 0))
 
-  // Check if any participant has a pig score (only show PIG column if within 365 days, not a remake, OR scores exist OR loading)
+  // Check if any participant has a pig score (only show PIG column if within 30 days, not a remake, OR scores exist OR loading)
   const hasPigScores =
-    (isWithin365Days && !isRemake) ||
+    (isWithin30Days && !isRemake) ||
     loadingPigScores ||
     allParticipants.some(
       p => (pigScores[p.puuid] ?? p.pigScore) !== null && (pigScores[p.puuid] ?? p.pigScore) !== undefined
@@ -637,17 +653,19 @@ export default function MatchDetails({
         >
           Build
         </button>
-        <button
-          onClick={() => setSelectedTab('performance')}
-          className={clsx(
-            'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px',
-            selectedTab === 'performance'
-              ? 'border-accent-light text-white'
-              : 'border-transparent text-text-muted hover:text-white'
-          )}
-        >
-          Performance
-        </button>
+        {canShowPerformanceTab && (
+          <button
+            onClick={() => setSelectedTab('performance')}
+            className={clsx(
+              'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px',
+              selectedTab === 'performance'
+                ? 'border-accent-light text-white'
+                : 'border-transparent text-text-muted hover:text-white'
+            )}
+          >
+            Performance
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -1095,18 +1113,18 @@ export default function MatchDetails({
                       </div>
                     </div>
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-2 text-center">
-                      <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">KDA</div>
+                      <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Timeline</div>
                       <div
                         className={clsx(
                           'text-lg font-bold',
-                          pigScoreBreakdown.componentScores.kda >= 85
+                          pigScoreBreakdown.componentScores.timeline >= 85
                             ? 'text-accent-light'
-                            : pigScoreBreakdown.componentScores.kda >= 70
+                            : pigScoreBreakdown.componentScores.timeline >= 70
                               ? 'text-gold-light'
                               : 'text-negative'
                         )}
                       >
-                        {pigScoreBreakdown.componentScores.kda}
+                        {pigScoreBreakdown.componentScores.timeline}
                       </div>
                     </div>
                   </div>
@@ -1169,20 +1187,21 @@ export default function MatchDetails({
                   const timeline = details?.kill_death_timeline
                   const gameDurationSec = match.info.gameDuration
 
-                  if (!timeline || (timeline.kills.length === 0 && timeline.deaths.length === 0)) {
+                  if (!timeline || (timeline.takedowns.length === 0 && timeline.deaths.length === 0)) {
                     return null
                   }
 
                   // combine all events into a sorted timeline
                   const events: Array<{
-                    type: 'kill' | 'death' | 'assist'
+                    type: 'takedown' | 'death'
                     t: number
                     gold?: number
                     tf?: boolean
+                    wasKill?: boolean
                     pos?: number
                     value?: number
                   }> = [
-                    ...timeline.kills.map(k => ({ type: 'kill' as const, ...k })),
+                    ...timeline.takedowns.map(k => ({ type: 'takedown' as const, ...k })),
                     ...timeline.deaths.map(d => ({ type: 'death' as const, ...d })),
                   ].sort((a, b) => a.t - b.t)
 
@@ -1199,7 +1218,7 @@ export default function MatchDetails({
                         <div className="flex items-center gap-3 text-xs">
                           <span className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-accent-light"></span>
-                            <span className="text-text-muted">{timeline.kills.length} kills</span>
+                            <span className="text-text-muted">{timeline.takedowns.length} takedowns</span>
                           </span>
                           <span className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-negative"></span>
@@ -1211,19 +1230,19 @@ export default function MatchDetails({
                       {/* Quality Scores */}
                       <div className="grid grid-cols-2 gap-2 mb-4">
                         <div className="bg-abyss-800/50 rounded p-2">
-                          <div className="text-[10px] text-text-muted mb-1">Kill Quality</div>
+                          <div className="text-[10px] text-text-muted mb-1">Takedown Quality</div>
                           <div className="flex items-baseline gap-1.5">
                             <span
                               className={clsx(
                                 'text-lg font-bold tabular-nums',
-                                timeline.killScore >= 70
+                                timeline.takedownScore >= 70
                                   ? 'text-accent-light'
-                                  : timeline.killScore >= 50
+                                  : timeline.takedownScore >= 50
                                     ? 'text-gold-light'
                                     : 'text-negative'
                               )}
                             >
-                              {timeline.killScore}
+                              {timeline.takedownScore}
                             </span>
                             <span className="text-[10px] text-text-muted">/100</span>
                           </div>
@@ -1288,12 +1307,14 @@ export default function MatchDetails({
                         {/* Event markers */}
                         {events.map((event, idx) => {
                           const leftPct = (event.t / gameDurationSec) * 100
-                          const isKill = event.type === 'kill'
+                          const isTakedown = event.type === 'takedown'
+                          const isKill = isTakedown && event.wasKill
                           const value = event.value ?? 50
+                          const eventLabel = isTakedown ? (isKill ? 'Kill' : 'Assist') : 'Death'
 
                           // color based on value: high value = bright, low value = dim
-                          const getValueColor = (v: number, isKill: boolean) => {
-                            if (isKill) {
+                          const getValueColor = (v: number, isTakedown: boolean) => {
+                            if (isTakedown) {
                               return v >= 70 ? 'text-accent-light' : v >= 40 ? 'text-gold-light' : 'text-text-muted'
                             } else {
                               // for deaths, high value = good death (teamfight, low gold)
@@ -1309,16 +1330,16 @@ export default function MatchDetails({
                                   <div
                                     className={clsx(
                                       'font-semibold mb-1.5 flex items-center justify-between',
-                                      isKill ? 'text-accent-light' : 'text-negative'
+                                      isTakedown ? 'text-accent-light' : 'text-negative'
                                     )}
                                   >
                                     <span>
-                                      {isKill ? 'Kill' : 'Death'} at {formatTime(event.t)}
+                                      {eventLabel} at {formatTime(event.t)}
                                     </span>
                                     <span
                                       className={clsx(
                                         'ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                        isKill
+                                        isTakedown
                                           ? value >= 70
                                             ? 'bg-accent-light/20'
                                             : value >= 40
@@ -1327,7 +1348,7 @@ export default function MatchDetails({
                                           : value >= 70
                                             ? 'bg-gold-light/20'
                                             : 'bg-negative/20',
-                                        getValueColor(value, isKill)
+                                        getValueColor(value, isTakedown)
                                       )}
                                     >
                                       {value}
@@ -1336,7 +1357,7 @@ export default function MatchDetails({
                                   <div className="space-y-0.5">
                                     {event.gold !== undefined && (
                                       <div className="text-text-muted flex justify-between">
-                                        <span>{isKill ? 'Victim gold:' : 'Your gold:'}</span>
+                                        <span>{isTakedown ? 'Victim gold:' : 'Your gold:'}</span>
                                         <span className="text-gold-light">{event.gold.toLocaleString()}</span>
                                       </div>
                                     )}
@@ -1357,9 +1378,9 @@ export default function MatchDetails({
                                       </div>
                                     )}
                                     {event.tf && (
-                                      <div className="text-blue-400">Teamfight {isKill ? 'kill' : 'death'}</div>
+                                      <div className="text-blue-400">Teamfight {isTakedown ? 'takedown' : 'death'}</div>
                                     )}
-                                    {!isKill && event.gold !== undefined && event.gold > 1500 && (
+                                    {!isTakedown && event.gold !== undefined && event.gold > 1500 && (
                                       <div className="text-negative text-[10px]">High gold at death</div>
                                     )}
                                   </div>
@@ -1373,7 +1394,7 @@ export default function MatchDetails({
                                 <div
                                   className={clsx(
                                     'w-3 h-3 rounded-full border-2 -ml-1.5',
-                                    isKill
+                                    isTakedown
                                       ? 'bg-accent-light border-accent-light/50'
                                       : 'bg-negative border-negative/50',
                                     event.tf && 'ring-2 ring-blue-400/50'
@@ -1388,26 +1409,28 @@ export default function MatchDetails({
                       {/* Event List */}
                       <div className="space-y-1.5 mt-6 max-h-32 overflow-y-auto">
                         {events.map((event, idx) => {
-                          const isKill = event.type === 'kill'
+                          const isTakedown = event.type === 'takedown'
+                          const isKill = isTakedown && event.wasKill
                           const value = event.value ?? 50
                           const pos = event.pos
+                          const eventLabel = isTakedown ? (isKill ? 'Kill' : 'Assist') : 'Death'
                           return (
                             <div key={`list-${event.type}-${idx}`} className="flex items-center gap-2 text-xs">
                               <span className="text-text-muted w-10 text-right tabular-nums">
                                 {formatTime(event.t)}
                               </span>
                               <span
-                                className={clsx('w-1.5 h-1.5 rounded-full', isKill ? 'bg-accent-light' : 'bg-negative')}
+                                className={clsx('w-1.5 h-1.5 rounded-full', isTakedown ? 'bg-accent-light' : 'bg-negative')}
                               />
                               <span
-                                className={clsx('font-medium w-10', isKill ? 'text-accent-light' : 'text-negative')}
+                                className={clsx('font-medium w-10', isTakedown ? 'text-accent-light' : 'text-negative')}
                               >
-                                {isKill ? 'Kill' : 'Death'}
+                                {eventLabel}
                               </span>
                               <span
                                 className={clsx(
                                   'w-8 text-center tabular-nums font-medium rounded px-1',
-                                  isKill
+                                  isTakedown
                                     ? value >= 70
                                       ? 'text-accent-light bg-accent-light/10'
                                       : value >= 40

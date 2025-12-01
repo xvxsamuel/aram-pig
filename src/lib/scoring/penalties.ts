@@ -8,44 +8,44 @@ import { getZScore, getStdDev } from '../db/stats-aggregator'
  * ====================================
  *
  * Instead of penalties, we calculate percentile scores for each metric.
- * The system is SKEWED so that "average" performance gives ~70, not 50.
+ * Average performance gives 50 (true middle), excellence gives 100.
  *
- * TARGET: 84th percentile (z = +1, mean + 1σ) = Score 100
+ * TARGET: 98th percentile (z = +2, mean + 2σ) = Score 100
  *
- * PERCENTILE TO SCORE MAPPING (skewed toward high performance):
+ * PERCENTILE TO SCORE MAPPING:
  * | Percentile | Z-Score | Score |
  * |------------|---------|-------|
- * | 99th       | +2.33   | 100   | (capped)
- * | 84th       | +1.0    | 100   | TARGET - top performers
- * | 70th       | +0.5    | 85    |
- * | 50th       | 0.0     | 70    | AVERAGE players
- * | 30th       | -0.5    | 55    |
- * | 16th       | -1.0    | 40    |
- * | 2nd        | -2.0    | 10    |
- * | 0th        | -3.0    | 0     | (capped)
+ * | 98th       | +2.0    | 100   | (capped) - TRUE excellence
+ * | 84th       | +1.0    | 75    | Good performers
+ * | 70th       | +0.5    | 62.5  |
+ * | 50th       | 0.0     | 50    | AVERAGE players
+ * | 30th       | -0.5    | 37.5  |
+ * | 16th       | -1.0    | 25    |
+ * | 2nd        | -2.0    | 0     | (capped)
  *
- * Formula: score = 70 + (zScore * 30), clamped to [0, 100]
- * - At z=+1 (target): 70 + 30 = 100
- * - At z=0 (mean): 70 + 0 = 70
- * - At z=-1: 70 - 30 = 40
- * - At z=-2.33: 70 - 70 = 0
+ * Formula: score = 50 + (zScore * 25), clamped to [0, 100]
+ * - At z=+2 (excellent): 50 + 50 = 100
+ * - At z=+1 (good): 50 + 25 = 75
+ * - At z=0 (mean): 50 + 0 = 50
+ * - At z=-1: 50 - 25 = 25
+ * - At z=-2: 50 - 50 = 0
  *
  * COMPONENT WEIGHTS:
- * - Performance Stats: 60% (damage, healing, CC, etc.)
+ * - Performance Stats: 50% (damage, healing, CC, etc.)
  * - Build Quality: 20% (items, runes, spells, skills)
- * - KDA Quality: 20% (deaths, kill participation, kill/death quality)
+ * - Timeline Quality: 30% (kill/death quality from position/trades)
  *
  * Each component is a weighted average of its sub-metrics, producing a 0-100 score.
  * Final score = weighted average of all components.
  */
 
-// Convert z-score to a 0-100 score with target at z=+1
-// Formula: score = 70 + (zScore * 30), clamped to [0, 100]
+// Convert z-score to a 0-100 score with target at z=+2
+// Formula: score = 50 + (zScore * 25), clamped to [0, 100]
 export function zScoreToScore(zScore: number): number {
-  // 70 is the "average" score (z=0)
-  // Each standard deviation is worth 30 points
-  // Target (z=+1) gives 100, z=-2.33 gives 0
-  const score = 70 + zScore * 30
+  // 50 is the "average" score (z=0)
+  // Each standard deviation is worth 25 points
+  // Excellent (z=+2) gives 100, z=-2 gives 0
+  const score = 50 + zScore * 25
   return Math.max(0, Math.min(100, score))
 }
 
@@ -73,9 +73,9 @@ export function percentileToScore(percentile: number): number {
 }
 
 // Calculate a percentile score for a stat using Welford stats
-// Returns 0-100 score where 70 = average, 100 = target (84th percentile)
+// Returns 0-100 score where 50 = average, 100 = excellent (98th percentile)
 export function calculateStatScore(playerValue: number, avgValue: number, welfordState?: WelfordState): number {
-  if (avgValue <= 0) return 70 // Default to average if no data
+  if (avgValue <= 0) return 50 // Default to average if no data
 
   // If we have Welford stats with enough samples, use z-score
   if (welfordState && welfordState.n >= 30) {
@@ -107,36 +107,36 @@ export function calculateStatPenalty(
   const score = calculateStatScore(playerValue, avgValue, welfordState)
   // Convert score (0-100) to penalty (0-maxPenalty)
   // Score 100 = 0 penalty, Score 0 = maxPenalty
-  // Score 70 (average) = 30% of maxPenalty
+  // Score 50 (average) = 50% of maxPenalty
   const penaltyRatio = (100 - score) / 100
   return maxPenalty * penaltyRatio
 }
 
 // Calculate deaths/minute score (0-100)
-// Optimal: 0.5-0.7 deaths/min = 100
-// Too few deaths (not fighting): penalized
-// Too many deaths: penalized more harshly
+// Optimal: 0.4-0.6 deaths/min = 80 (good but not perfect)
+// Very low deaths: 60 (safe play)
+// Too many deaths: penalized harshly
 export function calculateDeathsScore(deaths: number, gameDurationMinutes: number): number {
-  if (gameDurationMinutes <= 0) return 70
+  if (gameDurationMinutes <= 0) return 50
 
   const deathsPerMin = deaths / gameDurationMinutes
 
-  // Optimal range: 0.5-0.7 deaths/min = score 100
-  if (deathsPerMin >= 0.5 && deathsPerMin <= 0.7) return 100
+  // Optimal range: 0.4-0.6 deaths/min = score 80 (good, not perfect)
+  if (deathsPerMin >= 0.4 && deathsPerMin <= 0.6) return 80
 
-  // Too few deaths (not participating enough)
-  // 0 deaths/min = score 70 (just average, not bad)
-  if (deathsPerMin < 0.5) {
-    const deficit = 0.5 - deathsPerMin
-    // 0 deaths = 70, linear drop
-    return Math.max(70, 100 - deficit * 60)
+  // Very few deaths (safe play, not necessarily bad)
+  // 0 deaths/min = score 60
+  if (deathsPerMin < 0.4) {
+    const deficit = 0.4 - deathsPerMin
+    return Math.max(60, 80 - deficit * 50)
   }
 
-  // Too many deaths - penalize more
-  // 1.5 deaths/min = score ~40
-  // 2.0 deaths/min = score ~20
-  const excess = deathsPerMin - 0.7
-  return Math.max(0, 100 - excess * 75)
+  // Too many deaths - penalize more harshly
+  // 1.0 deaths/min = score ~50
+  // 1.5 deaths/min = score ~20
+  // 2.0 deaths/min = score ~0
+  const excess = deathsPerMin - 0.6
+  return Math.max(0, 80 - excess * 60)
 }
 
 // Legacy penalty function for backward compatibility
@@ -147,16 +147,20 @@ export function calculateDeathsPerMinutePenalty(deaths: number, gameDurationMinu
 }
 
 // Calculate kill participation score (0-100)
-// 90%+ KP = 100, scales down from there
+// 95%+ KP = 90, scales down from there
 export function calculateKillParticipationScore(killParticipation: number): number {
-  const TARGET_KP = 0.9
+  const EXCELLENT_KP = 0.95
+  const GOOD_KP = 0.80
 
-  if (killParticipation >= TARGET_KP) return 100
+  if (killParticipation >= EXCELLENT_KP) return 90
+  if (killParticipation >= GOOD_KP) {
+    // 80% = 70, 95% = 90
+    return 70 + ((killParticipation - GOOD_KP) / (EXCELLENT_KP - GOOD_KP)) * 20
+  }
 
-  // Linear scale from 0 to target
-  // 0% KP = 0 score, 90% KP = 100 score
-  // 70% KP = ~78 score
-  return Math.max(0, (killParticipation / TARGET_KP) * 100)
+  // Linear scale from 0 to good
+  // 0% KP = 0 score, 80% KP = 70 score
+  return Math.max(0, (killParticipation / GOOD_KP) * 70)
 }
 
 // Legacy penalty function for backward compatibility
@@ -166,15 +170,24 @@ export function calculateKillParticipationPenalty(killParticipation: number): nu
   return (100 - score) * 0.4
 }
 
-// Calculate build choice score (0-100) from winrate difference
-// Used for items, runes, spells, skills
-// Top choices = 100, worse choices scale down based on WR diff
+// Calculate build choice score (0-100) based on rank position
+// Uses exponential decay: top choice scores high, drops off faster
+// Rank 1 = 90, Rank 2 = 74, Rank 3 = 61, Rank 5 = 41, Rank 10 = 14
+export function calculateRankBasedScore(rank: number, totalOptions: number): number {
+  if (rank <= 0) return 90
+  // Exponential decay with decay constant of 5 (faster decay)
+  // score = 90 * e^(-(rank-1)/5)
+  const score = 90 * Math.exp(-(rank - 1) / 5)
+  return Math.max(0, Math.round(score))
+}
+
+// Legacy function for backward compatibility
 export function calculateBuildChoiceScore(playerWinrate: number | null, topWinrate: number, isInTopN: boolean): number {
   // Top choices get perfect score
   if (isInTopN) return 100
 
-  // Unknown/off-meta = 70 (average)
-  if (playerWinrate === null) return 70
+  // Unknown/off-meta = 50 (below average)
+  if (playerWinrate === null) return 50
 
   // Scale based on winrate difference
   // 0% diff = 100, 5% diff = 70, 10%+ diff = 40
@@ -265,13 +278,23 @@ export async function calculateItemPenaltyWithDetails(
       continue
     }
 
+    // Include all items with at least 10 games for ranking
+    // Items with 30+ games get full confidence, 10-29 games get partial confidence
+    const MIN_GAMES_THRESHOLD = 10
+    const FULL_CONFIDENCE_GAMES = 30
+
     const itemsWithPriority = slotItems
       .map(item => {
         const pickrate = (item.games / totalGames) * 100
         const priority = item.winrate
-        return { ...item, pickrate, priority }
+        // Confidence scales from 0.5 at 10 games to 1.0 at 30+ games
+        const confidence = Math.min(
+          1,
+          0.5 + (0.5 * (item.games - MIN_GAMES_THRESHOLD)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES_THRESHOLD)
+        )
+        return { ...item, pickrate, priority, confidence }
       })
-      .filter(item => item.games >= 30)
+      .filter(item => item.games >= MIN_GAMES_THRESHOLD)
       .sort((a, b) => b.priority - a.priority)
 
     if (itemsWithPriority.length === 0) {
@@ -285,52 +308,60 @@ export async function calculateItemPenaltyWithDetails(
       continue
     }
 
-    const top5 = itemsWithPriority.slice(0, 5)
-    const playerItem = itemsWithPriority.find(i => i.item_id === playerItemId)
+    // Find player's item - first check in ranked list
+    const playerItemIndex = itemsWithPriority.findIndex(i => i.item_id === playerItemId)
+    let playerItem = playerItemIndex >= 0 ? itemsWithPriority[playerItemIndex] : null
+    let playerRank = playerItemIndex >= 0 ? playerItemIndex + 1 : -1
+
+    // If not in ranked list, check if it exists with ANY data (even < 10 games)
+    if (!playerItem) {
+      const lowSampleItem = slotItems.find(i => i.item_id === playerItemId)
+      if (lowSampleItem && lowSampleItem.games >= 1) {
+        // We have SOME data - use it but with very low confidence
+        // Rank it at the end of known items
+        playerRank = itemsWithPriority.length + 1
+        const confidence = Math.min(0.5, lowSampleItem.games / MIN_GAMES_THRESHOLD)
+        playerItem = {
+          ...lowSampleItem,
+          pickrate: (lowSampleItem.games / totalGames) * 100,
+          priority: lowSampleItem.winrate,
+          confidence,
+        }
+      }
+    }
 
     if (!playerItem) {
-      // Item not in data - small penalty
-      totalPenalty += 2
+      // Truly unknown item - no data at all
+      const penaltyAmount = 10
+      totalPenalty += penaltyAmount
       details.push({
         slot,
         itemId: playerItemId,
-        penalty: 2,
+        penalty: penaltyAmount,
         reason: 'off-meta',
-        topWinrate: top5[0]?.priority,
+        topWinrate: itemsWithPriority[0]?.priority,
         isInTop5: false,
       })
       continue
     }
 
-    const isInTop5 = top5.some(i => i.item_id === playerItemId)
-    if (isInTop5) {
-      // Optimal item choice
-      details.push({
-        slot,
-        itemId: playerItemId,
-        penalty: 0,
-        reason: 'optimal',
-        playerWinrate: playerItem.priority,
-        topWinrate: top5[0].priority,
-        isInTop5: true,
-      })
-      continue
-    }
+    // Calculate score based on rank
+    const score = calculateRankBasedScore(playerRank, itemsWithPriority.length)
+    const isInTop5 = playerRank <= 5
 
-    // Suboptimal but tracked item
-    const topPriority = top5[0].priority
-    const priorityDiff = topPriority - playerItem.priority
-    const penaltyAmount = Math.min(6, priorityDiff / 25)
+    // Apply confidence weight - low sample items have reduced penalty impact
+    const basePenalty = ((100 - score) / 100) * 20
+    const penaltyAmount = basePenalty * playerItem.confidence
+
     totalPenalty += penaltyAmount
-
     details.push({
       slot,
       itemId: playerItemId,
       penalty: penaltyAmount,
-      reason: 'suboptimal',
+      reason: isInTop5 ? 'optimal' : 'suboptimal',
       playerWinrate: playerItem.priority,
-      topWinrate: topPriority,
-      isInTop5: false,
+      topWinrate: itemsWithPriority[0].priority,
+      isInTop5,
     })
   }
 
@@ -350,6 +381,9 @@ export async function calculateKeystonePenalty(
 ): Promise<number> {
   if (!participant.patch || !participant.perk0) return 0
 
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 50
+
   const supabase = createAdminClient()
 
   const { data: runeStats } = await supabase
@@ -366,27 +400,34 @@ export async function calculateKeystonePenalty(
     .map(rune => {
       const pickrate = (rune.games / totalGames) * 100
       const priority = rune.winrate
-      return { ...rune, pickrate, priority }
+      const confidence = Math.min(1, 0.5 + (0.5 * (rune.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return { ...rune, pickrate, priority, confidence }
     })
-    .filter(rune => rune.games >= 50)
+    .filter(rune => rune.games >= MIN_GAMES)
     .sort((a, b) => b.priority - a.priority)
 
   if (runesWithPriority.length === 0) return 0
 
-  const top5 = runesWithPriority.slice(0, 5)
-  const playerRune = runesWithPriority.find(r => r.rune_id === participant.perk0)
+  // Find player's rune
+  const playerRuneIndex = runesWithPriority.findIndex(r => r.rune_id === participant.perk0)
+  let playerRune = playerRuneIndex >= 0 ? runesWithPriority[playerRuneIndex] : null
+  let playerRank = playerRuneIndex >= 0 ? playerRuneIndex + 1 : -1
 
-  if (!playerRune) return 10
+  // Check for low sample data
+  if (!playerRune) {
+    const lowSampleRune = runeStats.find(r => r.rune_id === participant.perk0)
+    if (lowSampleRune && lowSampleRune.games >= 1) {
+      playerRank = runesWithPriority.length + 1
+      const confidence = Math.min(0.5, lowSampleRune.games / MIN_GAMES)
+      playerRune = { ...lowSampleRune, pickrate: 0, priority: lowSampleRune.winrate, confidence }
+    }
+  }
 
-  const isInTop5 = top5.some(r => r.rune_id === participant.perk0)
-  if (isInTop5) return 0
+  if (!playerRune) return 8 // Truly unknown rune
 
-  const topPriority = top5[0].priority
-  const priorityDiff = topPriority - playerRune.priority
-  // Soft quadratic: (diff/maxDiff)² * maxPenalty
-  // Max diff ~10% winrate difference for full penalty
-  const normalizedDiff = Math.min(priorityDiff / 10, 1.0)
-  return 20 * normalizedDiff * normalizedDiff
+  const score = calculateRankBasedScore(playerRank, runesWithPriority.length)
+  const basePenalty = ((100 - score) / 100) * 20
+  return basePenalty * playerRune.confidence
 }
 
 // calculate summoner spells penalty
@@ -395,6 +436,9 @@ export async function calculateSpellsPenalty(
   championName: string
 ): Promise<number> {
   if (!participant.patch || !participant.spell1 || !participant.spell2) return 0
+
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 30
 
   const supabase = createAdminClient()
 
@@ -415,31 +459,47 @@ export async function calculateSpellsPenalty(
   const playerKey = `${playerSpells[0]}_${playerSpells[1]}`
 
   const spellsWithWinrate = spellsEntries
-    .map(([key, value]) => ({
-      key,
-      games: value.games,
-      wins: value.wins,
-      winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
-    }))
-    .filter(s => s.games >= 30)
+    .map(([key, value]) => {
+      const confidence = Math.min(1, 0.5 + (0.5 * (value.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return {
+        key,
+        games: value.games,
+        wins: value.wins,
+        winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
+        confidence,
+      }
+    })
+    .filter(s => s.games >= MIN_GAMES)
     .sort((a, b) => b.winrate - a.winrate)
 
   if (spellsWithWinrate.length === 0) return 0
 
-  const top3 = spellsWithWinrate.slice(0, 3)
-  const playerSpellCombo = spellsWithWinrate.find(s => s.key === playerKey)
+  // Find player's spell combo
+  const playerComboIndex = spellsWithWinrate.findIndex(s => s.key === playerKey)
+  let playerCombo = playerComboIndex >= 0 ? spellsWithWinrate[playerComboIndex] : null
+  let playerRank = playerComboIndex >= 0 ? playerComboIndex + 1 : -1
 
-  if (!playerSpellCombo) return 4
+  // Check for low sample data
+  if (!playerCombo) {
+    const lowSampleEntry = spellsEntries.find(([key]) => key === playerKey)
+    if (lowSampleEntry && lowSampleEntry[1].games >= 1) {
+      playerRank = spellsWithWinrate.length + 1
+      const confidence = Math.min(0.5, lowSampleEntry[1].games / MIN_GAMES)
+      playerCombo = {
+        key: playerKey,
+        games: lowSampleEntry[1].games,
+        wins: lowSampleEntry[1].wins,
+        winrate: lowSampleEntry[1].games > 0 ? (lowSampleEntry[1].wins / lowSampleEntry[1].games) * 100 : 0,
+        confidence,
+      }
+    }
+  }
 
-  const isInTop3 = top3.some(s => s.key === playerKey)
-  if (isInTop3) return 0
+  if (!playerCombo) return 5 // Truly unknown combo
 
-  const topWinrate = top3[0].winrate
-  const winrateDiff = topWinrate - playerSpellCombo.winrate
-  // Soft quadratic: (diff/maxDiff)² * maxPenalty
-  // Max diff ~10% winrate difference for full penalty
-  const normalizedDiff = Math.min(winrateDiff / 10, 1.0)
-  return 20 * normalizedDiff * normalizedDiff
+  const score = calculateRankBasedScore(playerRank, spellsWithWinrate.length)
+  const basePenalty = ((100 - score) / 100) * 15
+  return basePenalty * playerCombo.confidence
 }
 
 // calculate skill max order penalty
@@ -448,6 +508,9 @@ export async function calculateSkillOrderPenalty(
   championName: string
 ): Promise<number> {
   if (!participant.patch || !participant.skillOrder) return 0
+
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 20
 
   const supabase = createAdminClient()
 
@@ -465,31 +528,47 @@ export async function calculateSkillOrderPenalty(
   if (skillsEntries.length === 0) return 0
 
   const skillsWithWinrate = skillsEntries
-    .map(([key, value]) => ({
-      key,
-      games: value.games,
-      wins: value.wins,
-      winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
-    }))
-    .filter(s => s.games >= 20)
+    .map(([key, value]) => {
+      const confidence = Math.min(1, 0.5 + (0.5 * (value.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return {
+        key,
+        games: value.games,
+        wins: value.wins,
+        winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
+        confidence,
+      }
+    })
+    .filter(s => s.games >= MIN_GAMES)
     .sort((a, b) => b.winrate - a.winrate)
 
   if (skillsWithWinrate.length === 0) return 0
 
-  const top2 = skillsWithWinrate.slice(0, 2)
-  const playerSkillOrder = skillsWithWinrate.find(s => s.key === participant.skillOrder)
+  // Find player's skill order
+  const playerSkillIndex = skillsWithWinrate.findIndex(s => s.key === participant.skillOrder)
+  let playerSkill = playerSkillIndex >= 0 ? skillsWithWinrate[playerSkillIndex] : null
+  let playerRank = playerSkillIndex >= 0 ? playerSkillIndex + 1 : -1
 
-  if (!playerSkillOrder) return 10
+  // Check for low sample data
+  if (!playerSkill) {
+    const lowSampleEntry = skillsEntries.find(([key]) => key === participant.skillOrder)
+    if (lowSampleEntry && lowSampleEntry[1].games >= 1) {
+      playerRank = skillsWithWinrate.length + 1
+      const confidence = Math.min(0.5, lowSampleEntry[1].games / MIN_GAMES)
+      playerSkill = {
+        key: participant.skillOrder,
+        games: lowSampleEntry[1].games,
+        wins: lowSampleEntry[1].wins,
+        winrate: lowSampleEntry[1].games > 0 ? (lowSampleEntry[1].wins / lowSampleEntry[1].games) * 100 : 0,
+        confidence,
+      }
+    }
+  }
 
-  const isInTop2 = top2.some(s => s.key === participant.skillOrder)
-  if (isInTop2) return 0
+  if (!playerSkill) return 8 // Truly unknown skill order
 
-  const topWinrate = top2[0].winrate
-  const winrateDiff = topWinrate - playerSkillOrder.winrate
-  // Soft quadratic: (diff/maxDiff)² * maxPenalty
-  // Max diff ~10% winrate difference for full penalty
-  const normalizedDiff = Math.min(winrateDiff / 10, 1.0)
-  return 20 * normalizedDiff * normalizedDiff
+  const score = calculateRankBasedScore(playerRank, skillsWithWinrate.length)
+  const basePenalty = ((100 - score) / 100) * 20
+  return basePenalty * playerSkill.confidence
 }
 
 // calculate build order penalty
@@ -510,6 +589,9 @@ export async function calculateBuildOrderPenalty(
 
   if (!championStats?.data?.core) return 0
 
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 20
+
   const coreData = championStats.data.core as Record<string, { games: number; wins: number }>
   if (Object.keys(coreData).length === 0) return 0
 
@@ -526,31 +608,47 @@ export async function calculateBuildOrderPenalty(
   const playerKey = normalizedPlayerItems.join('_')
 
   const combosWithWinrate = Object.entries(coreData)
-    .map(([key, data]) => ({
-      key,
-      games: data.games,
-      wins: data.wins,
-      winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
-    }))
-    .filter(c => c.games >= 20)
+    .map(([key, data]) => {
+      const confidence = Math.min(1, 0.5 + (0.5 * (data.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return {
+        key,
+        games: data.games,
+        wins: data.wins,
+        winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
+        confidence,
+      }
+    })
+    .filter(c => c.games >= MIN_GAMES)
     .sort((a, b) => b.winrate - a.winrate)
 
   if (combosWithWinrate.length === 0) return 0
 
-  const top5 = combosWithWinrate.slice(0, 5)
-  const playerCombo = combosWithWinrate.find(c => c.key === playerKey)
+  // Find player's build order
+  const playerComboIndex = combosWithWinrate.findIndex(c => c.key === playerKey)
+  let playerCombo = playerComboIndex >= 0 ? combosWithWinrate[playerComboIndex] : null
+  let playerRank = playerComboIndex >= 0 ? playerComboIndex + 1 : -1
 
-  if (!playerCombo) return 10
+  // Check for low sample data
+  if (!playerCombo) {
+    const lowSampleEntry = Object.entries(coreData).find(([key]) => key === playerKey)
+    if (lowSampleEntry && lowSampleEntry[1].games >= 1) {
+      playerRank = combosWithWinrate.length + 1
+      const confidence = Math.min(0.5, lowSampleEntry[1].games / MIN_GAMES)
+      playerCombo = {
+        key: playerKey,
+        games: lowSampleEntry[1].games,
+        wins: lowSampleEntry[1].wins,
+        winrate: lowSampleEntry[1].games > 0 ? (lowSampleEntry[1].wins / lowSampleEntry[1].games) * 100 : 0,
+        confidence,
+      }
+    }
+  }
 
-  const isInTop5 = top5.some(c => c.key === playerKey)
-  if (isInTop5) return 0
+  if (!playerCombo) return 8 // Truly unknown build order
 
-  const topWinrate = top5[0].winrate
-  const winrateDiff = topWinrate - playerCombo.winrate
-  // Soft quadratic: (diff/maxDiff)² * maxPenalty
-  // Max diff ~10% winrate difference for full penalty
-  const normalizedDiff = Math.min(winrateDiff / 10, 1.0)
-  return 20 * normalizedDiff * normalizedDiff
+  const score = calculateRankBasedScore(playerRank, combosWithWinrate.length)
+  const basePenalty = ((100 - score) / 100) * 20
+  return basePenalty * playerCombo.confidence
 }
 
 // ============================================================================
@@ -674,9 +772,22 @@ function calculateItemPenaltyFromData(
       continue
     }
 
+    // Include all items with at least 10 games for ranking
+    // Items with 30+ games get full confidence, 10-29 games get partial confidence
+    const MIN_GAMES_THRESHOLD = 10
+    const FULL_CONFIDENCE_GAMES = 30
+
     const itemsWithPriority = slotItems
-      .map(item => ({ ...item, pickrate: (item.games / totalGames) * 100, priority: item.winrate }))
-      .filter(item => item.games >= 30)
+      .map(item => {
+        const pickrate = (item.games / totalGames) * 100
+        // Confidence scales from 0.5 at 10 games to 1.0 at 30+ games
+        const confidence = Math.min(
+          1,
+          0.5 + (0.5 * (item.games - MIN_GAMES_THRESHOLD)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES_THRESHOLD)
+        )
+        return { ...item, pickrate, priority: item.winrate, confidence }
+      })
+      .filter(item => item.games >= MIN_GAMES_THRESHOLD)
       .sort((a, b) => b.priority - a.priority)
 
     if (itemsWithPriority.length === 0) {
@@ -684,49 +795,61 @@ function calculateItemPenaltyFromData(
       continue
     }
 
-    const top5 = itemsWithPriority.slice(0, 5)
-    const playerItem = itemsWithPriority.find(i => i.item_id === playerItemId)
+    // Find player's item - first check in ranked list
+    const playerItemIndex = itemsWithPriority.findIndex(i => i.item_id === playerItemId)
+    let playerItem = playerItemIndex >= 0 ? itemsWithPriority[playerItemIndex] : null
+    let playerRank = playerItemIndex >= 0 ? playerItemIndex + 1 : -1
+
+    // If not in ranked list, check if it exists with ANY data (even < 10 games)
+    if (!playerItem) {
+      const lowSampleItem = slotItems.find(i => i.item_id === playerItemId)
+      if (lowSampleItem && lowSampleItem.games >= 1) {
+        // We have SOME data - use it but with very low confidence
+        // Rank it at the end of known items
+        playerRank = itemsWithPriority.length + 1
+        const confidence = Math.min(0.5, lowSampleItem.games / MIN_GAMES_THRESHOLD)
+        playerItem = {
+          ...lowSampleItem,
+          pickrate: (lowSampleItem.games / totalGames) * 100,
+          priority: lowSampleItem.winrate,
+          confidence,
+        }
+      }
+    }
 
     if (!playerItem) {
-      totalPenalty += 2
+      // Truly unknown item - no data at all
+      // Give benefit of doubt with moderate penalty
+      const penaltyAmount = 10 // Fixed moderate penalty for completely unknown
+      totalPenalty += penaltyAmount
       details.push({
         slot,
         itemId: playerItemId,
-        penalty: 2,
+        penalty: penaltyAmount,
         reason: 'off-meta',
-        topWinrate: top5[0]?.priority,
+        topWinrate: itemsWithPriority[0]?.priority,
         isInTop5: false,
       })
       continue
     }
 
-    const isInTop5 = top5.some(i => i.item_id === playerItemId)
-    if (isInTop5) {
-      details.push({
-        slot,
-        itemId: playerItemId,
-        penalty: 0,
-        reason: 'optimal',
-        playerWinrate: playerItem.priority,
-        topWinrate: top5[0].priority,
-        isInTop5: true,
-      })
-      continue
-    }
+    // Calculate score based on rank
+    const score = calculateRankBasedScore(playerRank, itemsWithPriority.length)
+    const isInTop5 = playerRank <= 5
 
-    const topPriority = top5[0].priority
-    const priorityDiff = topPriority - playerItem.priority
-    const penaltyAmount = Math.min(6, priorityDiff / 25)
+    // Apply confidence weight - low sample items have reduced penalty impact
+    const basePenalty = ((100 - score) / 100) * 20
+    const penaltyAmount = basePenalty * playerItem.confidence
+
     totalPenalty += penaltyAmount
-
     details.push({
       slot,
       itemId: playerItemId,
       penalty: penaltyAmount,
-      reason: 'suboptimal',
+      reason: isInTop5 ? 'optimal' : 'suboptimal',
       playerWinrate: playerItem.priority,
-      topWinrate: topPriority,
-      isInTop5: false,
+      topWinrate: itemsWithPriority[0].priority,
+      isInTop5,
     })
   }
 
@@ -739,28 +862,48 @@ function calculateKeystonePenaltyFromData(
 ): number {
   if (!participant.perk0 || runeStats.length === 0) return 0
 
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 50
+
   const totalGames = runeStats.reduce((sum, r) => sum + r.games, 0)
   const runesWithPriority = runeStats
-    .map(rune => ({ ...rune, pickrate: (rune.games / totalGames) * 100, priority: rune.winrate }))
-    .filter(rune => rune.games >= 50)
+    .map(rune => {
+      const confidence = Math.min(1, 0.5 + (0.5 * (rune.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return { ...rune, pickrate: (rune.games / totalGames) * 100, priority: rune.winrate, confidence }
+    })
+    .filter(rune => rune.games >= MIN_GAMES)
     .sort((a, b) => b.priority - a.priority)
 
   if (runesWithPriority.length === 0) return 0
 
-  const top5 = runesWithPriority.slice(0, 5)
-  const playerRune = runesWithPriority.find(r => r.rune_id === participant.perk0)
+  // Find player's rune - first in ranked list
+  const playerRuneIndex = runesWithPriority.findIndex(r => r.rune_id === participant.perk0)
+  let playerRune = playerRuneIndex >= 0 ? runesWithPriority[playerRuneIndex] : null
+  let playerRank = playerRuneIndex >= 0 ? playerRuneIndex + 1 : -1
 
-  if (!playerRune) return 10
-  if (top5.some(r => r.rune_id === participant.perk0)) return 0
+  // Check for low sample data if not found
+  if (!playerRune) {
+    const lowSampleRune = runeStats.find(r => r.rune_id === participant.perk0)
+    if (lowSampleRune && lowSampleRune.games >= 1) {
+      playerRank = runesWithPriority.length + 1
+      const confidence = Math.min(0.5, lowSampleRune.games / MIN_GAMES)
+      playerRune = { ...lowSampleRune, pickrate: 0, priority: lowSampleRune.winrate, confidence }
+    }
+  }
 
-  const priorityDiff = top5[0].priority - playerRune.priority
-  const normalizedDiff = Math.min(priorityDiff / 10, 1.0)
-  return 20 * normalizedDiff * normalizedDiff
+  if (!playerRune) return 8 // Truly unknown rune
+
+  const score = calculateRankBasedScore(playerRank, runesWithPriority.length)
+  const basePenalty = ((100 - score) / 100) * 20
+  return basePenalty * playerRune.confidence
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function calculateSpellsPenaltyFromData(participant: ParticipantForPenalty, championData: any): number {
   if (!participant.spell1 || !participant.spell2 || !championData?.spells) return 0
+
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 30
 
   const spellsObj = championData.spells as Record<string, { games: number; wins: number }>
   const spellsEntries = Object.entries(spellsObj)
@@ -770,62 +913,110 @@ function calculateSpellsPenaltyFromData(participant: ParticipantForPenalty, cham
   const playerKey = `${playerSpells[0]}_${playerSpells[1]}`
 
   const spellsWithWinrate = spellsEntries
-    .map(([key, value]) => ({
-      key,
-      games: value.games,
-      wins: value.wins,
-      winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
-    }))
-    .filter(s => s.games >= 30)
+    .map(([key, value]) => {
+      const confidence = Math.min(1, 0.5 + (0.5 * (value.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return {
+        key,
+        games: value.games,
+        wins: value.wins,
+        winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
+        confidence,
+      }
+    })
+    .filter(s => s.games >= MIN_GAMES)
     .sort((a, b) => b.winrate - a.winrate)
 
   if (spellsWithWinrate.length === 0) return 0
 
-  const top3 = spellsWithWinrate.slice(0, 3)
-  const playerSpellCombo = spellsWithWinrate.find(s => s.key === playerKey)
+  // Find player's spell combo
+  const playerComboIndex = spellsWithWinrate.findIndex(s => s.key === playerKey)
+  let playerCombo = playerComboIndex >= 0 ? spellsWithWinrate[playerComboIndex] : null
+  let playerRank = playerComboIndex >= 0 ? playerComboIndex + 1 : -1
 
-  if (!playerSpellCombo) return 4
-  if (top3.some(s => s.key === playerKey)) return 0
+  // Check for low sample data
+  if (!playerCombo) {
+    const lowSampleEntry = spellsEntries.find(([key]) => key === playerKey)
+    if (lowSampleEntry && lowSampleEntry[1].games >= 1) {
+      playerRank = spellsWithWinrate.length + 1
+      const confidence = Math.min(0.5, lowSampleEntry[1].games / MIN_GAMES)
+      playerCombo = {
+        key: playerKey,
+        games: lowSampleEntry[1].games,
+        wins: lowSampleEntry[1].wins,
+        winrate: lowSampleEntry[1].games > 0 ? (lowSampleEntry[1].wins / lowSampleEntry[1].games) * 100 : 0,
+        confidence,
+      }
+    }
+  }
 
-  const winrateDiff = top3[0].winrate - playerSpellCombo.winrate
-  const normalizedDiff = Math.min(winrateDiff / 10, 1.0)
-  return 20 * normalizedDiff * normalizedDiff
+  if (!playerCombo) return 5 // Truly unknown combo
+
+  const score = calculateRankBasedScore(playerRank, spellsWithWinrate.length)
+  const basePenalty = ((100 - score) / 100) * 15
+  return basePenalty * playerCombo.confidence
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function calculateSkillOrderPenaltyFromData(participant: ParticipantForPenalty, championData: any): number {
   if (!participant.skillOrder || !championData?.skills) return 0
 
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 20
+
   const skillsObj = championData.skills as Record<string, { games: number; wins: number }>
   const skillsEntries = Object.entries(skillsObj)
   if (skillsEntries.length === 0) return 0
 
   const skillsWithWinrate = skillsEntries
-    .map(([key, value]) => ({
-      key,
-      games: value.games,
-      wins: value.wins,
-      winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
-    }))
-    .filter(s => s.games >= 20)
+    .map(([key, value]) => {
+      const confidence = Math.min(1, 0.5 + (0.5 * (value.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return {
+        key,
+        games: value.games,
+        wins: value.wins,
+        winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
+        confidence,
+      }
+    })
+    .filter(s => s.games >= MIN_GAMES)
     .sort((a, b) => b.winrate - a.winrate)
 
   if (skillsWithWinrate.length === 0) return 0
 
-  const top2 = skillsWithWinrate.slice(0, 2)
-  const playerSkillOrder = skillsWithWinrate.find(s => s.key === participant.skillOrder)
+  // Find player's skill order
+  const playerSkillIndex = skillsWithWinrate.findIndex(s => s.key === participant.skillOrder)
+  let playerSkill = playerSkillIndex >= 0 ? skillsWithWinrate[playerSkillIndex] : null
+  let playerRank = playerSkillIndex >= 0 ? playerSkillIndex + 1 : -1
 
-  if (!playerSkillOrder) return 10
-  if (top2.some(s => s.key === participant.skillOrder)) return 0
+  // Check for low sample data
+  if (!playerSkill) {
+    const lowSampleEntry = skillsEntries.find(([key]) => key === participant.skillOrder)
+    if (lowSampleEntry && lowSampleEntry[1].games >= 1) {
+      playerRank = skillsWithWinrate.length + 1
+      const confidence = Math.min(0.5, lowSampleEntry[1].games / MIN_GAMES)
+      playerSkill = {
+        key: participant.skillOrder,
+        games: lowSampleEntry[1].games,
+        wins: lowSampleEntry[1].wins,
+        winrate: lowSampleEntry[1].games > 0 ? (lowSampleEntry[1].wins / lowSampleEntry[1].games) * 100 : 0,
+        confidence,
+      }
+    }
+  }
 
-  const winrateDiff = top2[0].winrate - playerSkillOrder.winrate
-  const normalizedDiff = Math.min(winrateDiff / 10, 1.0)
-  return 20 * normalizedDiff * normalizedDiff
+  if (!playerSkill) return 8 // Truly unknown skill order
+
+  const score = calculateRankBasedScore(playerRank, skillsWithWinrate.length)
+  const basePenalty = ((100 - score) / 100) * 20
+  return basePenalty * playerSkill.confidence
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function calculateBuildOrderPenaltyFromData(participant: ParticipantForPenalty, championData: any): number {
   if (!participant.buildOrder || !championData?.core) return 0
+
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 20
 
   const coreData = championData.core as Record<string, { games: number; wins: number }>
   if (Object.keys(coreData).length === 0) return 0
@@ -843,24 +1034,45 @@ function calculateBuildOrderPenaltyFromData(participant: ParticipantForPenalty, 
   const playerKey = normalizedPlayerItems.join('_')
 
   const combosWithWinrate = Object.entries(coreData)
-    .map(([key, data]) => ({
-      key,
-      games: data.games,
-      wins: data.wins,
-      winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
-    }))
-    .filter(c => c.games >= 20)
+    .map(([key, data]) => {
+      const confidence = Math.min(1, 0.5 + (0.5 * (data.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return {
+        key,
+        games: data.games,
+        wins: data.wins,
+        winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
+        confidence,
+      }
+    })
+    .filter(c => c.games >= MIN_GAMES)
     .sort((a, b) => b.winrate - a.winrate)
 
   if (combosWithWinrate.length === 0) return 0
 
-  const top5 = combosWithWinrate.slice(0, 5)
-  const playerCombo = combosWithWinrate.find(c => c.key === playerKey)
+  // Find player's build order
+  const playerComboIndex = combosWithWinrate.findIndex(c => c.key === playerKey)
+  let playerCombo = playerComboIndex >= 0 ? combosWithWinrate[playerComboIndex] : null
+  let playerRank = playerComboIndex >= 0 ? playerComboIndex + 1 : -1
 
-  if (!playerCombo) return 10
-  if (top5.some(c => c.key === playerKey)) return 0
+  // Check for low sample data
+  if (!playerCombo) {
+    const lowSampleEntry = Object.entries(coreData).find(([key]) => key === playerKey)
+    if (lowSampleEntry && lowSampleEntry[1].games >= 1) {
+      playerRank = combosWithWinrate.length + 1
+      const confidence = Math.min(0.5, lowSampleEntry[1].games / MIN_GAMES)
+      playerCombo = {
+        key: playerKey,
+        games: lowSampleEntry[1].games,
+        wins: lowSampleEntry[1].wins,
+        winrate: lowSampleEntry[1].games > 0 ? (lowSampleEntry[1].wins / lowSampleEntry[1].games) * 100 : 0,
+        confidence,
+      }
+    }
+  }
 
-  const winrateDiff = top5[0].winrate - playerCombo.winrate
-  const normalizedDiff = Math.min(winrateDiff / 10, 1.0)
-  return 20 * normalizedDiff * normalizedDiff
+  if (!playerCombo) return 8 // Truly unknown build order
+
+  const score = calculateRankBasedScore(playerRank, combosWithWinrate.length)
+  const basePenalty = ((100 - score) / 100) * 20
+  return basePenalty * playerCombo.confidence
 }
