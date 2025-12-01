@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import type { UpdateJobProgress } from '@/types/update-jobs'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
@@ -11,7 +11,7 @@ interface Props {
   onNotifyChange: (enabled: boolean) => void
 }
 
-export default function FetchMessage({ job, region, notifyEnabled, onNotifyChange }: Props) {
+export default function FetchMessage({ job, region: _region, notifyEnabled, onNotifyChange }: Props) {
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const hasStartedFetching = job.totalMatches > 0
 

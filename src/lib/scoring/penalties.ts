@@ -150,7 +150,7 @@ export function calculateDeathsPerMinutePenalty(deaths: number, gameDurationMinu
 // 95%+ KP = 90, scales down from there
 export function calculateKillParticipationScore(killParticipation: number): number {
   const EXCELLENT_KP = 0.95
-  const GOOD_KP = 0.80
+  const GOOD_KP = 0.8
 
   if (killParticipation >= EXCELLENT_KP) return 90
   if (killParticipation >= GOOD_KP) {
@@ -173,7 +173,7 @@ export function calculateKillParticipationPenalty(killParticipation: number): nu
 // Calculate build choice score (0-100) based on rank position
 // Uses exponential decay: top choice scores high, drops off faster
 // Rank 1 = 90, Rank 2 = 74, Rank 3 = 61, Rank 5 = 41, Rank 10 = 14
-export function calculateRankBasedScore(rank: number, totalOptions: number): number {
+export function calculateRankBasedScore(rank: number, _totalOptions: number): number {
   if (rank <= 0) return 90
   // Exponential decay with decay constant of 5 (faster decay)
   // score = 90 * e^(-(rank-1)/5)

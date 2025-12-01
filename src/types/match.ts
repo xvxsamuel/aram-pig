@@ -50,6 +50,11 @@ export interface TimelineEvent {
     spellSlot: number
     type: string
   }>
+  // building kill event fields
+  buildingType?: string // 'TOWER_BUILDING', 'INHIBITOR_BUILDING'
+  teamId?: number // team that lost the building
+  laneType?: string // 'MID_LANE' for ARAM
+  towerType?: string // 'OUTER_TURRET', 'INNER_TURRET', etc.
 }
 
 export interface MatchData {

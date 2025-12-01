@@ -367,7 +367,7 @@ export function calculateRecentlyPlayedWith(
           games: 1,
           wins: teammate.win ? 1 : 0,
           losses: teammate.win ? 0 : 1,
-          profileIconId: profileIcons[teammate.puuid] || 29,
+          profileIconId: profileIcons[teammate.puuid] || 0,
         })
       }
     }

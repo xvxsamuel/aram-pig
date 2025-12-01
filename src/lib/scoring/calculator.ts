@@ -2,10 +2,16 @@
 import { createAdminClient } from '../db/supabase'
 import type { WelfordState } from '../db/stats-aggregator'
 import { getStdDev, getZScore } from '../db/stats-aggregator'
-import { calculateStatScore, calculateAllBuildPenalties, type ItemPenaltyDetail } from './penalties'
+import {
+  calculateStatScore,
+  calculateAllBuildPenalties,
+  calculateKillParticipationScore,
+  calculateDeathsScore,
+  type ItemPenaltyDetail,
+} from './penalties'
 
-// Determine relevant stats for a champion based on their data
-// Returns weights (0-1) for each stat based on how meaningful it is for this champion
+// determine relevant stats for a champion based on their data
+// returns weights (0-1) for each stat based on how meaningful it is for this champion
 interface StatRelevance {
   damageToChampions: number // 0-1 weight
   totalDamage: number
@@ -27,9 +33,9 @@ function calculateStatRelevance(
     ccTimePerMin?: WelfordState
   } | null
 ): StatRelevance {
-  // Base relevance on:
-  // 1. Whether the stat has a meaningful average (threshold-based)
-  // 2. Coefficient of variation (CV = stddev/mean) - higher CV means more skill expression
+  // base relevance on:
+  // 1. whether the stat has a meaningful average (threshold-based)
+  // 2. coefficient of variation (CV = stddev/mean) - higher CV means more skill expression
 
   const relevance: StatRelevance = {
     damageToChampions: 1.0, // always relevant - everyone should do damage
@@ -38,7 +44,7 @@ function calculateStatRelevance(
     ccTime: 0,
   }
 
-  // Healing/Shielding: only relevant if champion avg >= 300/min (lower threshold to catch more healers)
+  // healing/Shielding: only relevant if champion avg >= 300/min (lower threshold to catch more healers)
   // Then scale weight by how much they heal relative to damage dealers
   if (championAvgPerMin.healingShieldingPerMin >= 300) {
     // Weight from 0.5 (300/min) to 1.0 (1500+/min)
@@ -46,29 +52,29 @@ function calculateStatRelevance(
     relevance.healingShielding = healWeight
   }
 
-  // CC Time: only relevant if champion avg >= 2 sec/min (lower threshold)
-  // Then scale weight by how much CC they have
-  if (championAvgPerMin.ccTimePerMin >= 2) {
+  // cc time: only relevant if champion avg >= 2 sec/min
+  // then scale weight by how much CC they have
+  if (championAvgPerMin.ccTimePerMin >= 1) {
     // Weight from 0.5 (2 sec/min) to 1.0 (8+ sec/min)
     const ccWeight = Math.min(1.0, 0.5 + (championAvgPerMin.ccTimePerMin - 2) / 12)
     relevance.ccTime = ccWeight
   }
 
-  // Boost relevance if there's high variance (skill expression opportunity)
+  // boost relevance if there's high variance - CV > 0.3
   if (welford) {
-    // Damage stats: boost if CV > 0.3 (30% variation)
+    // damage stats
     if (welford.damageToChampionsPerMin && welford.damageToChampionsPerMin.n >= 30) {
       const cv = getStdDev(welford.damageToChampionsPerMin) / welford.damageToChampionsPerMin.mean
       if (cv > 0.3) relevance.damageToChampions = Math.min(1.0, relevance.damageToChampions * (1 + cv * 0.5))
     }
 
-    // Healing: boost if high variance (some players really maximize it)
+    // healing
     if (welford.healingShieldingPerMin && welford.healingShieldingPerMin.n >= 30 && relevance.healingShielding > 0) {
       const cv = getStdDev(welford.healingShieldingPerMin) / welford.healingShieldingPerMin.mean
       if (cv > 0.4) relevance.healingShielding = Math.min(1.0, relevance.healingShielding * (1 + cv * 0.3))
     }
 
-    // CC: boost if high variance
+    // cc
     if (welford.ccTimePerMin && welford.ccTimePerMin.n >= 30 && relevance.ccTime > 0) {
       const cv = getStdDev(welford.ccTimePerMin) / welford.ccTimePerMin.mean
       if (cv > 0.4) relevance.ccTime = Math.min(1.0, relevance.ccTime * (1 + cv * 0.3))
@@ -127,7 +133,8 @@ export interface PigScoreBreakdown {
   componentScores: {
     performance: number // 50% weight - damage, healing, CC stats
     build: number // 20% weight - items, runes, spells, skills
-    timeline: number // 30% weight - kill/death quality from position/trades
+    timeline: number // 20% weight - kill/death quality from position/trades
+    kda: number // 10% weight - kill participation and deaths per minute
   }
   // Detailed breakdown of each metric
   metrics: {
@@ -270,7 +277,7 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
     itemScore * 0.4 + keystoneScore * 0.2 + spellsScore * 0.15 + skillOrderScore * 0.15 + buildOrderScore * 0.1
 
   // ============================================================================
-  // TIMELINE COMPONENT (30% of final score)
+  // TIMELINE COMPONENT (20% of final score)
   // Kill/death quality based on position zones and trade detection
   // ============================================================================
   let timelineScore = 50 // Default average score if no timeline data
@@ -287,10 +294,27 @@ export async function calculatePigScore(participant: ParticipantData): Promise<n
   }
 
   // ============================================================================
+  // KDA COMPONENT (10% of final score)
+  // Kill participation and deaths per minute
+  // ============================================================================
+  let kdaScore = 50 // Default average score
+  if (
+    participant.kills !== undefined &&
+    participant.assists !== undefined &&
+    participant.teamTotalKills !== undefined &&
+    participant.teamTotalKills > 0
+  ) {
+    const killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
+    const kpScore = calculateKillParticipationScore(killParticipation)
+    const deathScore = calculateDeathsScore(participant.deaths, gameDurationMinutes)
+    kdaScore = kpScore * 0.6 + deathScore * 0.4
+  }
+
+  // ============================================================================
   // FINAL SCORE (weighted average of components)
   // ============================================================================
-  // Performance: 50%, Build: 20%, Timeline: 30%
-  const finalScore = Math.round(performanceScore * 0.5 + buildScore * 0.2 + timelineScore * 0.3)
+  // Performance: 50%, Build: 20%, Timeline: 20%, KDA: 10%
+  const finalScore = Math.round(performanceScore * 0.5 + buildScore * 0.2 + timelineScore * 0.2 + kdaScore * 0.1)
 
   return Math.max(0, Math.min(100, finalScore))
 }
@@ -477,21 +501,10 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
     itemScore * 0.4 + keystoneScore * 0.2 + spellsScore * 0.15 + skillOrderScore * 0.15 + buildOrderScore * 0.1
 
   // ============================================================================
-  // TIMELINE COMPONENT (30% of final score)
+  // TIMELINE COMPONENT (20% of final score)
   // Kill/death quality based on position zones and trade detection
   // ============================================================================
   let timelineScore = 50 // Default average score if no timeline data
-  let killParticipation: number | undefined
-
-  // Calculate kill participation for display (not used in score anymore)
-  if (
-    participant.kills !== undefined &&
-    participant.assists !== undefined &&
-    participant.teamTotalKills !== undefined &&
-    participant.teamTotalKills > 0
-  ) {
-    killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
-  }
 
   if (participant.takedownQualityScore !== undefined && participant.deathQualityScore !== undefined) {
     // Both scores available - weight death quality more (60%) since it's more controllable
@@ -532,10 +545,43 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
   }
 
   // ============================================================================
+  // KDA COMPONENT (10% of final score)
+  // Kill participation and deaths per minute
+  // ============================================================================
+  let kdaScore = 50 // Default average score
+  let killParticipation: number | undefined
+
+  // Calculate kill participation
+  if (
+    participant.kills !== undefined &&
+    participant.assists !== undefined &&
+    participant.teamTotalKills !== undefined &&
+    participant.teamTotalKills > 0
+  ) {
+    killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
+    const kpScore = calculateKillParticipationScore(killParticipation)
+    const deathScore = calculateDeathsScore(participant.deaths, gameDurationMinutes)
+    // Weight: KP 60%, Deaths 40%
+    kdaScore = kpScore * 0.6 + deathScore * 0.4
+    metrics.push({
+      name: 'Kill Participation',
+      score: kpScore,
+      weight: 0.6,
+      playerValue: killParticipation * 100,
+    })
+    metrics.push({
+      name: 'Deaths/Min',
+      score: deathScore,
+      weight: 0.4,
+      playerValue: participant.deaths / gameDurationMinutes,
+    })
+  }
+
+  // ============================================================================
   // FINAL SCORE (weighted average of components)
   // ============================================================================
-  // Performance: 50%, Build: 20%, Timeline: 30%
-  const finalScore = Math.round(performanceScore * 0.5 + buildScore * 0.2 + timelineScore * 0.3)
+  // Performance: 50%, Build: 20%, Timeline: 20%, KDA: 10%
+  const finalScore = Math.round(performanceScore * 0.5 + buildScore * 0.2 + timelineScore * 0.2 + kdaScore * 0.1)
 
   return {
     finalScore: Math.max(0, Math.min(100, finalScore)),
@@ -548,6 +594,7 @@ export async function calculatePigScoreWithBreakdown(participant: ParticipantDat
       performance: Math.round(performanceScore),
       build: Math.round(buildScore),
       timeline: Math.round(timelineScore),
+      kda: Math.round(kdaScore),
     },
     metrics,
     itemDetails: buildPenalties.itemDetails,

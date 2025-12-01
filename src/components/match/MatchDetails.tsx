@@ -48,6 +48,8 @@ interface TakedownEvent {
   wasKill: boolean // true = kill, false = assist (display only)
   pos?: number // position score 0-100 (higher = in enemy territory/pushing)
   value?: number // quality value 0-100
+  x?: number // raw x coordinate for map display
+  y?: number // raw y coordinate for map display
 }
 
 interface DeathEvent {
@@ -56,11 +58,21 @@ interface DeathEvent {
   tf: boolean
   pos?: number // position score 0-100 (higher = in enemy territory/pushing)
   value?: number // quality value 0-100
+  x?: number // raw x coordinate for map display
+  y?: number // raw y coordinate for map display
+}
+
+interface TowerEvent {
+  t: number // timestamp in seconds
+  x: number // raw x coordinate
+  y: number // raw y coordinate
+  team: 'ally' | 'enemy' // which team's tower was destroyed
 }
 
 interface KillDeathTimeline {
   takedowns: TakedownEvent[]
   deaths: DeathEvent[]
+  towers?: TowerEvent[]
   deathScore: number
   takedownScore: number
 }
@@ -107,6 +119,7 @@ interface PigScoreBreakdown {
   componentScores: {
     performance: number
     build: number
+    timeline: number
     kda: number
   }
   metrics: {
@@ -1081,7 +1094,7 @@ export default function MatchDetails({
                   </p>
 
                   {/* Component Scores Summary */}
-                  <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="grid grid-cols-4 gap-2 mb-4">
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-2 text-center">
                       <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Performance</div>
                       <div
@@ -1096,6 +1109,7 @@ export default function MatchDetails({
                       >
                         {pigScoreBreakdown.componentScores.performance}
                       </div>
+                      <div className="text-[9px] text-text-muted">50%</div>
                     </div>
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-2 text-center">
                       <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Build</div>
@@ -1111,6 +1125,7 @@ export default function MatchDetails({
                       >
                         {pigScoreBreakdown.componentScores.build}
                       </div>
+                      <div className="text-[9px] text-text-muted">20%</div>
                     </div>
                     <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-2 text-center">
                       <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Timeline</div>
@@ -1126,6 +1141,23 @@ export default function MatchDetails({
                       >
                         {pigScoreBreakdown.componentScores.timeline}
                       </div>
+                      <div className="text-[9px] text-text-muted">20%</div>
+                    </div>
+                    <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-2 text-center">
+                      <div className="text-[10px] text-text-muted uppercase tracking-wide mb-1">KDA</div>
+                      <div
+                        className={clsx(
+                          'text-lg font-bold',
+                          pigScoreBreakdown.componentScores.kda >= 85
+                            ? 'text-accent-light'
+                            : pigScoreBreakdown.componentScores.kda >= 70
+                              ? 'text-gold-light'
+                              : 'text-negative'
+                        )}
+                      >
+                        {pigScoreBreakdown.componentScores.kda}
+                      </div>
+                      <div className="text-[9px] text-text-muted">10%</div>
                     </div>
                   </div>
 
@@ -1191,19 +1223,33 @@ export default function MatchDetails({
                     return null
                   }
 
-                  // combine all events into a sorted timeline
+                  // combine all events into a sorted timeline (including towers)
                   const events: Array<{
-                    type: 'takedown' | 'death'
+                    type: 'takedown' | 'death' | 'tower'
                     t: number
                     gold?: number
                     tf?: boolean
                     wasKill?: boolean
                     pos?: number
                     value?: number
+                    x?: number
+                    y?: number
+                    team?: 'ally' | 'enemy'
                   }> = [
                     ...timeline.takedowns.map(k => ({ type: 'takedown' as const, ...k })),
                     ...timeline.deaths.map(d => ({ type: 'death' as const, ...d })),
+                    ...(timeline.towers || []).map(t => ({ type: 'tower' as const, ...t })),
                   ].sort((a, b) => a.t - b.t)
+
+                  // ARAM map constants for coordinate conversion
+                  const MAP_MIN = { x: -28, y: -19 }
+                  const MAP_MAX = { x: 12849, y: 12858 }
+
+                  // Convert game coordinates to map percentage (0-100)
+                  const coordToPercent = (x: number, y: number) => ({
+                    x: ((x - MAP_MIN.x) / (MAP_MAX.x - MAP_MIN.x)) * 100,
+                    y: ((y - MAP_MIN.y) / (MAP_MAX.y - MAP_MIN.y)) * 100,
+                  })
 
                   const formatTime = (secs: number) => {
                     const mins = Math.floor(secs / 60)
@@ -1224,6 +1270,12 @@ export default function MatchDetails({
                             <span className="w-2 h-2 rounded-full bg-negative"></span>
                             <span className="text-text-muted">{timeline.deaths.length} deaths</span>
                           </span>
+                          {timeline.towers && timeline.towers.length > 0 && (
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rotate-45 bg-gold-light"></span>
+                              <span className="text-text-muted">{timeline.towers.length} towers</span>
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -1307,10 +1359,20 @@ export default function MatchDetails({
                         {/* Event markers */}
                         {events.map((event, idx) => {
                           const leftPct = (event.t / gameDurationSec) * 100
+                          const isTower = event.type === 'tower'
                           const isTakedown = event.type === 'takedown'
+                          const isDeath = event.type === 'death'
                           const isKill = isTakedown && event.wasKill
                           const value = event.value ?? 50
-                          const eventLabel = isTakedown ? (isKill ? 'Kill' : 'Assist') : 'Death'
+                          const eventLabel = isTower
+                            ? event.team === 'enemy'
+                              ? 'Tower Destroyed'
+                              : 'Tower Lost'
+                            : isTakedown
+                              ? isKill
+                                ? 'Kill'
+                                : 'Assist'
+                              : 'Death'
 
                           // color based on value: high value = bright, low value = dim
                           const getValueColor = (v: number, isTakedown: boolean) => {
@@ -1322,86 +1384,169 @@ export default function MatchDetails({
                             }
                           }
 
+                          // Map position if coordinates available
+                          const hasPosition = event.x !== undefined && event.y !== undefined
+                          const mapPos = hasPosition ? coordToPercent(event.x!, event.y!) : null
+
                           return (
-                            <SimpleTooltip
+                            <div
                               key={`${event.type}-${idx}`}
-                              content={
-                                <div className="text-xs min-w-[120px]">
-                                  <div
-                                    className={clsx(
-                                      'font-semibold mb-1.5 flex items-center justify-between',
-                                      isTakedown ? 'text-accent-light' : 'text-negative'
-                                    )}
-                                  >
-                                    <span>
-                                      {eventLabel} at {formatTime(event.t)}
-                                    </span>
-                                    <span
+                              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
+                              style={{ left: `${leftPct}%` }}
+                            >
+                              <SimpleTooltip
+                                content={
+                                  <div className="text-xs">
+                                    {/* Map visualization */}
+                                    {hasPosition && (
+                                      <div className="relative w-[120px] h-[120px] mb-2 rounded overflow-hidden border border-abyss-600">
+                                        {/* ARAM Map background */}
+                                        <img
+                                          src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/map/map12.png`}
+                                          alt="ARAM Map"
+                                          className="absolute inset-0 w-full h-full object-cover"
+                                        />
+                                        {/* Event marker on map */}
+                                        {mapPos && (
+                                          <div
+                                            className="absolute z-10 transform -translate-x-1/2 -translate-y-1/2"
+                                          style={{
+                                            left: `${mapPos.x}%`,
+                                            // Flip Y axis since map image has origin at top-left but game coords have origin at bottom-left
+                                            top: `${100 - mapPos.y}%`,
+                                          }}
+                                        >
+                                          {isTower ? (
+                                            // Tower icon - diamond shape
+                                            <div
+                                              className={clsx(
+                                                'w-3 h-3 rotate-45 border',
+                                                event.team === 'enemy'
+                                                  ? 'bg-accent-light/90 border-white'
+                                                  : 'bg-negative/90 border-white'
+                                              )}
+                                            />
+                                          ) : (
+                                            // Champion icon for kills/deaths
+                                            <div
+                                              className={clsx(
+                                                'w-5 h-5 rounded-full border-[1.5px] overflow-hidden',
+                                                isTakedown ? 'border-accent-light' : 'border-negative',
+                                                event.tf && 'ring-1 ring-blue-400'
+                                              )}
+                                            >
+                                              <img
+                                                src={getChampionImageUrl(
+                                                  currentPlayer?.championName || '',
+                                                  ddragonVersion
+                                                )}
+                                                alt={currentPlayer?.championName}
+                                                className="w-full h-full object-cover"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Event info */}
+                                  <div className="min-w-[120px]">
+                                    <div
                                       className={clsx(
-                                        'ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                        isTakedown
-                                          ? value >= 70
-                                            ? 'bg-accent-light/20'
-                                            : value >= 40
-                                              ? 'bg-gold-light/20'
-                                              : 'bg-abyss-600'
-                                          : value >= 70
-                                            ? 'bg-gold-light/20'
-                                            : 'bg-negative/20',
-                                        getValueColor(value, isTakedown)
+                                        'font-semibold mb-1.5 flex items-center justify-between',
+                                        isTower
+                                          ? event.team === 'enemy'
+                                            ? 'text-accent-light'
+                                            : 'text-negative'
+                                          : isTakedown
+                                            ? 'text-accent-light'
+                                            : 'text-negative'
                                       )}
                                     >
-                                      {value}
-                                    </span>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    {event.gold !== undefined && (
-                                      <div className="text-text-muted flex justify-between">
-                                        <span>{isTakedown ? 'Victim gold:' : 'Your gold:'}</span>
-                                        <span className="text-gold-light">{event.gold.toLocaleString()}</span>
-                                      </div>
-                                    )}
-                                    {event.pos !== undefined && (
-                                      <div className="text-text-muted flex justify-between">
-                                        <span>Position:</span>
+                                      <span>
+                                        {eventLabel} at {formatTime(event.t)}
+                                      </span>
+                                      {!isTower && (
                                         <span
                                           className={clsx(
-                                            event.pos >= 60
-                                              ? 'text-accent-light'
-                                              : event.pos <= 40
-                                                ? 'text-negative'
-                                                : 'text-text-muted'
+                                            'ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold',
+                                            isTakedown
+                                              ? value >= 70
+                                                ? 'bg-accent-light/20'
+                                                : value >= 40
+                                                  ? 'bg-gold-light/20'
+                                                  : 'bg-abyss-600'
+                                              : value >= 70
+                                                ? 'bg-gold-light/20'
+                                                : 'bg-negative/20',
+                                            getValueColor(value, isTakedown)
                                           )}
                                         >
-                                          {event.pos >= 60 ? 'Pushing' : event.pos <= 40 ? 'At base' : 'Mid-lane'}
+                                          {value}
                                         </span>
+                                      )}
+                                    </div>
+                                    {!isTower && (
+                                      <div className="space-y-0.5">
+                                        {event.gold !== undefined && event.gold > 0 && (
+                                          <div className="text-text-muted flex justify-between">
+                                            <span>{isTakedown ? 'Victim gold:' : 'Gold spent:'}</span>
+                                            <span className="text-gold-light">{event.gold.toLocaleString()}</span>
+                                          </div>
+                                        )}
+                                        {event.pos !== undefined && (
+                                          <div className="text-text-muted flex justify-between">
+                                            <span>Position:</span>
+                                            <span
+                                              className={clsx(
+                                                event.pos >= 60
+                                                  ? 'text-accent-light'
+                                                  : event.pos <= 40
+                                                    ? 'text-negative'
+                                                    : 'text-text-muted'
+                                              )}
+                                            >
+                                              {event.pos >= 60 ? 'Pushing' : event.pos <= 40 ? 'At base' : 'Mid-lane'}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {event.tf && (
+                                          <div className="text-blue-400">
+                                            Teamfight {isTakedown ? 'takedown' : 'death'}
+                                          </div>
+                                        )}
+                                        {isDeath && event.gold !== undefined && event.gold > 2000 && (
+                                          <div className="text-negative text-[10px]">Held too much gold!</div>
+                                        )}
                                       </div>
-                                    )}
-                                    {event.tf && (
-                                      <div className="text-blue-400">Teamfight {isTakedown ? 'takedown' : 'death'}</div>
-                                    )}
-                                    {!isTakedown && event.gold !== undefined && event.gold > 1500 && (
-                                      <div className="text-negative text-[10px]">High gold at death</div>
                                     )}
                                   </div>
                                 </div>
                               }
                             >
-                              <div
-                                className="absolute top-1/2 -translate-y-1/2 cursor-pointer transition-transform hover:scale-125 z-10"
-                                style={{ left: `${leftPct}%` }}
-                              >
+                              {isTower ? (
+                                // Tower marker - diamond shape
                                 <div
                                   className={clsx(
-                                    'w-3 h-3 rounded-full border-2 -ml-1.5',
-                                    isTakedown
-                                      ? 'bg-accent-light border-accent-light/50'
-                                      : 'bg-negative border-negative/50',
-                                    event.tf && 'ring-2 ring-blue-400/50'
+                                    'w-2 h-2 rotate-45 cursor-pointer transition-transform hover:scale-150',
+                                    event.team === 'enemy'
+                                      ? 'bg-accent-light border border-accent-light/50'
+                                      : 'bg-negative border border-negative/50'
                                   )}
                                 />
-                              </div>
-                            </SimpleTooltip>
+                              ) : (
+                                // Kill/death marker - circle
+                                <div
+                                  className={clsx(
+                                    'w-2 h-2 rounded-full cursor-pointer transition-transform hover:scale-150',
+                                    isTakedown ? 'bg-accent-light' : 'bg-negative',
+                                    event.tf && 'ring-1 ring-blue-400/50'
+                                  )}
+                                />
+                              )}
+                              </SimpleTooltip>
+                            </div>
                           )
                         })}
                       </div>
@@ -1409,46 +1554,81 @@ export default function MatchDetails({
                       {/* Event List */}
                       <div className="space-y-1.5 mt-6 max-h-32 overflow-y-auto">
                         {events.map((event, idx) => {
+                          const isTower = event.type === 'tower'
                           const isTakedown = event.type === 'takedown'
+                          const _isDeath = event.type === 'death'
                           const isKill = isTakedown && event.wasKill
                           const value = event.value ?? 50
                           const pos = event.pos
-                          const eventLabel = isTakedown ? (isKill ? 'Kill' : 'Assist') : 'Death'
+                          const eventLabel = isTower
+                            ? event.team === 'enemy'
+                              ? 'Tower ✓'
+                              : 'Tower ✗'
+                            : isTakedown
+                              ? isKill
+                                ? 'Kill'
+                                : 'Assist'
+                              : 'Death'
                           return (
                             <div key={`list-${event.type}-${idx}`} className="flex items-center gap-2 text-xs">
                               <span className="text-text-muted w-10 text-right tabular-nums">
                                 {formatTime(event.t)}
                               </span>
+                              {isTower ? (
+                                // Tower marker - diamond
+                                <span
+                                  className={clsx(
+                                    'w-1.5 h-1.5 rotate-45',
+                                    event.team === 'enemy' ? 'bg-accent-light' : 'bg-negative'
+                                  )}
+                                />
+                              ) : (
+                                // Kill/death marker - circle
+                                <span
+                                  className={clsx(
+                                    'w-1.5 h-1.5 rounded-full',
+                                    isTakedown ? 'bg-accent-light' : 'bg-negative'
+                                  )}
+                                />
+                              )}
                               <span
-                                className={clsx('w-1.5 h-1.5 rounded-full', isTakedown ? 'bg-accent-light' : 'bg-negative')}
-                              />
-                              <span
-                                className={clsx('font-medium w-10', isTakedown ? 'text-accent-light' : 'text-negative')}
+                                className={clsx(
+                                  'font-medium w-12',
+                                  isTower
+                                    ? event.team === 'enemy'
+                                      ? 'text-accent-light'
+                                      : 'text-negative'
+                                    : isTakedown
+                                      ? 'text-accent-light'
+                                      : 'text-negative'
+                                )}
                               >
                                 {eventLabel}
                               </span>
-                              <span
-                                className={clsx(
-                                  'w-8 text-center tabular-nums font-medium rounded px-1',
-                                  isTakedown
-                                    ? value >= 70
-                                      ? 'text-accent-light bg-accent-light/10'
-                                      : value >= 40
+                              {!isTower && (
+                                <span
+                                  className={clsx(
+                                    'w-8 text-center tabular-nums font-medium rounded px-1',
+                                    isTakedown
+                                      ? value >= 70
+                                        ? 'text-accent-light bg-accent-light/10'
+                                        : value >= 40
+                                          ? 'text-gold-light bg-gold-light/10'
+                                          : 'text-text-muted bg-abyss-600/50'
+                                      : value >= 70
                                         ? 'text-gold-light bg-gold-light/10'
-                                        : 'text-text-muted bg-abyss-600/50'
-                                    : value >= 70
-                                      ? 'text-gold-light bg-gold-light/10'
-                                      : 'text-negative bg-negative/10'
-                                )}
-                              >
-                                {value}
-                              </span>
-                              {event.gold !== undefined && event.gold > 0 && (
+                                        : 'text-negative bg-negative/10'
+                                  )}
+                                >
+                                  {value}
+                                </span>
+                              )}
+                              {!isTower && event.gold !== undefined && event.gold > 0 && (
                                 <span className="text-text-muted">
                                   <span className="text-gold-light">{event.gold.toLocaleString()}g</span>
                                 </span>
                               )}
-                              {pos !== undefined && (
+                              {!isTower && pos !== undefined && (
                                 <span
                                   className={clsx(
                                     'px-1.5 py-0.5 text-[10px] rounded',
@@ -1462,7 +1642,7 @@ export default function MatchDetails({
                                   {pos >= 60 ? 'PUSH' : pos <= 40 ? 'BASE' : 'MID'}
                                 </span>
                               )}
-                              {event.tf && (
+                              {!isTower && event.tf && (
                                 <span className="px-1.5 py-0.5 text-[10px] bg-blue-500/20 text-blue-400 rounded">
                                   TF
                                 </span>

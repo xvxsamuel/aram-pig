@@ -49,7 +49,7 @@ export {
   getKillDeathSummary,
   type KillEvent,
   type DeathAnalysis,
-  type KillAnalysis,
+  type TakedownAnalysis,
   type PlayerKillDeathTimeline,
   type KillDeathSummary,
 } from './kill-timeline'

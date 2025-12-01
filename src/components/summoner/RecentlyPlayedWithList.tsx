@@ -33,7 +33,7 @@ export default function RecentlyPlayedWithList({ players, region, ddragonVersion
               {/* profile icon */}
               <div className="w-8 h-8 rounded-full overflow-hidden bg-abyss-700 flex-shrink-0">
                 <Image
-                  src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/profileicon/${player.profileIconId}.png`}
+                  src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/profileicon/${player.profileIconId || 29}.png`}
                   alt={player.gameName}
                   width={40}
                   height={40}

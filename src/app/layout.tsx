@@ -64,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={leagueSpartan.variable}>
       <head>
         <link rel="preload" href="/bg.png" as="image" />
+        <link rel="preload" href="/title.svg" as="image" />
       </head>
       <body
         className="min-h-screen antialiased font-light flex flex-col bg-abyss-700 text-white"
