@@ -12,8 +12,6 @@ import {
   getProfileIcons,
   getUpdateStatus,
 } from '@/lib/db'
-import { autoEnrichRecentMatches } from '@/lib/db/auto-enrich'
-import type { PlatformCode } from '@/lib/game'
 import type { ProfileData } from '@/types/profile'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ puuid: string }> }) {
@@ -39,19 +37,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       getLongestWinStreak(puuid),
       getUpdateStatus(puuid),
     ])
-
-    // Auto-enrich recent matches (< 30 days) that don't have timeline data
-    // This runs in background and updates DB, but we return current data immediately
-    // The enriched data will be available on next page load or refresh
-    if (summonerInfo.region && matches.length > 0) {
-      const matchIds = matches.map(m => m.metadata.matchId)
-      // Fire and forget - don't await to keep response fast
-      autoEnrichRecentMatches(matchIds, summonerInfo.region as PlatformCode)
-        .then(count => {
-          if (count > 0) console.log(`[profile API] Auto-enriched ${count} matches for ${puuid.slice(0, 8)}...`)
-        })
-        .catch(err => console.error('[profile API] Auto-enrich error:', err))
-    }
 
     // get profile icons for teammates in matches
     const teammatePuuids = new Set<string>()

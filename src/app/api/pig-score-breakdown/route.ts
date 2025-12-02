@@ -29,6 +29,52 @@ function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefin
   return result
 }
 
+// Define types for match data to avoid type mismatches
+interface MatchData {
+  pigScoreBreakdown?: unknown
+  teamId?: number
+  kills?: number
+  assists?: number
+  deaths?: number
+  stats?: {
+    damage?: number
+    totalDamageDealt?: number
+    totalHealsOnTeammates?: number
+    totalDamageShieldedOnTeammates?: number
+    timeCCingOthers?: number
+  }
+  items?: number[]
+  runes?: {
+    primary?: {
+      perks?: number[]
+    }
+  }
+  spells?: number[]
+  abilityOrder?: string
+  buildOrder?: string | { itemId: number; timestamp: number }[] // Can be string (new) or array (legacy)
+  firstBuy?: string // comma-separated starting item IDs
+}
+
+interface ParticipantRecord {
+  puuid: string
+  match_data: MatchData
+  patch: string
+  champion_name: string
+}
+
+// buildOrder is already stored as a comma-separated string in match_data
+// Just pass it through, ensuring it's a string or undefined
+function formatBuildOrderForScoring(buildOrder: string | { itemId: number; timestamp: number }[] | undefined): string | undefined {
+  if (!buildOrder) return undefined
+  // If it's already a string, return it
+  if (typeof buildOrder === 'string') return buildOrder
+  // If it's an array (legacy format), convert it
+  if (Array.isArray(buildOrder) && buildOrder.length > 0) {
+    return buildOrder.map(b => b.itemId).join(',')
+  }
+  return undefined
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -43,85 +89,119 @@ export async function GET(request: Request) {
 
     console.log(`[pig-score-breakdown] Request for matchId=${matchId}, puuid=${puuid.slice(0, 8)}...`)
 
-    // get participant data
-    const { data: participantData, error: participantError } = await supabase
-      .from('summoner_matches')
-      .select('match_data, patch, champion_name')
-      .eq('match_id', matchId)
-      .eq('puuid', puuid)
-      .single()
+    // CONSOLIDATED QUERY: Fetch all match data in parallel
+    // This ensures we get consistent data from the same point in time
+    const [participantsResult, matchResult] = await Promise.all([
+      // Get ALL participants for this match (includes our player + teammates for team kills)
+      supabase
+        .from('summoner_matches')
+        .select('puuid, match_data, patch, champion_name')
+        .eq('match_id', matchId),
+      // Get match record for game_duration
+      supabase.from('matches').select('game_duration, patch').eq('match_id', matchId).single(),
+    ])
 
-    if (participantError || !participantData) {
-      console.log(`[pig-score-breakdown] Participant not found`)
-      return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
+    if (participantsResult.error || !participantsResult.data) {
+      console.log(`[pig-score-breakdown] Failed to fetch participants`)
+      return NextResponse.json({ error: 'Failed to fetch match participants' }, { status: 404 })
     }
 
-    // check if breakdown is already cached in match_data
-    if (participantData.match_data?.pigScoreBreakdown) {
-      console.log(`[pig-score-breakdown] CACHE HIT - returning stored breakdown`)
-      return NextResponse.json(participantData.match_data.pigScoreBreakdown)
-    }
-
-    console.log(`[pig-score-breakdown] CACHE MISS - calculating breakdown for ${participantData.champion_name}...`)
-
-    // get game_duration from matches table
-    const { data: matchRecord, error: matchError } = await supabase
-      .from('matches')
-      .select('game_duration')
-      .eq('match_id', matchId)
-      .single()
-
-    if (matchError || !matchRecord) {
+    if (matchResult.error || !matchResult.data) {
+      console.log(`[pig-score-breakdown] Match record not found`)
       return NextResponse.json({ error: 'Match record not found' }, { status: 404 })
     }
 
-    // Get all participants for this match to calculate team kills
-    const { data: allParticipants } = await supabase
-      .from('summoner_matches')
-      .select('puuid, match_data')
-      .eq('match_id', matchId)
+    const allParticipants = participantsResult.data as ParticipantRecord[]
+    const matchRecord = matchResult.data
 
-    // Calculate team kills for kill participation
+    // Find our specific player from the participants
+    const participantData = allParticipants.find(p => p.puuid === puuid)
+
+    if (!participantData) {
+      console.log(`[pig-score-breakdown] Participant not found in match`)
+      return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
+    }
+
+    // Use consistent patch - prefer match record patch, fallback to participant patch
+    const patch = matchRecord.patch || participantData.patch
+
+    // Check if breakdown is already cached in match_data
+    // Use cache if it has itemDetails, startingItemsDetails (when firstBuy is available), and coreKey
+    const cachedBreakdown = participantData.match_data?.pigScoreBreakdown as { 
+      itemDetails?: unknown[]
+      startingItemsDetails?: unknown
+      coreKey?: string
+    } | undefined
+    const hasFirstBuy = !!participantData.match_data?.firstBuy
+    const cacheHasStartingDetails = !!cachedBreakdown?.startingItemsDetails
+    const cacheHasCoreKey = cachedBreakdown?.coreKey !== undefined
+    // Cache must have coreKey, and if match has firstBuy, must have startingItemsDetails
+    const isCacheValid = cachedBreakdown && 
+      Array.isArray(cachedBreakdown.itemDetails) && 
+      cachedBreakdown.itemDetails.length > 0 &&
+      cacheHasCoreKey &&
+      (!hasFirstBuy || cacheHasStartingDetails)
+    
+    console.log(`[pig-score-breakdown] Cache check: hasFirstBuy=${hasFirstBuy}, cacheHasCoreKey=${cacheHasCoreKey}, cacheHasStartingDetails=${cacheHasStartingDetails}, cachedCoreKey=${cachedBreakdown?.coreKey}, isCacheValid=${isCacheValid}`)
+    console.log(`[pig-score-breakdown] Match data: buildOrder=${participantData.match_data?.buildOrder?.slice(0,50)}, firstBuy=${participantData.match_data?.firstBuy}`)
+    
+    if (isCacheValid) {
+      console.log(`[pig-score-breakdown] CACHE HIT - returning stored breakdown`)
+      return NextResponse.json(cachedBreakdown)
+    }
+
+    console.log(
+      `[pig-score-breakdown] CACHE MISS - calculating breakdown for ${participantData.champion_name} on patch ${patch}...`
+    )
+
+    // Calculate team kills from the already-fetched participants
     let teamTotalKills = 0
-    let playerKills = 0
-    let playerAssists = 0
     const playerTeamId = participantData.match_data?.teamId
 
-    if (allParticipants && playerTeamId !== undefined) {
+    if (playerTeamId !== undefined) {
       for (const p of allParticipants) {
         if (p.match_data?.teamId === playerTeamId) {
           teamTotalKills += p.match_data?.kills || 0
         }
       }
-      playerKills = participantData.match_data?.kills || 0
-      playerAssists = participantData.match_data?.assists || 0
     }
 
-    // calculate pig score with breakdown
+    const playerKills = participantData.match_data?.kills || 0
+    const playerAssists = participantData.match_data?.assists || 0
+    const matchData = participantData.match_data
+
+    // Require build order (from timeline) for accurate scoring
+    if (!matchData?.buildOrder) {
+      console.log(`[pig-score-breakdown] No build order available - cannot calculate accurate breakdown`)
+      return NextResponse.json({ error: 'No timeline data available' }, { status: 404 })
+    }
+
+    // Calculate pig score with breakdown using consistent patch
     const breakdown = await calculatePigScoreWithBreakdown({
       championName: participantData.champion_name,
-      damage_dealt_to_champions: participantData.match_data.stats?.damage || 0,
-      total_damage_dealt: participantData.match_data.stats?.totalDamageDealt || 0,
-      total_heals_on_teammates: participantData.match_data.stats?.totalHealsOnTeammates || 0,
-      total_damage_shielded_on_teammates: participantData.match_data.stats?.totalDamageShieldedOnTeammates || 0,
-      time_ccing_others: participantData.match_data.stats?.timeCCingOthers || 0,
+      damage_dealt_to_champions: matchData.stats?.damage || 0,
+      total_damage_dealt: matchData.stats?.totalDamageDealt || 0,
+      total_heals_on_teammates: matchData.stats?.totalHealsOnTeammates || 0,
+      total_damage_shielded_on_teammates: matchData.stats?.totalDamageShieldedOnTeammates || 0,
+      time_ccing_others: matchData.stats?.timeCCingOthers || 0,
       game_duration: matchRecord.game_duration,
-      deaths: participantData.match_data.deaths || 0,
+      deaths: matchData.deaths || 0,
       kills: playerKills,
       assists: playerAssists,
       teamTotalKills: teamTotalKills,
-      item0: participantData.match_data.items?.[0] || 0,
-      item1: participantData.match_data.items?.[1] || 0,
-      item2: participantData.match_data.items?.[2] || 0,
-      item3: participantData.match_data.items?.[3] || 0,
-      item4: participantData.match_data.items?.[4] || 0,
-      item5: participantData.match_data.items?.[5] || 0,
-      perk0: participantData.match_data.runes?.primary?.perks?.[0] || 0,
-      patch: participantData.patch,
-      spell1: participantData.match_data.spells?.[0],
-      spell2: participantData.match_data.spells?.[1],
-      skillOrder: extractSkillOrderFromAbilityOrder(participantData.match_data.abilityOrder),
-      buildOrder: participantData.match_data.buildOrder,
+      item0: matchData.items?.[0] || 0,
+      item1: matchData.items?.[1] || 0,
+      item2: matchData.items?.[2] || 0,
+      item3: matchData.items?.[3] || 0,
+      item4: matchData.items?.[4] || 0,
+      item5: matchData.items?.[5] || 0,
+      perk0: matchData.runes?.primary?.perks?.[0] || 0,
+      patch: patch,
+      spell1: matchData.spells?.[0],
+      spell2: matchData.spells?.[1],
+      skillOrder: extractSkillOrderFromAbilityOrder(matchData.abilityOrder),
+      buildOrder: formatBuildOrderForScoring(matchData.buildOrder),
+      firstBuy: matchData.firstBuy,
     })
 
     if (!breakdown) {
@@ -131,9 +211,9 @@ export async function GET(request: Request) {
 
     console.log(`[pig-score-breakdown] Calculated breakdown, caching to DB...`)
 
-    // cache the breakdown in match_data for future requests
+    // Cache the breakdown in match_data for future requests
     const updatedMatchData = {
-      ...participantData.match_data,
+      ...matchData,
       pigScoreBreakdown: breakdown,
     }
 

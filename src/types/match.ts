@@ -111,6 +111,17 @@ export interface ParticipantData {
   item5: number
   pigScore?: number
   pigScoreBreakdown?: Record<string, unknown>
+  // Timeline-derived data
+  buildOrder?: string // comma-separated item IDs in purchase order
+  firstBuy?: string // comma-separated starting item IDs
+  abilityOrder?: string // space-separated ability order (e.g., "Q W Q E Q R...")
+  itemPurchases?: Array<{
+    itemId: number
+    itemName: string
+    timestamp: number
+    action: 'buy' | 'sell'
+    itemType: 'legendary' | 'boots' | 'mythic' | 'component' | 'other'
+  }>
   labels?: string[]
   firstItem?: number
   secondItem?: number

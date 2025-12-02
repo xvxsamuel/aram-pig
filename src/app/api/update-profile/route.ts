@@ -10,15 +10,15 @@ import {
 import { type RequestType } from '@/lib/riot/rate-limiter'
 import type { PlatformCode } from '@/lib/game'
 import type { UpdateJob } from '../../../types/update-jobs'
-import { calculatePigScoreWithBreakdown, recalculateProfileStatsForPlayers } from '@/lib/scoring'
+import { calculatePigScoreWithBreakdownCached, prefetchChampionStats, recalculateProfileStatsForPlayers } from '@/lib/scoring'
 import {
   extractAbilityOrder,
   extractBuildOrder,
   extractFirstBuy,
   formatBuildOrder,
   formatFirstBuy,
-  extractItemPurchases,
-  type ItemPurchaseEvent,
+  extractItemTimeline,
+  type ItemTimelineEvent,
   extractPatch,
   getPatchFromDate,
   isPatchAccepted,
@@ -215,6 +215,7 @@ async function failJob(supabase: any, jobId: string, errorMessage: string) {
 }
 
 // check and calculate missing pig scores for recent matches (within 30 days)
+// OPTIMIZED: Pre-fetches all champion stats in one query
 async function calculateMissingPigScores(supabase: any, puuid: string) {
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
 
@@ -245,52 +246,63 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
 
   console.log(`[UpdateProfile] Calculating pig scores for ${matchesNeedingPigScore.length} matches...`)
 
+  // Pre-fetch all champion stats in one query
+  const championNames = [...new Set(matchesNeedingPigScore.map((m: any) => m.champion_name))]
+  const statsCache = await prefetchChampionStats(championNames)
+
   let calculated = 0
-  for (const match of matchesNeedingPigScore) {
-    try {
-      const gameDuration = match.matches?.game_duration || 0
+  // Process in parallel with concurrency limit
+  const BATCH_SIZE = 5
+  for (let i = 0; i < matchesNeedingPigScore.length; i += BATCH_SIZE) {
+    const batch = matchesNeedingPigScore.slice(i, i + BATCH_SIZE)
+    
+    await Promise.all(batch.map(async (match: any) => {
+      try {
+        const gameDuration = match.matches?.game_duration || 0
 
-      const breakdown = await calculatePigScoreWithBreakdown({
-        championName: match.champion_name,
-        damage_dealt_to_champions: match.match_data.stats?.damage || 0,
-        total_damage_dealt: match.match_data.stats?.totalDamageDealt || 0,
-        total_heals_on_teammates: match.match_data.stats?.totalHealsOnTeammates || 0,
-        total_damage_shielded_on_teammates: match.match_data.stats?.totalDamageShieldedOnTeammates || 0,
-        time_ccing_others: match.match_data.stats?.timeCCingOthers || 0,
-        game_duration: gameDuration,
-        deaths: match.match_data.deaths || 0,
-        item0: match.match_data.items?.[0] || 0,
-        item1: match.match_data.items?.[1] || 0,
-        item2: match.match_data.items?.[2] || 0,
-        item3: match.match_data.items?.[3] || 0,
-        item4: match.match_data.items?.[4] || 0,
-        item5: match.match_data.items?.[5] || 0,
-        perk0: match.match_data.runes?.primary?.perks?.[0] || 0,
-        patch: match.patch,
-        spell1: match.match_data.spells?.[0] || 0,
-        spell2: match.match_data.spells?.[1] || 0,
-        skillOrder: extractSkillOrderAbbreviation(match.match_data.abilityOrder || ''),
-        buildOrder: match.match_data.buildOrder || undefined,
-      })
+        const breakdown = await calculatePigScoreWithBreakdownCached({
+          championName: match.champion_name,
+          damage_dealt_to_champions: match.match_data.stats?.damage || 0,
+          total_damage_dealt: match.match_data.stats?.totalDamageDealt || 0,
+          total_heals_on_teammates: match.match_data.stats?.totalHealsOnTeammates || 0,
+          total_damage_shielded_on_teammates: match.match_data.stats?.totalDamageShieldedOnTeammates || 0,
+          time_ccing_others: match.match_data.stats?.timeCCingOthers || 0,
+          game_duration: gameDuration,
+          deaths: match.match_data.deaths || 0,
+          item0: match.match_data.items?.[0] || 0,
+          item1: match.match_data.items?.[1] || 0,
+          item2: match.match_data.items?.[2] || 0,
+          item3: match.match_data.items?.[3] || 0,
+          item4: match.match_data.items?.[4] || 0,
+          item5: match.match_data.items?.[5] || 0,
+          perk0: match.match_data.runes?.primary?.perks?.[0] || 0,
+          patch: match.patch,
+          spell1: match.match_data.spells?.[0] || 0,
+          spell2: match.match_data.spells?.[1] || 0,
+          skillOrder: extractSkillOrderAbbreviation(match.match_data.abilityOrder || ''),
+          buildOrder: match.match_data.buildOrder || undefined,
+          firstBuy: match.match_data.firstBuy || undefined,
+        }, statsCache)
 
-      if (breakdown) {
-        const updatedMatchData = {
-          ...match.match_data,
-          pigScore: breakdown.finalScore,
-          pigScoreBreakdown: breakdown,
+        if (breakdown) {
+          const updatedMatchData = {
+            ...match.match_data,
+            pigScore: breakdown.finalScore,
+            pigScoreBreakdown: breakdown,
+          }
+
+          await supabase
+            .from('summoner_matches')
+            .update({ match_data: updatedMatchData })
+            .eq('match_id', match.match_id)
+            .eq('puuid', match.puuid)
+
+          calculated++
         }
-
-        await supabase
-          .from('summoner_matches')
-          .update({ match_data: updatedMatchData })
-          .eq('match_id', match.match_id)
-          .eq('puuid', match.puuid)
-
-        calculated++
+      } catch (err) {
+        console.error(`[UpdateProfile] Failed to calculate pig score for ${match.match_id}:`, err)
       }
-    } catch (err) {
-      console.error(`[UpdateProfile] Failed to calculate pig score for ${match.match_id}:`, err)
-    }
+    }))
   }
 
   return calculated
@@ -566,19 +578,61 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
         }
 
         if (existingMatch) {
-          // match exists but user doesn't have record - fetch and add user record only
+          // match exists but user doesn't have record - fetch match + timeline and add all records
           const match = await fetchMatch(region, matchId, requestType)
+          const isOlderThan30Days = existingMatch.game_creation < Date.now() - 30 * 24 * 60 * 60 * 1000
+          const isRemake = match.info.participants.some((p: any) => p.gameEndedInEarlySurrender)
+
+          // Fetch timeline for recent matches (same as new matches)
+          let timeline = null
+          if (!isOlderThan30Days) {
+            try {
+              timeline = await getMatchTimeline(matchId, region as any, requestType)
+            } catch {}
+          }
+
+          // Pre-fetch champion stats for ALL participants
+          const allChampionNames = match.info.participants.map((p: any) => p.championName)
+          const statsCache = !isOlderThan30Days && !isRemake
+            ? await prefetchChampionStats(allChampionNames)
+            : new Map()
+
+          // Calculate team kills for KP
+          const team100Kills = match.info.participants
+            .filter((p: any) => p.teamId === 100)
+            .reduce((sum: number, p: any) => sum + (p.kills || 0), 0)
+          const team200Kills = match.info.participants
+            .filter((p: any) => p.teamId === 200)
+            .reduce((sum: number, p: any) => sum + (p.kills || 0), 0)
 
           const summonerMatchRecords = await Promise.all(
-            match.info.participants.map(async (p: any) => {
-              const isTrackedUser = p.puuid === puuid
-              const isOlderThan30Days = existingMatch.game_creation < Date.now() - 30 * 24 * 60 * 60 * 1000
+            match.info.participants.map(async (p: any, index: number) => {
+              const participantId = index + 1
+              const teamTotalKills = p.teamId === 100 ? team100Kills : team200Kills
 
+              // Extract timeline data for ALL participants
+              let abilityOrder = null
+              let buildOrderStr = null
+              let firstBuyStr = null
+              let itemPurchases: ItemTimelineEvent[] = []
+
+              if (!isOlderThan30Days && timeline) {
+                abilityOrder = extractAbilityOrder(timeline, participantId)
+                const buildOrder = extractBuildOrder(timeline, participantId)
+                const firstBuy = extractFirstBuy(timeline, participantId)
+                itemPurchases = extractItemTimeline(timeline, participantId)
+                buildOrderStr = buildOrder.length > 0 ? formatBuildOrder(buildOrder) : null
+                firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
+              }
+
+              // Calculate PIG score for ALL players
               let pigScore = null
               let pigScoreBreakdown = null
-              if (isTrackedUser && !isOlderThan30Days && !p.gameEndedInEarlySurrender) {
+              if (!isOlderThan30Days && !isRemake && statsCache.size > 0) {
                 try {
-                  const breakdown = await calculatePigScoreWithBreakdown({
+                  const killDeathSummary = timeline ? getKillDeathSummary(timeline, participantId, p.teamId) : null
+
+                  const breakdown = await calculatePigScoreWithBreakdownCached({
                     championName: p.championName,
                     damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
                     total_damage_dealt: p.totalDamageDealt || 0,
@@ -587,6 +641,9 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
                     time_ccing_others: p.timeCCingOthers || 0,
                     game_duration: match.info.gameDuration || 0,
                     deaths: p.deaths,
+                    kills: p.kills,
+                    assists: p.assists,
+                    teamTotalKills,
                     item0: p.item0 || 0,
                     item1: p.item1,
                     item2: p.item2,
@@ -595,7 +652,14 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
                     item5: p.item5,
                     perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
                     patch: existingMatch.patch,
-                  })
+                    spell1: p.summoner1Id || 0,
+                    spell2: p.summoner2Id || 0,
+                    skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
+                    buildOrder: buildOrderStr || undefined,
+                    firstBuy: firstBuyStr || undefined,
+                    takedownQualityScore: killDeathSummary?.takedownScore,
+                    deathQualityScore: killDeathSummary?.deathScore,
+                  }, statsCache)
                   if (breakdown) {
                     pigScore = breakdown.finalScore
                     pigScoreBreakdown = breakdown
@@ -651,6 +715,10 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
                   },
                   pigScore,
                   pigScoreBreakdown,
+                  abilityOrder,
+                  buildOrder: buildOrderStr,
+                  firstBuy: firstBuyStr,
+                  itemPurchases: itemPurchases.length > 0 ? itemPurchases : null,
                 },
               }
             })
@@ -688,34 +756,51 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           patch: patchVersion,
         })
 
-        // prepare participant records
+        // Pre-fetch champion stats for ALL participants in one query (optimization)
+        const allChampionNames = match.info.participants.map((p: any) => p.championName)
+        const statsCache = !isOlderThan30Days && !match.info.participants.some((p: any) => p.gameEndedInEarlySurrender)
+          ? await prefetchChampionStats(allChampionNames)
+          : new Map()
+
+        // Calculate team total kills for KP calculation
+        const team100Kills = match.info.participants
+          .filter((p: any) => p.teamId === 100)
+          .reduce((sum: number, p: any) => sum + (p.kills || 0), 0)
+        const team200Kills = match.info.participants
+          .filter((p: any) => p.teamId === 200)
+          .reduce((sum: number, p: any) => sum + (p.kills || 0), 0)
+
+        // prepare participant records - calculate PIG for ALL players
         const summonerMatchRecords = await Promise.all(
           match.info.participants.map(async (p: any, index: number) => {
             const participantId = index + 1
-            const isTrackedUser = p.puuid === puuid
+            const _isTrackedUser = p.puuid === puuid // Kept for debugging
+            const teamTotalKills = p.teamId === 100 ? team100Kills : team200Kills
 
+            // Extract timeline data for ALL participants (not just tracked user)
             let abilityOrder = null
             let buildOrderStr = null
             let firstBuyStr = null
-            let itemPurchases: ItemPurchaseEvent[] = []
+            let itemPurchases: ItemTimelineEvent[] = []
 
             if (!isOlderThan30Days && timeline) {
               abilityOrder = extractAbilityOrder(timeline, participantId)
               const buildOrder = extractBuildOrder(timeline, participantId)
               const firstBuy = extractFirstBuy(timeline, participantId)
-              itemPurchases = extractItemPurchases(timeline, participantId)
+              itemPurchases = extractItemTimeline(timeline, participantId)
               buildOrderStr = buildOrder.length > 0 ? formatBuildOrder(buildOrder) : null
               firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
             }
 
+            // Calculate PIG score for ALL players (not just tracked user)
             let pigScore = null
             let pigScoreBreakdown = null
-            if (isTrackedUser && !isOlderThan30Days && !p.gameEndedInEarlySurrender) {
+            if (!isOlderThan30Days && !p.gameEndedInEarlySurrender && statsCache.size > 0) {
               try {
                 // Get kill/death quality scores from timeline if available
                 const killDeathSummary = timeline ? getKillDeathSummary(timeline, participantId, p.teamId) : null
 
-                const breakdown = await calculatePigScoreWithBreakdown({
+                const breakdown = await calculatePigScoreWithBreakdownCached({
                   championName: p.championName,
                   damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
                   total_damage_dealt: p.totalDamageDealt || 0,
@@ -724,6 +809,9 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
                   time_ccing_others: p.timeCCingOthers || 0,
                   game_duration: match.info.gameDuration || 0,
                   deaths: p.deaths,
+                  kills: p.kills,
+                  assists: p.assists,
+                  teamTotalKills,
                   item0: p.item0 || 0,
                   item1: p.item1,
                   item2: p.item2,
@@ -736,9 +824,10 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
                   spell2: p.summoner2Id || 0,
                   skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
                   buildOrder: buildOrderStr || undefined,
+                  firstBuy: firstBuyStr || undefined,
                   takedownQualityScore: killDeathSummary?.takedownScore,
                   deathQualityScore: killDeathSummary?.deathScore,
-                })
+                }, statsCache)
                 if (breakdown) {
                   pigScore = breakdown.finalScore
                   pigScoreBreakdown = breakdown

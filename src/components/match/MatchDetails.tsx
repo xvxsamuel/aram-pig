@@ -5,6 +5,7 @@ import type { MatchData } from '@/types/match'
 import Image from 'next/image'
 import Link from 'next/link'
 import clsx from 'clsx'
+import { motion } from 'framer-motion'
 import {
   getChampionImageUrl,
   getItemImageUrl,
@@ -17,7 +18,99 @@ import { getKdaColor, getPigScoreColor } from '@/lib/ui'
 import Tooltip from '@/components/ui/Tooltip'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import runesData from '@/data/runes.json'
+import itemsData from '@/data/items.json'
 import { LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from '@/lib/game'
+
+// Animated glow component for PIG score items
+function AnimatedGlow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <motion.div
+        className="absolute inset-0 rounded bg-accent-light/80 blur-[3px]"
+        animate={{
+          opacity: [0.5, 0.9, 0.5],
+        }}
+        transition={{
+          duration: 1.5,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      />
+      <div className="relative">{children}</div>
+    </div>
+  )
+}
+
+// Warning icon for fallback data (global instead of core-specific)
+function FallbackWarning() {
+  return (
+    <SimpleTooltip 
+      content={
+        <div className="text-xs max-w-[200px]">
+          <div className="font-medium text-warning mb-1">Low Sample Size</div>
+          <div className="text-text-muted">
+            Using global champion data instead of core-specific data. Scores may be less accurate.
+          </div>
+        </div>
+      }
+    >
+      <svg 
+        className="w-3.5 h-3.5 text-warning cursor-help inline-block ml-1" 
+        fill="none" 
+        viewBox="0 0 24 24" 
+        strokeWidth={2} 
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+      </svg>
+    </SimpleTooltip>
+  )
+}
+
+// Helper to check if an item is a completed item (legendary, boots, mythic)
+const itemsLookup = itemsData as Record<string, { name?: string; itemType?: string }>
+function isCompletedItemById(itemId: number): boolean {
+  const item = itemsLookup[String(itemId)]
+  if (!item) return false
+  const type = item.itemType
+  return type === 'legendary' || type === 'boots' || type === 'mythic'
+}
+
+// Helper to get item type for timeline display
+function getItemType(itemId: number): 'legendary' | 'boots' | 'mythic' | 'component' | 'other' {
+  const item = itemsLookup[String(itemId)]
+  if (!item) return 'other'
+  const type = item.itemType as string
+  if (type === 'legendary') return 'legendary'
+  if (type === 'boots') return 'boots'
+  if (type === 'mythic') return 'mythic'
+  if (type === 'component') return 'component'
+  return 'other'
+}
+
+// Helper to get item name
+function getItemName(itemId: number): string {
+  const item = itemsLookup[String(itemId)]
+  return item?.name || `Item ${itemId}`
+}
+
+// Hydrate stored ItemPurchaseEvent[] to full ItemTimelineEvent[]
+// Stored data only has itemId/timestamp/action, we add itemType/itemName client-side
+interface StoredItemEvent {
+  itemId: number
+  timestamp: number
+  action: 'buy' | 'sell' | string
+}
+
+function hydrateItemTimeline(events: StoredItemEvent[]): ItemTimelineEvent[] {
+  return events.map(e => ({
+    itemId: e.itemId,
+    timestamp: e.timestamp,
+    action: e.action === 'sell' ? 'sell' : 'buy',
+    itemType: getItemType(e.itemId),
+    itemName: getItemName(e.itemId),
+  }))
+}
 
 interface Props {
   match: MatchData
@@ -30,8 +123,10 @@ interface Props {
 
 interface ItemTimelineEvent {
   timestamp: number
-  type: 'ITEM_PURCHASED' | 'ITEM_SOLD' | 'ITEM_UNDO'
+  action: 'buy' | 'sell'
   itemId: number
+  itemType: 'legendary' | 'boots' | 'mythic' | 'component' | 'other'
+  itemName: string
 }
 
 interface CompletedItem {
@@ -132,6 +227,30 @@ interface PigScoreBreakdown {
     zScore?: number
   }[]
   itemDetails?: ItemPenaltyDetail[]
+  startingItemsDetails?: {
+    itemIds: number[]
+    penalty: number
+    reason: 'optimal' | 'suboptimal' | 'off-meta' | 'unknown'
+    playerWinrate?: number
+    topWinrate?: number
+    rank?: number
+    totalOptions?: number
+  }
+  coreBuildDetails?: {
+    penalty: number
+    playerWinrate?: number
+    topWinrate?: number
+    rank?: number
+    totalOptions?: number
+    games?: number
+  }
+  coreKey?: string
+  fallbackInfo?: {
+    items: boolean
+    keystone: boolean
+    spells: boolean
+    starting: boolean
+  }
   scoringInfo?: {
     targetPercentile: number
     averageScore: number
@@ -277,9 +396,25 @@ export default function MatchDetails({
     region,
   ])
 
-  // fetch pig score breakdown when performance tab is selected
+  // Use pig score breakdown from match data (pre-calculated) or fetch if needed
   useEffect(() => {
-    if (selectedTab === 'performance' && !pigScoreBreakdown && !loadingBreakdown) {
+    if ((selectedTab === 'performance' || selectedTab === 'build') && !pigScoreBreakdown && !loadingBreakdown) {
+      // First, try to use the breakdown from match data (already calculated during update-profile)
+      const cachedBreakdown = currentPlayer?.pigScoreBreakdown as PigScoreBreakdown | undefined
+      if (cachedBreakdown && cachedBreakdown.itemDetails && cachedBreakdown.itemDetails.length > 0) {
+        // Check if the cached breakdown has all the data we need
+        const hasCoreKey = cachedBreakdown.coreKey !== undefined
+        const hasStartingDetails = cachedBreakdown.startingItemsDetails !== undefined
+        const hasFirstBuy = !!currentPlayer?.firstBuy
+        
+        // Use cache if it has coreKey and startingItemsDetails (when firstBuy exists)
+        if (hasCoreKey && (!hasFirstBuy || hasStartingDetails)) {
+          setPigScoreBreakdown(cachedBreakdown)
+          return
+        }
+      }
+      
+      // Fallback: fetch from API (will recalculate and cache if needed)
       setLoadingBreakdown(true)
       fetch(`/api/pig-score-breakdown?matchId=${match.metadata.matchId}&puuid=${currentPuuid}`)
         .then(res => (res.ok ? res.json() : null))
@@ -291,7 +426,7 @@ export default function MatchDetails({
         .catch(err => console.error('Failed to fetch pig score breakdown:', err))
         .finally(() => setLoadingBreakdown(false))
     }
-  }, [selectedTab, match.metadata.matchId, currentPuuid, pigScoreBreakdown, loadingBreakdown])
+  }, [selectedTab, match.metadata.matchId, currentPuuid, currentPlayer?.pigScoreBreakdown, currentPlayer?.firstBuy, pigScoreBreakdown, loadingBreakdown])
 
   // separate teams
   const team100 = match.info.participants.filter(p => p.teamId === 100)
@@ -368,7 +503,31 @@ export default function MatchDetails({
     // skip if already loading or loaded
     if (participantDetails.has(puuid)) return
 
-    // mark as loading
+    // First, check if the participant already has the data from match data
+    const participant = match.info.participants.find(p => p.puuid === puuid)
+    if (participant?.buildOrder && participant?.firstBuy) {
+      // Use data from match - no API call needed
+      // Hydrate itemPurchases with item names/types (stored data only has itemId/timestamp/action)
+      const hydratedTimeline = participant.itemPurchases 
+        ? hydrateItemTimeline(participant.itemPurchases as StoredItemEvent[])
+        : []
+      setParticipantDetails(prev =>
+        new Map(prev).set(puuid, {
+          puuid,
+          build_order: participant.buildOrder || null,
+          ability_order: participant.abilityOrder || null,
+          first_buy: participant.firstBuy || null,
+          pig_score: participant.pigScore ?? null,
+          item_timeline: hydratedTimeline,
+          completed_items: [], // Derived from itemPurchases if needed
+          kill_death_timeline: null,
+          loading: false,
+        })
+      )
+      return
+    }
+
+    // mark as loading - fallback to API for old matches without pre-calculated data
     setParticipantDetails(prev =>
       new Map(prev).set(puuid, {
         puuid,
@@ -719,15 +878,155 @@ export default function MatchDetails({
             ))}
           </div>
         ) : selectedTab === 'build' ? (
-          <div className="p-4 space-y-4">
+          <div className="p-4 space-y-5">
             {currentPlayer && (
               <>
-                {/* Items Timeline with Components */}
-                <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
-                  <h3 className="text-xs font-medium text-text-muted mb-3">Items</h3>
+                {/* Core Build & Starter Items - 2 columns */}
+                {(() => {
+                  const details = participantDetails.get(currentPlayer.puuid)
+                  if (!details || details.loading) {
+                    return (
+                      <div className="flex items-center gap-2 text-xs text-text-muted">
+                        <div className="w-4 h-4 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
+                        Loading...
+                      </div>
+                    )
+                  }
+
+                  const startingDetails = pigScoreBreakdown?.startingItemsDetails
+                  const coreKey = pigScoreBreakdown?.coreKey
+                  const fallbackInfo = pigScoreBreakdown?.fallbackInfo
+
+                  // Get player's final items and build order
+                  const finalItems = [
+                    currentPlayer.item0, currentPlayer.item1, currentPlayer.item2,
+                    currentPlayer.item3, currentPlayer.item4, currentPlayer.item5
+                  ].filter(id => id > 0 && isCompletedItemById(id))
+                  
+                  // Get core items in PURCHASE ORDER (not sorted coreKey order)
+                  let coreItemIds: number[] = []
+                  const buildOrderStr = currentPlayer.buildOrder
+                  if (buildOrderStr && finalItems.length >= 3) {
+                    const buildOrderItems = buildOrderStr.split(',').map((id: string) => parseInt(id, 10)).filter((id: number) => !isNaN(id) && id > 0)
+                    const seen = new Set<number>()
+                    for (const itemId of buildOrderItems) {
+                      if (coreItemIds.length >= 3) break
+                      if (isCompletedItemById(itemId) && finalItems.includes(itemId) && !seen.has(itemId)) {
+                        coreItemIds.push(itemId)
+                        seen.add(itemId)
+                      }
+                    }
+                  }
+                  // Fallback to coreKey if no build order
+                  if (coreItemIds.length < 3 && coreKey) {
+                    coreItemIds = coreKey.split('_').map(id => parseInt(id, 10)).filter(id => !isNaN(id))
+                  }
+
+                  // Get starter items from timeline (items bought before 30s)
+                  const playerDetails = participantDetails.get(currentPlayer.puuid)
+                  const rawTimeline = (playerDetails?.item_timeline || []) as ItemTimelineEvent[]
+                  const starterItems = rawTimeline.filter(e => e.timestamp < 30000 && e.action === 'buy')
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Starter Build */}
+                      <div>
+                        <h3 className="text-xs font-medium text-text-muted mb-2">
+                          Starter Items
+                          {fallbackInfo?.starting && <FallbackWarning />}
+                        </h3>
+                        {starterItems.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex gap-1 items-center">
+                              {starterItems.map((item, idx) => (
+                                <Tooltip key={idx} id={item.itemId} type="item">
+                                  <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
+                                    <Image
+                                      src={getItemImageUrl(item.itemId, ddragonVersion)}
+                                      alt={item.itemName || `Item ${item.itemId}`}
+                                      width={32}
+                                      height={32}
+                                      className="w-full h-full object-cover"
+                                      unoptimized
+                                    />
+                                  </div>
+                                </Tooltip>
+                              ))}
+                            </div>
+                            {startingDetails?.playerWinrate !== undefined && (
+                              <div className="text-[10px] text-text-muted">
+                                {startingDetails.playerWinrate.toFixed(1)}% WR
+                                {startingDetails.rank && startingDetails.totalOptions && (
+                                  <span className="text-text-muted/70"> (#{startingDetails.rank}/{startingDetails.totalOptions})</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-text-muted">No starter data</div>
+                        )}
+                      </div>
+
+                      {/* Core Build */}
+                      <div>
+                        <h3 className="text-xs font-medium text-text-muted mb-2">Core Build</h3>
+                        {coreItemIds.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex gap-1.5 items-center">
+                              {coreItemIds.map((itemId, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5">
+                                  {idx > 0 && <span className="text-gold-light/50 text-xs">→</span>}
+                                  <Tooltip id={itemId === 99999 ? 0 : itemId} type="item">
+                                    <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
+                                      {itemId === 99999 ? (
+                                        <div className="w-full h-full flex items-center justify-center text-[10px] text-text-muted">
+                                          Boots
+                                        </div>
+                                      ) : (
+                                        <Image
+                                          src={getItemImageUrl(itemId, ddragonVersion)}
+                                          alt={`Item ${itemId}`}
+                                          width={32}
+                                          height={32}
+                                          className="w-full h-full object-cover"
+                                          unoptimized
+                                        />
+                                      )}
+                                    </div>
+                                  </Tooltip>
+                                </div>
+                              ))}
+                            </div>
+                            {pigScoreBreakdown?.coreBuildDetails?.playerWinrate !== undefined && (
+                              <div className="text-[10px] text-text-muted">
+                                {pigScoreBreakdown.coreBuildDetails.playerWinrate.toFixed(1)}% WR
+                                {pigScoreBreakdown.coreBuildDetails.rank && pigScoreBreakdown.coreBuildDetails.totalOptions && (
+                                  <span className="text-text-muted/70"> (#{pigScoreBreakdown.coreBuildDetails.rank}/{pigScoreBreakdown.coreBuildDetails.totalOptions})</span>
+                                )}
+                                {pigScoreBreakdown.coreBuildDetails.games && (
+                                  <span className="text-text-muted/70"> · {pigScoreBreakdown.coreBuildDetails.games} games</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-text-muted">No core data</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Items Timeline */}
+                <div>
+                  <h3 className="text-xs font-medium text-text-muted mb-3">
+                    Items
+                    {pigScoreBreakdown?.fallbackInfo?.items && <FallbackWarning />}
+                  </h3>
                   {(() => {
                     const details = participantDetails.get(currentPlayer.puuid)
-                    if (details?.loading) {
+                    // Show loading if details not fetched yet or still loading
+                    if (!details || details.loading) {
                       return (
                         <div className="flex items-center gap-2 text-xs text-text-muted">
                           <div className="w-4 h-4 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
@@ -736,143 +1035,328 @@ export default function MatchDetails({
                       )
                     }
 
-                    const itemTimeline = details?.item_timeline || []
+                    // Get timeline and deduplicate by timestamp+itemId+action
+                    const rawTimeline = (details.item_timeline || []) as ItemTimelineEvent[]
+                    const seenEvents = new Set<string>()
+                    const itemTimeline = rawTimeline.filter(event => {
+                      const key = `${event.timestamp}-${event.itemId}-${event.action}`
+                      if (seenEvents.has(key)) return false
+                      seenEvents.add(key)
+                      return true
+                    })
 
                     if (itemTimeline.length === 0) {
-                      // fallback: show final items without timestamps
+                      // No timeline - show simple items list
+                      const playerItems = [
+                        currentPlayer.item0,
+                        currentPlayer.item1,
+                        currentPlayer.item2,
+                        currentPlayer.item3,
+                        currentPlayer.item4,
+                        currentPlayer.item5,
+                      ].filter(itemId => itemId > 0)
+
+                      if (playerItems.length === 0) {
+                        return <div className="text-xs text-text-muted">No items data available</div>
+                      }
+
                       return (
                         <div className="flex gap-2 items-center flex-wrap">
-                          {[
-                            currentPlayer.item0,
-                            currentPlayer.item1,
-                            currentPlayer.item2,
-                            currentPlayer.item3,
-                            currentPlayer.item4,
-                            currentPlayer.item5,
-                          ]
-                            .filter(itemId => itemId > 0)
-                            .map((itemId, idx) => (
-                              <Tooltip key={idx} id={itemId} type="item">
-                                <div className="w-10 h-10 rounded border border-gold-dark overflow-hidden bg-abyss-800">
-                                  <Image
-                                    src={getItemImageUrl(itemId, ddragonVersion)}
-                                    alt={`Item ${itemId}`}
-                                    width={40}
-                                    height={40}
-                                    className="w-full h-full object-cover"
-                                    unoptimized
-                                  />
-                                </div>
-                              </Tooltip>
-                            ))}
-                          <span className="text-xs text-text-muted ml-2">(Timeline unavailable)</span>
+                          {playerItems.map((itemId, idx) => {
+                            const isFinished = isCompletedItemById(itemId)
+                            // Match by itemId, not by slot (penalties use actual item positions, not purchase order)
+                            const itemDetail = pigScoreBreakdown?.itemDetails?.find(d => d.itemId === itemId)
+                            const winrate = itemDetail?.playerWinrate
+                            // Calculate item score from penalty (max penalty is 20 per item)
+                            const itemScore = itemDetail ? Math.round(100 - (itemDetail.penalty / 20) * 100) : undefined
+
+                            return (
+                              <SimpleTooltip
+                                key={idx}
+                                content={
+                                  isFinished && itemScore !== undefined ? (
+                                    <div className="text-xs">
+                                      <div className="flex justify-center">
+                                        <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-bold leading-none flex items-center gap-1 border border-gold-dark/40">
+                                          <span style={{ color: getPigScoreColor(itemScore) }}>
+                                            {itemScore}
+                                          </span>
+                                          <span className="text-white">PIG</span>
+                                        </div>
+                                      </div>
+                                      {winrate !== undefined && itemDetail && (
+                                        <div className="mt-1 text-center text-text-muted">
+                                          {winrate.toFixed(1)}% WR as {itemDetail.slot + 1}{itemDetail.slot === 0 ? 'st' : itemDetail.slot === 1 ? 'nd' : itemDetail.slot === 2 ? 'rd' : 'th'} item
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : null
+                                }
+                              >
+                                {isFinished ? (
+                                  <AnimatedGlow>
+                                    <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 relative">
+                                      <Tooltip id={itemId} type="item">
+                                        <Image
+                                          src={getItemImageUrl(itemId, ddragonVersion)}
+                                          alt={`Item ${itemId}`}
+                                          width={28}
+                                          height={28}
+                                          className="w-full h-full object-cover"
+                                          unoptimized
+                                        />
+                                      </Tooltip>
+                                    </div>
+                                  </AnimatedGlow>
+                                ) : (
+                                  <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 relative border border-gold-dark/50">
+                                    <Tooltip id={itemId} type="item">
+                                      <Image
+                                        src={getItemImageUrl(itemId, ddragonVersion)}
+                                        alt={`Item ${itemId}`}
+                                        width={28}
+                                        height={28}
+                                        className="w-full h-full object-cover"
+                                        unoptimized
+                                      />
+                                    </Tooltip>
+                                  </div>
+                                )}
+                              </SimpleTooltip>
+                            )
+                          })}
                         </div>
                       )
                     }
 
-                    // group items by minute and filter to only purchases
-                    const purchases = itemTimeline.filter(e => e.type === 'ITEM_PURCHASED')
+                    // Have timeline - show all events in order
+                    // Track completed items for highlighting
+                    const completedItemIds = new Set<number>()
 
-                    // group by minute (round down to nearest minute)
-                    const groupedByMinute = new Map<number, typeof purchases>()
-                    for (const event of purchases) {
-                      const minute = Math.floor(event.timestamp / 60000)
-                      if (!groupedByMinute.has(minute)) {
-                        groupedByMinute.set(minute, [])
+                    for (const event of itemTimeline) {
+                      if (
+                        event.action === 'buy' &&
+                        (event.itemType === 'legendary' || event.itemType === 'boots' || event.itemType === 'mythic')
+                      ) {
+                        completedItemIds.add(event.itemId)
                       }
-                      groupedByMinute.get(minute)!.push(event)
                     }
 
-                    // sort groups by minute
-                    const sortedGroups = Array.from(groupedByMinute.entries()).sort((a, b) => a[0] - b[0])
+                    // Format timestamp as m:ss
+                    const formatTime = (ms: number) => {
+                      const totalSeconds = Math.floor(ms / 1000)
+                      const minutes = Math.floor(totalSeconds / 60)
+                      const seconds = totalSeconds % 60
+                      return `${minutes}:${seconds.toString().padStart(2, '0')}`
+                    }
+
+                    // Group items by 20-second proximity
+                    const GROUP_GAP_MS = 20000 // 20 seconds
+                    const itemGroups: ItemTimelineEvent[][] = []
+                    let currentGroup: ItemTimelineEvent[] = []
+
+                    for (const event of itemTimeline) {
+                      if (currentGroup.length === 0) {
+                        currentGroup.push(event)
+                      } else {
+                        const lastEvent = currentGroup[currentGroup.length - 1]
+                        if (event.timestamp - lastEvent.timestamp <= GROUP_GAP_MS) {
+                          currentGroup.push(event)
+                        } else {
+                          itemGroups.push(currentGroup)
+                          currentGroup = [event]
+                        }
+                      }
+                    }
+                    if (currentGroup.length > 0) {
+                      itemGroups.push(currentGroup)
+                    }
+
+                    // Skip first group if it's starter items (already shown above)
+                    const startingDetails = pigScoreBreakdown?.startingItemsDetails
+                    const firstGroup = itemGroups[0]
+                    // Check if first group is starter items (< 30s) for glow purposes
+                    // Starter items should glow regardless of whether we have stats data
+                    const isFirstGroupStarter = firstGroup && 
+                      firstGroup[0].timestamp < 30000 && 
+                      firstGroup.every(e => e.action === 'buy')
+
+                    // Show ALL groups including starter items in the timeline
+                    const displayGroups = itemGroups
 
                     return (
-                      <div className="flex flex-wrap gap-4">
-                        {sortedGroups.map(([minute, items]) => (
-                          <div key={minute} className="flex flex-col items-center gap-1.5">
-                            <div className="flex gap-1 items-center">
-                              {items
-                                .map((item, idx) => (
-                                  <Tooltip key={idx} id={item.itemId} type="item">
-                                    <div className="w-8 h-8 rounded border border-gold-dark/50 overflow-hidden bg-abyss-800 relative">
-                                      <Image
-                                        src={getItemImageUrl(item.itemId, ddragonVersion)}
-                                        alt={`Item ${item.itemId}`}
-                                        width={32}
-                                        height={32}
-                                        className="w-full h-full object-cover"
-                                        unoptimized
-                                      />
-                                      {items.filter(i => i.itemId === item.itemId).length > 1 &&
-                                        items.indexOf(item) === items.findIndex(i => i.itemId === item.itemId) && (
-                                          <span className="absolute -bottom-0.5 -right-0.5 text-[9px] bg-abyss-900 text-white px-1 rounded-sm font-bold">
-                                            {items.filter(i => i.itemId === item.itemId).length}
-                                          </span>
+                      <div className="relative">
+                        {/* Continuous gold timeline line behind all groups */}
+                        <div 
+                          className="absolute left-0 right-0 h-[1px] bg-gold-light/30" 
+                          style={{ top: 'calc(50% - 10px)' }} 
+                        />
+                        <div className="relative flex flex-wrap gap-2 items-start">
+                          {displayGroups.map((group, groupIdx) => {
+                            // Check if this group is the starter items group
+                            const isStarterGroup = groupIdx === 0 && isFirstGroupStarter
+                            const groupContent = (
+                              <div className="flex gap-1 items-end">
+                                {group.map((event, idx) => {
+                                  const isFinished =
+                                    event.itemType === 'legendary' ||
+                                    event.itemType === 'boots' ||
+                                    event.itemType === 'mythic'
+                                  const isSell = event.action === 'sell'
+                                  // For starter items, use the starting items score
+                                  const isStarterItem = isStarterGroup && !isSell
+                                  // Match by itemId, not by slot (penalties use actual item positions, not purchase order)
+                                  const itemDetail = pigScoreBreakdown?.itemDetails?.find(d => d.itemId === event.itemId)
+                                  const winrate = itemDetail?.playerWinrate
+                                  // Calculate item score from penalty (max penalty is 20 per item)
+                                  const itemScore = itemDetail ? Math.round(100 - (itemDetail.penalty / 20) * 100) : undefined
+                                  // For starter items, show the starter score
+                                  const starterScore = startingDetails ? Math.round(100 - (startingDetails.penalty / 10) * 100) : undefined
+                                  // displayScore was intended for unified display but starterScore/itemScore are used directly
+                                  const _displayScore = isStarterItem ? starterScore : itemScore
+                                  // Apply glow to finished items OR starter items
+                                  const shouldGlow = (isFinished && !isSell) || isStarterItem
+
+                                  return (
+                                    <div key={idx} className="flex flex-col items-center gap-0.5">
+                                      <SimpleTooltip
+                                        content={
+                                          <div className="text-xs">
+                                            <div className="font-medium text-white">{event.itemName}</div>
+                                            <div className="text-text-muted">
+                                              {isSell ? 'Sold' : 'Bought'} at {formatTime(event.timestamp)}
+                                            </div>
+                                            {isStarterItem && starterScore !== undefined && (
+                                              <div className="mt-2 flex justify-center">
+                                                <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-bold leading-none flex items-center gap-1 border border-gold-dark/40">
+                                                  <span style={{ color: getPigScoreColor(starterScore) }}>
+                                                    {starterScore}
+                                                  </span>
+                                                  <span className="text-white">PIG</span>
+                                                </div>
+                                              </div>
+                                            )}
+                                            {isStarterItem && startingDetails?.playerWinrate !== undefined && (
+                                              <div className="mt-1 text-center text-text-muted">
+                                                {startingDetails.playerWinrate.toFixed(1)}% WR
+                                                {startingDetails.rank && startingDetails.totalOptions && (
+                                                  <span> (#{startingDetails.rank} of {startingDetails.totalOptions})</span>
+                                                )}
+                                              </div>
+                                            )}
+                                            {!isStarterItem && isFinished && !isSell && itemScore !== undefined && (
+                                              <div className="mt-2 flex justify-center">
+                                                <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-bold leading-none flex items-center gap-1 border border-gold-dark/40">
+                                                  <span style={{ color: getPigScoreColor(itemScore) }}>
+                                                    {itemScore}
+                                                  </span>
+                                                  <span className="text-white">PIG</span>
+                                                </div>
+                                              </div>
+                                            )}
+                                            {!isStarterItem && isFinished && !isSell && winrate !== undefined && itemDetail && (
+                                              <div className="mt-1 text-center text-text-muted">
+                                                {winrate.toFixed(1)}% WR as {itemDetail.slot + 1}{itemDetail.slot === 0 ? 'st' : itemDetail.slot === 1 ? 'nd' : itemDetail.slot === 2 ? 'rd' : 'th'} item
+                                              </div>
+                                            )}
+                                          </div>
+                                        }
+                                      >
+                                        {shouldGlow ? (
+                                          <AnimatedGlow>
+                                            <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 relative">
+                                              <Image
+                                                src={getItemImageUrl(event.itemId, ddragonVersion)}
+                                                alt={event.itemName || `Item ${event.itemId}`}
+                                                width={28}
+                                                height={28}
+                                                className="w-full h-full object-cover"
+                                                unoptimized
+                                              />
+                                            </div>
+                                          </AnimatedGlow>
+                                        ) : (
+                                          <div
+                                            className={clsx(
+                                              'w-7 h-7 rounded overflow-hidden bg-abyss-800 relative border border-gold-dark/50',
+                                              isSell && 'opacity-50'
+                                            )}
+                                          >
+                                            <Image
+                                              src={getItemImageUrl(event.itemId, ddragonVersion)}
+                                              alt={event.itemName || `Item ${event.itemId}`}
+                                              width={28}
+                                              height={28}
+                                              className="w-full h-full object-cover"
+                                              unoptimized
+                                            />
+                                            {isSell && (
+                                              <div className="absolute inset-0 flex items-center justify-center bg-negative/30">
+                                                <span className="text-white text-[10px] font-bold">×</span>
+                                              </div>
+                                            )}
+                                          </div>
                                         )}
+                                      </SimpleTooltip>
+                                      <span className="text-[9px] text-text-muted tabular-nums">
+                                        {formatTime(event.timestamp)}
+                                      </span>
                                     </div>
-                                  </Tooltip>
-                                ))
-                                .filter((_el, idx) => {
-                                  // dedupe by finding first occurrence of each itemId
-                                  const itemId = items[idx].itemId
-                                  return items.findIndex(i => i.itemId === itemId) === idx
+                                  )
                                 })}
-                            </div>
-                            <span className="text-[10px] text-text-muted tabular-nums">{minute} min</span>
-                          </div>
-                        ))}
+                              </div>
+                            )
+
+                            return (
+                              <div
+                                key={groupIdx}
+                                className="bg-abyss-800/50 rounded-lg p-1.5 border border-gold-dark/10"
+                              >
+                                {groupContent}
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )
                   })()}
                 </div>
 
-                {/* Skill Order */}
-                <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
-                  <h3 className="text-xs font-medium text-text-muted mb-3">Skill Order</h3>
-                  {(() => {
-                    const details = participantDetails.get(currentPlayer.puuid)
-                    const abilityOrder = details?.ability_order
+                {/* Skill Order - only show if we have ability order data */}
+                {(() => {
+                  const details = participantDetails.get(currentPlayer.puuid)
+                  const abilityOrder = details?.ability_order
+                  if (!abilityOrder || details?.loading) return null
 
-                    if (details?.loading) {
-                      return (
-                        <div className="flex items-center gap-2 text-xs text-text-muted">
-                          <div className="w-4 h-4 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
-                          Loading...
-                        </div>
-                      )
-                    }
+                  const abilities = abilityOrder.split(' ')
 
-                    if (!abilityOrder) {
-                      return <span className="text-xs text-text-muted">No skill data available</span>
-                    }
-
-                    const abilities = abilityOrder.split(' ')
-
-                    // determine skill max order (Q, W, E first maxed)
-                    const counts = { Q: 0, W: 0, E: 0 }
-                    const maxOrder: string[] = []
-                    for (const ability of abilities) {
-                      if (ability === 'R') continue
-                      if (ability in counts) {
-                        counts[ability as keyof typeof counts]++
-                        // maxed at 5 points
-                        if (counts[ability as keyof typeof counts] === 5 && !maxOrder.includes(ability)) {
-                          maxOrder.push(ability)
-                        }
+                  // determine skill max order (Q, W, E first maxed)
+                  const counts = { Q: 0, W: 0, E: 0 }
+                  const maxOrder: string[] = []
+                  for (const ability of abilities) {
+                    if (ability === 'R') continue
+                    if (ability in counts) {
+                      counts[ability as keyof typeof counts]++
+                      // maxed at 5 points
+                      if (counts[ability as keyof typeof counts] === 5 && !maxOrder.includes(ability)) {
+                        maxOrder.push(ability)
                       }
                     }
-                    // add any abilities not yet maxed (in order of most points)
-                    const remaining = ['Q', 'W', 'E'].filter(a => !maxOrder.includes(a))
-                    remaining.sort((a, b) => counts[b as keyof typeof counts] - counts[a as keyof typeof counts])
-                    maxOrder.push(...remaining)
+                  }
+                  // add any abilities not yet maxed (in order of most points)
+                  const remaining = ['Q', 'W', 'E'].filter(a => !maxOrder.includes(a))
+                  remaining.sort((a, b) => counts[b as keyof typeof counts] - counts[a as keyof typeof counts])
+                  maxOrder.push(...remaining)
 
-                    const abilityTextColors: Record<string, string> = {
-                      Q: 'text-kda-3',
-                      W: 'text-kda-4',
-                      E: 'text-kda-5',
-                    }
+                  const abilityTextColors: Record<string, string> = {
+                    Q: 'text-kda-3',
+                    W: 'text-kda-4',
+                    E: 'text-kda-5',
+                  }
 
-                    return (
+                  return (
+                    <div>
+                      <h3 className="text-xs font-medium text-text-muted mb-3">Skill Order</h3>
                       <div className="space-y-3">
                         {/* Max order display */}
                         <div className="flex items-center gap-2">
@@ -908,13 +1392,16 @@ export default function MatchDetails({
                           ))}
                         </div>
                       </div>
-                    )
-                  })()}
-                </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Runes */}
-                <div className="bg-abyss-700/50 rounded-lg border border-gold-dark/20 p-4">
-                  <h3 className="text-xs font-medium text-text-muted mb-3">Runes</h3>
+                <div>
+                  <h3 className="text-xs font-medium text-text-muted mb-3">
+                    Runes
+                    {pigScoreBreakdown?.fallbackInfo?.keystone && <FallbackWarning />}
+                  </h3>
                   <div className="flex gap-8">
                     {/* Primary Tree */}
                     <div>
@@ -1056,6 +1543,7 @@ export default function MatchDetails({
                     </div>
                   </div>
                 </div>
+
               </>
             )}
           </div>

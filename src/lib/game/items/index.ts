@@ -1,9 +1,8 @@
-// Item utilities - re-exports from modular items/ directory
-// This file maintains backward compatibility with existing imports
+// Items module barrel exports
+// Combines build order and first buy utilities
 
-// Re-export all from the modular items/ directory
+// Build order and core extraction
 export {
-  // Build order constants and utilities
   BOOT_IDS,
   TIER1_BOOTS,
   BOOTS_NORMALIZED,
@@ -18,7 +17,10 @@ export {
   extractCompletedBuildOrder,
   formatBuildOrder,
   parseBuildOrder,
-  // First buy utilities
+} from './build-order'
+
+// First buy (starter items)
+export {
   ARAM_STARTING_GOLD,
   STARTER_TIME_WINDOW,
   MAX_STARTER_TIME,
@@ -27,4 +29,4 @@ export {
   formatFirstBuy,
   parseFirstBuy,
   normalizeFirstBuyKey,
-} from './items/index'
+} from './first-buy'

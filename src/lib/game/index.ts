@@ -29,18 +29,39 @@ export { extractAbilityOrder, formatAbilityOrder } from './ability-leveling'
 export {
   extractItemPurchases,
   extractCompletedItems,
+  extractItemTimeline,
   getFinalItems,
   type ItemPurchaseEvent,
+  type ItemTimelineEvent,
   type CompletedItemEvent,
 } from './item-history'
 
+// Items - modular build order and first buy utilities
 export {
+  // Build order constants and utilities
+  BOOT_IDS,
+  TIER1_BOOTS,
+  BOOTS_NORMALIZED,
+  isBootItem,
+  isCompletedItem,
+  isLegendaryOrFinishedBoots,
+  normalizeBootId,
+  extractCoreItems,
+  createCoreKey,
+  extractAndNormalizeCoreKey,
+  extractBuildOrder,
+  extractCompletedBuildOrder,
+  formatBuildOrder,
+  parseBuildOrder,
+  // First buy utilities
+  ARAM_STARTING_GOLD,
+  STARTER_TIME_WINDOW,
+  MAX_STARTER_TIME,
+  getItemCost,
   extractFirstBuy,
   formatFirstBuy,
   parseFirstBuy,
-  extractBuildOrder,
-  formatBuildOrder,
-  parseBuildOrder,
+  normalizeFirstBuyKey,
 } from './items'
 
 export {

@@ -91,7 +91,7 @@ export default function FetchMessage({ job, region: _region, notifyEnabled, onNo
 
   return (
     <div className="mb-6 rounded-lg p-px bg-gradient-to-b from-gold-light to-gold-dark" style={{ minHeight: '80px' }}>
-      <div className="bg-abyss-800 rounded-[inherit] p-4">
+      <div className="bg-abyss-800 rounded-[inherit] px-4.5 py-4">
         <div className="flex items-center gap-4">
           <LoadingSpinner size={40} bgColor="bg-abyss-800" />
 

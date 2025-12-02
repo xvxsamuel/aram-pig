@@ -23,6 +23,7 @@
 
   --color-negative: oklch(62.451% 0.20324 17.952);
   --color-negative-dark: oklch(45% 0.15 17.952);
+  --color-warning: oklch(75% 0.18 70);
   --color-loss: oklch(33.809% 0.04742 13.776);
   --color-loss-light: oklch(40% 0.05 13.776);
   --color-win: oklch(33.989% 0.0559 265.681);

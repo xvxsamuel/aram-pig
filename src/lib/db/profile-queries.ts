@@ -236,6 +236,12 @@ function transformToMatchDataParticipant(
     quadraKills: stats?.quadraKills || 0,
     pentaKills: stats?.pentaKills || 0,
     pigScore: (matchData?.pigScore as number) ?? undefined,
+    pigScoreBreakdown: (matchData?.pigScoreBreakdown as Record<string, unknown>) ?? undefined,
+    // Include timeline-derived data for Build tab
+    buildOrder: (matchData?.buildOrder as string) ?? undefined,
+    firstBuy: (matchData?.firstBuy as string) ?? undefined,
+    abilityOrder: (matchData?.abilityOrder as string) ?? undefined,
+    itemPurchases: (matchData?.itemPurchases as Array<{ itemId: number; itemName: string; timestamp: number; action: 'buy' | 'sell'; itemType: 'legendary' | 'boots' | 'mythic' | 'component' | 'other' }>) ?? undefined,
   }
 }
 

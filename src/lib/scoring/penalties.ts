@@ -2,6 +2,17 @@
 import { createAdminClient } from '../db/supabase'
 import type { WelfordState } from '../db/stats-aggregator'
 import { getZScore, getStdDev } from '../db/stats-aggregator'
+import itemsData from '@/data/items.json'
+
+// Item data for checking completed items
+const items = itemsData as Record<string, { itemType?: string }>
+
+function isCompletedItem(itemId: number): boolean {
+  const item = items[String(itemId)]
+  if (!item) return false
+  const type = item.itemType
+  return type === 'legendary' || type === 'boots' || type === 'mythic'
+}
 
 /*
  * PIG SCORE - PERCENTILE-BASED SYSTEM
@@ -94,6 +105,32 @@ export function calculateStatScore(playerValue: number, avgValue: number, welfor
   // Convert ratio to equivalent z-score: (ratio - 1) / 0.15
   const equivalentZScore = (performanceRatio - 1) / 0.15
   return zScoreToScore(equivalentZScore)
+}
+
+// Special CC time scoring: 
+// - Below 0.5 sec/min average: don't count CC at all (neutral score)
+// - 0.5-2 sec/min average: just use ratio (100% of avg = 100 score, too inconsistent for variance)
+// - Above 2 sec/min average: use normal z-score based scoring
+export function calculateCCTimeScore(playerValue: number, avgValue: number, welfordState?: WelfordState): number {
+  if (avgValue <= 0) return 50 // Default to average if no data
+
+  // Champions with very low CC (< 0.5 sec/min avg) - don't count CC at all
+  if (avgValue < 0.5) {
+    return 100 // Neutral score, effectively ignored via weight
+  }
+
+  // If champion avg CC 0.5-2 sec/min, CC is too inconsistent - just use ratio scoring
+  // Meeting or exceeding average = 100, below average scales down proportionally
+  if (avgValue < 2) {
+    const ratio = playerValue / avgValue
+    if (ratio >= 1) return 100 // At or above average = perfect
+    // Below average: scale from 0-100 based on how close to average
+    // 0% of avg = 0 score, 100% of avg = 100 score
+    return Math.round(ratio * 100)
+  }
+
+  // Above 2 sec/min: use normal stat scoring with z-score
+  return calculateStatScore(playerValue, avgValue, welfordState)
 }
 
 // Legacy penalty function - converts percentile score to penalty for backward compatibility
@@ -200,11 +237,15 @@ interface ParticipantForPenalty {
   item0: number
   item1: number
   item2: number
+  item3: number
+  item4: number
+  item5: number
   perk0: number
   spell1?: number
   spell2?: number
   skillOrder?: string
   buildOrder?: string
+  firstBuy?: string // comma-separated item IDs of starting items
 }
 
 // Item penalty detail for breakdown display
@@ -217,6 +258,17 @@ export interface ItemPenaltyDetail {
   playerWinrate?: number
   topWinrate?: number
   isInTop5: boolean
+}
+
+// Starting items penalty detail for breakdown display
+export interface StartingItemsPenaltyDetail {
+  itemIds: number[]
+  penalty: number
+  reason: 'optimal' | 'suboptimal' | 'off-meta' | 'unknown'
+  playerWinrate?: number
+  topWinrate?: number
+  rank?: number
+  totalOptions?: number
 }
 
 // calculate item build penalty with detailed breakdown
@@ -652,8 +704,49 @@ export async function calculateBuildOrderPenalty(
 }
 
 // ============================================================================
-// OPTIMIZED BATCH CALCULATION - runs all DB queries in parallel
+// OPTIMIZED BATCH CALCULATION - Core-build aware scoring
 // ============================================================================
+
+// All boots (tier 1 + tier 2) - normalized to 99999 for core combo grouping
+const BOOT_IDS = new Set([1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158])
+
+function normalizeBootId(itemId: number): number {
+  return BOOT_IDS.has(itemId) ? 99999 : itemId
+}
+
+function createComboKey(items: number[]): string | null {
+  const first3 = items.filter(id => id > 0).slice(0, 3)
+  if (first3.length !== 3) return null
+
+  const normalized = first3.map(normalizeBootId)
+  const uniqueSorted = [...new Set(normalized)].sort((a, b) => a - b)
+
+  if (uniqueSorted.length !== 3) return null
+
+  return uniqueSorted.join('_')
+}
+
+function createSpellKey(spell1: number, spell2: number): string {
+  return `${Math.min(spell1, spell2)}_${Math.max(spell1, spell2)}`
+}
+
+// Fallback info - tracks when global data is used instead of core-specific data
+export interface FallbackInfo {
+  items: boolean       // true if items used global data (no core match)
+  keystone: boolean    // true if keystone used global data
+  spells: boolean      // true if spells used global data
+  starting: boolean    // true if starting items used global data
+}
+
+// Core build details for breakdown display
+export interface CoreBuildDetails {
+  penalty: number
+  playerWinrate?: number
+  topWinrate?: number
+  rank?: number
+  totalOptions?: number
+  games?: number
+}
 
 export interface AllPenaltiesResult {
   itemPenalty: number
@@ -662,14 +755,69 @@ export interface AllPenaltiesResult {
   spellsPenalty: number
   skillOrderPenalty: number
   buildOrderPenalty: number
+  startingItemsPenalty: number
+  startingItemsDetails?: StartingItemsPenaltyDetail
+  coreBuildDetails?: CoreBuildDetails
+  coreKey?: string // The matched core build key (for debugging)
+  fallbackInfo: FallbackInfo // Tracks which categories used fallback data
+  usedFallbackPatch?: boolean // Whether we used a different patch's data due to insufficient data for match patch
+  actualPatchUsed?: string // The actual patch data used (may differ from match patch if fallback)
 }
 
-// Calculate all build/choice penalties in one batch with parallel DB queries
-// This is MUCH faster than calling each function individually (1 round trip vs 5+)
+// Calculate all build/choice penalties using CORE BUILD CONTEXT
+// This scores items/runes/spells based on what works with YOUR specific core build
+// Accepts optional pre-fetched championData to avoid duplicate DB queries
 export async function calculateAllBuildPenalties(
   participant: ParticipantForPenalty,
-  championName: string
+  championName: string,
+  prefetchedChampionData?: Record<string, unknown> | null
 ): Promise<AllPenaltiesResult> {
+  // Calculate player's core key from FINAL items, ordered by build timeline
+  // Core = first 3 completed items (legendary/boots/mythic) the player finished
+  const coreItems: number[] = []
+  
+  // Get final items from slots
+  const finalItems = [
+    participant.item0, participant.item1, participant.item2,
+    participant.item3, participant.item4, participant.item5
+  ].filter(id => id > 0 && isCompletedItem(id))
+  
+  if (participant.buildOrder && finalItems.length >= 3) {
+    // Parse build order to get purchase sequence
+    const buildOrderItems = participant.buildOrder
+      .split(',')
+      .map(id => parseInt(id, 10))
+      .filter(id => !isNaN(id) && id > 0)
+    
+    // Find first 3 completed items from build order that are in final items
+    // This gives us the order they were completed
+    const seen = new Set<number>()
+    for (const itemId of buildOrderItems) {
+      if (coreItems.length >= 3) break
+      // Only count if it's a completed item AND in final items AND not already counted
+      // For boots: only count finished boots (not tier 1 boots 1001)
+      if (isCompletedItem(itemId) && finalItems.includes(itemId) && !seen.has(itemId)) {
+        coreItems.push(itemId)
+        seen.add(itemId)
+      }
+    }
+
+  }
+  
+  // Fallback to item slots if no build order or not enough items
+  if (coreItems.length < 3) {
+
+    for (const itemId of finalItems) {
+      if (coreItems.length >= 3) break
+      if (!coreItems.includes(itemId)) {
+        coreItems.push(itemId)
+      }
+    }
+  }
+  
+  const playerCoreKey = createComboKey(coreItems) || undefined
+
+
   if (!participant.patch) {
     return {
       itemPenalty: 0,
@@ -678,60 +826,163 @@ export async function calculateAllBuildPenalties(
       spellsPenalty: 0,
       skillOrderPenalty: 0,
       buildOrderPenalty: 0,
+      startingItemsPenalty: 0,
+      coreKey: playerCoreKey,
+      fallbackInfo: { items: true, keystone: true, spells: true, starting: true },
     }
   }
 
-  const supabase = createAdminClient()
-
-  // Run ALL DB queries in parallel - this is the key optimization
-  const [itemStatsResult, championStatsIncResult, runeStatsResult, championStatsResult] = await Promise.all([
-    // For item penalty
-    supabase
-      .from('item_stats_by_patch')
-      .select('item_id, slot, games, wins, winrate')
-      .eq('champion_name', championName)
-      .eq('patch', participant.patch),
-
-    // For item penalty (total games)
-    supabase
-      .from('champion_stats_incremental')
-      .select('games')
-      .eq('champion_name', championName)
-      .eq('patch', participant.patch)
-      .maybeSingle(),
-
-    // For keystone penalty
-    supabase
-      .from('rune_stats_by_patch')
-      .select('rune_id, games, wins, winrate')
-      .eq('champion_name', championName)
-      .eq('patch', participant.patch)
-      .eq('slot', 0),
-
-    // For spells, skill order, and build order penalties (single query!)
-    supabase
+  // Use pre-fetched data if available, otherwise fetch from DB
+  // Implements fallback logic: try exact patch first, then fall back to latest patch with sufficient data
+  let championData = prefetchedChampionData
+  let usedFallbackPatch = false
+  let actualPatchUsed = participant.patch
+  
+  if (!championData) {
+    const supabase = createAdminClient()
+    
+    // First try exact patch match
+    const { data: exactMatchResult } = await supabase
       .from('champion_stats')
-      .select('data')
+      .select('data, patch')
       .eq('champion_name', championName)
       .eq('patch', participant.patch)
-      .maybeSingle(),
-  ])
+      .maybeSingle()
+    
+    if (exactMatchResult?.data && (exactMatchResult.data as any).games >= 100) {
+      championData = exactMatchResult.data
+      actualPatchUsed = exactMatchResult.patch
+    } else {
+      // Fallback: get all patches for this champion, sorted by patch desc (newest first)
+      // and pick the one with the most data (100+ games)
+      const { data: allPatchesResult } = await supabase
+        .from('champion_stats')
+        .select('data, patch')
+        .eq('champion_name', championName)
+        .order('patch', { ascending: false })
+        .limit(5)
+      
+      if (allPatchesResult && allPatchesResult.length > 0) {
+        // Find first patch with 100+ games (prefer newer patches)
+        const validPatch = allPatchesResult.find(p => (p.data as any)?.games >= 100)
+        if (validPatch) {
+          championData = validPatch.data
+          actualPatchUsed = validPatch.patch
+          usedFallbackPatch = actualPatchUsed !== participant.patch
+          if (usedFallbackPatch) {
+            console.log(`[Penalties] Using fallback patch ${actualPatchUsed} for champion ${championName} (match was ${participant.patch})`)
+          }
+        }
+      }
+    }
+  }
 
-  // Calculate item penalty from pre-fetched data
-  const itemResult = calculateItemPenaltyFromData(
+  if (!championData) {
+    return {
+      itemPenalty: 0,
+      itemDetails: [],
+      keystonePenalty: 0,
+      spellsPenalty: 0,
+      skillOrderPenalty: 0,
+      buildOrderPenalty: 0,
+      startingItemsPenalty: 0,
+      coreKey: playerCoreKey,
+      fallbackInfo: { items: true, keystone: true, spells: true, starting: true },
+      usedFallbackPatch,
+      actualPatchUsed,
+    }
+  }
+
+  // Find player's core build data, or fall back to best matching core
+  const coreData = championData.core as Record<string, CoreBuildData> | undefined
+  let matchedCoreData: CoreBuildData | null = null
+
+  // Debug: log incoming data
+  console.log(`[CoreMatch] Champion: ${championName}, patch: ${participant.patch}`)
+  console.log(`[CoreMatch] buildOrder: ${participant.buildOrder}`)
+  console.log(`[CoreMatch] finalItems: ${finalItems.join(',')}`)
+  console.log(`[CoreMatch] coreItems: ${coreItems.join(',')}`)
+  console.log(`[CoreMatch] playerCoreKey: ${playerCoreKey}`)
+  console.log(`[CoreMatch] coreData exists: ${!!coreData}, keys: ${coreData ? Object.keys(coreData).length : 0}`)
+
+  if (coreData && playerCoreKey) {
+    // Exact match
+    if (coreData[playerCoreKey]) {
+      matchedCoreData = coreData[playerCoreKey]
+      console.log(`[CoreMatch] EXACT match found: ${playerCoreKey} with ${matchedCoreData.games} games`)
+    } else {
+      // Find best matching core (most games with at least 2 matching items)
+      const playerNormalized = coreItems.slice(0, 3).map(normalizeBootId)
+      let bestMatch: { key: string; data: CoreBuildData; matchCount: number } | null = null
+
+      for (const [key, data] of Object.entries(coreData)) {
+        const coreKeyItems = key.split('_').map(Number)
+        const matchCount = playerNormalized.filter(item => coreKeyItems.includes(item)).length
+        if (matchCount >= 2 && data.games >= 10) {
+          if (!bestMatch || data.games > bestMatch.data.games) {
+            bestMatch = { key, data, matchCount }
+          }
+        }
+      }
+
+      if (bestMatch) {
+        matchedCoreData = bestMatch.data
+        console.log(`[CoreMatch] PARTIAL match: ${bestMatch.key} with ${bestMatch.matchCount} items, ${matchedCoreData.games} games`)
+      } else {
+        console.log(`[CoreMatch] NO match found. Player normalized: ${playerNormalized.join(',')}`)
+        // Log top 5 cores for debugging
+        const topCores = Object.entries(coreData)
+          .sort((a, b) => b[1].games - a[1].games)
+          .slice(0, 5)
+          .map(([k, v]) => `${k}(${v.games})`)
+        console.log(`[CoreMatch] Top 5 cores: ${topCores.join(', ')}`)
+      }
+    }
+  } else {
+    console.log(`[CoreMatch] Missing data - coreData: ${!!coreData}, playerCoreKey: ${playerCoreKey}`)
+    if (coreItems.length > 0) {
+      console.log(`[CoreMatch] coreItems were: ${coreItems.join(',')} but key creation failed`)
+    }
+  }
+
+  // Calculate core build score (how good is the core itself)
+  const coreBuildResult = calculateCoreBuildPenalty(playerCoreKey, coreData)
+
+  // If we have core-specific data, use it for items beyond slot 3, runes, spells
+  // Otherwise fall back to global stats
+  const useCore = matchedCoreData && matchedCoreData.games >= 10
+  console.log(`[CoreMatch] useCore=${useCore}, matchedCoreData=${!!matchedCoreData}, games=${matchedCoreData?.games || 0}`)
+
+  // Calculate penalties using core-specific or global data
+  const itemResult = calculateItemPenaltyFromCoreData(
     participant,
-    itemStatsResult.data || [],
-    championStatsIncResult.data?.games || 1
+    coreItems,
+    useCore ? matchedCoreData : null,
+    championData.items,
+    championData.games || 1
   )
 
-  // Calculate keystone penalty from pre-fetched data
-  const keystonePenalty = calculateKeystonePenaltyFromData(participant, runeStatsResult.data || [])
+  const keystonePenalty = calculateKeystonePenaltyFromCoreData(
+    participant,
+    useCore ? matchedCoreData?.runes?.primary : null,
+    championData.runes?.primary
+  )
 
-  // Calculate spells, skill order, build order from shared champion_stats data
-  const championData = championStatsResult.data?.data
-  const spellsPenalty = calculateSpellsPenaltyFromData(participant, championData)
+  const spellsPenalty = calculateSpellsPenaltyFromCoreData(
+    participant,
+    useCore ? matchedCoreData?.spells : null,
+    championData.spells
+  )
+
+  // Skill order uses global data (not core-specific)
   const skillOrderPenalty = calculateSkillOrderPenaltyFromData(participant, championData)
-  const buildOrderPenalty = calculateBuildOrderPenaltyFromData(participant, championData)
+
+  // Starting items - use core-specific data if available
+  const startingItemsResult = calculateStartingItemsPenaltyFromCoreData(
+    participant,
+    useCore ? matchedCoreData?.starting : null,
+    championData.starting
+  )
 
   return {
     itemPenalty: itemResult.totalPenalty,
@@ -739,116 +990,240 @@ export async function calculateAllBuildPenalties(
     keystonePenalty,
     spellsPenalty,
     skillOrderPenalty,
-    buildOrderPenalty,
+    buildOrderPenalty: coreBuildResult.penalty,
+    startingItemsPenalty: startingItemsResult.penalty,
+    startingItemsDetails: startingItemsResult.details,
+    coreBuildDetails: coreBuildResult,
+    coreKey: playerCoreKey, // Return player's core build, not the matched data key
+    fallbackInfo: {
+      items: !useCore,
+      keystone: !useCore,
+      spells: !useCore,
+      starting: startingItemsResult.usedFallback,
+    },
+    usedFallbackPatch,
+    actualPatchUsed,
   }
 }
 
-// Pure calculation functions that work with pre-fetched data
-function calculateItemPenaltyFromData(
+// Type for core build data structure
+interface CoreBuildData {
+  games: number
+  wins: number
+  items?: Record<string, Record<string, { games: number; wins: number }>>
+  runes?: {
+    primary?: Record<string, { games: number; wins: number }>
+    secondary?: Record<string, { games: number; wins: number }>
+    tertiary?: {
+      offense?: Record<string, { games: number; wins: number }>
+      flex?: Record<string, { games: number; wins: number }>
+      defense?: Record<string, { games: number; wins: number }>
+    }
+  }
+  spells?: Record<string, { games: number; wins: number }>
+  starting?: Record<string, { games: number; wins: number }>
+}
+
+// Calculate core build penalty (is the 3-item core good?)
+function calculateCoreBuildPenalty(
+  playerCoreKey: string | null,
+  coreData: Record<string, CoreBuildData> | undefined
+): CoreBuildDetails {
+  if (!playerCoreKey || !coreData) return { penalty: 0 }
+
+  const MIN_GAMES = 10
+  const FULL_CONFIDENCE_GAMES = 30
+
+  const coresWithWinrate = Object.entries(coreData)
+    .map(([key, data]) => {
+      const confidence = Math.min(1, 0.5 + (0.5 * (data.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return {
+        key,
+        games: data.games,
+        wins: data.wins,
+        winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
+        confidence,
+      }
+    })
+    .filter(c => c.games >= MIN_GAMES)
+    .sort((a, b) => b.winrate - a.winrate)
+
+  if (coresWithWinrate.length === 0) return { penalty: 0 }
+
+  // Find player's core
+  const playerIndex = coresWithWinrate.findIndex(c => c.key === playerCoreKey)
+  let playerCore = playerIndex >= 0 ? coresWithWinrate[playerIndex] : null
+  let playerRank = playerIndex >= 0 ? playerIndex + 1 : -1
+
+  // Check low sample data
+  if (!playerCore && coreData[playerCoreKey]) {
+    const lowSample = coreData[playerCoreKey]
+    if (lowSample.games >= 1) {
+      playerRank = coresWithWinrate.length + 1
+      const confidence = Math.min(0.5, lowSample.games / MIN_GAMES)
+      playerCore = {
+        key: playerCoreKey,
+        games: lowSample.games,
+        wins: lowSample.wins,
+        winrate: lowSample.games > 0 ? (lowSample.wins / lowSample.games) * 100 : 0,
+        confidence,
+      }
+    }
+  }
+
+  if (!playerCore) {
+    return {
+      penalty: 8,
+      topWinrate: coresWithWinrate[0]?.winrate,
+      totalOptions: coresWithWinrate.length,
+    }
+  }
+
+  const score = calculateRankBasedScore(playerRank, coresWithWinrate.length)
+  const basePenalty = ((100 - score) / 100) * 20
+  const penalty = basePenalty * playerCore.confidence
+
+  return {
+    penalty,
+    playerWinrate: playerCore.winrate,
+    topWinrate: coresWithWinrate[0]?.winrate,
+    rank: playerRank,
+    totalOptions: coresWithWinrate.length,
+    games: playerCore.games,
+  }
+}
+
+// Calculate item penalty using core-specific data for slots 4-6
+// Calculate item penalty using BUILD ORDER positions (not physical slots)
+// This matches how champion_stats stores data: by build order position (1st, 2nd, 3rd item bought)
+function calculateItemPenaltyFromCoreData(
   participant: ParticipantForPenalty,
-  itemStats: Array<{ item_id: number; slot: number; games: number; wins: number; winrate: number }>,
-  totalGames: number
+  playerCoreItems: number[],
+  coreData: CoreBuildData | null,
+  globalItems: Record<string, Record<string, { games: number; wins: number }>> | undefined,
+  _totalGames: number
 ): { totalPenalty: number; details: ItemPenaltyDetail[] } {
   const details: ItemPenaltyDetail[] = []
   let totalPenalty = 0
-  const items = [participant.item0, participant.item1, participant.item2]
 
-  if (itemStats.length === 0) return { totalPenalty: 0, details }
+  // Require build order from timeline - no fallback to item slots
+  if (!participant.buildOrder) {
+    return { totalPenalty: 0, details }
+  }
 
-  const bootsIds = [3006, 3009, 3020, 3047, 3111, 3117, 3158]
+  // Get completed items in BUILD ORDER (not physical slot order)
+  const allPurchasedItems = participant.buildOrder
+    .split(',')
+    .map(id => parseInt(id, 10))
+    .filter(id => !isNaN(id) && id > 0)
+  
+  const completedItemsInOrder = allPurchasedItems.filter(isCompletedItem)
 
-  for (let slot = 0; slot < 3; slot++) {
-    const playerItemId = items[slot]
+  const MIN_GAMES_THRESHOLD = 10
+  const FULL_CONFIDENCE_GAMES = 30
+
+  // Process each completed item by its BUILD ORDER position
+  for (let buildPosition = 0; buildPosition < completedItemsInOrder.length && buildPosition < 6; buildPosition++) {
+    const playerItemId = completedItemsInOrder[buildPosition]
     if (!playerItemId || playerItemId === 0) continue
 
-    if (bootsIds.includes(playerItemId)) {
-      details.push({ slot, itemId: playerItemId, penalty: 0, reason: 'boots', isInTop5: true })
+    // Boots get no penalty
+    if (BOOT_IDS.has(playerItemId)) {
+      details.push({ slot: buildPosition, itemId: playerItemId, penalty: 0, reason: 'boots', isInTop5: true })
       continue
     }
 
-    const slotItems = itemStats.filter(i => i.slot === slot)
-    if (slotItems.length === 0) {
-      details.push({ slot, itemId: playerItemId, penalty: 0, reason: 'unknown', isInTop5: false })
+    // Build position is 0-indexed, but champion_stats uses 1-indexed keys
+    const positionKey = (buildPosition + 1).toString()
+    let itemsForPosition: Record<string, { games: number; wins: number }> | undefined
+
+    // For ALL positions, check core-specific data first (not just positions 4-6)
+    if (coreData?.items) {
+      const corePositionItems: Record<string, { games: number; wins: number }> = {}
+      for (const [itemId, positions] of Object.entries(coreData.items)) {
+        if (positions[positionKey]) {
+          corePositionItems[itemId] = positions[positionKey]
+        }
+      }
+      if (Object.keys(corePositionItems).length > 0) {
+        itemsForPosition = corePositionItems
+      }
+    }
+
+    // Fall back to global position data
+    if (!itemsForPosition && globalItems?.[positionKey]) {
+      itemsForPosition = globalItems[positionKey]
+    }
+
+    if (!itemsForPosition || Object.keys(itemsForPosition).length === 0) {
+      details.push({ slot: buildPosition, itemId: playerItemId, penalty: 0, reason: 'unknown', isInTop5: false })
       continue
     }
 
-    // Include all items with at least 10 games for ranking
-    // Items with 30+ games get full confidence, 10-29 games get partial confidence
-    const MIN_GAMES_THRESHOLD = 10
-    const FULL_CONFIDENCE_GAMES = 30
-
-    const itemsWithPriority = slotItems
-      .map(item => {
-        const pickrate = (item.games / totalGames) * 100
-        // Confidence scales from 0.5 at 10 games to 1.0 at 30+ games
+    // Rank items by winrate
+    const itemsWithPriority = Object.entries(itemsForPosition)
+      .map(([itemId, stats]) => {
+        const winrate = stats.games > 0 ? (stats.wins / stats.games) * 100 : 0
         const confidence = Math.min(
           1,
-          0.5 + (0.5 * (item.games - MIN_GAMES_THRESHOLD)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES_THRESHOLD)
+          0.5 + (0.5 * (stats.games - MIN_GAMES_THRESHOLD)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES_THRESHOLD)
         )
-        return { ...item, pickrate, priority: item.winrate, confidence }
+        return { itemId: parseInt(itemId), games: stats.games, winrate, confidence }
       })
       .filter(item => item.games >= MIN_GAMES_THRESHOLD)
-      .sort((a, b) => b.priority - a.priority)
+      .sort((a, b) => b.winrate - a.winrate)
 
     if (itemsWithPriority.length === 0) {
-      details.push({ slot, itemId: playerItemId, penalty: 0, reason: 'unknown', isInTop5: false })
+      details.push({ slot: buildPosition, itemId: playerItemId, penalty: 0, reason: 'unknown', isInTop5: false })
       continue
     }
 
-    // Find player's item - first check in ranked list
-    const playerItemIndex = itemsWithPriority.findIndex(i => i.item_id === playerItemId)
-    let playerItem = playerItemIndex >= 0 ? itemsWithPriority[playerItemIndex] : null
-    let playerRank = playerItemIndex >= 0 ? playerItemIndex + 1 : -1
+    // Find player's item
+    const playerIndex = itemsWithPriority.findIndex(i => i.itemId === playerItemId)
+    let playerItem = playerIndex >= 0 ? itemsWithPriority[playerIndex] : null
+    let playerRank = playerIndex >= 0 ? playerIndex + 1 : -1
 
-    // If not in ranked list, check if it exists with ANY data (even < 10 games)
-    if (!playerItem) {
-      const lowSampleItem = slotItems.find(i => i.item_id === playerItemId)
-      if (lowSampleItem && lowSampleItem.games >= 1) {
-        // We have SOME data - use it but with very low confidence
-        // Rank it at the end of known items
+    // Check low sample
+    if (!playerItem && itemsForPosition[playerItemId.toString()]) {
+      const lowSample = itemsForPosition[playerItemId.toString()]
+      if (lowSample.games >= 1) {
         playerRank = itemsWithPriority.length + 1
-        const confidence = Math.min(0.5, lowSampleItem.games / MIN_GAMES_THRESHOLD)
+        const confidence = Math.min(0.5, lowSample.games / MIN_GAMES_THRESHOLD)
         playerItem = {
-          ...lowSampleItem,
-          pickrate: (lowSampleItem.games / totalGames) * 100,
-          priority: lowSampleItem.winrate,
+          itemId: playerItemId,
+          games: lowSample.games,
+          winrate: lowSample.games > 0 ? (lowSample.wins / lowSample.games) * 100 : 0,
           confidence,
         }
       }
     }
 
     if (!playerItem) {
-      // Truly unknown item - no data at all
-      // Give benefit of doubt with moderate penalty
-      const penaltyAmount = 10 // Fixed moderate penalty for completely unknown
-      totalPenalty += penaltyAmount
+      totalPenalty += 10
       details.push({
-        slot,
+        slot: buildPosition,
         itemId: playerItemId,
-        penalty: penaltyAmount,
+        penalty: 10,
         reason: 'off-meta',
-        topWinrate: itemsWithPriority[0]?.priority,
+        topWinrate: itemsWithPriority[0]?.winrate,
         isInTop5: false,
       })
       continue
     }
 
-    // Calculate score based on rank
     const score = calculateRankBasedScore(playerRank, itemsWithPriority.length)
     const isInTop5 = playerRank <= 5
-
-    // Apply confidence weight - low sample items have reduced penalty impact
     const basePenalty = ((100 - score) / 100) * 20
     const penaltyAmount = basePenalty * playerItem.confidence
 
     totalPenalty += penaltyAmount
     details.push({
-      slot,
+      slot: buildPosition,
       itemId: playerItemId,
       penalty: penaltyAmount,
       reason: isInTop5 ? 'optimal' : 'suboptimal',
-      playerWinrate: playerItem.priority,
-      topWinrate: itemsWithPriority[0].priority,
+      playerWinrate: playerItem.winrate,
+      topWinrate: itemsWithPriority[0].winrate,
       isInTop5,
     })
   }
@@ -856,108 +1231,114 @@ function calculateItemPenaltyFromData(
   return { totalPenalty: Math.min(60, totalPenalty), details }
 }
 
-function calculateKeystonePenaltyFromData(
+// Calculate keystone penalty using core-specific data if available
+function calculateKeystonePenaltyFromCoreData(
   participant: ParticipantForPenalty,
-  runeStats: Array<{ rune_id: number; games: number; wins: number; winrate: number }>
+  coreRunes: Record<string, { games: number; wins: number }> | null | undefined,
+  globalRunes: Record<string, { games: number; wins: number }> | undefined
 ): number {
-  if (!participant.perk0 || runeStats.length === 0) return 0
+  if (!participant.perk0) return 0
+
+  const runeData = coreRunes && Object.keys(coreRunes).length > 0 ? coreRunes : globalRunes
+  if (!runeData || Object.keys(runeData).length === 0) return 0
 
   const MIN_GAMES = 10
   const FULL_CONFIDENCE_GAMES = 50
 
-  const totalGames = runeStats.reduce((sum, r) => sum + r.games, 0)
-  const runesWithPriority = runeStats
-    .map(rune => {
-      const confidence = Math.min(1, 0.5 + (0.5 * (rune.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
-      return { ...rune, pickrate: (rune.games / totalGames) * 100, priority: rune.winrate, confidence }
+  const runesWithPriority = Object.entries(runeData)
+    .map(([runeId, stats]) => {
+      const winrate = stats.games > 0 ? (stats.wins / stats.games) * 100 : 0
+      const confidence = Math.min(1, 0.5 + (0.5 * (stats.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return { runeId: parseInt(runeId), games: stats.games, winrate, confidence }
     })
-    .filter(rune => rune.games >= MIN_GAMES)
-    .sort((a, b) => b.priority - a.priority)
+    .filter(r => r.games >= MIN_GAMES)
+    .sort((a, b) => b.winrate - a.winrate)
 
   if (runesWithPriority.length === 0) return 0
 
-  // Find player's rune - first in ranked list
-  const playerRuneIndex = runesWithPriority.findIndex(r => r.rune_id === participant.perk0)
-  let playerRune = playerRuneIndex >= 0 ? runesWithPriority[playerRuneIndex] : null
-  let playerRank = playerRuneIndex >= 0 ? playerRuneIndex + 1 : -1
+  const playerIndex = runesWithPriority.findIndex(r => r.runeId === participant.perk0)
+  let playerRune = playerIndex >= 0 ? runesWithPriority[playerIndex] : null
+  let playerRank = playerIndex >= 0 ? playerIndex + 1 : -1
 
-  // Check for low sample data if not found
-  if (!playerRune) {
-    const lowSampleRune = runeStats.find(r => r.rune_id === participant.perk0)
-    if (lowSampleRune && lowSampleRune.games >= 1) {
+  // Check low sample
+  if (!playerRune && runeData[participant.perk0.toString()]) {
+    const lowSample = runeData[participant.perk0.toString()]
+    if (lowSample.games >= 1) {
       playerRank = runesWithPriority.length + 1
-      const confidence = Math.min(0.5, lowSampleRune.games / MIN_GAMES)
-      playerRune = { ...lowSampleRune, pickrate: 0, priority: lowSampleRune.winrate, confidence }
+      const confidence = Math.min(0.5, lowSample.games / MIN_GAMES)
+      playerRune = {
+        runeId: participant.perk0,
+        games: lowSample.games,
+        winrate: lowSample.games > 0 ? (lowSample.wins / lowSample.games) * 100 : 0,
+        confidence,
+      }
     }
   }
 
-  if (!playerRune) return 8 // Truly unknown rune
+  if (!playerRune) return 8
 
   const score = calculateRankBasedScore(playerRank, runesWithPriority.length)
   const basePenalty = ((100 - score) / 100) * 20
   return basePenalty * playerRune.confidence
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function calculateSpellsPenaltyFromData(participant: ParticipantForPenalty, championData: any): number {
-  if (!participant.spell1 || !participant.spell2 || !championData?.spells) return 0
+// Calculate spells penalty using core-specific data if available
+function calculateSpellsPenaltyFromCoreData(
+  participant: ParticipantForPenalty,
+  coreSpells: Record<string, { games: number; wins: number }> | null | undefined,
+  globalSpells: Record<string, { games: number; wins: number }> | undefined
+): number {
+  if (!participant.spell1 || !participant.spell2) return 0
+
+  const spellData = coreSpells && Object.keys(coreSpells).length > 0 ? coreSpells : globalSpells
+  if (!spellData || Object.keys(spellData).length === 0) return 0
 
   const MIN_GAMES = 10
   const FULL_CONFIDENCE_GAMES = 30
 
-  const spellsObj = championData.spells as Record<string, { games: number; wins: number }>
-  const spellsEntries = Object.entries(spellsObj)
-  if (spellsEntries.length === 0) return 0
+  const playerKey = createSpellKey(participant.spell1, participant.spell2)
 
-  const playerSpells = [participant.spell1, participant.spell2].sort((a, b) => a - b)
-  const playerKey = `${playerSpells[0]}_${playerSpells[1]}`
-
-  const spellsWithWinrate = spellsEntries
-    .map(([key, value]) => {
-      const confidence = Math.min(1, 0.5 + (0.5 * (value.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
-      return {
-        key,
-        games: value.games,
-        wins: value.wins,
-        winrate: value.games > 0 ? (value.wins / value.games) * 100 : 0,
-        confidence,
-      }
+  const spellsWithPriority = Object.entries(spellData)
+    .map(([key, stats]) => {
+      const winrate = stats.games > 0 ? (stats.wins / stats.games) * 100 : 0
+      const confidence = Math.min(1, 0.5 + (0.5 * (stats.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return { key, games: stats.games, winrate, confidence }
     })
     .filter(s => s.games >= MIN_GAMES)
     .sort((a, b) => b.winrate - a.winrate)
 
-  if (spellsWithWinrate.length === 0) return 0
+  if (spellsWithPriority.length === 0) return 0
 
-  // Find player's spell combo
-  const playerComboIndex = spellsWithWinrate.findIndex(s => s.key === playerKey)
-  let playerCombo = playerComboIndex >= 0 ? spellsWithWinrate[playerComboIndex] : null
-  let playerRank = playerComboIndex >= 0 ? playerComboIndex + 1 : -1
+  const playerIndex = spellsWithPriority.findIndex(s => s.key === playerKey)
+  let playerSpell = playerIndex >= 0 ? spellsWithPriority[playerIndex] : null
+  let playerRank = playerIndex >= 0 ? playerIndex + 1 : -1
 
-  // Check for low sample data
-  if (!playerCombo) {
-    const lowSampleEntry = spellsEntries.find(([key]) => key === playerKey)
-    if (lowSampleEntry && lowSampleEntry[1].games >= 1) {
-      playerRank = spellsWithWinrate.length + 1
-      const confidence = Math.min(0.5, lowSampleEntry[1].games / MIN_GAMES)
-      playerCombo = {
+  // Check low sample
+  if (!playerSpell && spellData[playerKey]) {
+    const lowSample = spellData[playerKey]
+    if (lowSample.games >= 1) {
+      playerRank = spellsWithPriority.length + 1
+      const confidence = Math.min(0.5, lowSample.games / MIN_GAMES)
+      playerSpell = {
         key: playerKey,
-        games: lowSampleEntry[1].games,
-        wins: lowSampleEntry[1].wins,
-        winrate: lowSampleEntry[1].games > 0 ? (lowSampleEntry[1].wins / lowSampleEntry[1].games) * 100 : 0,
+        games: lowSample.games,
+        winrate: lowSample.games > 0 ? (lowSample.wins / lowSample.games) * 100 : 0,
         confidence,
       }
     }
   }
 
-  if (!playerCombo) return 5 // Truly unknown combo
+  if (!playerSpell) return 5
 
-  const score = calculateRankBasedScore(playerRank, spellsWithWinrate.length)
+  const score = calculateRankBasedScore(playerRank, spellsWithPriority.length)
   const basePenalty = ((100 - score) / 100) * 15
-  return basePenalty * playerCombo.confidence
+  return basePenalty * playerSpell.confidence
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function calculateSkillOrderPenaltyFromData(participant: ParticipantForPenalty, championData: any): number {
+function calculateSkillOrderPenaltyFromData(
+  participant: ParticipantForPenalty,
+  championData: Record<string, unknown>
+): number {
   if (!participant.skillOrder || !championData?.skills) return 0
 
   const MIN_GAMES = 10
@@ -1011,68 +1392,115 @@ function calculateSkillOrderPenaltyFromData(participant: ParticipantForPenalty, 
   return basePenalty * playerSkill.confidence
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function calculateBuildOrderPenaltyFromData(participant: ParticipantForPenalty, championData: any): number {
-  if (!participant.buildOrder || !championData?.core) return 0
+// Normalize a starter key by sorting item IDs (for order-independent comparison)
+function normalizeStarterKey(key: string): string {
+  return key.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id)).sort((a, b) => a - b).join(',')
+}
+
+// Calculate starting items penalty using core-specific data if available
+function calculateStartingItemsPenaltyFromCoreData(
+  participant: ParticipantForPenalty,
+  coreStarting: Record<string, { games: number; wins: number }> | null | undefined,
+  globalStarting: Record<string, { games: number; wins: number }> | undefined
+): { penalty: number; details?: StartingItemsPenaltyDetail; usedFallback: boolean } {
+  if (!participant.firstBuy) {
+    console.log(`[StartingItems] No firstBuy provided`)
+    return { penalty: 0, usedFallback: false }
+  }
+
+  const useCoreData = coreStarting && Object.keys(coreStarting).length > 0
+  const startingData = useCoreData ? coreStarting : globalStarting
+  console.log(`[StartingItems] Using ${useCoreData ? 'CORE' : 'GLOBAL'} starting data. firstBuy=${participant.firstBuy}, options=${Object.keys(startingData || {}).length}`)
+  
+  if (!startingData || Object.keys(startingData).length === 0) return { penalty: 0, usedFallback: !useCoreData }
 
   const MIN_GAMES = 10
-  const FULL_CONFIDENCE_GAMES = 20
+  const FULL_CONFIDENCE_GAMES = 30
 
-  const coreData = championData.core as Record<string, { games: number; wins: number }>
-  if (Object.keys(coreData).length === 0) return 0
+  // Normalize player's key for order-independent comparison
+  const playerKey = normalizeStarterKey(participant.firstBuy)
 
-  const playerItems = participant.buildOrder
-    .split(',')
-    .map(id => parseInt(id, 10))
-    .slice(0, 3)
-  if (playerItems.length < 3) return 0
-
-  const BOOT_IDS = [1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158]
-  const normalizeItem = (id: number) => (BOOT_IDS.includes(id) ? 10010 : id)
-
-  const normalizedPlayerItems = playerItems.map(normalizeItem).sort((a, b) => a - b)
-  const playerKey = normalizedPlayerItems.join('_')
-
-  const combosWithWinrate = Object.entries(coreData)
-    .map(([key, data]) => {
-      const confidence = Math.min(1, 0.5 + (0.5 * (data.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
-      return {
-        key,
-        games: data.games,
-        wins: data.wins,
-        winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
-        confidence,
-      }
-    })
-    .filter(c => c.games >= MIN_GAMES)
-    .sort((a, b) => b.winrate - a.winrate)
-
-  if (combosWithWinrate.length === 0) return 0
-
-  // Find player's build order
-  const playerComboIndex = combosWithWinrate.findIndex(c => c.key === playerKey)
-  let playerCombo = playerComboIndex >= 0 ? combosWithWinrate[playerComboIndex] : null
-  let playerRank = playerComboIndex >= 0 ? playerComboIndex + 1 : -1
-
-  // Check for low sample data
-  if (!playerCombo) {
-    const lowSampleEntry = Object.entries(coreData).find(([key]) => key === playerKey)
-    if (lowSampleEntry && lowSampleEntry[1].games >= 1) {
-      playerRank = combosWithWinrate.length + 1
-      const confidence = Math.min(0.5, lowSampleEntry[1].games / MIN_GAMES)
-      playerCombo = {
-        key: playerKey,
-        games: lowSampleEntry[1].games,
-        wins: lowSampleEntry[1].wins,
-        winrate: lowSampleEntry[1].games > 0 ? (lowSampleEntry[1].wins / lowSampleEntry[1].games) * 100 : 0,
-        confidence,
-      }
+  // Normalize all keys for comparison and merge duplicates that become identical after normalization
+  const normalizedData: Record<string, { games: number; wins: number }> = {}
+  for (const [key, stats] of Object.entries(startingData)) {
+    const normalizedKey = normalizeStarterKey(key)
+    if (normalizedData[normalizedKey]) {
+      normalizedData[normalizedKey].games += stats.games
+      normalizedData[normalizedKey].wins += stats.wins
+    } else {
+      normalizedData[normalizedKey] = { games: stats.games, wins: stats.wins }
     }
   }
 
-  if (!playerCombo) return 8 // Truly unknown build order
+  const startingWithPriority = Object.entries(normalizedData)
+    .map(([key, stats]) => {
+      const winrate = stats.games > 0 ? (stats.wins / stats.games) * 100 : 0
+      const confidence = Math.min(1, 0.5 + (0.5 * (stats.games - MIN_GAMES)) / (FULL_CONFIDENCE_GAMES - MIN_GAMES))
+      return { key, games: stats.games, winrate, confidence }
+    })
+    .filter(s => s.games >= MIN_GAMES)
+    .sort((a, b) => b.winrate - a.winrate)
 
-  const score = calculateRankBasedScore(playerRank, combosWithWinrate.length)
-  const basePenalty = ((100 - score) / 100) * 20
-  return basePenalty * playerCombo.confidence
+  console.log(`[StartingItems] After MIN_GAMES filter: ${startingWithPriority.length} options with 10+ games`)
+
+  if (startingWithPriority.length === 0) return { penalty: 0, usedFallback: !useCoreData }
+
+  const playerIndex = startingWithPriority.findIndex(s => s.key === playerKey)
+  let playerStarting = playerIndex >= 0 ? startingWithPriority[playerIndex] : null
+  let playerRank = playerIndex >= 0 ? playerIndex + 1 : -1
+
+  console.log(`[StartingItems] Player key="${playerKey}", found=${playerIndex >= 0}, rank=${playerRank}`)
+
+  // Check low sample using normalized data
+  if (!playerStarting && normalizedData[playerKey]) {
+    const lowSample = normalizedData[playerKey]
+    if (lowSample.games >= 1) {
+      playerRank = startingWithPriority.length + 1
+      const confidence = Math.min(0.5, lowSample.games / MIN_GAMES)
+      playerStarting = {
+        key: playerKey,
+        games: lowSample.games,
+        winrate: lowSample.games > 0 ? (lowSample.wins / lowSample.games) * 100 : 0,
+        confidence,
+      }
+      console.log(`[StartingItems] Low sample fallback: games=${lowSample.games}, winrate=${playerStarting.winrate.toFixed(1)}`)
+    }
+  }
+
+  // Parse item IDs from the key
+  const itemIds = playerKey.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id))
+
+  if (!playerStarting) {
+    return {
+      penalty: 5,
+      details: {
+        itemIds,
+        penalty: 5,
+        reason: 'off-meta',
+        topWinrate: startingWithPriority[0]?.winrate,
+        rank: -1,
+        totalOptions: startingWithPriority.length,
+      },
+      usedFallback: !useCoreData,
+    }
+  }
+
+  const score = calculateRankBasedScore(playerRank, startingWithPriority.length)
+  const isTop5 = playerRank <= 5
+  const basePenalty = ((100 - score) / 100) * 10 // Max 10 penalty for starting items
+  const penalty = basePenalty * playerStarting.confidence
+
+  return {
+    penalty,
+    details: {
+      itemIds,
+      penalty,
+      reason: isTop5 ? 'optimal' : 'suboptimal',
+      playerWinrate: playerStarting.winrate,
+      topWinrate: startingWithPriority[0].winrate,
+      rank: playerRank,
+      totalOptions: startingWithPriority.length,
+    },
+    usedFallback: !useCoreData,
+  }
 }

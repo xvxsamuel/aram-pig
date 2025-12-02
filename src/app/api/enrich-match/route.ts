@@ -8,7 +8,7 @@ import {
   extractFirstBuy,
   formatBuildOrder,
   formatFirstBuy,
-  extractItemPurchases,
+  extractItemTimeline,
   isPatchAccepted,
 } from '@/lib/game'
 import { getKillDeathSummary } from '@/lib/game/kill-timeline'
@@ -236,7 +236,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
       const abilityOrder = extractAbilityOrder(timeline, participantId)
       const buildOrder = extractBuildOrder(timeline, participantId)
       const firstBuy = extractFirstBuy(timeline, participantId)
-      const itemPurchases = extractItemPurchases(timeline, participantId)
+      const itemPurchases = extractItemTimeline(timeline, participantId)
 
       const buildOrderStr = buildOrder.length > 0 ? formatBuildOrder(buildOrder) : null
       const firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
@@ -247,6 +247,8 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
       // calculate pig score with breakdown
       let pigScore = participant.match_data?.pigScore ?? null
       let pigScoreBreakdown = participant.match_data?.pigScoreBreakdown ?? null
+
+      console.log(`[EnrichMatch] ${participant.champion_name}: buildOrderStr=${buildOrderStr?.slice(0,50)}, firstBuyStr=${firstBuyStr}`)
 
       if (pigScore === null && !matchParticipant.gameEndedInEarlySurrender) {
         try {
@@ -274,6 +276,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
             spell2: matchParticipant.summoner2Id || 0,
             skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
             buildOrder: buildOrderStr || undefined,
+            firstBuy: firstBuyStr || undefined,
             takedownQualityScore: killDeathSummary.takedownScore,
             deathQualityScore: killDeathSummary.deathScore,
           })
@@ -281,6 +284,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
           if (breakdown) {
             pigScore = breakdown.finalScore
             pigScoreBreakdown = breakdown
+            console.log(`[EnrichMatch] ${participant.champion_name}: coreKey=${breakdown.coreKey}, startingDetails=${!!breakdown.startingItemsDetails}, itemDetails=${breakdown.itemDetails?.length}`)
           }
         } catch (err) {
           console.error(`[EnrichMatch] Failed to calculate pig score for ${participant.champion_name}:`, err)

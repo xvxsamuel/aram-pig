@@ -8,7 +8,7 @@ import {
   extractFirstBuy,
   formatBuildOrder,
   formatFirstBuy,
-  extractItemPurchases,
+  extractItemTimeline,
   extractCompletedItems,
   getKillDeathSummary,
   type KillDeathSummary,
@@ -37,12 +37,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
 
-    // if already has build_order, pig_score, completedItems, and killDeathTimeline in match_data, return cached data
+    // check if cached itemPurchases is in new format (has 'action' AND 'itemName' fields)
+    const cachedItemPurchases = matchData.match_data?.itemPurchases as Array<{ action?: string; itemName?: string }> | undefined
+    const hasNewFormatTimeline = cachedItemPurchases?.length && 
+      cachedItemPurchases[0]?.action !== undefined && 
+      cachedItemPurchases[0]?.itemName !== undefined
+
+    // if already has build_order, pig_score, completedItems, killDeathTimeline, AND new format item timeline in match_data, return cached data
     if (
       matchData.match_data?.buildOrder &&
       matchData.match_data?.pigScore !== null &&
       matchData.match_data?.completedItems &&
-      matchData.match_data?.killDeathTimeline
+      matchData.match_data?.killDeathTimeline &&
+      hasNewFormatTimeline
     ) {
       return NextResponse.json({
         build_order: matchData.match_data.buildOrder,
@@ -94,19 +101,43 @@ export async function POST(request: Request) {
       })
     }
 
-    // Find participant ID (need to get all participants to find index)
-    const { data: allParticipants } = await supabase
-      .from('summoner_matches')
-      .select('puuid, match_data')
-      .eq('match_id', matchId)
-      .order('match_data->teamId', { ascending: true })
+    // Find participant ID from timeline metadata
+    // Timeline metadata.participants array contains PUUIDs in order (index + 1 = participantId)
+    const timelineParticipants = (timeline as any)?.metadata?.participants as string[] | undefined
+    let participantId = -1
 
-    const participantIndex = allParticipants?.findIndex(p => p.puuid === puuid) ?? -1
-    if (participantIndex === -1) {
-      return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
+    if (timelineParticipants) {
+      const participantIndex = timelineParticipants.findIndex((p: string) => p === puuid)
+      if (participantIndex !== -1) {
+        participantId = participantIndex + 1
+      }
     }
 
-    const participantId = participantIndex + 1
+    // Fallback: get from database if timeline doesn't have metadata
+    if (participantId === -1) {
+      const { data: allParticipants } = await supabase
+        .from('summoner_matches')
+        .select('puuid, match_data')
+        .eq('match_id', matchId)
+
+      if (allParticipants && allParticipants.length > 0) {
+        // Sort by teamId to match Riot's ordering (team 100 = 1-5, team 200 = 6-10)
+        const sortedParticipants = [...allParticipants].sort((a, b) => {
+          const teamA = a.match_data?.teamId || 0
+          const teamB = b.match_data?.teamId || 0
+          return teamA - teamB
+        })
+
+        const participantIndex = sortedParticipants.findIndex(p => p.puuid === puuid)
+        if (participantIndex !== -1) {
+          participantId = participantIndex + 1
+        }
+      }
+    }
+
+    if (participantId === -1) {
+      return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
+    }
 
     // Extract build order and first buy if timeline available
     let buildOrderStr = matchData.match_data?.buildOrder || null
@@ -119,8 +150,8 @@ export async function POST(request: Request) {
       firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
     }
 
-    // Extract full item purchase history (buy/sell with undo filtering)
-    const itemTimeline = timeline ? extractItemPurchases(timeline, participantId) : []
+    // Extract full item timeline for display (buy/sell events with undos removed)
+    const itemTimeline = timeline ? extractItemTimeline(timeline, participantId) : []
 
     // Extract completed items (legendaries, boots) with timestamps for build path display
     const completedItems = timeline ? extractCompletedItems(timeline, participantId) : []
