@@ -95,6 +95,21 @@ function topByGames<T extends GameStats>(
     .slice(0, limit)
 }
 
+// return all entries sorted by games (no limit)
+function allByGames<T extends GameStats>(
+  obj: Record<string, T> | undefined
+): Array<{ key: string; games: number; wins: number; winrate: number }> {
+  if (!obj) return []
+  return Object.entries(obj)
+    .map(([key, val]) => ({
+      key,
+      games: val.games,
+      wins: val.wins,
+      winrate: val.games > 0 ? (val.wins / val.games) * 100 : 0,
+    }))
+    .sort((a, b) => b.games - a.games)
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ championName: string }> }) {
   const { championName } = await params
   const { searchParams } = new URL(request.url)
@@ -210,14 +225,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       slot6: topByGames(rawData.items?.['6'], 10),
     },
 
-    // top runes
+    // top runes - return ALL runes for complete display
     topRunes: {
-      primary: topByGames(rawData.runes?.primary, 10),
-      secondary: topByGames(rawData.runes?.secondary, 10),
+      primary: allByGames(rawData.runes?.primary),
+      secondary: allByGames(rawData.runes?.secondary),
       statPerks: {
-        offense: topByGames(rawData.runes?.tertiary?.offense, 5),
-        flex: topByGames(rawData.runes?.tertiary?.flex, 5),
-        defense: topByGames(rawData.runes?.tertiary?.defense, 5),
+        offense: allByGames(rawData.runes?.tertiary?.offense),
+        flex: allByGames(rawData.runes?.tertiary?.flex),
+        defense: allByGames(rawData.runes?.tertiary?.defense),
       },
       trees: {
         primary: topByGames(rawData.runes?.tree?.primary, 5),

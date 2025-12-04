@@ -9,20 +9,20 @@ export {
   type CoreBuildStats,
   type ComparisonResult,
   type BuildChoiceResult,
-  BOOT_IDS,
+  BOOT_IDS as BOOT_IDS_SET, // Renamed to avoid conflict with build-scoring
   BOOTS_NORMALIZED,
   MIN_GAMES_THRESHOLD,
   FULL_CONFIDENCE_GAMES,
   isBootItem,
-  normalizeBootId,
-  createSpellKey,
+  normalizeBootId as normalizeBootIdTypes,
+  createSpellKey as createSpellKeyTypes,
   getWinrate,
   getConfidence,
 } from './types'
 
 // Stat extractors - modular helpers for extracting match stats
 export {
-  isCompletedItem,
+  isCompletedItem as isCompletedItemExtractor,
   isLegendaryOrBoots,
   extractSkillOrderAbbreviation,
   extractCoreKey,
@@ -42,7 +42,7 @@ export {
 
 // Stat comparison - z-score based comparison against profile stats
 export {
-  zScoreToScore,
+  zScoreToScore as zScoreToScoreComparison,
   compareMetric,
   compareMetricWithWelford,
   rankToScore,
@@ -63,23 +63,43 @@ export {
   type ChampionStatsCache,
 } from './calculator'
 
-// Penalties - build choice penalty calculations
+// Performance scoring - stat-based scoring (z-score, sigmoid, CDF)
 export {
-  calculateStatPenalty,
-  calculateDeathsPerMinutePenalty,
-  calculateItemPenalty,
-  calculateItemPenaltyWithDetails,
+  zScoreToScore,
+  zScoreToPercentile,
+  percentileToScore,
+  calculateStatScore,
+  calculateCCTimeScore,
+  calculateDeathsScore,
+  calculateKillParticipationScore,
+  calculateDistanceBasedScore,
+} from './performance-scoring'
+
+// Build scoring - build choice scoring (items, runes, spells, cores)
+export {
+  isCompletedItem,
+  normalizeBootId,
+  createComboKey,
+  createSpellKey,
+  calculateBayesianScore,
+  mergeCoreData,
+  calculateCoreBuildPenalty,
+  calculateItemPenaltyFromCoreData,
+  calculateKeystonePenaltyFromCoreData,
+  calculateSpellsPenaltyFromCoreData,
+  calculateSkillOrderPenaltyFromData,
+  calculateStartingItemsPenaltyFromCoreData,
   calculateAllBuildPenalties,
-  calculateKeystonePenalty,
-  calculateSpellsPenalty,
-  calculateSkillOrderPenalty,
-  calculateBuildOrderPenalty,
+  BOOT_IDS,
+  type ParticipantForPenalty,
   type ItemPenaltyDetail,
   type StartingItemsPenaltyDetail,
   type CoreBuildDetails,
-  type AllPenaltiesResult,
   type FallbackInfo,
-} from './penalties'
+  type AllPenaltiesResult,
+  type CoreBuildData,
+  type ChampionStatsData,
+} from './build-scoring'
 
 // Profile stats - recalculation utilities
 export {

@@ -31,7 +31,7 @@ export async function getLatestPatches(count: number = PATCHES_TO_KEEP): Promise
     return patches
   } catch (error) {
     console.error('Failed to fetch latest patches:', error)
-    return ['25.23', '25.22', '25.21'].slice(0, count)
+    return []
   }
 }
 
@@ -43,10 +43,8 @@ export async function isPatchAccepted(patch: string): Promise<boolean> {
   return latestPatches.includes(patch)
 }
 
-/**
- * Extract patch version from Riot API gameVersion string
- * Riot API returns version 15.x for 2025, but actual patch names are 25.x
- */
+// riot api gameVersion string returns version 15.x for s15, but actual patch names are 25.x
+
 export function extractPatch(gameVersion: string): string {
   if (!gameVersion) return 'unknown'
   const parts = gameVersion.split('.')
@@ -59,7 +57,7 @@ export function extractPatch(gameVersion: string): string {
   return apiPatch
 }
 
-// Patch schedule for fallback date-based detection
+// patch schedule for fallback date-based detection
 export const patchSchedule = [
   { patch: '25.1', start: new Date('2025-01-09').getTime() },
   { patch: '25.2', start: new Date('2025-01-23').getTime() },

@@ -92,15 +92,15 @@ export default function ChampionPageClient({
 }: Props) {
   const currentPatch = selectedPatch || availablePatches[0]
 
-  // SWR with stale-while-revalidate caching
+  // swr with stale-while-revalidate caching
   const { data, error, isLoading } = useSWR<ChampionStatsResponse | null>(
     `/api/champion-stats/${championName}?patch=${currentPatch}`,
     fetcher,
     {
-      revalidateOnFocus: false, // Don't refetch when tab regains focus
-      revalidateOnReconnect: false, // Don't refetch when reconnecting
-      dedupingInterval: 60000, // Dedupe requests within 60s
-      keepPreviousData: true, // Keep showing old data while loading new patch
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000,
+      keepPreviousData: true,
     }
   )
 
@@ -332,49 +332,93 @@ export default function ChampionPageClient({
   })
 
   // core builds (from raw data for full item position info)
+  // Sort by Lower Bound Wilson Score - balances winrate with statistical confidence
+  // This naturally penalizes low-sample builds AND low-winrate builds
+  const MIN_CORE_GAMES = 50 // Fixed minimum games to show a core
   const allBuildData = data.raw?.core
-    ? Object.entries(data.raw.core as Record<string, any>)
-        .map(([comboKey, comboData]: [string, any]) => {
-          const normalizedItems = comboKey.split('_').map(id => parseInt(id))
+    ? (() => {
+        const coreEntries = Object.entries(data.raw.core as Record<string, any>)
+        
+        // Calculate champion's overall winrate as baseline
+        const totalCoreGames = coreEntries.reduce((sum, [, d]: [string, any]) => sum + (d.games || 0), 0)
+        const totalCoreWins = coreEntries.reduce((sum, [, d]: [string, any]) => sum + (d.wins || 0), 0)
+        const championWinrate = totalCoreGames > 0 ? (totalCoreWins / totalCoreGames) * 100 : 50
+        
+        return coreEntries
+          .map(([comboKey, comboData]: [string, any]) => {
+            const normalizedItems = comboKey.split('_').map(id => parseInt(id))
+            const games = comboData.games || 0
+            const wins = comboData.wins || 0
+            const winrate = games > 0 ? (wins / games) * 100 : 0
+            
+            // Wilson Score Lower Bound (95% confidence)
+            // This gives us the lower bound of what the "true" winrate likely is
+            // Low sample sizes get pulled down heavily, high samples stay close to actual WR
+            // Formula: (p + z²/2n - z*sqrt(p(1-p)/n + z²/4n²)) / (1 + z²/n)
+            // where p = winrate (0-1), n = games, z = 1.96 for 95% confidence
+            const p = winrate / 100
+            const n = games
+            const z = 1.96
+            const z2 = z * z
+            
+            let wilsonLowerBound: number
+            if (n === 0) {
+              wilsonLowerBound = 0
+            } else {
+              const denominator = 1 + z2 / n
+              const centerAdjusted = p + z2 / (2 * n)
+              const spread = z * Math.sqrt((p * (1 - p) + z2 / (4 * n)) / n)
+              wilsonLowerBound = (centerAdjusted - spread) / denominator
+            }
+            
+            // Convert back to percentage
+            const wilsonScore = wilsonLowerBound * 100
 
-          const actualBoots: number[] = []
-          if (comboData.items && typeof comboData.items === 'object') {
-            Object.keys(comboData.items).forEach(itemId => {
-              const id = parseInt(itemId)
-              if (isBootsItem(id)) actualBoots.push(id)
-            })
-          }
-
-          const comboItemStats: Record<number, { positions: Record<number, { games: number; wins: number }> }> = {}
-
-          if (comboData.items && typeof comboData.items === 'object') {
-            Object.entries(comboData.items).forEach(([itemId, stats]: [string, any]) => {
-              const positions: Record<number, { games: number; wins: number }> = {}
-              Object.entries(stats).forEach(([key, slotStats]: [string, any]) => {
-                const slotNum = parseInt(key)
-                if (!isNaN(slotNum) && slotNum >= 1 && slotNum <= 6 && typeof slotStats === 'object') {
-                  positions[slotNum] = {
-                    games: slotStats.games || 0,
-                    wins: slotStats.wins || 0,
-                  }
-                }
+            const actualBoots: number[] = []
+            if (comboData.items && typeof comboData.items === 'object') {
+              Object.keys(comboData.items).forEach(itemId => {
+                const id = parseInt(itemId)
+                if (isBootsItem(id)) actualBoots.push(id)
               })
-              comboItemStats[parseInt(itemId)] = { positions }
-            })
-          }
+            }
 
-          return {
-            normalizedItems,
-            actualBoots,
-            games: comboData.games || 0,
-            wins: comboData.wins || 0,
-            itemStats: comboItemStats,
-            runes: comboData.runes || undefined,
-            spells: comboData.spells || undefined,
-            starting: comboData.starting || undefined,
-          }
-        })
-        .sort((a, b) => b.games - a.games)
+            const comboItemStats: Record<number, { positions: Record<number, { games: number; wins: number }> }> = {}
+
+            if (comboData.items && typeof comboData.items === 'object') {
+              Object.entries(comboData.items).forEach(([itemId, stats]: [string, any]) => {
+                const positions: Record<number, { games: number; wins: number }> = {}
+                Object.entries(stats).forEach(([key, slotStats]: [string, any]) => {
+                  const slotNum = parseInt(key)
+                  if (!isNaN(slotNum) && slotNum >= 1 && slotNum <= 6 && typeof slotStats === 'object') {
+                    positions[slotNum] = {
+                      games: slotStats.games || 0,
+                      wins: slotStats.wins || 0,
+                    }
+                  }
+                })
+                comboItemStats[parseInt(itemId)] = { positions }
+              })
+            }
+
+            return {
+              normalizedItems,
+              actualBoots,
+              games,
+              wins,
+              winrate,
+              wilsonScore,
+              championWinrate,
+              itemStats: comboItemStats,
+              runes: comboData.runes || undefined,
+              spells: comboData.spells || undefined,
+              starting: comboData.starting || undefined,
+            }
+          })
+          // Filter: must have exactly 3 core items, minimum 100 games, AND winrate at least (champion average - 5%)
+          // normalizedItems uses 99999 for boots, so we count actual items
+          .filter(c => c.normalizedItems.length === 3 && c.games >= MIN_CORE_GAMES && c.winrate >= (c.championWinrate - 5))
+          .sort((a, b) => b.wilsonScore - a.wilsonScore)
+      })()
     : []
 
   return (
@@ -431,12 +475,14 @@ export default function ChampionPageClient({
             bootsItems={bootsItems}
             starterItems={starterItems}
             runeStats={runeStats}
+            statPerks={data.topRunes.statPerks}
             abilityLevelingStats={abilityLevelingStats}
             summonerSpellStats={summonerSpellStats}
             ddragonVersion={ddragonVersion}
             totalGames={totalGames}
             buildOrders={[]}
             allBuildData={allBuildData}
+            championWinrate={data.overview.winrate}
           />
         </div>
       </div>

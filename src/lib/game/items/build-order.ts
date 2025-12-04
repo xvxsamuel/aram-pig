@@ -58,6 +58,7 @@ export function isLegendaryOrFinishedBoots(itemId: number): boolean {
 
 /**
  * Normalize a boot ID to the standard value (99999) for core grouping
+ * @deprecated Boots are now excluded from cores entirely
  */
 export function normalizeBootId(itemId: number): number {
   return BOOT_IDS.has(itemId) ? BOOTS_NORMALIZED : itemId
@@ -68,8 +69,8 @@ export function normalizeBootId(itemId: number): number {
 // ============================================================================
 
 /**
- * Extract first 3 completed items from build order string
- * Returns the actual item IDs in purchase order
+ * Extract first 3 NON-BOOT completed items from build order string
+ * Returns the actual item IDs in purchase order (no boots)
  * 
  * @param buildOrder - Comma-separated item IDs from timeline
  * @param finalItems - Final item slots as fallback
@@ -87,11 +88,13 @@ export function extractCoreItems(
       .map(id => parseInt(id, 10))
       .filter(id => !isNaN(id) && id > 0)
 
-    // find first 3 completed items (legendary or finished boots)
+    // find first 3 NON-BOOT completed items
     const seen = new Set<number>()
     for (const itemId of buildOrderItems) {
       if (coreItems.length >= 3) break
-      // check if completed and not already in core
+      // Skip boots entirely for core identification
+      if (BOOT_IDS.has(itemId)) continue
+      // check if completed legendary and not already in core
       if (isLegendaryOrFinishedBoots(itemId) && !seen.has(itemId)) {
         coreItems.push(itemId)
         seen.add(itemId)
@@ -102,7 +105,7 @@ export function extractCoreItems(
   // fallback to final items if build order insufficient
   if (coreItems.length < 3 && finalItems) {
     const completedFinalItems = finalItems.filter(
-      id => id > 0 && isLegendaryOrFinishedBoots(id)
+      id => id > 0 && isLegendaryOrFinishedBoots(id) && !BOOT_IDS.has(id)
     )
     for (const itemId of completedFinalItems) {
       if (coreItems.length >= 3) break
@@ -116,20 +119,18 @@ export function extractCoreItems(
 }
 
 /**
- * Create a normalized, sorted core key from 3 items
- * Boots are normalized to 99999 for grouping
- * Returns underscore-separated string (e.g., "3078_6333_99999")
+ * Create a sorted core key from 3 non-boot items
+ * Returns underscore-separated string (e.g., "3031_6672_6675")
  */
 export function createCoreKey(coreItems: number[]): string | null {
-  if (coreItems.length !== 3) return null
-
-  // normalize boots to 99999
-  const normalized = coreItems.map(normalizeBootId)
+  // Filter out any boots that might have slipped through
+  const nonBootItems = coreItems.filter(id => !BOOT_IDS.has(id))
+  if (nonBootItems.length !== 3) return null
   
   // sort for consistent key
-  const sorted = [...normalized].sort((a, b) => a - b)
+  const sorted = [...nonBootItems].sort((a, b) => a - b)
   
-  // ensure 3 unique items after normalization
+  // ensure 3 unique items
   const unique = [...new Set(sorted)]
   if (unique.length !== 3) return null
 

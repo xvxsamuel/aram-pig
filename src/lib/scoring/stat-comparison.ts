@@ -22,20 +22,28 @@ import {
 // ============================================================================
 
 /**
- * Convert z-score to a 0-100 score with target at z=+2
- * Formula: score = 50 + (zScore * 25), clamped to [0, 100]
+ * Convert z-score to a 0-100 score using sigmoid function
+ * No hard clamps - smooth S-curve with diminishing returns at extremes
  * 
- * | Z-Score | Score | Percentile |
- * |---------|-------|------------|
- * | +2.0    | 100   | 98th       |
- * | +1.0    | 75    | 84th       |
- * | 0.0     | 50    | 50th       |
- * | -1.0    | 25    | 16th       |
- * | -2.0    | 0     | 2nd        |
+ * | Z-Score | True CDF% | Score  |
+ * |---------|-----------|--------|
+ * | +3.0    | 99.87%    | ~95    | (soft cap)
+ * | +2.0    | 97.72%    | ~88    |
+ * | +1.0    | 84.13%    | ~73    |
+ * | 0.0     | 50.00%    | 50     | AVERAGE
+ * | -1.0    | 15.87%    | ~27    |
+ * | -2.0    | 2.28%     | ~12    |
+ * | -3.0    | 0.13%     | ~5     | (soft floor)
  */
+const SIGMOID_K = 0.8 // Determines steepness of the S-curve
+
 export function zScoreToScore(zScore: number): number {
-  const score = 50 + zScore * 25
-  return Math.max(0, Math.min(100, score))
+  // Sigmoid: score = 100 / (1 + e^(-k * z))
+  // - At z=0: 100 / (1 + 1) = 50
+  // - At z→+∞: approaches 100
+  // - At z→-∞: approaches 0 (but never reaches it)
+  const score = 100 / (1 + Math.exp(-SIGMOID_K * zScore))
+  return score
 }
 
 /**

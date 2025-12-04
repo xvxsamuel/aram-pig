@@ -1,19 +1,48 @@
 // Stats aggregator - TypeScript-side aggregation for champion stats
 // Reduces DB operations from N (per participant) to M (per unique champion+patch)
 
-// all boots (tier 1 + tier 2) - normalized to 99999 for core combo grouping
-const BOOT_IDS = new Set([1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158])
+// tier 1 boots - not completed (excluded from cores)
+const TIER1_BOOT_ID = 1001
 
-function normalizeBootId(itemId: number): number {
-  return BOOT_IDS.has(itemId) ? 99999 : itemId
+// tier 2 boots - completed boots (normalized to 99999 for core grouping)
+const TIER2_BOOT_IDS = new Set([3006, 3009, 3020, 3047, 3111, 3117, 3158])
+
+// normalized boot ID for core key grouping
+const NORMALIZED_BOOT_ID = 99999
+
+// check if item is a completed item (legendary or tier 2 boots)
+// tier 1 boots (1001) are NOT completed items for core purposes
+function isCompletedItemForCore(itemId: number): boolean {
+  // tier 1 boots are not completed items
+  if (itemId === TIER1_BOOT_ID) return false
+  // tier 2 boots are completed items
+  if (TIER2_BOOT_IDS.has(itemId)) return true
+  // for non-boots, we need to check if it's a legendary
+  // items >= 3000 and not component items are generally legendaries
+  // This is a simplified check - the full check uses items.json
+  return itemId >= 3000
 }
 
 function createComboKey(items: number[]): string | null {
-  const first3 = items.filter(id => id > 0).slice(0, 3)
-  if (first3.length !== 3) return null
+  // core = first 3 completed items (legendary/boots) from build order
+  // boots are normalized to 99999 for grouping
+  const coreItems: number[] = []
+  
+  for (const itemId of items) {
+    if (coreItems.length >= 3) break
+    if (itemId <= 0) continue
+    if (!isCompletedItemForCore(itemId)) continue
+    
+    // normalize boots to 99999
+    const normalizedId = TIER2_BOOT_IDS.has(itemId) ? NORMALIZED_BOOT_ID : itemId
+    if (!coreItems.includes(normalizedId)) {
+      coreItems.push(normalizedId)
+    }
+  }
+  
+  if (coreItems.length !== 3) return null
 
-  const normalized = first3.map(normalizeBootId)
-  const uniqueSorted = [...new Set(normalized)].sort((a, b) => a - b)
+  const uniqueSorted = [...new Set(coreItems)].sort((a, b) => a - b)
 
   if (uniqueSorted.length !== 3) return null
 

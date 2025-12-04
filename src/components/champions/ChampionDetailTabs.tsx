@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import Image from 'next/image'
 import clsx from 'clsx'
 import Tooltip from '@/components/ui/Tooltip'
-import { getItemImageUrl, getSummonerSpellUrl } from '@/lib/ddragon'
+import ItemIcon from '@/components/ui/ItemIcon'
+import { getSummonerSpellUrl } from '@/lib/ddragon'
 import { getWinrateColor } from '@/lib/ui'
 import runesData from '@/data/runes.json'
 
@@ -23,7 +24,7 @@ const RUNE_TREES = {
     id: 8100,
     name: 'Domination',
     color: '#D44242',
-    keystones: [8112, 8128, 9923, 8124], // Electrocute, Dark Harvest, Hail of Blades
+    keystones: [8112, 8128, 9923], // Electrocute, Dark Harvest, Hail of Blades
     tier1: [8126, 8139, 8143], // Cheap Shot, Taste of Blood, Sudden Impact
     tier2: [8136, 8120, 8138], // Zombie Ward, Ghost Poro, Eyeball Collection
     tier3: [8135, 8105, 8106], // Treasure Hunter, Relentless Hunter, Ultimate Hunter
@@ -55,6 +56,25 @@ const RUNE_TREES = {
     tier2: [8321, 8345, 8347], // Cash Back, Biscuit Delivery, Cosmic Insight
     tier3: [8410, 8352, 8316], // Approach Velocity, Time Warp Tonic, Jack Of All Trades
   },
+}
+
+// Stat perk shards (tertiary runes)
+const STAT_PERKS = {
+  offense: [
+    { id: 5008, name: 'Adaptive Force', icon: 'perk-images/StatMods/StatModsAdaptiveForceIcon.png' },
+    { id: 5005, name: 'Attack Speed', icon: 'perk-images/StatMods/StatModsAttackSpeedIcon.png' },
+    { id: 5007, name: 'Ability Haste', icon: 'perk-images/StatMods/StatModsCDRScalingIcon.png' },
+  ],
+  flex: [
+    { id: 5008, name: 'Adaptive Force', icon: 'perk-images/StatMods/StatModsAdaptiveForceIcon.png' },
+    { id: 5010, name: 'Move Speed', icon: 'perk-images/StatMods/StatModsMovementSpeedIcon.png' },
+    { id: 5001, name: 'Health Scaling', icon: 'perk-images/StatMods/StatModsHealthPlusIcon.png' },
+  ],
+  defense: [
+    { id: 5011, name: 'Health', icon: 'perk-images/StatMods/StatModsHealthScalingIcon.png' },
+    { id: 5013, name: 'Tenacity', icon: 'perk-images/StatMods/StatModsTenacityIcon.png' },
+    { id: 5001, name: 'Health Scaling', icon: 'perk-images/StatMods/StatModsHealthPlusIcon.png' },
+  ],
 }
 
 // get rune tree info by rune ID
@@ -122,6 +142,25 @@ function getAbilityMaxOrder(abilityOrder: string): string {
   return maxOrder.join(' > ')
 }
 
+// Wilson Score Lower Bound (95% confidence)
+// This gives us the lower bound of what the "true" winrate likely is
+// Low sample sizes get pulled down heavily, high samples stay close to actual WR
+function calculateWilsonScore(games: number, wins: number): number {
+  if (games === 0) return 0
+  
+  const p = wins / games // winrate as decimal
+  const n = games
+  const z = 1.96 // 95% confidence
+  const z2 = z * z
+  
+  const denominator = 1 + z2 / n
+  const centerAdjusted = p + z2 / (2 * n)
+  const spread = z * Math.sqrt((p * (1 - p) + z2 / (4 * n)) / n)
+  const wilsonLowerBound = (centerAdjusted - spread) / denominator
+  
+  return wilsonLowerBound * 100 // return as percentage
+}
+
 interface ItemStat {
   item_id: number
   games: number
@@ -147,6 +186,13 @@ interface RuneStat {
   pickrate: number
 }
 
+interface StatPerkStat {
+  key: string
+  games: number
+  wins: number
+  winrate: number
+}
+
 interface AbilityLevelingStat {
   ability_order: string
   games: number
@@ -169,6 +215,8 @@ interface PreCalculatedCombo {
   actualBoots: number[]
   games: number
   wins: number
+  winrate?: number
+  championWinrate?: number
   itemStats: Record<
     number,
     {
@@ -193,12 +241,18 @@ interface Props {
   bootsItems: ItemStat[]
   starterItems: StarterBuild[]
   runeStats: Record<number, RuneStat[]>
+  statPerks: {
+    offense: StatPerkStat[]
+    flex: StatPerkStat[]
+    defense: StatPerkStat[]
+  }
   abilityLevelingStats: AbilityLevelingStat[]
   summonerSpellStats: SummonerSpellStat[]
   ddragonVersion: string
   totalGames: number
   buildOrders: string[]
   allBuildData: PreCalculatedCombo[]
+  championWinrate: number
 }
 
 export default function ChampionDetailTabs({
@@ -206,26 +260,30 @@ export default function ChampionDetailTabs({
   bootsItems,
   starterItems,
   runeStats,
+  statPerks,
   abilityLevelingStats,
   summonerSpellStats,
   ddragonVersion,
   totalGames,
   allBuildData,
+  championWinrate,
 }: Props) {
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
-  const [selectedCombo, setSelectedCombo] = useState<number>(0)
-
-  console.log('ChampionDetailTabs: allBuildData length:', allBuildData?.length, 'selectedCombo:', selectedCombo)
+  const [selectedCombo, setSelectedCombo] = useState<number | null>(null) // null until initialized
+  const [coreBuildsView, setCoreBuildsView] = useState<'best' | 'worst'>('best')
+  const [showAllBuilds, setShowAllBuilds] = useState(false)
+  
+  // refs for animated selector
+  const containerRef = useRef<HTMLDivElement>(null)
+  const buttonRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
+  const [selectorStyle, setSelectorStyle] = useState<{ top: number; height: number } | null>(null)
 
   // transform pre-calculated combinations into display format with build order and accompanying items
-  const itemCombinations = (() => {
+  // Each combo now includes originalIndex to properly reference allBuildData
+  const { bestCombinations, worstCombinations } = (() => {
     if (!allBuildData || allBuildData.length === 0) {
-      return []
+      return { bestCombinations: [], worstCombinations: [] }
     }
-
-    console.log('[DEBUG] Starting itemCombinations transformation, allBuildData:', allBuildData.length)
-    console.log('[DEBUG] First combo normalizedItems:', allBuildData[0]?.normalizedItems)
-    console.log('[DEBUG] itemsBySlot keys:', Object.keys(itemsBySlot))
 
     const combinations = allBuildData
       .map((combo, idx) => {
@@ -276,22 +334,11 @@ export default function ChampionDetailTabs({
               const found = slotItems.find(i => i.item_id === itemId)
               if (found) return found
             }
-            if (idx === 0) {
-              console.log('[DEBUG] Could not find item in itemsBySlot:', itemId)
-            }
             return null
           })
           .filter(Boolean) as ItemStat[]
 
         if (itemStats.length !== combo.normalizedItems.length) {
-          if (idx === 0) {
-            console.log(
-              '[DEBUG] Skipping combo, itemStats length:',
-              itemStats.length,
-              'normalizedItems length:',
-              combo.normalizedItems.length
-            )
-          }
           return null
         }
 
@@ -331,23 +378,12 @@ export default function ChampionDetailTabs({
         // sort accompanying items by frequency
         accompanyingItems.sort((a, b) => b.games - a.games)
 
-        const avgWinrate = combo.games > 0 ? (combo.wins / combo.games) * 100 : 0
+        // Use winrate from allBuildData (already calculated in ChampionPageClient)
+        const avgWinrate = combo.winrate ?? (combo.games > 0 ? (combo.wins / combo.games) * 100 : 0)
         const pickrate = totalGames > 0 ? (combo.games / totalGames) * 100 : 0
 
-        if (idx === 0) {
-          console.log(
-            '[DEBUG] Created combo with games:',
-            combo.games,
-            'avgWinrate:',
-            avgWinrate,
-            'buildOrder:',
-            buildOrder.map(b => b.itemId),
-            'accompanying:',
-            accompanyingItems.length
-          )
-        }
-
         return {
+          originalIndex: idx, // Keep track of original index for proper allBuildData access
           items: itemStats,
           hasBoots: combo.normalizedItems.includes(99999),
           actualBootItems: actualBootItems,
@@ -359,6 +395,7 @@ export default function ChampionDetailTabs({
         }
       })
       .filter(Boolean) as Array<{
+      originalIndex: number
       items: ItemStat[]
       hasBoots: boolean
       actualBootItems: ItemStat[]
@@ -369,15 +406,85 @@ export default function ChampionDetailTabs({
       pickrate: number
     }>
 
-    console.log('[DEBUG] After mapping, combinations length:', combinations.length)
-    console.log('[DEBUG] First combo estimatedGames:', combinations[0]?.estimatedGames)
-
-    // sort by games and take top 5 with at least 2 games
-    return combinations
-      .filter(c => c.estimatedGames >= 2)
-      .sort((a, b) => b.estimatedGames - a.estimatedGames)
-      .slice(0, 5)
+    // Fixed cutoff of 50 games minimum for display
+    const MIN_CORE_GAMES = 50
+    
+    // Filter minimum games - allBuildData is already sorted by Wilson score in ChampionPageClient
+    const validCombinations = combinations.filter(c => c.estimatedGames >= MIN_CORE_GAMES)
+    
+    // Best combinations: builds at or above champion average, sorted by Wilson score (already sorted)
+    const bestCombinations = validCombinations.filter(c => c.avgWinrate >= championWinrate)
+    
+    // Worst combinations: builds at least 2% below champion average, sorted by pickrate (most played bad builds first)
+    // This prevents marginal builds (e.g., 52.5% when champ is 53%) from being labeled as "worst"
+    const worstCombinations = validCombinations
+      .filter(c => c.avgWinrate < championWinrate - 2)
+      .sort((a, b) => b.estimatedGames - a.estimatedGames) // Sort by pickrate descending
+    
+    return { bestCombinations, worstCombinations }
   })()
+
+  // Initialize selectedCombo to first available build (only once)
+  const initializedRef = useRef(false)
+  useEffect(() => {
+    if (!initializedRef.current) {
+      if (bestCombinations.length > 0) {
+        setSelectedCombo(bestCombinations[0].originalIndex)
+        initializedRef.current = true
+      } else if (worstCombinations.length > 0) {
+        setSelectedCombo(worstCombinations[0].originalIndex)
+        initializedRef.current = true
+      }
+    }
+  }, [bestCombinations.length, worstCombinations.length]) // Only depend on length, not the arrays
+
+  // Update selector position when selection changes
+  useLayoutEffect(() => {
+    if (selectedCombo === null) return
+    
+    // Use requestAnimationFrame to ensure refs are populated
+    const updatePosition = () => {
+      const button = buttonRefs.current.get(selectedCombo)
+      const container = containerRef.current
+      if (button && container) {
+        const containerRect = container.getBoundingClientRect()
+        const buttonRect = button.getBoundingClientRect()
+        setSelectorStyle({
+          top: buttonRect.top - containerRect.top,
+          height: buttonRect.height,
+        })
+      }
+    }
+    
+    // Run immediately and also on next frame for safety
+    updatePosition()
+    const rafId = requestAnimationFrame(updatePosition)
+    return () => cancelAnimationFrame(rafId)
+  }, [selectedCombo])
+
+  // Also update selector on resize
+  useEffect(() => {
+    const updateSelector = () => {
+      if (selectedCombo === null) return
+      const button = buttonRefs.current.get(selectedCombo)
+      const container = containerRef.current
+      if (button && container) {
+        const containerRect = container.getBoundingClientRect()
+        const buttonRect = button.getBoundingClientRect()
+        setSelectorStyle({
+          top: buttonRect.top - containerRect.top,
+          height: buttonRect.height,
+        })
+      }
+    }
+    
+    window.addEventListener('resize', updateSelector)
+    return () => window.removeEventListener('resize', updateSelector)
+  }, [selectedCombo])
+
+  // Find the selected combo data from allBuildData using originalIndex
+  const selectedComboData = selectedCombo !== null ? allBuildData?.[selectedCombo] : null
+  const selectedComboDisplay = [...bestCombinations, ...worstCombinations].find(c => c.originalIndex === selectedCombo)
 
   return (
     <div>
@@ -434,84 +541,171 @@ export default function ChampionDetailTabs({
         <div className="grid grid-cols-12 gap-6">
           {/* Left Sidebar - Item Combinations */}
           <div className="col-span-12 lg:col-span-3 xl:col-span-3">
-            <div className="bg-abyss-700 rounded-lg p-4 sticky top-4">
-              <div className="text-sm text-subtitle mb-3">Select a combination</div>
-              <div className="space-y-2">
-                {itemCombinations.map((combo, idx) => (
-                  <div
-                    key={idx}
-                    className={clsx(
-                      'rounded-lg transition-all',
-                      selectedCombo === idx ? 'p-px bg-gradient-to-b from-gold-light to-gold-dark' : ''
-                    )}
+            <div className="bg-abyss-700 rounded-lg p-4 sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
+              {/* Container for animated selector */}
+              <div ref={containerRef} className="relative">
+                {/* Animated gold border selector - gradient border with transparent center */}
+                {selectorStyle && (
+                  <div 
+                    className="absolute left-0 right-0 rounded-lg transition-all duration-300 ease-out pointer-events-none z-10"
+                    style={{ 
+                      top: selectorStyle.top,
+                      height: selectorStyle.height,
+                      padding: '1px',
+                      background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
+                      WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                      WebkitMaskComposite: 'xor',
+                      maskComposite: 'exclude',
+                    }}
+                  />
+                )}
+                
+                {/* Core Builds Header with Toggle */}
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className={clsx(
+                    "text-sm font-semibold",
+                    coreBuildsView === 'best' ? 'text-white' : 'text-negative'
+                  )}>
+                    {coreBuildsView === 'best' ? 'Best' : 'Worst'} Core Builds
+                  </h2>
+                  <button
+                    onClick={() => setCoreBuildsView(coreBuildsView === 'best' ? 'worst' : 'best')}
+                    className="text-xs text-muted hover:text-white transition-colors flex items-center gap-1"
                   >
-                    <button
-                      onClick={() => setSelectedCombo(idx)}
-                      className={clsx(
-                        'w-full text-left p-3 rounded-lg transition-colors',
-                        selectedCombo === idx ? 'bg-abyss-700' : 'bg-abyss-800 hover:bg-abyss-900'
-                      )}
-                    >
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        {/* Show non-boot items */}
-                        {combo.items
-                          .filter(item => item.item_id !== 99999)
-                          .map((item, position) => (
-                            <div key={position} className="flex items-center gap-1">
-                              {position > 0 && <span className="text-gray-600 text-xs">+</span>}
-                              <Tooltip id={item.item_id} type="item">
-                                <div className="w-8 h-8 rounded bg-abyss-900 border border-gray-700 overflow-hidden flex-shrink-0">
-                                  <Image
-                                    src={getItemImageUrl(item.item_id, ddragonVersion)}
-                                    alt=""
-                                    width={32}
-                                    height={32}
-                                    className="w-full h-full object-cover"
-                                    unoptimized
-                                  />
-                                </div>
-                              </Tooltip>
-                            </div>
-                          ))}
+                    {coreBuildsView === 'best' ? 'Worst' : 'Best'} →
+                  </button>
+                </div>
 
-                        {/* Show "Any Boots" placeholder if combo includes boots */}
-                        {combo.hasBoots && (
-                          <>
-                            <span className="text-gray-600 text-xs">+</span>
-                            <div className="w-8 h-8 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
-                              <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">
-                                Any
-                                <br />
-                                Boots
-                              </span>
-                            </div>
-                          </>
+                {/* Core Builds List */}
+                {coreBuildsView === 'best' && bestCombinations.length > 0 && (
+                  <div className="space-y-2">
+                    {(showAllBuilds ? bestCombinations : bestCombinations.slice(0, 7)).map(combo => (
+                      <button
+                        key={combo.originalIndex}
+                        ref={(el) => {
+                          if (el) buttonRefs.current.set(combo.originalIndex, el)
+                          else buttonRefs.current.delete(combo.originalIndex)
+                        }}
+                        onClick={() => setSelectedCombo(combo.originalIndex)}
+                        className={clsx(
+                          'w-full text-left p-3 rounded-lg transition-colors relative',
+                          selectedCombo === combo.originalIndex ? 'bg-abyss-700' : 'bg-abyss-800 hover:bg-abyss-900'
                         )}
-
-                        {/* Show "No Boots" if explicitly marked */}
-                        {combo.items.some(item => item.item_id === -2) && (
-                          <>
-                            <span className="text-gray-600 text-xs">+</span>
-                            <div className="w-8 h-8 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
-                              <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">
-                                No
-                                <br />
-                                Boots
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="flex justify-between text-xs">
-                        <span className="font-bold" style={{ color: getWinrateColor(combo.avgWinrate) }}>
-                          {combo.avgWinrate.toFixed(1)}%
-                        </span>
-                        <span className="text-subtitle">{Math.round(combo.estimatedGames).toLocaleString()}</span>
-                      </div>
-                    </button>
+                      >
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {combo.items
+                            .filter(item => item.item_id !== 99999)
+                            .map((item, position) => (
+                              <div key={position} className="flex items-center gap-1">
+                                {position > 0 && <span className="text-gray-600 text-xs">+</span>}
+                                <ItemIcon
+                                  itemId={item.item_id}
+                                  ddragonVersion={ddragonVersion}
+                                  size="sm"
+                                  className="flex-shrink-0 bg-abyss-900 border-gray-700"
+                                />
+                              </div>
+                            ))}
+                          {combo.hasBoots && (
+                            <>
+                              <span className="text-gray-600 text-xs">+</span>
+                              <div className="w-7 h-7 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                                <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">
+                                  Any
+                                  <br />
+                                  Boots
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="font-bold" style={{ color: getWinrateColor(combo.avgWinrate) }}>
+                            {combo.avgWinrate.toFixed(1)}%
+                          </span>
+                          <span className="text-subtitle">{Math.round(combo.estimatedGames).toLocaleString()}</span>
+                        </div>
+                      </button>
+                    ))}
+                    {!showAllBuilds && bestCombinations.length > 7 && (
+                      <button
+                        onClick={() => setShowAllBuilds(true)}
+                        className="w-full text-center py-2 text-xs text-muted hover:text-white transition-colors"
+                      >
+                        Load more builds ({bestCombinations.length - 7} more)
+                      </button>
+                    )}
                   </div>
-                ))}
+                )}
+
+                {coreBuildsView === 'worst' && worstCombinations.length > 0 && (
+                  <div className="space-y-2">
+                    {(showAllBuilds ? worstCombinations : worstCombinations.slice(0, 7)).map(combo => (
+                      <button
+                        key={combo.originalIndex}
+                        ref={(el) => {
+                          if (el) buttonRefs.current.set(combo.originalIndex, el)
+                          else buttonRefs.current.delete(combo.originalIndex)
+                        }}
+                        onClick={() => setSelectedCombo(combo.originalIndex)}
+                        className={clsx(
+                          'w-full text-left p-3 rounded-lg transition-colors relative',
+                          selectedCombo === combo.originalIndex ? 'bg-abyss-700' : 'bg-abyss-800 hover:bg-abyss-900'
+                        )}
+                      >
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {combo.items
+                            .filter(item => item.item_id !== 99999)
+                            .map((item, position) => (
+                              <div key={position} className="flex items-center gap-1">
+                                {position > 0 && <span className="text-gray-600 text-xs">+</span>}
+                                <ItemIcon
+                                  itemId={item.item_id}
+                                  ddragonVersion={ddragonVersion}
+                                  size="sm"
+                                  className="flex-shrink-0 bg-abyss-900 border-gray-700"
+                                />
+                              </div>
+                            ))}
+                          {combo.hasBoots && (
+                            <>
+                              <span className="text-gray-600 text-xs">+</span>
+                              <div className="w-7 h-7 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                                <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">
+                                  Any
+                                  <br />
+                                  Boots
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="font-bold" style={{ color: getWinrateColor(combo.avgWinrate) }}>
+                            {combo.avgWinrate.toFixed(1)}%
+                          </span>
+                          <span className="text-subtitle">{Math.round(combo.estimatedGames).toLocaleString()}</span>
+                        </div>
+                      </button>
+                    ))}
+                    {!showAllBuilds && worstCombinations.length > 7 && (
+                      <button
+                        onClick={() => setShowAllBuilds(true)}
+                        className="w-full text-center py-2 text-xs text-muted hover:text-white transition-colors"
+                      >
+                        Load more builds ({worstCombinations.length - 7} more)
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {((coreBuildsView === 'best' && bestCombinations.length === 0) ||
+                  (coreBuildsView === 'worst' && worstCombinations.length === 0)) && (
+                  <div className="text-xs text-muted text-center py-4">
+                    No {coreBuildsView} core builds found
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -524,21 +718,20 @@ export default function ChampionDetailTabs({
                 {/* Items Grid */}
                 <div className="flex-1">
                   <h3 className="text-2xl font-bold mb-4">Items</h3>
-                  {itemCombinations[selectedCombo] ? (
+                  {selectedComboData && selectedComboDisplay ? (
                     <div>
                       <div className="text-sm text-subtitle mb-6">
                         Showing most common items built in each slot with this combination (
-                        {itemCombinations[selectedCombo].estimatedGames.toLocaleString()} games)
+                        {selectedComboDisplay.estimatedGames.toLocaleString()} games)
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         {[1, 2, 3, 4, 5, 6].map(slotNum => {
-                          // get combo object to access all itemStats with positions
-                          const combo = allBuildData[selectedCombo]
+                          // Use selectedComboData which is correctly indexed from allBuildData
                           const itemsInSlot: Array<{ itemId: number; games: number; winrate: number }> = []
 
                           // iterate through ALL items in the combo's itemStats (not just the 3 core items)
-                          if (combo?.itemStats) {
-                            Object.entries(combo.itemStats).forEach(([itemIdStr, itemData]) => {
+                          if (selectedComboData?.itemStats) {
+                            Object.entries(selectedComboData.itemStats).forEach(([itemIdStr, itemData]) => {
                               const itemId = parseInt(itemIdStr)
 
                               // check if this item appears in this slot
@@ -563,26 +756,14 @@ export default function ChampionDetailTabs({
                               <div className="space-y-2">
                                 {top3.length > 0 ? (
                                   top3.map((itemData, idx) => (
-                                    <div key={idx} className="text-center mb-1">
-                                      <Tooltip id={itemData.itemId} type="item">
-                                        <div className="w-12 h-12 mx-auto rounded bg-abyss-800 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
-                                          <Image
-                                            src={getItemImageUrl(itemData.itemId, ddragonVersion)}
-                                            alt=""
-                                            width={48}
-                                            height={48}
-                                            className="w-full h-full object-cover"
-                                            unoptimized
-                                          />
-                                        </div>
-                                      </Tooltip>
-                                      <div
-                                        className="text-xs font-bold"
-                                        style={{ color: getWinrateColor(itemData.winrate) }}
-                                      >
-                                        {itemData.winrate.toFixed(1)}%
-                                      </div>
-                                      <div className="text-[10px] text-muted">{itemData.games.toLocaleString()}</div>
+                                    <div key={idx} className="flex justify-center mb-1">
+                                      <ItemIcon
+                                        itemId={itemData.itemId}
+                                        ddragonVersion={ddragonVersion}
+                                        size="xl"
+                                        winrate={itemData.winrate}
+                                        games={itemData.games}
+                                      />
                                     </div>
                                   ))
                                 ) : (
@@ -605,39 +786,53 @@ export default function ChampionDetailTabs({
             <div className="bg-abyss-700 rounded-lg p-6">
               <h3 className="text-2xl font-bold mb-4">Runes</h3>
               {(() => {
-                // Get all runes
-                const allRunes: RuneStat[] = []
+                // Convert combo runes data to RuneStat-like format if available
+                type ComboRuneData = { rune_id: number; games: number; wins: number; winrate: number }
+                let comboRunes: ComboRuneData[] = []
+                
+                if (selectedComboData?.runes) {
+                  // Merge primary and secondary runes from combo
+                  const runeEntries: [string, { games: number; wins: number }][] = []
+                  if (selectedComboData.runes.primary) {
+                    runeEntries.push(...Object.entries(selectedComboData.runes.primary))
+                  }
+                  if (selectedComboData.runes.secondary) {
+                    runeEntries.push(...Object.entries(selectedComboData.runes.secondary))
+                  }
+                  
+                  comboRunes = runeEntries.map(([runeId, data]) => ({
+                    rune_id: parseInt(runeId),
+                    games: data.games,
+                    wins: data.wins,
+                    winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
+                  }))
+                }
+
+                // Decide which rune source to use
+                const useComboRunes = comboRunes.length > 0
+                
+                // Get all runes from global stats (for fallback and tier lookup)
+                const allGlobalRunes: RuneStat[] = []
                 Object.values(runeStats).forEach(slotRunes => {
                   slotRunes.forEach(rune => {
-                    if (!allRunes.find(r => r.rune_id === rune.rune_id)) {
-                      allRunes.push(rune)
+                    if (!allGlobalRunes.find(r => r.rune_id === rune.rune_id)) {
+                      allGlobalRunes.push(rune)
                     }
                   })
                 })
 
                 // Calculate total games for pickrate baseline
-                const totalGames = Math.max(
-                  ...allRunes.filter(r => getRuneTree(r.rune_id)?.tier === 'keystone').map(r => r.games),
-                  1
-                )
+                const runesSource = useComboRunes ? comboRunes : allGlobalRunes
 
-                // Score function: balances winrate and pickrate
-                // Higher winrate is better, but very low pickrate penalizes
-                // Formula: winrate * log(pickrate * 100 + 1) / log(101)
-                // This makes a 75% wr with 4x less pickrate need significantly higher wr to beat 60% wr majority pick
-                const calculateScore = (rune: RuneStat) => {
-                  const pickrate = (rune.games / totalGames) * 100
-                  // Require at least 2% pickrate to be considered
-                  if (pickrate < 2) return 0
-                  // Score = winrate * pickrate_factor
-                  // pickrate_factor ranges from ~0.3 (2% pick) to 1.0 (100% pick)
-                  const pickrateFactor = Math.log10(pickrate + 1) / Math.log10(101)
-                  return rune.winrate * (0.5 + pickrateFactor * 0.5)
+                // Use Wilson score for ranking - same as core builds
+                const getWilsonScoreForRune = (rune: { games: number; wins?: number; winrate?: number }) => {
+                  const wins = rune.wins ?? (rune.winrate ? Math.round(rune.games * rune.winrate / 100) : 0)
+                  return calculateWilsonScore(rune.games, wins)
                 }
 
-                // Find best keystone by score
-                const keystones = allRunes.filter(r => getRuneTree(r.rune_id)?.tier === 'keystone')
-                const bestKeystone = keystones.sort((a, b) => calculateScore(b) - calculateScore(a))[0]
+                // Find best keystone by Wilson score
+                const keystones = runesSource.filter(r => getRuneTree(r.rune_id)?.tier === 'keystone')
+                const bestKeystone = keystones.sort((a, b) => getWilsonScoreForRune(b) - getWilsonScoreForRune(a))[0]
 
                 if (!bestKeystone) return <div className="text-center text-subtitle py-4">No rune data available</div>
 
@@ -647,11 +842,11 @@ export default function ChampionDetailTabs({
                 // Get best rune for each tier in the primary tree
                 const primaryTreeName = primaryTreeInfo.tree.name.toLowerCase()
                 const getBestRuneForTier = (tier: 'tier1' | 'tier2' | 'tier3') => {
-                  const tierRunes = allRunes.filter(r => {
+                  const tierRunes = runesSource.filter(r => {
                     const info = getRuneTree(r.rune_id)
                     return info?.tree.name.toLowerCase() === primaryTreeName && info?.tier === tier
                   })
-                  return tierRunes.sort((a, b) => calculateScore(b) - calculateScore(a))[0]
+                  return tierRunes.sort((a, b) => getWilsonScoreForRune(b) - getWilsonScoreForRune(a))[0]
                 }
 
                 const bestTier1 = getBestRuneForTier('tier1')
@@ -659,18 +854,18 @@ export default function ChampionDetailTabs({
                 const bestTier3 = getBestRuneForTier('tier3')
 
                 // Find best secondary tree (not primary)
-                const secondaryTreeRunes = allRunes.filter(r => {
+                const secondaryTreeRunes = runesSource.filter(r => {
                   const info = getRuneTree(r.rune_id)
                   return info && info.tree.name.toLowerCase() !== primaryTreeName && info.tier !== 'keystone'
                 })
 
-                // Group by tree and find which tree has highest total score
+                // Group by tree and find which tree has highest total Wilson score
                 const treeScores: Record<string, number> = {}
                 secondaryTreeRunes.forEach(rune => {
                   const info = getRuneTree(rune.rune_id)
                   if (!info) return
                   const treeName = info.tree.name.toLowerCase()
-                  treeScores[treeName] = (treeScores[treeName] || 0) + calculateScore(rune)
+                  treeScores[treeName] = (treeScores[treeName] || 0) + getWilsonScoreForRune(rune)
                 })
 
                 const bestSecondaryTreeName = Object.entries(treeScores).sort((a, b) => b[1] - a[1])[0]?.[0]
@@ -678,10 +873,10 @@ export default function ChampionDetailTabs({
                   ? RUNE_TREES[bestSecondaryTreeName as keyof typeof RUNE_TREES]
                   : null
 
-                // Get top 2 runes from secondary tree
+                // Get top 2 runes from secondary tree by Wilson score
                 const secondaryRunes = secondaryTreeRunes
                   .filter(r => getRuneTree(r.rune_id)?.tree.name.toLowerCase() === bestSecondaryTreeName)
-                  .sort((a, b) => calculateScore(b) - calculateScore(a))
+                  .sort((a, b) => getWilsonScoreForRune(b) - getWilsonScoreForRune(a))
                   .slice(0, 2)
 
                 const primaryTree = primaryTreeInfo.tree
@@ -715,7 +910,7 @@ export default function ChampionDetailTabs({
                         {/* Keystone */}
                         <div className="flex items-center gap-3">
                           <Tooltip id={bestKeystone.rune_id} type="rune">
-                            <div className="w-14 h-14 rounded-full bg-abyss-900 border-2 border-gold-dark overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
+                            <div className="w-14 h-14 rounded-full bg-abyss-900 border-2 border-gold-dark overflow-hidden cursor-pointer">
                               {keystoneInfo?.icon && (
                                 <Image
                                   src={`https://ddragon.leagueoflegends.com/cdn/img/${keystoneInfo.icon}`}
@@ -743,7 +938,7 @@ export default function ChampionDetailTabs({
                           return (
                             <div key={idx} className="flex items-center gap-3">
                               <Tooltip id={rune.rune_id} type="rune">
-                                <div className="w-10 h-10 rounded-full bg-abyss-900 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
+                                <div className="w-10 h-10 rounded-full bg-abyss-900 border border-gray-700 overflow-hidden cursor-pointer">
                                   {runeInfo?.icon && (
                                     <Image
                                       src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
@@ -794,7 +989,7 @@ export default function ChampionDetailTabs({
                             return (
                               <div key={idx} className="flex items-center gap-3">
                                 <Tooltip id={rune.rune_id} type="rune">
-                                  <div className="w-10 h-10 rounded-full bg-abyss-900 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
+                                  <div className="w-10 h-10 rounded-full bg-abyss-900 border border-gray-700 overflow-hidden cursor-pointer">
                                     {runeInfo?.icon && (
                                       <Image
                                         src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
@@ -829,274 +1024,239 @@ export default function ChampionDetailTabs({
               {/* Starting Items */}
               <div className="bg-abyss-700 rounded-lg p-4">
                 <h4 className="font-bold mb-3 text-gold-light">Starting Items</h4>
-                {starterItems.length > 0 ? (
-                  <div>
-                    <div className="flex gap-2 mb-2 text-sm">
-                      <div className="text-white font-bold" style={{ color: getWinrateColor(starterItems[0].winrate) }}>
-                        {starterItems[0].winrate.toFixed(1)}%
-                      </div>
-                      <div className="text-subtitle">{starterItems[0].games.toLocaleString()}</div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {starterItems[0].items.map((itemId, itemIdx) => (
-                        <Tooltip key={itemIdx} id={itemId} type="item">
-                          <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
-                            <Image
-                              src={getItemImageUrl(itemId, ddragonVersion)}
-                              alt=""
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-cover"
-                              unoptimized
-                            />
+                {(() => {
+                  // Use combo-specific starting items if available
+                  if (selectedComboData?.starting && Object.keys(selectedComboData.starting).length > 0) {
+                    const sortedStarting = Object.entries(selectedComboData.starting)
+                      .map(([key, data]) => ({
+                        items: key.split(',').map(Number),
+                        games: data.games,
+                        wins: data.wins,
+                        winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
+                        wilsonScore: calculateWilsonScore(data.games, data.wins),
+                      }))
+                      .sort((a, b) => b.wilsonScore - a.wilsonScore) // Sort by Wilson score
+                    
+                    if (sortedStarting.length > 0) {
+                      const best = sortedStarting[0]
+                      return (
+                        <div>
+                          <div className="flex gap-2 mb-2 text-sm">
+                            <div className="text-white font-bold" style={{ color: getWinrateColor(best.winrate) }}>
+                              {best.winrate.toFixed(1)}%
+                            </div>
+                            <div className="text-subtitle">{best.games.toLocaleString()}</div>
                           </div>
-                        </Tooltip>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-500">No data</div>
-                )}
+                          <div className="flex flex-wrap gap-2">
+                            {best.items.map((itemId, itemIdx) => (
+                              <ItemIcon
+                                key={itemIdx}
+                                itemId={itemId}
+                                ddragonVersion={ddragonVersion}
+                                size="lg"
+                                className="bg-abyss-800 border-gray-700"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    }
+                  }
+                  
+                  // Fallback to global starter items - sort by Wilson score
+                  if (starterItems.length > 0) {
+                    const sortedStarters = [...starterItems]
+                      .map(s => ({
+                        ...s,
+                        wilsonScore: calculateWilsonScore(s.games, s.wins),
+                      }))
+                      .sort((a, b) => b.wilsonScore - a.wilsonScore)
+                    const best = sortedStarters[0]
+                    return (
+                      <div>
+                        <div className="flex gap-2 mb-2 text-sm">
+                          <div className="text-white font-bold" style={{ color: getWinrateColor(best.winrate) }}>
+                            {best.winrate.toFixed(1)}%
+                          </div>
+                          <div className="text-subtitle">{best.games.toLocaleString()}</div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {best.items.map((itemId, itemIdx) => (
+                            <ItemIcon
+                              key={itemIdx}
+                              itemId={itemId}
+                              ddragonVersion={ddragonVersion}
+                              size="lg"
+                              className="bg-abyss-800 border-gray-700"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+                  
+                  return <div className="text-xs text-gray-500">No data</div>
+                })()}
               </div>
 
               {/* Summoner Spells */}
               <div className="bg-abyss-700 rounded-lg p-4">
                 <h4 className="font-bold mb-3 text-gold-light">Spells</h4>
-                {summonerSpellStats.length > 0 ? (
-                  <div>
-                    <div className="flex gap-2 mb-2 text-sm">
-                      <div
-                        className="text-white font-bold"
-                        style={{ color: getWinrateColor(summonerSpellStats[0].winrate) }}
-                      >
-                        {summonerSpellStats[0].winrate.toFixed(1)}%
+                {(() => {
+                  // Use combo-specific spells if available
+                  if (selectedComboData?.spells && Object.keys(selectedComboData.spells).length > 0) {
+                    const sortedSpells = Object.entries(selectedComboData.spells)
+                      .map(([key, data]) => {
+                        const [spell1, spell2] = key.split('_').map(Number)
+                        return {
+                          spell1_id: spell1,
+                          spell2_id: spell2,
+                          games: data.games,
+                          wins: data.wins,
+                          winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
+                          wilsonScore: calculateWilsonScore(data.games, data.wins),
+                        }
+                      })
+                      .sort((a, b) => b.wilsonScore - a.wilsonScore) // Sort by Wilson score
+                    
+                    if (sortedSpells.length > 0) {
+                      const best = sortedSpells[0]
+                      return (
+                        <div>
+                          <div className="flex gap-2 mb-2 text-sm">
+                            <div className="text-white font-bold" style={{ color: getWinrateColor(best.winrate) }}>
+                              {best.winrate.toFixed(1)}%
+                            </div>
+                            <div className="text-subtitle">{best.games.toLocaleString()}</div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Tooltip id={best.spell1_id} type="summoner-spell">
+                              <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden cursor-pointer">
+                                <Image
+                                  src={getSummonerSpellUrl(best.spell1_id, ddragonVersion)}
+                                  alt=""
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              </div>
+                            </Tooltip>
+                            <Tooltip id={best.spell2_id} type="summoner-spell">
+                              <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden cursor-pointer">
+                                <Image
+                                  src={getSummonerSpellUrl(best.spell2_id, ddragonVersion)}
+                                  alt=""
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              </div>
+                            </Tooltip>
+                          </div>
+                        </div>
+                      )
+                    }
+                  }
+                  
+                  // Fallback to global summoner spell stats - sort by Wilson score
+                  if (summonerSpellStats.length > 0) {
+                    const sortedSpells = [...summonerSpellStats]
+                      .map(s => ({
+                        ...s,
+                        wilsonScore: calculateWilsonScore(s.games, s.wins),
+                      }))
+                      .sort((a, b) => b.wilsonScore - a.wilsonScore)
+                    const best = sortedSpells[0]
+                    return (
+                      <div>
+                        <div className="flex gap-2 mb-2 text-sm">
+                          <div
+                            className="text-white font-bold"
+                            style={{ color: getWinrateColor(best.winrate) }}
+                          >
+                            {best.winrate.toFixed(1)}%
+                          </div>
+                          <div className="text-subtitle">{best.games.toLocaleString()}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Tooltip id={best.spell1_id} type="summoner-spell">
+                            <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden cursor-pointer">
+                              <Image
+                                src={getSummonerSpellUrl(best.spell1_id, ddragonVersion)}
+                                alt=""
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            </div>
+                          </Tooltip>
+                          <Tooltip id={best.spell2_id} type="summoner-spell">
+                            <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden cursor-pointer">
+                              <Image
+                                src={getSummonerSpellUrl(best.spell2_id, ddragonVersion)}
+                                alt=""
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            </div>
+                          </Tooltip>
+                        </div>
                       </div>
-                      <div className="text-subtitle">{summonerSpellStats[0].games.toLocaleString()}</div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Tooltip id={summonerSpellStats[0].spell1_id} type="summoner-spell">
-                        <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
-                          <Image
-                            src={getSummonerSpellUrl(summonerSpellStats[0].spell1_id, ddragonVersion)}
-                            alt=""
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      </Tooltip>
-                      <Tooltip id={summonerSpellStats[0].spell2_id} type="summoner-spell">
-                        <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
-                          <Image
-                            src={getSummonerSpellUrl(summonerSpellStats[0].spell2_id, ddragonVersion)}
-                            alt=""
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      </Tooltip>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-500">No data</div>
-                )}
+                    )
+                  }
+                  
+                  return <div className="text-xs text-gray-500">No data</div>
+                })()}
               </div>
 
               {/* Level Order */}
               <div className="bg-abyss-700 rounded-lg p-4">
-                <h4 className="font-bold mb-3 text-gold-light">Skill Max Order</h4>
-                {abilityLevelingStats.length > 0 && (
-                  <div>
-                    <div className="flex gap-2 mb-3 text-sm">
-                      <div
-                        className="text-white font-bold"
-                        style={{ color: getWinrateColor(abilityLevelingStats[0].winrate) }}
-                      >
-                        {abilityLevelingStats[0].winrate.toFixed(1)}%
-                      </div>
-                      <div className="text-subtitle">{abilityLevelingStats[0].games.toLocaleString()}</div>
-                    </div>
-                    {/* Max Order Display */}
-                    <div className="flex items-center gap-2">
-                      {getAbilityMaxOrder(abilityLevelingStats[0].ability_order)
-                        .split(' > ')
-                        .map((ability, idx, arr) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <div className="w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg bg-abyss-800 border border-gray-600 text-white">
-                              {ability}
-                            </div>
-                            {idx < arr.length - 1 && <span className="text-gray-500 font-bold">&gt;</span>}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Runes Grid - Organized by Tree */}
-            <div className="bg-abyss-700 rounded-lg p-6">
-              <h3 className="text-2xl font-bold mb-6">Runes</h3>
-              {(() => {
-                // Collect all runes from all slots into a single array
-                const allRunes: RuneStat[] = []
-                Object.values(runeStats).forEach(slotRunes => {
-                  slotRunes.forEach(rune => {
-                    if (!allRunes.find(r => r.rune_id === rune.rune_id)) {
-                      allRunes.push(rune)
-                    }
-                  })
-                })
-
-                // Organize runes by tree
-                const runesByTree: Record<
-                  string,
-                  { keystones: RuneStat[]; tier1: RuneStat[]; tier2: RuneStat[]; tier3: RuneStat[] }
-                > = {}
-
-                allRunes.forEach(rune => {
-                  const treeInfo = getRuneTree(rune.rune_id)
-                  if (!treeInfo) return
-
-                  const treeName = treeInfo.tree.name.toLowerCase()
-                  if (!runesByTree[treeName]) {
-                    runesByTree[treeName] = { keystones: [], tier1: [], tier2: [], tier3: [] }
-                  }
-
-                  if (treeInfo.tier === 'keystone') runesByTree[treeName].keystones.push(rune)
-                  else if (treeInfo.tier === 'tier1') runesByTree[treeName].tier1.push(rune)
-                  else if (treeInfo.tier === 'tier2') runesByTree[treeName].tier2.push(rune)
-                  else if (treeInfo.tier === 'tier3') runesByTree[treeName].tier3.push(rune)
-                })
-
-                // Sort each tier by games
-                Object.values(runesByTree).forEach(tree => {
-                  tree.keystones.sort((a, b) => b.games - a.games)
-                  tree.tier1.sort((a, b) => b.games - a.games)
-                  tree.tier2.sort((a, b) => b.games - a.games)
-                  tree.tier3.sort((a, b) => b.games - a.games)
-                })
-
-                // Get top keystone to determine primary tree
-                const topKeystone = allRunes
-                  .filter(r => getRuneTree(r.rune_id)?.tier === 'keystone')
-                  .sort((a, b) => b.games - a.games)[0]
-
-                const primaryTreeName = topKeystone ? getRuneTree(topKeystone.rune_id)?.tree.name.toLowerCase() : null
-
-                return (
-                  <div className="space-y-6">
-                    {/* Primary Tree - Most played keystones */}
-                    {primaryTreeName && runesByTree[primaryTreeName] && (
+                <h2 className="mb-3">Skill Max Order</h2>
+                {(() => {
+                  if (abilityLevelingStats.length > 0) {
+                    // Sort by Wilson score
+                    const sortedAbilities = [...abilityLevelingStats]
+                      .map(s => ({
+                        ...s,
+                        wilsonScore: calculateWilsonScore(s.games, s.wins),
+                      }))
+                      .sort((a, b) => b.wilsonScore - a.wilsonScore)
+                    const best = sortedAbilities[0]
+                    return (
                       <div>
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-6 h-6 rounded overflow-hidden">
-                            <Image
-                              src={`https://ddragon.leagueoflegends.com/cdn/img/${(runesData as Record<string, any>)[RUNE_TREES[primaryTreeName as keyof typeof RUNE_TREES].id]?.icon}`}
-                              alt=""
-                              width={24}
-                              height={24}
-                              className="w-full h-full"
-                              unoptimized
-                            />
-                          </div>
-                          <span
-                            className="font-bold text-lg"
-                            style={{ color: RUNE_TREES[primaryTreeName as keyof typeof RUNE_TREES].color }}
+                        <div className="flex gap-2 mb-3 text-sm">
+                          <div
+                            className="text-white font-bold"
+                            style={{ color: getWinrateColor(best.winrate) }}
                           >
-                            {RUNE_TREES[primaryTreeName as keyof typeof RUNE_TREES].name}
-                          </span>
-                          <span className="text-xs text-subtitle ml-2">Primary</span>
-                        </div>
-
-                        {/* Keystones */}
-                        {runesByTree[primaryTreeName].keystones.length > 0 && (
-                          <div className="mb-4">
-                            <div className="text-xs text-subtitle mb-2 uppercase tracking-wider">Keystone</div>
-                            <div className="flex flex-wrap gap-3">
-                              {runesByTree[primaryTreeName].keystones.slice(0, 4).map(rune => {
-                                const runeInfo = (runesData as Record<string, any>)[rune.rune_id.toString()]
-                                return (
-                                  <div
-                                    key={rune.rune_id}
-                                    className="flex items-center gap-2 bg-abyss-800 rounded-lg p-2 pr-4"
-                                  >
-                                    <Tooltip id={rune.rune_id} type="rune">
-                                      <div className="w-10 h-10 rounded-full bg-abyss-900 border-2 border-gold-dark overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
-                                        {runeInfo?.icon && (
-                                          <Image
-                                            src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                                            alt=""
-                                            width={40}
-                                            height={40}
-                                            className="w-full h-full"
-                                            unoptimized
-                                          />
-                                        )}
-                                      </div>
-                                    </Tooltip>
-                                    <div className="text-xs">
-                                      <div className="font-bold" style={{ color: getWinrateColor(rune.winrate) }}>
-                                        {rune.winrate.toFixed(1)}%
-                                      </div>
-                                      <div className="text-subtitle">{rune.pickrate.toFixed(0)}% pick</div>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
+                            {best.winrate.toFixed(1)}%
                           </div>
-                        )}
-
-                        {/* Tier Runes - Vertical display */}
-                        <div className="flex flex-col gap-3">
-                          {['tier1', 'tier2', 'tier3'].map(tierKey => {
-                            const tierRunes =
-                              runesByTree[primaryTreeName][
-                                tierKey as keyof (typeof runesByTree)[typeof primaryTreeName]
-                              ]
-                            if (tierRunes.length === 0) return null
-                            return (
-                              <div key={tierKey} className="flex items-center gap-3">
-                                {tierRunes.slice(0, 3).map(rune => {
-                                  const runeInfo = (runesData as Record<string, any>)[rune.rune_id.toString()]
-                                  return (
-                                    <div key={rune.rune_id} className="flex items-center gap-2">
-                                      <Tooltip id={rune.rune_id} type="rune">
-                                        <div className="w-10 h-10 rounded-full bg-abyss-900 border border-gray-700 overflow-hidden hover:border-accent-light transition-colors cursor-pointer">
-                                          {runeInfo?.icon && (
-                                            <Image
-                                              src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                                              alt=""
-                                              width={40}
-                                              height={40}
-                                              className="w-full h-full"
-                                              unoptimized
-                                            />
-                                          )}
-                                        </div>
-                                      </Tooltip>
-                                      <div className="text-[10px] min-w-0">
-                                        <div className="font-bold" style={{ color: getWinrateColor(rune.winrate) }}>
-                                          {rune.winrate.toFixed(0)}%
-                                        </div>
-                                        <div className="text-subtitle">{rune.pickrate.toFixed(0)}%</div>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
+                          <div className="text-subtitle">{best.games.toLocaleString()}</div>
+                        </div>
+                        {/* Max Order Display */}
+                        <div className="flex items-center gap-2">
+                          {getAbilityMaxOrder(best.ability_order)
+                            .split(' > ')
+                            .map((ability, idx, arr) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <div className="w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg bg-abyss-800 border border-gray-600 text-white">
+                                  {ability}
+                                </div>
+                                {idx < arr.length - 1 && <span className="text-gray-500 font-bold">&gt;</span>}
                               </div>
-                            )
-                          })}
+                            ))}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )
-              })()}
+                    )
+                  }
+                  return null
+                })()}
+              </div>
             </div>
           </div>
         </div>
@@ -1122,23 +1282,19 @@ export default function ChampionDetailTabs({
                       <div className="flex items-center gap-3">
                         <div className="flex gap-1">
                           {Array.from(itemCounts.entries()).map(([itemId, count], itemIdx) => (
-                            <Tooltip key={itemIdx} id={itemId} type="item">
-                              <div className="relative w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden flex-shrink-0">
-                                <Image
-                                  src={getItemImageUrl(itemId, ddragonVersion)}
-                                  alt="Item"
-                                  width={40}
-                                  height={40}
-                                  className="w-full h-full object-cover"
-                                  unoptimized
-                                />
-                                {count > 1 && (
-                                  <div className="absolute bottom-0 right-0 bg-abyss-900 border border-gray-700 rounded-tl px-1 text-[10px] font-bold text-white leading-tight">
-                                    {count}
-                                  </div>
-                                )}
-                              </div>
-                            </Tooltip>
+                            <div key={itemIdx} className="relative">
+                              <ItemIcon
+                                itemId={itemId}
+                                ddragonVersion={ddragonVersion}
+                                size="lg"
+                                className="bg-abyss-800 border-gray-700 flex-shrink-0"
+                              />
+                              {count > 1 && (
+                                <div className="absolute bottom-0 right-0 bg-abyss-900 border border-gray-700 rounded-tl px-1 text-[10px] font-bold text-white leading-tight">
+                                  {count}
+                                </div>
+                              )}
+                            </div>
                           ))}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1174,18 +1330,12 @@ export default function ChampionDetailTabs({
                           <span className="text-2xl text-gray-500">∅</span>
                         </div>
                       ) : (
-                        <Tooltip id={item.item_id} type="item">
-                          <div className="w-12 h-12 rounded bg-abyss-800 border border-gray-700 overflow-hidden flex-shrink-0">
-                            <Image
-                              src={getItemImageUrl(item.item_id, ddragonVersion)}
-                              alt="Item"
-                              width={48}
-                              height={48}
-                              className="w-full h-full object-cover"
-                              unoptimized
-                            />
-                          </div>
-                        </Tooltip>
+                        <ItemIcon
+                          itemId={item.item_id}
+                          ddragonVersion={ddragonVersion}
+                          size="xl"
+                          className="bg-abyss-800 border-gray-700 flex-shrink-0"
+                        />
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between text-xs mb-1">
@@ -1218,18 +1368,12 @@ export default function ChampionDetailTabs({
                   {items.slice(0, 8).map(item => (
                     <div key={item.item_id} className="bg-abyss-700 rounded-lg p-3">
                       <div className="flex items-center gap-3">
-                        <Tooltip id={item.item_id} type="item">
-                          <div className="w-12 h-12 rounded bg-abyss-800 border border-gray-700 overflow-hidden flex-shrink-0">
-                            <Image
-                              src={getItemImageUrl(item.item_id, ddragonVersion)}
-                              alt="Item"
-                              width={48}
-                              height={48}
-                              className="w-full h-full object-cover"
-                              unoptimized
-                            />
-                          </div>
-                        </Tooltip>
+                        <ItemIcon
+                          itemId={item.item_id}
+                          ddragonVersion={ddragonVersion}
+                          size="xl"
+                          className="bg-abyss-800 border-gray-700 flex-shrink-0"
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-subtitle">Pick</span>
@@ -1254,156 +1398,296 @@ export default function ChampionDetailTabs({
 
       {/* Runes Tab */}
       {selectedTab === 'runes' && (
-        <div>
+        <div className="space-y-6">
           {(() => {
-            // Collect all runes from all slots
-            const allRunes: RuneStat[] = []
-            Object.values(runeStats).forEach(slotRunes => {
-              slotRunes.forEach(rune => {
-                if (!allRunes.find(r => r.rune_id === rune.rune_id)) {
-                  allRunes.push(rune)
+            // Collect PRIMARY runes from slots 0-3 (keystone + primary tree tiers)
+            const primaryRunesMap = new Map<number, RuneStat>()
+            ;[0, 1, 2, 3].forEach(slot => {
+              runeStats[slot]?.forEach(rune => {
+                if (!primaryRunesMap.has(rune.rune_id)) {
+                  primaryRunesMap.set(rune.rune_id, rune)
                 }
               })
             })
 
-            // Organize by tree
-            const runesByTree: Record<
-              string,
-              {
-                tree: typeof RUNE_TREES.precision
-                keystones: RuneStat[]
-                tier1: RuneStat[]
-                tier2: RuneStat[]
-                tier3: RuneStat[]
-              }
-            > = {}
-
-            allRunes.forEach(rune => {
-              const treeInfo = getRuneTree(rune.rune_id)
-              if (!treeInfo) return
-
-              const treeName = treeInfo.tree.name.toLowerCase()
-              if (!runesByTree[treeName]) {
-                runesByTree[treeName] = { tree: treeInfo.tree, keystones: [], tier1: [], tier2: [], tier3: [] }
-              }
-
-              if (treeInfo.tier === 'keystone') runesByTree[treeName].keystones.push(rune)
-              else if (treeInfo.tier === 'tier1') runesByTree[treeName].tier1.push(rune)
-              else if (treeInfo.tier === 'tier2') runesByTree[treeName].tier2.push(rune)
-              else if (treeInfo.tier === 'tier3') runesByTree[treeName].tier3.push(rune)
-            })
-
-            // Sort each tier by games
-            Object.values(runesByTree).forEach(tree => {
-              tree.keystones.sort((a, b) => b.games - a.games)
-              tree.tier1.sort((a, b) => b.games - a.games)
-              tree.tier2.sort((a, b) => b.games - a.games)
-              tree.tier3.sort((a, b) => b.games - a.games)
+            // Collect SECONDARY runes from slots 4-5 (secondary tree tiers only)
+            const secondaryRunesMap = new Map<number, RuneStat>()
+            ;[4, 5].forEach(slot => {
+              runeStats[slot]?.forEach(rune => {
+                if (!secondaryRunesMap.has(rune.rune_id)) {
+                  secondaryRunesMap.set(rune.rune_id, rune)
+                }
+              })
             })
 
             // Fixed tree order: Precision, Domination, Sorcery, Resolve, Inspiration
             const treeOrder = ['precision', 'domination', 'sorcery', 'resolve', 'inspiration']
 
-            return (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {treeOrder.map(treeName => {
-                  const treeData = runesByTree[treeName]
-                  const tree = RUNE_TREES[treeName as keyof typeof RUNE_TREES]
-                  if (!tree) return null
-
-                  const { keystones = [], tier1 = [], tier2 = [], tier3 = [] } = treeData || {}
-
-                  return (
-                    <div key={treeName} className="bg-abyss-700 rounded-lg p-3">
-                      {/* Tree Header */}
-                      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-700">
-                        <div className="w-6 h-6 rounded overflow-hidden">
-                          <Image
-                            src={`https://ddragon.leagueoflegends.com/cdn/img/${(runesData as Record<string, any>)[tree.id]?.icon}`}
-                            alt=""
-                            width={24}
-                            height={24}
-                            className="w-full h-full"
-                            unoptimized
-                          />
-                        </div>
-                        <span className="text-sm font-bold" style={{ color: tree.color }}>
-                          {tree.name}
-                        </span>
-                      </div>
-
-                      {/* Keystones Row */}
-                      <div className="mb-3">
-                        <div className="flex flex-wrap justify-center gap-2">
-                          {keystones.map(rune => {
-                            const runeInfo = (runesData as Record<string, any>)[rune.rune_id.toString()]
-                            return (
-                              <Tooltip key={rune.rune_id} id={rune.rune_id} type="rune">
-                                <div className="flex flex-col items-center cursor-pointer group">
-                                  <div className="w-10 h-10 rounded-full bg-abyss-900 border-2 border-gold-dark overflow-hidden group-hover:border-accent-light transition-colors">
-                                    {runeInfo?.icon && (
-                                      <Image
-                                        src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                                        alt=""
-                                        width={40}
-                                        height={40}
-                                        className="w-full h-full"
-                                        unoptimized
-                                      />
-                                    )}
-                                  </div>
-                                  <div className="text-[10px] text-center mt-1">
-                                    <span className="font-bold" style={{ color: getWinrateColor(rune.winrate) }}>
-                                      {rune.winrate.toFixed(1)}%
-                                    </span>
-                                    <span className="text-subtitle ml-1">{rune.games.toLocaleString()}</span>
-                                  </div>
-                                </div>
-                              </Tooltip>
-                            )
-                          })}
-                          {keystones.length === 0 && <div className="text-[10px] text-subtitle">No data</div>}
-                        </div>
-                      </div>
-
-                      {/* Tier Runes */}
-                      {[tier1, tier2, tier3].map((tierRunes, tierIdx) => (
-                        <div key={tierIdx} className="mb-2 last:mb-0">
-                          <div className="flex flex-wrap justify-center gap-2">
-                            {tierRunes.map(rune => {
-                              const runeInfo = (runesData as Record<string, any>)[rune.rune_id.toString()]
-                              return (
-                                <Tooltip key={rune.rune_id} id={rune.rune_id} type="rune">
-                                  <div className="flex flex-col items-center cursor-pointer group">
-                                    <div className="w-8 h-8 rounded bg-abyss-900 border border-gray-700 overflow-hidden group-hover:border-accent-light transition-colors">
-                                      {runeInfo?.icon && (
-                                        <Image
-                                          src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                                          alt=""
-                                          width={32}
-                                          height={32}
-                                          className="w-full h-full"
-                                          unoptimized
-                                        />
-                                      )}
-                                    </div>
-                                    <div className="text-[9px] text-center mt-0.5">
-                                      <span className="font-bold" style={{ color: getWinrateColor(rune.winrate) }}>
-                                        {rune.winrate.toFixed(1)}%
-                                      </span>
-                                      <span className="text-subtitle ml-1">{rune.games.toLocaleString()}</span>
-                                    </div>
-                                  </div>
-                                </Tooltip>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ))}
+            // Render a single rune icon with stats
+            const renderRune = (runeId: number, statsMap: Map<number, RuneStat>, size: 'lg' | 'sm' = 'sm') => {
+              const runeInfo = (runesData as Record<string, any>)[runeId.toString()]
+              const runeStat = statsMap.get(runeId)
+              const hasData = runeStat && runeStat.games > 0
+              const isLowPickrate = runeStat && runeStat.pickrate < 1
+              const shouldGrey = !hasData || isLowPickrate
+              const sizeClass = size === 'lg' ? 'w-10 h-10' : 'w-8 h-8'
+              const imgSize = size === 'lg' ? 40 : 32
+              
+              return (
+                <Tooltip key={runeId} id={runeId} type="rune">
+                  <div className="flex flex-col items-center cursor-pointer">
+                    <div className={clsx(
+                      sizeClass, "rounded-full overflow-hidden",
+                      shouldGrey && "opacity-40"
+                    )}>
+                      {runeInfo?.icon && (
+                        <Image
+                          src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
+                          alt=""
+                          width={imgSize}
+                          height={imgSize}
+                          className={clsx("w-full h-full", shouldGrey && "grayscale")}
+                          unoptimized
+                        />
+                      )}
                     </div>
-                  )
-                })}
-              </div>
+                    <div className="text-[10px] text-center mt-1">
+                      {hasData ? (
+                        <>
+                          <div className={clsx("font-bold", isLowPickrate && "text-gray-600")} style={!isLowPickrate ? { color: getWinrateColor(runeStat.winrate) } : undefined}>
+                            {runeStat.winrate.toFixed(1)}%
+                          </div>
+                          <div className={clsx(isLowPickrate ? "text-gray-600" : "text-subtitle")}>{runeStat.games.toLocaleString()}</div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-gray-600">-</div>
+                          <div className="text-gray-600">0</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </Tooltip>
+              )
+            }
+
+            return (
+              <>
+                {/* Primary Runes Section */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {treeOrder.map(treeName => {
+                    const tree = RUNE_TREES[treeName as keyof typeof RUNE_TREES]
+                    if (!tree) return null
+
+                    return (
+                      <div key={treeName} className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                        {/* Tree Header */}
+                        <div className="flex items-center gap-2 mb-6">
+                          <h2 className="text-sm font-bold text-white">{tree.name}</h2>
+                          <span className="text-xs text-text-muted">Primary</span>
+                        </div>
+
+                        {/* Keystones Row */}
+                        <div className={clsx(
+                          "grid gap-1 justify-items-center mb-3",
+                          tree.keystones.length === 4 ? "grid-cols-4" : "grid-cols-3"
+                        )}>
+                          {tree.keystones.map(runeId => renderRune(runeId, primaryRunesMap, 'lg'))}
+                        </div>
+
+                        {/* Separator */}
+                        <div className="border-t border-gold-dark/40 my-3" />
+
+                        {/* Tier Runes */}
+                        {[tree.tier1, tree.tier2, tree.tier3].map((tierRuneIds, tierIdx) => (
+                          <div key={tierIdx} className="mb-2 last:mb-0">
+                            <div className="grid grid-cols-3 gap-1 justify-items-center">
+                              {tierRuneIds.map(runeId => renderRune(runeId, primaryRunesMap))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Secondary Runes Section */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {treeOrder.map(treeName => {
+                    const tree = RUNE_TREES[treeName as keyof typeof RUNE_TREES]
+                    if (!tree) return null
+
+                    return (
+                      <div key={treeName} className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                        {/* Tree Header */}
+                        <div className="flex items-center gap-2 mb-6">
+                          <h2 className="text-sm font-bold text-white">{tree.name}</h2>
+                          <span className="text-xs text-text-muted">Secondary</span>
+                        </div>
+
+                        {/* Tier Runes Only (no keystones for secondary) */}
+                        {[tree.tier1, tree.tier2, tree.tier3].map((tierRuneIds, tierIdx) => (
+                          <div key={tierIdx} className="mb-2 last:mb-0">
+                            <div className="grid grid-cols-3 gap-1 justify-items-center">
+                              {tierRuneIds.map(runeId => renderRune(runeId, secondaryRunesMap))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Stat Shards Section - 3 separate boxes */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Offense Box */}
+                  <div className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                    <div className="flex items-center gap-2 mb-6">
+                      <h2 className="text-sm font-bold text-white">Offense</h2>
+                      <span className="text-xs text-text-muted">Stats</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 justify-items-center">
+                      {STAT_PERKS.offense.map((perk, idx) => {
+                        const stat = statPerks.offense.find(s => s.key === perk.id.toString())
+                        const hasData = stat && stat.games > 0
+                        const pickrate = hasData && totalGames > 0 ? (stat.games / totalGames) * 100 : 0
+                        const isLowPickrate = pickrate < 1
+                        const shouldGrey = !hasData || isLowPickrate
+                        return (
+                          <div key={`offense-${idx}`} className="flex flex-col items-center">
+                            <div className={clsx(
+                              "w-8 h-8 rounded-full overflow-hidden",
+                              shouldGrey && "opacity-40"
+                            )}>
+                              <Image
+                                src={`https://ddragon.leagueoflegends.com/cdn/img/${perk.icon}`}
+                                alt={perk.name}
+                                width={32}
+                                height={32}
+                                className={clsx("w-full h-full", shouldGrey && "grayscale")}
+                                unoptimized
+                              />
+                            </div>
+                            <div className="text-[10px] text-center mt-1">
+                              {hasData ? (
+                                <>
+                                  <div className={clsx("font-bold", isLowPickrate && "text-gray-600")} style={!isLowPickrate ? { color: getWinrateColor(stat.winrate) } : undefined}>
+                                    {stat.winrate.toFixed(1)}%
+                                  </div>
+                                  <div className={clsx(isLowPickrate ? "text-gray-600" : "text-subtitle")}>{stat.games.toLocaleString()}</div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-gray-600">-</div>
+                                  <div className="text-gray-600">0</div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Flex Box */}
+                  <div className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h2 className="text-sm font-bold text-white">Flex</h2>
+                      <span className="text-xs text-text-muted">Stats</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 justify-items-center">
+                      {STAT_PERKS.flex.map((perk, idx) => {
+                        const stat = statPerks.flex.find(s => s.key === perk.id.toString())
+                        const hasData = stat && stat.games > 0
+                        const pickrate = hasData && totalGames > 0 ? (stat.games / totalGames) * 100 : 0
+                        const isLowPickrate = pickrate < 1
+                        const shouldGrey = !hasData || isLowPickrate
+                        return (
+                          <div key={`flex-${idx}`} className="flex flex-col items-center">
+                            <div className={clsx(
+                              "w-8 h-8 rounded-full overflow-hidden",
+                              shouldGrey && "opacity-40"
+                            )}>
+                              <Image
+                                src={`https://ddragon.leagueoflegends.com/cdn/img/${perk.icon}`}
+                                alt={perk.name}
+                                width={32}
+                                height={32}
+                                className={clsx("w-full h-full", shouldGrey && "grayscale")}
+                                unoptimized
+                              />
+                            </div>
+                            <div className="text-[10px] text-center mt-1">
+                              {hasData ? (
+                                <>
+                                  <div className={clsx("font-bold", isLowPickrate && "text-gray-600")} style={!isLowPickrate ? { color: getWinrateColor(stat.winrate) } : undefined}>
+                                    {stat.winrate.toFixed(1)}%
+                                  </div>
+                                  <div className={clsx(isLowPickrate ? "text-gray-600" : "text-subtitle")}>{stat.games.toLocaleString()}</div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-gray-600">-</div>
+                                  <div className="text-gray-600">0</div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Defense Box */}
+                  <div className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h2 className="text-sm font-bold text-white">Defense</h2>
+                      <span className="text-xs text-text-muted">Stats</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 justify-items-center">
+                      {STAT_PERKS.defense.map((perk, idx) => {
+                        const stat = statPerks.defense.find(s => s.key === perk.id.toString())
+                        const hasData = stat && stat.games > 0
+                        const pickrate = hasData && totalGames > 0 ? (stat.games / totalGames) * 100 : 0
+                        const isLowPickrate = pickrate < 1
+                        const shouldGrey = !hasData || isLowPickrate
+                        return (
+                          <div key={`defense-${idx}`} className="flex flex-col items-center">
+                            <div className={clsx(
+                              "w-8 h-8 rounded-full overflow-hidden",
+                              shouldGrey && "opacity-40"
+                            )}>
+                              <Image
+                                src={`https://ddragon.leagueoflegends.com/cdn/img/${perk.icon}`}
+                                alt={perk.name}
+                                width={32}
+                                height={32}
+                                className={clsx("w-full h-full", shouldGrey && "grayscale")}
+                                unoptimized
+                              />
+                            </div>
+                            <div className="text-[10px] text-center mt-1">
+                              {hasData ? (
+                                <>
+                                  <div className={clsx("font-bold", isLowPickrate && "text-gray-600")} style={!isLowPickrate ? { color: getWinrateColor(stat.winrate) } : undefined}>
+                                    {stat.winrate.toFixed(1)}%
+                                  </div>
+                                  <div className={clsx(isLowPickrate ? "text-gray-600" : "text-subtitle")}>{stat.games.toLocaleString()}</div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-gray-600">-</div>
+                                  <div className="text-gray-600">0</div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </>
             )
           })()}
 

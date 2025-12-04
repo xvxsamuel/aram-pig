@@ -34,3 +34,13 @@ export {
 export { getTrackedPuuids, invalidateTrackedPuuidsCache } from './tracked-players'
 
 export { getStoredTimeline } from './auto-enrich'
+
+export {
+  isFinishedItem,
+  extractSkillOrderAbbreviation,
+  extractRunes,
+  buildMatchData,
+  processParticipants,
+  calculateTeamKills,
+  prepareStatsCache,
+} from './participant-processor'

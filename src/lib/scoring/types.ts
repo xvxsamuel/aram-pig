@@ -201,7 +201,13 @@ export interface BuildChoiceResult {
 // CONSTANTS
 // ============================================================================
 
-/** All boot item IDs (tier 1 + tier 2) */
+/** Tier 1 boots (not completed) */
+export const TIER1_BOOT_ID = 1001
+
+/** Tier 2 boots - completed boots (normalized to 99999 for core grouping) */
+export const TIER2_BOOT_IDS = new Set([3006, 3009, 3020, 3047, 3111, 3117, 3158])
+
+/** All boot item IDs (tier 1 + tier 2) - for general boot detection */
 export const BOOT_IDS = new Set([1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158])
 
 /** Normalized boot ID for core key grouping */
@@ -218,17 +224,25 @@ export const FULL_CONFIDENCE_GAMES = 30
 // ============================================================================
 
 /**
- * Check if an item ID is a boot
+ * Check if an item ID is any boot (tier 1 or tier 2)
  */
 export function isBootItem(itemId: number): boolean {
   return BOOT_IDS.has(itemId)
 }
 
 /**
- * Normalize a boot ID to the standard value (99999)
+ * Check if an item ID is a completed (tier 2) boot
+ */
+export function isCompletedBoot(itemId: number): boolean {
+  return TIER2_BOOT_IDS.has(itemId)
+}
+
+/**
+ * Normalize a tier 2 boot ID to the standard value (99999)
+ * Only normalizes completed boots, not tier 1 boots
  */
 export function normalizeBootId(itemId: number): number {
-  return isBootItem(itemId) ? BOOTS_NORMALIZED : itemId
+  return isCompletedBoot(itemId) ? BOOTS_NORMALIZED : itemId
 }
 
 /**

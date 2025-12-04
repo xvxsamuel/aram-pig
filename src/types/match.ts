@@ -122,6 +122,38 @@ export interface ParticipantData {
     action: 'buy' | 'sell'
     itemType: 'legendary' | 'boots' | 'mythic' | 'component' | 'other'
   }>
+  killDeathTimeline?: {
+    takedowns: Array<{
+      t: number
+      gold: number
+      tf: boolean
+      wasKill: boolean
+      pos: number
+      value: number
+      x: number
+      y: number
+    }>
+    deaths: Array<{
+      t: number
+      gold: number
+      tf: boolean
+      trade: boolean
+      tradeKills: number
+      zone: string
+      pos: number
+      value: number
+      x: number
+      y: number
+    }>
+    towers: Array<{
+      t: number
+      x: number
+      y: number
+      team: 'ally' | 'enemy'
+    }>
+    deathScore: number
+    takedownScore: number
+  }
   labels?: string[]
   firstItem?: number
   secondItem?: number

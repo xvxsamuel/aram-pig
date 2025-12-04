@@ -20,19 +20,18 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-// Accept only patch 25.23
-const ACCEPTED_PATCHES = ['25.23']
+const ACCEPTED_PATCHES = ['25.24']
 
 async function getCurrentPatch(): Promise<string[]> {
   return ACCEPTED_PATCHES
 }
 
-// Stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
+// stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
 const STATS_BUFFER_FLUSH_SIZE = 30 // flush every 30 participants (3 matches) - smaller batches to avoid DB timeout
 let lastStatsFlush = Date.now()
 const STATS_FLUSH_INTERVAL = 20000 // or every 20 seconds
 
-// Check if stats buffer should be flushed (using match-storage's buffer)
+// check if stats buffer should be flushed (using match-storage's buffer)
 async function maybeFlushStats(): Promise<void> {
   const bufferCount = getStatsBufferCount()
   const now = Date.now()
@@ -50,7 +49,7 @@ const crawlStackByRegion = new Map<RegionalCluster, string[]>([
   ['sea', []],
 ])
 
-// Track visited PUUIDs to avoid cycles
+// track visited PUUIDs to avoid cycles
 const visitedPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
   ['europe', new Set()],
   ['americas', new Set()],
@@ -58,7 +57,7 @@ const visitedPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
   ['sea', new Set()],
 ])
 
-// Track "dry" PUUIDs (players with no recent ARAM matches) - avoid re-visiting them
+// track "dry" PUUIDs (players with no recent ARAM matches) - avoid re-visiting them
 const dryPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
   ['europe', new Set()],
   ['americas', new Set()],
@@ -66,7 +65,7 @@ const dryPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
   ['sea', new Set()],
 ])
 
-// Track backtrack history for random backtracking
+// track backtrack history for random backtracking
 const backtrackHistoryByRegion = new Map<RegionalCluster, string[]>([
   ['europe', []],
   ['americas', []],
@@ -74,10 +73,10 @@ const backtrackHistoryByRegion = new Map<RegionalCluster, string[]>([
   ['sea', []],
 ])
 
-// Cache: known match IDs (avoid redundant DB queries)
+// cache: known match IDs (avoid redundant DB queries)
 const knownMatchIds = new Set<string>()
 
-// Seed pool: all PUUIDs discovered from matches (for re-seeding when stuck)
+// seed pool: all PUUIDs discovered from matches (for re-seeding when stuck)
 const seedPoolByRegion = new Map<RegionalCluster, Set<string>>([
   ['europe', new Set()],
   ['americas', new Set()],
@@ -111,13 +110,13 @@ const REGION_TO_PREFIXES: Record<RegionalCluster, string[]> = {
   sea: ['OC1', 'SG2', 'TW2', 'VN2', 'PH2', 'TH2'],
 }
 
-// Get random seeds from the seed pool (PUUIDs we've seen from matches)
+// get random seeds from the seed pool (PUUIDs we've seen from matches)
 function getRandomSeedsFromPool(region: RegionalCluster): string[] {
   const seedPool = seedPoolByRegion.get(region)!
   const visited = visitedPuuidsByRegion.get(region)!
   const dryPuuids = dryPuuidsByRegion.get(region)!
 
-  // Filter to unvisited, non-dry PUUIDs
+  // filter to unvisited, non-dry PUUIDs
   const available = Array.from(seedPool).filter(p => !visited.has(p) && !dryPuuids.has(p))
 
   if (available.length === 0) {
@@ -125,7 +124,7 @@ function getRandomSeedsFromPool(region: RegionalCluster): string[] {
     return []
   }
 
-  // Shuffle and return up to 20 seeds
+  // shuffle and return up to 20 seeds
   const shuffled = available.sort(() => Math.random() - 0.5)
   const seeds = shuffled.slice(0, Math.min(20, shuffled.length))
 
@@ -133,9 +132,9 @@ function getRandomSeedsFromPool(region: RegionalCluster): string[] {
   return seeds
 }
 
-// Fetch PUUIDs from existing matches in DB for a region
-// Gets match IDs from DB, then fetches ONE match from Riot API to get participants
-// This is a last resort - uses 1 API call to get 9 new PUUIDs
+// fetch PUUIDs from existing matches in DB for a region
+// gets match IDs from DB, then fetches ONE match from Riot API to get participants
+// this is a last resort - uses 1 API call to get 9 new PUUIDs
 async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
   const acceptedPatches = await getCurrentPatch()
   const prefixes = REGION_TO_PREFIXES[region]

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false, // disable double-invoke in dev (causes duplicate API calls)
+  reactStrictMode: false, // disable double-invoke in dev (causes duplicate api calls)
   images: {
     qualities: [75, 90],
     remotePatterns: [

@@ -3,7 +3,7 @@
 // Functions are 5-20 lines, pure, and testable
 
 import type { MatchStats, BasicMatchStats } from './types'
-import { BOOT_IDS, normalizeBootId } from './types'
+import { TIER2_BOOT_IDS, BOOTS_NORMALIZED, TIER1_BOOT_ID } from './types'
 import itemsData from '@/data/items.json'
 
 const items = itemsData as Record<string, { itemType?: string }>
@@ -29,8 +29,8 @@ export function isLegendaryOrBoots(itemId: number): boolean {
   const item = items[String(itemId)]
   if (!item) return false
   const type = item.itemType
-  // tier 1 boots (1001) are not completed, but finished boots are
-  if (BOOT_IDS.has(itemId) && itemId !== 1001) return true
+  // tier 2 boots are completed boots
+  if (TIER2_BOOT_IDS.has(itemId)) return true
   return type === 'legendary' || type === 'mythic'
 }
 
@@ -75,9 +75,10 @@ export function extractSkillOrderAbbreviation(abilityOrder: string | null): stri
 // ============================================================================
 
 /**
- * Extract and normalize core key from build order
- * Core = first 3 completed items (legendary/boots), boots normalized to 99999
- * Returns sorted underscore-separated key (e.g., "3078_6333_99999")
+ * Extract core key from build order
+ * Core = first 3 completed items (legendary/tier2 boots) from build order
+ * Tier 2 boots are normalized to 99999 for grouping (different boots = same core)
+ * Returns sorted underscore-separated key (e.g., "3031_6672_99999")
  */
 export function extractCoreKey(buildOrder: string | null, finalItems?: number[]): string | null {
   if (!buildOrder && (!finalItems || finalItems.length < 3)) return null
@@ -91,41 +92,49 @@ export function extractCoreKey(buildOrder: string | null, finalItems?: number[])
       .map(id => parseInt(id, 10))
       .filter(id => !isNaN(id) && id > 0)
 
-    // find first 3 completed items (legendary or finished boots)
+    // find first 3 completed items (including tier 2 boots, normalized)
+    // skip tier 1 boots (1001) - they're not a meaningful item investment for cores
     for (const itemId of buildOrderItems) {
       if (coreItems.length >= 3) break
-      if (isCompletedItem(itemId) && !coreItems.includes(itemId)) {
-        coreItems.push(itemId)
+      if (itemId === TIER1_BOOT_ID) continue // skip tier 1 boots
+      if (!isCompletedItem(itemId)) continue
+      
+      // normalize tier 2 boots to 99999 for grouping
+      const normalizedId = TIER2_BOOT_IDS.has(itemId) ? BOOTS_NORMALIZED : itemId
+      if (!coreItems.includes(normalizedId)) {
+        coreItems.push(normalizedId)
       }
     }
   }
 
   // fallback to final items if build order insufficient
+  // also skip tier 1 boots in fallback
   if (coreItems.length < 3 && finalItems) {
-    const completedFinalItems = finalItems.filter(id => id > 0 && isCompletedItem(id))
+    const completedFinalItems = finalItems.filter(id => id > 0 && id !== TIER1_BOOT_ID && isCompletedItem(id))
     for (const itemId of completedFinalItems) {
       if (coreItems.length >= 3) break
-      if (!coreItems.includes(itemId)) {
-        coreItems.push(itemId)
+      // normalize tier 2 boots to 99999 for grouping
+      const normalizedId = TIER2_BOOT_IDS.has(itemId) ? BOOTS_NORMALIZED : itemId
+      if (!coreItems.includes(normalizedId)) {
+        coreItems.push(normalizedId)
       }
     }
   }
 
   if (coreItems.length !== 3) return null
 
-  // normalize boots to 99999 and sort for consistent key
-  const normalized = coreItems.map(normalizeBootId)
-  const uniqueSorted = [...new Set(normalized)].sort((a, b) => a - b)
+  // sort for consistent key
+  const uniqueSorted = [...new Set(coreItems)].sort((a, b) => a - b)
 
-  // must have 3 unique items after normalization
+  // must have 3 unique items
   if (uniqueSorted.length !== 3) return null
 
   return uniqueSorted.join('_')
 }
 
 /**
- * Extract first 3 completed items from build order (not normalized)
- * Returns the actual item IDs in purchase order
+ * Extract first 3 completed items from build order (including boots)
+ * Returns the actual item IDs in purchase order (boots included with real IDs for display)
  */
 export function extractCoreItems(buildOrder: string | null, finalItems?: number[]): number[] {
   const coreItems: number[] = []

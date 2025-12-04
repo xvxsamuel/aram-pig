@@ -340,7 +340,7 @@ const TooltipContent = memo(
               </div>
             )}
             {type === 'rune' && tooltipData.icon && (
-              <div className="w-8 h-8 rounded border border-gold-dark/40 overflow-hidden relative">
+              <div className="w-8 h-8 rounded-full border-2 border-gold-dark/60 overflow-hidden relative">
                 <Image
                   src={`https://ddragon.leagueoflegends.com/cdn/img/${tooltipData.icon}`}
                   alt={tooltipData.name}

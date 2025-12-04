@@ -130,6 +130,126 @@ const TEAMFIGHT_DISTANCE = 2500 // units
 const ARAM_BLUE_BASE = { x: 400, y: 400 }
 const ARAM_RED_BASE = { x: 12400, y: 12400 }
 
+// ARAM tower positions (approximate lane positions as 0-1 values)
+// Blue team towers (from base outward): nexus towers, inhibitor, inner, outer
+// Red team towers (from base outward): nexus towers, inhibitor, inner, outer
+const TOWER_POSITIONS = {
+  // Blue team towers (lane position from blue base perspective)
+  blue: {
+    nexus1: 0.05,  // first nexus tower
+    nexus2: 0.08,  // second nexus tower  
+    inhibitor: 0.15,
+    inner: 0.28,
+    outer: 0.42,
+  },
+  // Red team towers (lane position from blue base perspective)
+  red: {
+    outer: 0.58,
+    inner: 0.72,
+    inhibitor: 0.85,
+    nexus1: 0.92,
+    nexus2: 0.95,
+  }
+}
+
+interface TowerState {
+  blueOuterDown: boolean
+  blueInnerDown: boolean
+  blueInhibitorDown: boolean
+  redOuterDown: boolean
+  redInnerDown: boolean
+  redInhibitorDown: boolean
+}
+
+/**
+ * Extract tower destruction events from timeline
+ */
+function extractTowerDestructions(timeline: MatchTimeline): Array<{ timestamp: number; teamId: number; towerType: string }> {
+  if (!timeline?.info?.frames) return []
+  
+  const destructions: Array<{ timestamp: number; teamId: number; towerType: string }> = []
+  
+  for (const frame of timeline.info.frames) {
+    for (const event of frame.events || []) {
+      if (event.type === 'BUILDING_KILL' && event.buildingType === 'TOWER_BUILDING') {
+        destructions.push({
+          timestamp: event.timestamp,
+          teamId: event.teamId || 0, // team that OWNED the tower (lost it)
+          towerType: event.towerType || 'UNKNOWN',
+        })
+      }
+    }
+  }
+  
+  return destructions.sort((a, b) => a.timestamp - b.timestamp)
+}
+
+/**
+ * Get tower state at a specific timestamp
+ */
+function getTowerStateAtTime(
+  towerDestructions: Array<{ timestamp: number; teamId: number; towerType: string }>,
+  timestamp: number
+): TowerState {
+  const state: TowerState = {
+    blueOuterDown: false,
+    blueInnerDown: false,
+    blueInhibitorDown: false,
+    redOuterDown: false,
+    redInnerDown: false,
+    redInhibitorDown: false,
+  }
+  
+  for (const destruction of towerDestructions) {
+    if (destruction.timestamp > timestamp) break
+    
+    // teamId = team that lost the tower
+    if (destruction.teamId === 100) { // Blue team lost tower
+      if (destruction.towerType === 'OUTER_TURRET') state.blueOuterDown = true
+      else if (destruction.towerType === 'INNER_TURRET') state.blueInnerDown = true
+      else if (destruction.towerType === 'BASE_TURRET') state.blueInhibitorDown = true
+    } else if (destruction.teamId === 200) { // Red team lost tower
+      if (destruction.towerType === 'OUTER_TURRET') state.redOuterDown = true
+      else if (destruction.towerType === 'INNER_TURRET') state.redInnerDown = true
+      else if (destruction.towerType === 'BASE_TURRET') state.redInhibitorDown = true
+    }
+  }
+  
+  return state
+}
+
+/**
+ * Get the current frontline positions based on tower state
+ * Returns the "safe" zone boundary for each team (where their furthest standing tower is)
+ */
+function getFrontlines(towerState: TowerState): { blueFrontline: number; redFrontline: number } {
+  // Blue team's frontline = their furthest forward standing tower
+  let blueFrontline = TOWER_POSITIONS.blue.outer
+  if (towerState.blueOuterDown) {
+    blueFrontline = TOWER_POSITIONS.blue.inner
+    if (towerState.blueInnerDown) {
+      blueFrontline = TOWER_POSITIONS.blue.inhibitor
+      if (towerState.blueInhibitorDown) {
+        blueFrontline = TOWER_POSITIONS.blue.nexus2
+      }
+    }
+  }
+  
+  // Red team's frontline = their furthest forward standing tower
+  let redFrontline = TOWER_POSITIONS.red.outer
+  if (towerState.redOuterDown) {
+    redFrontline = TOWER_POSITIONS.red.inner
+    if (towerState.redInnerDown) {
+      redFrontline = TOWER_POSITIONS.red.inhibitor
+      if (towerState.redInhibitorDown) {
+        redFrontline = TOWER_POSITIONS.red.nexus1
+      }
+    }
+  }
+  
+  return { blueFrontline, redFrontline }
+}
+
 function distance(p1: { x: number; y: number }, p2: { x: number; y: number }): number {
   return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2))
 }
@@ -144,35 +264,48 @@ function getLanePosition(position: { x: number; y: number }): number {
 }
 
 /**
- * Determine the zone where death occurred relative to player's team
- * Returns zone name and a score:
- * - Passive (own side): score 0 - always bad, you were playing safe and still died
- * - Neutral (middle): score 50 - could be good or bad, we don't know
- * - Aggressive (enemy side): score 100 - good, you were making plays/diving
- *
- * Zone definitions (normalized so 0 = own base, 1 = enemy base):
- * - 0.00 - 0.45: Passive (your side of the map) - BAD
- * - 0.45 - 0.55: Neutral (middle of the map) - UNKNOWN
- * - 0.55 - 1.00: Aggressive (enemy side of the map) - GOOD
+ * Determine the zone where death occurred relative to player's team AND current tower state
+ * 
+ * Dynamic zone system based on current frontlines:
+ * - Passive: Behind your team's current frontline tower (BAD - playing too safe)
+ * - Neutral: Between frontlines (contested territory - OK)
+ * - Aggressive: Past enemy's current frontline tower (GOOD - making plays)
+ * 
+ * This means:
+ * - Early game with all towers: middle of map is neutral
+ * - If you lose outer tower: your "safe" zone shrinks, dying at old outer = passive (bad)
+ * - If enemy loses towers: their "safe" zone shrinks, pushing into their base = aggressive (good)
  */
-function getDeathZone(
+function getDeathZoneDynamic(
   position: { x: number; y: number },
-  teamId: number
+  teamId: number,
+  towerState: TowerState
 ): { zone: 'passive' | 'neutral' | 'aggressive'; score: number } {
   const lanePos = getLanePosition(position)
-
-  // Normalize so 0 = own base, 1 = enemy base for both teams
-  const normalizedPos = teamId === 100 ? lanePos : 1 - lanePos
-
-  if (normalizedPos < 0.45) {
-    // Passive - on your own side, bad death
-    return { zone: 'passive', score: 0 }
-  } else if (normalizedPos < 0.55) {
-    // Neutral - middle of map, could be good or bad
-    return { zone: 'neutral', score: 50 }
+  const { blueFrontline, redFrontline } = getFrontlines(towerState)
+  
+  if (teamId === 100) {
+    // Blue team player
+    // Passive = behind blue frontline (closer to blue base)
+    // Aggressive = past red frontline (closer to red base)
+    if (lanePos < blueFrontline) {
+      return { zone: 'passive', score: 0 }
+    } else if (lanePos > redFrontline) {
+      return { zone: 'aggressive', score: 100 }
+    } else {
+      return { zone: 'neutral', score: 50 }
+    }
   } else {
-    // Aggressive - on enemy side, good death (diving/pushing)
-    return { zone: 'aggressive', score: 100 }
+    // Red team player (teamId === 200)
+    // Passive = behind red frontline (closer to red base)
+    // Aggressive = past blue frontline (closer to blue base)
+    if (lanePos > redFrontline) {
+      return { zone: 'passive', score: 0 }
+    } else if (lanePos < blueFrontline) {
+      return { zone: 'aggressive', score: 100 }
+    } else {
+      return { zone: 'neutral', score: 50 }
+    }
   }
 }
 
@@ -262,6 +395,7 @@ export function extractKillEvents(timeline: MatchTimeline, participantTeams: Map
 /**
  * Get kill/death timeline analysis for a specific player
  * Treats kills and assists the same as "takedowns" - no KDA hunting incentive
+ * Uses dynamic zone boundaries based on current tower state
  */
 export function getPlayerKillDeathTimeline(
   timeline: MatchTimeline,
@@ -270,6 +404,9 @@ export function getPlayerKillDeathTimeline(
   participantTeams: Map<number, number>
 ): PlayerKillDeathTimeline {
   const killEvents = extractKillEvents(timeline, participantTeams)
+  
+  // Extract tower destructions for dynamic zone calculation
+  const towerDestructions = extractTowerDestructions(timeline)
 
   // Extract item purchases for gold calculation
   const purchases = extractItemPurchaseTimestamps(timeline, participantId)
@@ -288,9 +425,12 @@ export function getPlayerKillDeathTimeline(
   const processedKillTimestamps = new Set<number>() // avoid double-counting kill+assist on same event
 
   for (const kill of killEvents) {
+    // Get tower state at the time of this event
+    const towerState = getTowerStateAtTime(towerDestructions, kill.timestamp)
+    
     // Player died
     if (kill.victimId === participantId) {
-      const { zone, score: zoneScore } = getDeathZone(kill.position, teamId)
+      const { zone, score: zoneScore } = getDeathZoneDynamic(kill.position, teamId, towerState)
 
       // Check if it was a trade (our team got kills around same time)
       const wasTrade = kill.nearbyEnemyDeaths > 0
@@ -326,7 +466,8 @@ export function getPlayerKillDeathTimeline(
       processedKillTimestamps.add(kill.timestamp)
 
       // Takedown quality = inverse of where the enemy died from their perspective
-      const enemyDeathZone = getDeathZone(kill.position, kill.victimTeamId)
+      // Use dynamic zones based on tower state at time of kill
+      const enemyDeathZone = getDeathZoneDynamic(kill.position, kill.victimTeamId, towerState)
       // If enemy died in a bad spot for them (low score), it's a good takedown for us
       const quality = 100 - enemyDeathZone.score
 
