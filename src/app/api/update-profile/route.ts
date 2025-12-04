@@ -25,7 +25,6 @@ import {
   extractAbilityOrder,
   extractBuildOrder,
   extractFirstBuy,
-  formatBuildOrder,
   formatFirstBuy,
   extractPatch,
   getPatchFromDate,

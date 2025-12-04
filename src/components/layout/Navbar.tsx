@@ -2,6 +2,7 @@
 
 import SearchBar from '@/components/search/SearchBar'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { UserGroupIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
@@ -27,10 +28,12 @@ export default function Navbar() {
         <div className="flex flex-col h-full">
           {/* logo section */}
           <Link href="/" className="flex items-center p-4 h-[64px]">
-            <img src="/logo.svg" alt="ARAM PIG Logo" className="h-8 w-8 flex-shrink-0" />
-            <img
+            <Image src="/logo.svg" alt="ARAM PIG Logo" width={32} height={32} className="h-8 w-8 flex-shrink-0" />
+            <Image
               src="/title-bar.svg"
               alt="ARAM PIG"
+              width={120}
+              height={32}
               className="ml-3 h-8 w-auto transition-all duration-300"
               style={{
                 opacity: sidebarHovered ? 1 : 0,
