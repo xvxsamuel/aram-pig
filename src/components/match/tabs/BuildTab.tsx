@@ -132,7 +132,7 @@ export function BuildTab({
         ].filter(id => id > 0 && isCompletedItemById(id))
         
         // Get core items in PURCHASE ORDER (first 3 completed items, including boots)
-        let coreItemIds: number[] = []
+        const coreItemIds: number[] = []
         const buildOrderStr = currentPlayer.buildOrder
         if (buildOrderStr) {
           const buildOrderItems = buildOrderStr.split(',').map((id: string) => parseInt(id, 10)).filter((id: number) => !isNaN(id) && id > 0)

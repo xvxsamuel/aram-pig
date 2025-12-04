@@ -415,7 +415,6 @@ export function calculateCoreBuildPenalty(
   if (!playerCoreKey || !coreData) return { penalty: 0, playerCoreKey: playerCoreKey || undefined, globalWinrate: championWinrate }
 
   const MIN_EXACT_GAMES = 10
-  const MIN_FAMILY_GAMES = 30
   
   // Get ranked cores (using 100 game minimum like champion page)
   const rankedCores = rankChampionCores(coreData, championWinrate, 100)
