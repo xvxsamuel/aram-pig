@@ -6,10 +6,11 @@ import { REGIONS } from '@/lib/game'
 type Props = {
   value?: string
   onChange: (region: string) => void
+  onOpen?: () => void
   className?: string
 }
 
-export default function RegionSelector({ value = 'EUW', onChange, className = '' }: Props) {
+export default function RegionSelector({ value = 'EUW', onChange, onOpen, className = '' }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -31,11 +32,20 @@ export default function RegionSelector({ value = 'EUW', onChange, className = ''
     setIsOpen(false)
   }
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const willOpen = !isOpen
+    setIsOpen(willOpen)
+    if (willOpen && onOpen) {
+      onOpen()
+    }
+  }
+
   return (
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         aria-label={`Region: ${value}. Change region`}
         aria-haspopup="menu"
         aria-expanded={isOpen}

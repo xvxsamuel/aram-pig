@@ -70,13 +70,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Match record not found' }, { status: 404 })
     }
 
-    // Only calculate pig scores for matches within 30 days
-    // Timeline data (needed for ability order, build order) is only available for 30 days
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-    if (matchRecord.game_creation < thirtyDaysAgo) {
+    // Only calculate pig scores for matches within 1 year
+    // Timeline data is available for historical matches
+    const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
+    if (matchRecord.game_creation < oneYearAgo) {
       return NextResponse.json({
         pigScore: null,
-        reason: 'Match older than 30 days - timeline data not available',
+        reason: 'Match older than 1 year - timeline data not available',
       })
     }
 
@@ -158,9 +158,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Match record not found' }, { status: 404 })
     }
 
-    // Check if match is older than 30 days
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-    const isOlderThan30Days = matchRecord.game_creation < thirtyDaysAgo
+    // Check if match is older than 1 year
+    const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
+    const isOlderThan1Year = matchRecord.game_creation < oneYearAgo
 
     const results: Record<string, number | null> = {}
     const updates: Array<{ puuid: string; pigScore: number }> = []
@@ -173,7 +173,7 @@ export async function PUT(request: Request) {
       }
 
       // Skip calculation for old matches - timeline data not available
-      if (isOlderThan30Days) {
+      if (isOlderThan1Year) {
         results[participant.puuid] = null
         continue
       }

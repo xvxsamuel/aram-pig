@@ -104,10 +104,20 @@
     "description": "Heal when you damage an enemy champion.",
     "icon": "perk-images/Styles/Domination/TasteOfBlood/GreenTerror_TasteOfBlood.png"
   },
+  "8137": {
+    "name": "Sixth Sense",
+    "description": "On a long Cooldown, automatically sense a nearby untracked and unseen ward, tracking it for the team. Level 11: Also reveal the ward for 10s.",
+    "icon": "perk-images/Styles/Domination/SixthSense/SixthSense.png"
+  },
   "8140": {
     "name": "Grisly Mementos",
     "description": "Gain 6 trinket haste per Memento stack, up to 108 haste at maximum stacks. Earn a Memento stack whenever scoring a champion takedown, up to 18 stacks. In modes where wards are not available, each stack permanently grants 3 summoner spell haste instead, up to 54.",
     "icon": "perk-images/Styles/Domination/GrislyMementos/GrislyMementos.png"
+  },
+  "8141": {
+    "name": "Deep Ward",
+    "description": "Your wards in the enemy jungle are Deep. Deep wards gain +1 extra Health and increased duration. Level 9: Wards in the river are also Deep.",
+    "icon": "perk-images/Styles/Domination/DeepWard/DeepWard.png"
   },
   "8143": {
     "name": "Sudden Impact",

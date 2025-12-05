@@ -152,7 +152,6 @@ export interface ParticipantData {
       team: 'ally' | 'enemy'
     }>
     deathScore: number
-    takedownScore: number
   }
   labels?: string[]
   firstItem?: number

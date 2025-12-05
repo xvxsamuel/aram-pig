@@ -42,7 +42,6 @@ export interface ParticipantData {
   skillOrder?: string
   buildOrder?: string
   firstBuy?: string
-  takedownQualityScore?: number
   deathQualityScore?: number
 }
 
@@ -222,10 +221,10 @@ export async function calculatePigScoreWithBreakdown(
 
   if (!championStats || championStats.length === 0) return null
 
-  // find valid stats (100+ games, prefer matching patch)
-  let selectedStats = championStats.find(s => s.patch === participant.patch && ((s.data as any)?.games || 0) >= 100)
+  // find valid stats (2000+ games, prefer matching patch)
+  let selectedStats = championStats.find(s => s.patch === participant.patch && ((s.data as any)?.games || 0) >= 2000)
   const usedFallbackPatch = !selectedStats
-  if (!selectedStats) selectedStats = championStats.find(s => ((s.data as any)?.games || 0) >= 100)
+  if (!selectedStats) selectedStats = championStats.find(s => ((s.data as any)?.games || 0) >= 2000)
   if (!selectedStats) return null
 
   const data = selectedStats.data as any
@@ -324,18 +323,11 @@ export async function calculatePigScoreWithBreakdown(
 
   const buildScore = startingScore * 0.05 + skillOrderScore * 0.05 + keystoneScore * 0.10 + spellsScore * 0.05 + coreScore * 0.45 + itemScore * 0.30
 
-  // TIMELINE COMPONENT
+  // TIMELINE COMPONENT (Death Quality only)
   let timelineScore = 50
-  if (participant.takedownQualityScore !== undefined && participant.deathQualityScore !== undefined) {
-    timelineScore = participant.deathQualityScore * 0.8 + participant.takedownQualityScore * 0.2
-    metrics.push({ name: 'Death Quality', score: participant.deathQualityScore, weight: 0.8 })
-    metrics.push({ name: 'Takedown Quality', score: participant.takedownQualityScore, weight: 0.2 })
-  } else if (participant.deathQualityScore !== undefined) {
+  if (participant.deathQualityScore !== undefined) {
     timelineScore = participant.deathQualityScore
     metrics.push({ name: 'Death Quality', score: participant.deathQualityScore, weight: 1.0 })
-  } else if (participant.takedownQualityScore !== undefined) {
-    timelineScore = participant.takedownQualityScore
-    metrics.push({ name: 'Takedown Quality', score: participant.takedownQualityScore, weight: 1.0 })
   } else {
     metrics.push({ name: 'Timeline', score: 50, weight: 1.0 })
   }

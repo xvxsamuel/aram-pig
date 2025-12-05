@@ -26,7 +26,7 @@ const RUNE_TREES = {
     color: '#D44242',
     keystones: [8112, 8128, 9923], // Electrocute, Dark Harvest, Hail of Blades
     tier1: [8126, 8139, 8143], // Cheap Shot, Taste of Blood, Sudden Impact
-    tier2: [8136, 8120, 8138], // Zombie Ward, Ghost Poro, Eyeball Collection
+    tier2: [8137, 8140, 8141], // Sixth Sense, Grisly Mementos, Deep Ward
     tier3: [8135, 8105, 8106], // Treasure Hunter, Relentless Hunter, Ultimate Hunter
   },
   sorcery: {

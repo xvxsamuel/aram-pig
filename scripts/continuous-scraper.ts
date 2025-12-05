@@ -288,18 +288,21 @@ async function crawlSummoner(
           continue
         }
 
-        // Extract PUUIDs from valid patch matches
+        // Extract PUUIDs from valid patch matches - these are HIGH PRIORITY (active on current patch)
         if (matchData.info?.participants) {
           const currentStack = crawlStackByRegion.get(region)
-          const shouldAddToStack = !currentStack || currentStack.length < 50
           const seedPool = seedPoolByRegion.get(region)!
+
+          // For current patch matches, aggressively add to stack (these players are ACTIVE)
+          // Use higher threshold to ensure we follow active player chains
+          const shouldAddToStack = !currentStack || currentStack.length < 500
 
           matchData.info.participants.forEach(p => {
             if (p.puuid && p.puuid !== puuid) {
               // Always add to seed pool for future re-seeding
               seedPool.add(p.puuid)
 
-              // Only add to discovered (for immediate stack) if stack is low
+              // Add to discovered for immediate stack (prioritize active players)
               if (shouldAddToStack && !visitedPuuidsByRegion.get(region)?.has(p.puuid) && !dryPuuids.has(p.puuid)) {
                 discovered.push(p.puuid)
               }
@@ -354,13 +357,14 @@ function loadState(): {
   backtrackHistory: Record<string, string[]>
   dry: Record<string, string[]>
   seedPool: Record<string, string[]>
+  lastPatch?: string
 } {
   if (existsSync(STATE_FILE) && !process.argv.includes('--reset')) {
     try {
       const data = readFileSync(STATE_FILE, 'utf-8')
       const state = JSON.parse(data)
       console.log('[CRAWLER] Loaded state from scraper-state.json')
-      return { ...state, dry: state.dry || {}, seedPool: state.seedPool || {} }
+      return { ...state, dry: state.dry || {}, seedPool: state.seedPool || {}, lastPatch: state.lastPatch }
     } catch (_error) {
       console.log('[CRAWLER] Failed to load state, starting fresh')
     }
@@ -402,6 +406,7 @@ function saveState() {
       asia: Array.from(seedPoolByRegion.get('asia')!).slice(-10000),
       sea: Array.from(seedPoolByRegion.get('sea')!).slice(-10000),
     },
+    lastPatch: ACCEPTED_PATCHES[0],
   }
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2))
 }
@@ -472,6 +477,27 @@ async function main() {
     if (savedState.seedPool && savedState.seedPool[region]) {
       savedState.seedPool[region].forEach((p: string) => seedPoolByRegion.get(region)!.add(p))
     }
+  }
+
+  // PATCH CHANGE DETECTION: Clear dry PUUIDs and visited when patch changes
+  // This is crucial because players marked "dry" on old patch may have new games on new patch
+  const currentPatch = ACCEPTED_PATCHES[0]
+  if (savedState.lastPatch && savedState.lastPatch !== currentPatch) {
+    console.log(`\n[CRAWLER] 🔄 PATCH CHANGE DETECTED: ${savedState.lastPatch} → ${currentPatch}`)
+    console.log('[CRAWLER] Clearing dry PUUIDs and visited sets (players may have new games now)...')
+    
+    let totalDryCleared = 0
+    let totalVisitedCleared = 0
+    for (const region of ['europe', 'americas', 'asia', 'sea'] as RegionalCluster[]) {
+      const drySet = dryPuuidsByRegion.get(region)!
+      const visitedSet = visitedPuuidsByRegion.get(region)!
+      totalDryCleared += drySet.size
+      totalVisitedCleared += visitedSet.size
+      drySet.clear()
+      visitedSet.clear()
+    }
+    console.log(`[CRAWLER] Cleared ${totalDryCleared} dry PUUIDs and ${totalVisitedCleared} visited PUUIDs`)
+    console.log('[CRAWLER] Stack and seed pool preserved - will re-crawl with fresh state\n')
   }
 
   // Check if we have existing state to resume from

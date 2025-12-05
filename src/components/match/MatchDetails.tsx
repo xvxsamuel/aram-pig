@@ -72,8 +72,8 @@ export default function MatchDetails({
 }: Props) {
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
 
-  // check if match is within 30 days (timeline data availability from Riot API)
-  const isWithin30Days = Date.now() - match.info.gameCreation < 30 * 24 * 60 * 60 * 1000
+  // check if match is within 1 year (timeline data availability from Riot API)
+  const isWithin1Year = Date.now() - match.info.gameCreation < 365 * 24 * 60 * 60 * 1000
 
   // check if current player already has a PIG score (from previous calculation)
   const hasExistingPigScore = currentPlayer?.pigScore !== null && currentPlayer?.pigScore !== undefined
@@ -81,8 +81,8 @@ export default function MatchDetails({
   // check if game was a remake (no PIG score for remakes)
   const isRemake = currentPlayer?.gameEndedInEarlySurrender ?? false
 
-  // Check if performance tab should be available (within 30 days OR has existing score)
-  const canShowPerformanceTab = (isWithin30Days && !isRemake) || hasExistingPigScore
+  // Check if performance tab should be available (within 1 year OR has existing score)
+  const canShowPerformanceTab = (isWithin1Year && !isRemake) || hasExistingPigScore
 
   // Determine initial tab - fall back to overview if performance not available
   const getValidTab = (tab: 'overview' | 'build' | 'performance') => {
@@ -116,7 +116,7 @@ export default function MatchDetails({
 
   // enrich match with timeline data and pig scores when component mounts (for recent matches)
   useEffect(() => {
-    if (!isWithin30Days || isRemake || pigScoresFetched || enrichFetchingRef.current) return
+    if (!isWithin1Year || isRemake || pigScoresFetched || enrichFetchingRef.current) return
 
     // check if ALL players already have pig scores (match already enriched)
     const allHavePigScores = match.info.participants.every(p => p.pigScore !== null && p.pigScore !== undefined)
@@ -191,7 +191,7 @@ export default function MatchDetails({
     match.metadata.matchId,
     match.info.participants,
     match.info.gameCreation,
-    isWithin30Days,
+    isWithin1Year,
     isRemake,
     pigScoresFetched,
     region,
@@ -248,9 +248,9 @@ export default function MatchDetails({
   const allParticipants = match.info.participants
   const maxDamageDealt = Math.max(...allParticipants.map(p => p.totalDamageDealtToChampions || 0))
 
-  // Check if any participant has a pig score (only show PIG column if within 30 days, not a remake, OR scores exist OR loading)
+  // Check if any participant has a pig score (only show PIG column if within 1 year, not a remake, OR scores exist OR loading)
   const hasPigScores =
-    (isWithin30Days && !isRemake) ||
+    (isWithin1Year && !isRemake) ||
     loadingPigScores ||
     allParticipants.some(
       p => (pigScores[p.puuid] ?? p.pigScore) !== null && (pigScores[p.puuid] ?? p.pigScore) !== undefined

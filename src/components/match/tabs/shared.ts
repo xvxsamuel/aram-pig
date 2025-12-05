@@ -53,7 +53,6 @@ export interface KillDeathTimeline {
   takedowns: TakedownEvent[]
   deaths: DeathEvent[]
   towers?: TowerEvent[]
-  takedownScore: number
   deathScore: number
 }
 

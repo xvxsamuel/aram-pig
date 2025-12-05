@@ -1,7 +1,10 @@
 import SearchBar from '@/components/search/SearchBar'
 import Image from 'next/image'
+import { getLatestVersion } from '@/lib/ddragon'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const ddragonVersion = await getLatestVersion()
+
   return (
     <main className="home-page relative min-h-screen flex flex-col items-center px-4 bg-accent-dark overflow-hidden">
       <Image src="/bg.png" alt="Background" fill className="object-cover" quality={90} priority />
@@ -19,7 +22,7 @@ export default function HomePage() {
             priority
           />
         </div>
-        <SearchBar className="h-12 w-full" />
+        <SearchBar className="h-12 w-full" ddragonVersion={ddragonVersion} />
       </div>
     </main>
   )

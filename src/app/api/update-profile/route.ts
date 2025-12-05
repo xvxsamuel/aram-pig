@@ -140,13 +140,13 @@ async function fetchMatchIds(region: string, puuid: string, count?: number, requ
 // ============================================================================
 
 async function calculateMissingPigScores(supabase: any, puuid: string) {
-  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+  const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
 
   const { data: recentMatches, error } = await supabase
     .from('summoner_matches')
     .select('match_id, puuid, match_data, patch, champion_name, game_creation, matches!inner(game_duration)')
     .eq('puuid', puuid)
-    .gte('game_creation', thirtyDaysAgo)
+    .gte('game_creation', oneYearAgo)
     .order('game_creation', { ascending: false })
     .limit(30)
 
@@ -356,14 +356,14 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
 
         // fetch match data
         const match = await getMatchById(matchId, region as any, 'batch')
-        const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+        const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
         const gameCreation = (existingMatch as any)?.game_creation || match.info.gameCreation
-        const isOlderThan30Days = gameCreation < thirtyDaysAgo
+        const isOlderThan1Year = gameCreation < oneYearAgo
         const isRemake = match.info.participants.some((p: any) => p.gameEndedInEarlySurrender)
 
-        // fetch timeline for recent matches
+        // fetch timeline for recent matches (within 1 year)
         let timeline = null
-        if (!isOlderThan30Days) {
+        if (!isOlderThan1Year) {
           try { timeline = await getMatchTimeline(matchId, region as any, 'batch') } catch {}
         }
 
@@ -381,7 +381,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
         }
 
         // prepare stats and process participants
-        const statsCache = await prepareStatsCache(match.info.participants, isOlderThan30Days, isRemake)
+        const statsCache = await prepareStatsCache(match.info.participants, isOlderThan1Year, isRemake)
         const teamKills = calculateTeamKills(match.info.participants)
 
         const records = await processParticipants({
@@ -391,7 +391,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           gameCreation,
           gameDuration,
           timeline,
-          isOlderThan30Days,
+          isOlderThan1Year,
           isRemake,
           statsCache,
           team100Kills: teamKills.team100,
@@ -411,7 +411,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
             let buildOrderForStats: number[] = []
             let firstBuyForStats = ''
 
-            if (!isOlderThan30Days && timeline) {
+            if (!isOlderThan1Year && timeline) {
               abilityOrderStr = extractAbilityOrder(timeline, participantId)
               const buildOrder = extractBuildOrder(timeline, participantId)
               const firstBuy = extractFirstBuy(timeline, participantId)

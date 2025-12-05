@@ -109,6 +109,7 @@ export interface TakedownAnalysis {
   bounty: number
   position: { x: number; y: number }
   quality: number // 0-100, based on enemy death quality (inverse)
+  zoneScore: number // 0-100 from player's perspective (100 = aggressive, 0 = passive)
 }
 
 export interface PlayerKillDeathTimeline {
@@ -268,13 +269,13 @@ function getLanePosition(position: { x: number; y: number }): number {
  * 
  * Dynamic zone system based on current frontlines:
  * - Passive: Behind your team's current frontline tower (BAD - playing too safe)
- * - Neutral: Between frontlines (contested territory - OK)
- * - Aggressive: Past enemy's current frontline tower (GOOD - making plays)
+ * - Neutral: Between your frontline and the midpoint (OK - contested but not pushing)
+ * - Aggressive: Past the midpoint towards enemy base (GOOD - making plays/pushing)
  * 
- * This means:
- * - Early game with all towers: middle of map is neutral
- * - If you lose outer tower: your "safe" zone shrinks, dying at old outer = passive (bad)
- * - If enemy loses towers: their "safe" zone shrinks, pushing into their base = aggressive (good)
+ * The midpoint shifts dynamically as towers fall:
+ * - Early game with all towers: midpoint is ~0.5 (center of map)
+ * - If you lose outer tower: your frontline moves back, but midpoint also shifts
+ * - If enemy loses towers: midpoint shifts towards them, more area becomes "aggressive"
  */
 function getDeathZoneDynamic(
   position: { x: number; y: number },
@@ -284,24 +285,29 @@ function getDeathZoneDynamic(
   const lanePos = getLanePosition(position)
   const { blueFrontline, redFrontline } = getFrontlines(towerState)
   
+  // Calculate the midpoint between the two frontlines
+  const midpoint = (blueFrontline + redFrontline) / 2
+  
   if (teamId === 100) {
-    // Blue team player
+    // Blue team player (base at low lane position)
     // Passive = behind blue frontline (closer to blue base)
-    // Aggressive = past red frontline (closer to red base)
+    // Neutral = between blue frontline and midpoint
+    // Aggressive = past the midpoint towards red base
     if (lanePos < blueFrontline) {
       return { zone: 'passive', score: 0 }
-    } else if (lanePos > redFrontline) {
+    } else if (lanePos >= midpoint) {
       return { zone: 'aggressive', score: 100 }
     } else {
       return { zone: 'neutral', score: 50 }
     }
   } else {
-    // Red team player (teamId === 200)
+    // Red team player (teamId === 200) (base at high lane position)
     // Passive = behind red frontline (closer to red base)
-    // Aggressive = past blue frontline (closer to blue base)
+    // Neutral = between red frontline and midpoint
+    // Aggressive = past the midpoint towards blue base
     if (lanePos > redFrontline) {
       return { zone: 'passive', score: 0 }
-    } else if (lanePos < blueFrontline) {
+    } else if (lanePos <= midpoint) {
       return { zone: 'aggressive', score: 100 }
     } else {
       return { zone: 'neutral', score: 50 }
@@ -470,6 +476,9 @@ export function getPlayerKillDeathTimeline(
       const enemyDeathZone = getDeathZoneDynamic(kill.position, kill.victimTeamId, towerState)
       // If enemy died in a bad spot for them (low score), it's a good takedown for us
       const quality = 100 - enemyDeathZone.score
+      
+      // Get zone from player's perspective (for position display)
+      const playerZone = getDeathZoneDynamic(kill.position, teamId, towerState)
 
       takedowns.push({
         timestamp: kill.timestamp,
@@ -481,6 +490,7 @@ export function getPlayerKillDeathTimeline(
         bounty: kill.bounty + kill.shutdownBounty,
         position: kill.position,
         quality,
+        zoneScore: playerZone.score,
       })
     }
   }
@@ -542,7 +552,7 @@ export interface KillDeathSummary {
     gold: number // victim gold
     tf: boolean // teamfight
     wasKill: boolean // true if kill, false if assist (display only)
-    pos: number // 0-100 lane position (0 = blue base, 100 = red base)
+    pos: number // 0-100 zone score (0 = passive, 50 = neutral, 100 = aggressive) - accounts for team side and tower state
     value: number // 0-100 takedown quality
     x: number // raw x coordinate for map display
     y: number // raw y coordinate for map display
@@ -553,8 +563,8 @@ export interface KillDeathSummary {
     tf: boolean // teamfight
     trade: boolean // was it a trade
     tradeKills: number // how many enemies died
-    zone: string // zone name
-    pos: number // 0-100 lane position
+    zone: string // zone name ('passive' | 'neutral' | 'aggressive')
+    pos: number // 0-100 zone score (0 = passive, 50 = neutral, 100 = aggressive) - accounts for team side and tower state
     value: number // 0-100 death quality (100 = good death, 0 = bad death)
     x: number // raw x coordinate for map display
     y: number // raw y coordinate for map display
@@ -566,7 +576,6 @@ export interface KillDeathSummary {
     team: 'ally' | 'enemy' // which team's tower was destroyed
   }>
   deathScore: number // average death quality
-  takedownScore: number // average takedown quality
 }
 
 export function getKillDeathSummary(
@@ -612,7 +621,7 @@ export function getKillDeathSummary(
       gold: t.victimGold,
       tf: t.wasTeamfight,
       wasKill: t.wasKill,
-      pos: Math.round(getLanePosition(t.position) * 100),
+      pos: t.zoneScore, // Use zone score (0=passive, 50=neutral, 100=aggressive)
       value: t.quality,
       x: t.position.x,
       y: t.position.y,
@@ -633,7 +642,7 @@ export function getKillDeathSummary(
         trade: d.wasTrade,
         tradeKills: d.tradeKills,
         zone: d.zone,
-        pos: Math.round(getLanePosition(d.position) * 100),
+        pos: d.zoneScore, // Use zone score (0=passive, 50=neutral, 100=aggressive)
         value: Math.round(value),
         x: d.position.x,
         y: d.position.y,
@@ -641,6 +650,5 @@ export function getKillDeathSummary(
     }),
     towers,
     deathScore: analysis.deathQualityScore,
-    takedownScore: analysis.takedownQualityScore,
   }
 }

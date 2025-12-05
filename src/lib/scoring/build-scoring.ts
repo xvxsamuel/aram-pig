@@ -1247,7 +1247,7 @@ export async function calculateAllBuildPenalties(
       .eq('patch', participant.patch)
       .maybeSingle()
     
-    if (exactMatchResult?.data && (exactMatchResult.data as ChampionStatsData).games >= 100) {
+    if (exactMatchResult?.data && (exactMatchResult.data as ChampionStatsData).games >= 2000) {
       championData = exactMatchResult.data as ChampionStatsData
       actualPatchUsed = exactMatchResult.patch
     } else {
@@ -1260,7 +1260,7 @@ export async function calculateAllBuildPenalties(
         .limit(5)
       
       if (allPatchesResult && allPatchesResult.length > 0) {
-        const validPatch = allPatchesResult.find(p => (p.data as ChampionStatsData)?.games >= 100)
+        const validPatch = allPatchesResult.find(p => (p.data as ChampionStatsData)?.games >= 2000)
         if (validPatch) {
           championData = validPatch.data as ChampionStatsData
           actualPatchUsed = validPatch.patch

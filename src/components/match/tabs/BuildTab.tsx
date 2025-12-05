@@ -18,6 +18,75 @@ import {
   BOOT_IDS,
 } from './shared'
 
+// Rune tree structure (same as ChampionDetailTabs)
+const RUNE_TREES = {
+  precision: {
+    id: 8000,
+    name: 'Precision',
+    color: '#C8AA6E',
+    keystones: [8005, 8008, 8021, 8010],
+    tier1: [9101, 8009, 9111],
+    tier2: [9104, 9103, 9105],
+    tier3: [8014, 8017, 8299],
+  },
+  domination: {
+    id: 8100,
+    name: 'Domination',
+    color: '#D44242',
+    keystones: [8112, 8128, 9923],
+    tier1: [8126, 8139, 8143],
+    tier2: [8136, 8120, 8138],
+    tier3: [8135, 8105, 8106],
+  },
+  sorcery: {
+    id: 8200,
+    name: 'Sorcery',
+    color: '#9FAAFC',
+    keystones: [8214, 8229, 8230],
+    tier1: [8224, 8226, 8275],
+    tier2: [8210, 8234, 8233],
+    tier3: [8237, 8232, 8236],
+  },
+  resolve: {
+    id: 8400,
+    name: 'Resolve',
+    color: '#A1D586',
+    keystones: [8437, 8439, 8465],
+    tier1: [8446, 8463, 8401],
+    tier2: [8429, 8444, 8473],
+    tier3: [8451, 8453, 8242],
+  },
+  inspiration: {
+    id: 8300,
+    name: 'Inspiration',
+    color: '#49AAF5',
+    keystones: [8351, 8360, 8369],
+    tier1: [8306, 8304, 8313],
+    tier2: [8321, 8345, 8347],
+    tier3: [8410, 8352, 8316],
+  },
+}
+
+// Stat perk shards
+const STAT_PERKS = {
+  offense: [
+    { id: 5008, name: 'Adaptive Force', icon: 'perk-images/StatMods/StatModsAdaptiveForceIcon.png' },
+    { id: 5005, name: 'Attack Speed', icon: 'perk-images/StatMods/StatModsAttackSpeedIcon.png' },
+    { id: 5007, name: 'Ability Haste', icon: 'perk-images/StatMods/StatModsCDRScalingIcon.png' },
+  ],
+  flex: [
+    { id: 5008, name: 'Adaptive Force', icon: 'perk-images/StatMods/StatModsAdaptiveForceIcon.png' },
+    { id: 5010, name: 'Move Speed', icon: 'perk-images/StatMods/StatModsMovementSpeedIcon.png' },
+    { id: 5001, name: 'Health Scaling', icon: 'perk-images/StatMods/StatModsHealthPlusIcon.png' },
+  ],
+  defense: [
+    { id: 5011, name: 'Health', icon: 'perk-images/StatMods/StatModsHealthScalingIcon.png' },
+    { id: 5013, name: 'Tenacity', icon: 'perk-images/StatMods/StatModsTenacityIcon.png' },
+    { id: 5001, name: 'Health Scaling', icon: 'perk-images/StatMods/StatModsHealthPlusIcon.png' },
+  ],
+}
+
+// Helper to find which tree a rune belongs to
 // animated glow component for scored items with pig score color
 function ScoredItemGlow({ 
   children, 
@@ -85,10 +154,14 @@ export function BuildTab({
 }: TabProps) {
   if (!currentPlayer) return null
 
+  // Check if we have timeline data - only show PIG labels if we do
+  const playerDetails = participantDetails.get(currentPlayer.puuid)
+  const hasTimelineData = playerDetails?.item_timeline && playerDetails.item_timeline.length > 0
+
   // Calculate overall build score from sub-scores with new weights:
   // starter 5%, skills 5%, runes 10%, spells 5%, core 45%, items 30%
   const buildSubScores = pigScoreBreakdown?.buildSubScores
-  const overallBuildScore = buildSubScores ? Math.round(
+  const overallBuildScore = (buildSubScores && hasTimelineData) ? Math.round(
     (buildSubScores.starting ?? 50) * 0.05 +
     (buildSubScores.skills ?? 50) * 0.05 +
     (buildSubScores.keystone ?? 50) * 0.10 +
@@ -174,7 +247,7 @@ export function BuildTab({
                   Starter Items
                   {fallbackInfo?.starting && <FallbackWarning />}
                 </h3>
-                <PigLabel score={pigScoreBreakdown?.buildSubScores?.starting} />
+                {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.starting} />}
               </div>
               {starterItems.length > 0 ? (
                 <div className="flex flex-col gap-1">
@@ -209,7 +282,7 @@ export function BuildTab({
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-xs font-medium text-text-muted">Core Build</h3>
-                <PigLabel score={pigScoreBreakdown?.buildSubScores?.core} />
+                {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.core} />}
               </div>
               {coreItemIds.length > 0 ? (
                 <div className="flex flex-col gap-1">
@@ -256,7 +329,7 @@ export function BuildTab({
             Items
             {pigScoreBreakdown?.fallbackInfo?.items && <FallbackWarning />}
           </h3>
-          <PigLabel score={pigScoreBreakdown?.buildSubScores?.items} />
+          {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.items} />}
         </div>
         {(() => {
           const details = participantDetails.get(currentPlayer.puuid)
@@ -594,7 +667,7 @@ export function BuildTab({
           <div>
             <div className="flex items-center gap-2 mb-3">
               <h3 className="text-xs font-medium text-text-muted">Skill Order</h3>
-              <PigLabel score={pigScoreBreakdown?.buildSubScores?.skills} />
+              {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.skills} />}
             </div>
             <div className="space-y-3">
               {/* Max order display */}
@@ -642,155 +715,183 @@ export function BuildTab({
             Runes
             {pigScoreBreakdown?.fallbackInfo?.keystone && <FallbackWarning />}
           </h3>
-          <PigLabel score={pigScoreBreakdown?.buildSubScores?.keystone} />
+          {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.keystone} />}
         </div>
-        <div className="flex gap-8">
-          {/* Primary Tree */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              {(() => {
-                const treeId = currentPlayer.perks?.styles[0]?.style
-                const treeInfo = treeId ? (runesData as Record<string, { icon?: string; name?: string }>)[String(treeId)] : null
-                return (
-                  <>
-                    {treeInfo?.icon && (
-                      <div className="w-6 h-6 rounded-full overflow-hidden">
-                        <Image
-                          src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
-                          alt={treeInfo.name || 'Primary'}
-                          width={24}
-                          height={24}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    )}
-                    <span className="text-[10px] text-gold-light font-medium">
-                      {treeInfo?.name || 'Primary'}
-                    </span>
-                  </>
-                )
-              })()}
-            </div>
-            <div className="flex gap-2">
-              {/* Keystone */}
-              {(() => {
-                const runeId = currentPlayer.perks?.styles[0]?.selections[0]?.perk
-                const runeInfo = runeId ? (runesData as Record<string, { icon?: string; name?: string }>)[String(runeId)] : null
-                return runeInfo?.icon ? (
-                  <Tooltip id={runeId!} type="rune">
-                    <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-gold-light bg-abyss-800">
-                      <Image
-                        src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                        alt={runeInfo.name || 'Keystone'}
-                        width={44}
-                        height={44}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  </Tooltip>
-                ) : null
-              })()}
-              {/* Other primary runes */}
-              {[1, 2, 3].map(idx => {
-                const runeId = currentPlayer.perks?.styles[0]?.selections[idx]?.perk
-                const runeInfo = runeId ? (runesData as Record<string, { icon?: string; name?: string }>)[String(runeId)] : null
-                return runeInfo?.icon ? (
-                  <Tooltip key={idx} id={runeId!} type="rune">
-                    <div className="w-8 h-8 rounded-full overflow-hidden border border-gold-dark bg-abyss-800">
-                      <Image
-                        src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                        alt={runeInfo.name || 'Rune'}
-                        width={32}
-                        height={32}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  </Tooltip>
-                ) : null
-              })}
-            </div>
-          </div>
-
-          {/* Secondary Tree */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              {(() => {
-                const treeId = currentPlayer.perks?.styles[1]?.style
-                const treeInfo = treeId ? (runesData as Record<string, { icon?: string; name?: string }>)[String(treeId)] : null
-                return (
-                  <>
-                    {treeInfo?.icon && (
-                      <div className="w-6 h-6 rounded-full overflow-hidden">
-                        <Image
-                          src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
-                          alt={treeInfo.name || 'Secondary'}
-                          width={24}
-                          height={24}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    )}
-                    <span className="text-[10px] text-text-muted font-medium">
-                      {treeInfo?.name || 'Secondary'}
-                    </span>
-                  </>
-                )
-              })()}
-            </div>
-            <div className="flex gap-2">
-              {[0, 1].map(idx => {
-                const runeId = currentPlayer.perks?.styles[1]?.selections[idx]?.perk
-                const runeInfo = runeId ? (runesData as Record<string, { icon?: string; name?: string }>)[String(runeId)] : null
-                return runeInfo?.icon ? (
-                  <Tooltip key={idx} id={runeId!} type="rune">
-                    <div className="w-8 h-8 rounded-full overflow-hidden border border-gold-dark bg-abyss-800">
-                      <Image
-                        src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                        alt={runeInfo.name || 'Rune'}
-                        width={32}
-                        height={32}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  </Tooltip>
-                ) : null
-              })}
-            </div>
-          </div>
-
-          {/* Stat Shards */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] text-text-muted font-medium">Shards</span>
-            </div>
-            <div className="flex gap-1.5">
-              {[
-                currentPlayer.perks?.statPerks?.offense,
-                currentPlayer.perks?.statPerks?.flex,
-                currentPlayer.perks?.statPerks?.defense,
-              ].map((shardId, idx) => (
-                <div
-                  key={idx}
-                  className="w-6 h-6 rounded-full bg-abyss-800 border border-gold-dark/50 flex items-center justify-center"
-                >
-                  <span className="text-[9px] text-text-muted font-medium">+</span>
+        
+        {(() => {
+          // Get player's selected runes
+          const primaryTreeId = currentPlayer.perks?.styles[0]?.style
+          const secondaryTreeId = currentPlayer.perks?.styles[1]?.style
+          const selectedRuneIds = new Set<number>()
+          
+          // Collect all selected rune IDs
+          currentPlayer.perks?.styles[0]?.selections?.forEach(s => selectedRuneIds.add(s.perk))
+          currentPlayer.perks?.styles[1]?.selections?.forEach(s => selectedRuneIds.add(s.perk))
+          
+          // Find primary and secondary trees
+          const primaryTree = Object.values(RUNE_TREES).find(t => t.id === primaryTreeId)
+          const secondaryTree = Object.values(RUNE_TREES).find(t => t.id === secondaryTreeId)
+          
+          // Helper to render a rune icon
+          const renderRune = (runeId: number, isKeystone: boolean = false) => {
+            const runeInfo = (runesData as Record<string, { icon?: string; name?: string }>)[String(runeId)]
+            const isSelected = selectedRuneIds.has(runeId)
+            const size = isKeystone ? 'w-9 h-9' : 'w-7 h-7'
+            const imgSize = isKeystone ? 36 : 28
+            
+            return (
+              <Tooltip key={runeId} id={runeId} type="rune">
+                <div className={clsx(
+                  size, "rounded-full overflow-hidden",
+                  isSelected ? "border-2 border-gold-light" : "border border-gray-700 opacity-30 grayscale"
+                )}>
+                  {runeInfo?.icon && (
+                    <Image
+                      src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
+                      alt={runeInfo.name || ''}
+                      width={imgSize}
+                      height={imgSize}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  )}
                 </div>
-              ))}
+              </Tooltip>
+            )
+          }
+          
+          // Helper to render stat shard
+          const renderStatShard = (shardOptions: typeof STAT_PERKS.offense, selectedId: number | undefined) => {
+            return (
+              <div className="flex gap-1">
+                {shardOptions.map(shard => {
+                  const isSelected = shard.id === selectedId
+                  return (
+                    <div
+                      key={shard.id}
+                      className={clsx(
+                        "w-5 h-5 rounded-full overflow-hidden",
+                        isSelected ? "border border-gold-light" : "border border-gray-700 opacity-30 grayscale"
+                      )}
+                    >
+                      <Image
+                        src={`https://ddragon.leagueoflegends.com/cdn/img/${shard.icon}`}
+                        alt={shard.name}
+                        width={20}
+                        height={20}
+                        className="w-full h-full object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          }
+          
+          return (
+            <div className="flex gap-4">
+              {/* Primary Tree */}
+              {primaryTree && (
+                <div className="bg-abyss-800 rounded-lg p-3 border border-gold-dark/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    {(() => {
+                      const treeInfo = (runesData as Record<string, { icon?: string; name?: string }>)[String(primaryTree.id)]
+                      return (
+                        <>
+                          {treeInfo?.icon && (
+                            <div className="w-5 h-5 rounded-full overflow-hidden">
+                              <Image
+                                src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
+                                alt={primaryTree.name}
+                                width={20}
+                                height={20}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            </div>
+                          )}
+                          <span className="text-[10px] font-medium" style={{ color: primaryTree.color }}>
+                            {primaryTree.name}
+                          </span>
+                        </>
+                      )
+                    })()}
+                  </div>
+                  
+                  {/* Keystones */}
+                  <div className={clsx(
+                    "grid gap-1 justify-items-center mb-2",
+                    primaryTree.keystones.length === 4 ? "grid-cols-4" : "grid-cols-3"
+                  )}>
+                    {primaryTree.keystones.map(id => renderRune(id, true))}
+                  </div>
+                  
+                  <div className="border-t border-gray-700/50 my-2" />
+                  
+                  {/* Tier runes */}
+                  {[primaryTree.tier1, primaryTree.tier2, primaryTree.tier3].map((tier, idx) => (
+                    <div key={idx} className="grid grid-cols-3 gap-1 justify-items-center mb-1 last:mb-0">
+                      {tier.map(id => renderRune(id))}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Secondary Tree */}
+              {secondaryTree && (
+                <div className="bg-abyss-800 rounded-lg p-3 border border-gray-700/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    {(() => {
+                      const treeInfo = (runesData as Record<string, { icon?: string; name?: string }>)[String(secondaryTree.id)]
+                      return (
+                        <>
+                          {treeInfo?.icon && (
+                            <div className="w-5 h-5 rounded-full overflow-hidden">
+                              <Image
+                                src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
+                                alt={secondaryTree.name}
+                                width={20}
+                                height={20}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            </div>
+                          )}
+                          <span className="text-[10px] font-medium" style={{ color: secondaryTree.color }}>
+                            {secondaryTree.name}
+                          </span>
+                        </>
+                      )
+                    })()}
+                  </div>
+                  
+                  {/* Tier runes only (no keystones for secondary) */}
+                  {[secondaryTree.tier1, secondaryTree.tier2, secondaryTree.tier3].map((tier, idx) => (
+                    <div key={idx} className="grid grid-cols-3 gap-1 justify-items-center mb-1 last:mb-0">
+                      {tier.map(id => renderRune(id))}
+                    </div>
+                  ))}
+                  
+                  {/* Stat Shards - under separator in secondary tree */}
+                  <div className="border-t border-gray-700/50 my-2" />
+                  <div className="flex flex-col gap-1">
+                    {renderStatShard(STAT_PERKS.offense, currentPlayer.perks?.statPerks?.offense)}
+                    {renderStatShard(STAT_PERKS.flex, currentPlayer.perks?.statPerks?.flex)}
+                    {renderStatShard(STAT_PERKS.defense, currentPlayer.perks?.statPerks?.defense)}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+          )
+        })()}
       </div>
 
       {/* Summoner Spells */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <h3 className="text-xs font-medium text-text-muted">Summoner Spells</h3>
-          <PigLabel score={pigScoreBreakdown?.buildSubScores?.spells} />
+          {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.spells} />}
         </div>
         <div className="flex gap-2">
           {[currentPlayer.summoner1Id, currentPlayer.summoner2Id].map((spellId, idx) => {

@@ -1,38 +1,17 @@
 // Patch version utilities
 // Handles patch version conversion and fetching from Riot's DDragon API
+import { getLatestPatches as getDDragonPatches } from '@/lib/ddragon/assets'
 
 // Number of patches to keep detailed stats for
 export const PATCHES_TO_KEEP = 3
 
 /**
- * Fetches the latest patch versions from Riot's Data Dragon API
- * Converts API patch format (15.x.x) to ARAM PIG format (25.x)
+ * Fetches the latest patch versions from cached DDragon data
+ * Uses shared cache - only fetches from API when DDragon version changes
+ * Returns patches in ARAM PIG format (25.x)
  */
 export async function getLatestPatches(count: number = PATCHES_TO_KEEP): Promise<string[]> {
-  try {
-    const response = await fetch('https://ddragon.leagueoflegends.com/api/versions.json', {
-      next: { revalidate: 3600 },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch versions: ${response.status}`)
-    }
-
-    const versions: string[] = await response.json()
-
-    const patches = versions.slice(0, count).map(version => {
-      const parts = version.split('.')
-      const major = parseInt(parts[0])
-      const minor = parts[1]
-      const convertedMajor = major + 10
-      return `${convertedMajor}.${minor}`
-    })
-
-    return patches
-  } catch (error) {
-    console.error('Failed to fetch latest patches:', error)
-    return []
-  }
+  return getDDragonPatches(count)
 }
 
 /**

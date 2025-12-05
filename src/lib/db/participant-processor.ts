@@ -121,7 +121,7 @@ interface ProcessParticipantsOptions {
   gameCreation: number
   gameDuration: number
   timeline: any | null
-  isOlderThan30Days: boolean
+  isOlderThan1Year: boolean
   isRemake: boolean
   statsCache: ChampionStatsCache
   team100Kills: number
@@ -132,7 +132,7 @@ interface ProcessParticipantsOptions {
 export async function processParticipants(options: ProcessParticipantsOptions) {
   const {
     match, matchId, patch, gameCreation, gameDuration, timeline,
-    isOlderThan30Days, isRemake, statsCache, team100Kills, team200Kills
+    isOlderThan1Year, isRemake, statsCache, team100Kills, team200Kills
   } = options
 
   return Promise.all(
@@ -146,7 +146,7 @@ export async function processParticipants(options: ProcessParticipantsOptions) {
       let firstBuyStr: string | null = null
       let itemPurchases: ItemTimelineEvent[] | null = null
 
-      if (!isOlderThan30Days && timeline) {
+      if (!isOlderThan1Year && timeline) {
         abilityOrder = extractAbilityOrder(timeline, participantId)
         const buildOrder = extractBuildOrder(timeline, participantId)
         const firstBuy = extractFirstBuy(timeline, participantId)
@@ -158,7 +158,7 @@ export async function processParticipants(options: ProcessParticipantsOptions) {
       // calculate PIG score
       let pigScore: number | null = null
       let pigScoreBreakdown: any = null
-      if (!isOlderThan30Days && !isRemake && statsCache.size > 0) {
+      if (!isOlderThan1Year && !isRemake && statsCache.size > 0) {
         try {
           const killDeathSummary = timeline ? getKillDeathSummary(timeline, participantId, p.teamId) : null
           const breakdown = await calculatePigScoreWithBreakdownCached({
@@ -186,7 +186,6 @@ export async function processParticipants(options: ProcessParticipantsOptions) {
             skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
             buildOrder: buildOrderStr || undefined,
             firstBuy: firstBuyStr || undefined,
-            takedownQualityScore: killDeathSummary?.takedownScore,
             deathQualityScore: killDeathSummary?.deathScore,
           }, statsCache)
           if (breakdown) {
@@ -220,8 +219,8 @@ export function calculateTeamKills(participants: any[]): { team100: number; team
 }
 
 // prepare champion stats cache for a match
-export async function prepareStatsCache(participants: any[], isOlderThan30Days: boolean, isRemake: boolean): Promise<ChampionStatsCache> {
-  if (isOlderThan30Days || isRemake) return new Map()
+export async function prepareStatsCache(participants: any[], isOlderThan1Year: boolean, isRemake: boolean): Promise<ChampionStatsCache> {
+  if (isOlderThan1Year || isRemake) return new Map()
   const championNames = participants.map((p: any) => p.championName)
   return prefetchChampionStats(championNames)
 }

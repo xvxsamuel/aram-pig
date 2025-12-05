@@ -57,13 +57,12 @@ export function PerformanceTab({
           )}
         </p>
 
-        {/* Component Scores Summary - 2 main components: Performance (50%) and Build (50%) */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* Component Scores Summary - Performance only */}
+        <div className="mb-4">
           {/* Performance Component - includes Stats, Timeline, KDA */}
           <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
             <div className="flex items-center justify-between mb-2">
               <div className="text-[10px] text-text-muted uppercase tracking-wide">Performance</div>
-              <div className="text-[9px] text-text-muted">50%</div>
             </div>
             {(() => {
               const combinedPerformance = Math.round(
@@ -119,31 +118,13 @@ export function PerformanceTab({
               </div>
             </div>
           </div>
-          {/* Build Component */}
-          <div className="bg-abyss-800/50 rounded-lg border border-gold-dark/10 p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-[10px] text-text-muted uppercase tracking-wide">Build</div>
-              <div className="text-[9px] text-text-muted">50%</div>
-            </div>
-            <div
-              className={clsx(
-                'text-xl font-bold text-center',
-                pigScoreBreakdown.componentScores.build >= 85
-                  ? 'text-accent-light'
-                  : pigScoreBreakdown.componentScores.build >= 70
-                    ? 'text-gold-light'
-                    : 'text-negative'
-              )}
-            >
-              {pigScoreBreakdown.componentScores.build}
-            </div>
-            <div className="text-[8px] text-text-muted text-center mt-1">Items, Runes, Spells, Skills</div>
-          </div>
         </div>
 
-        {/* Metrics Grid */}
+        {/* Metrics Grid - Performance metrics only */}
         <div className="space-y-2.5">
-          {pigScoreBreakdown.metrics.map((m, idx) => {
+          {pigScoreBreakdown.metrics
+            .filter(m => !['Starter', 'Skills', 'Keystone', 'Spells', 'Core Build', 'Items'].includes(m.name))
+            .map((m, idx) => {
             const isGood = m.score >= 85
             const isBad = m.score < 50
             const isModerate = !isGood && !isBad
@@ -243,27 +224,9 @@ export function PerformanceTab({
               </div>
             </div>
 
-            {/* Quality Scores */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div className="bg-abyss-800/50 rounded p-2">
-                <div className="text-[10px] text-text-muted mb-1">Takedown Quality</div>
-                <div className="flex items-baseline gap-1.5">
-                  <span
-                    className={clsx(
-                      'text-lg font-bold tabular-nums',
-                      timeline.takedownScore >= 70
-                        ? 'text-accent-light'
-                        : timeline.takedownScore >= 50
-                          ? 'text-gold-light'
-                          : 'text-negative'
-                    )}
-                  >
-                    {timeline.takedownScore}
-                  </span>
-                  <span className="text-[10px] text-text-muted">/100</span>
-                </div>
-              </div>
-              <div className="bg-abyss-800/50 rounded p-2">
+            {/* Death Quality Score */}
+            <div className="mb-4">
+              <div className="bg-abyss-800/50 rounded p-2 max-w-[140px]">
                 <div className="text-[10px] text-text-muted mb-1">Death Quality</div>
                 <div className="flex items-baseline gap-1.5">
                   <span
@@ -327,7 +290,6 @@ export function PerformanceTab({
                 const isTakedown = event.type === 'takedown'
                 const isDeath = event.type === 'death'
                 const isKill = isTakedown && event.wasKill
-                const value = event.value ?? 50
                 const eventLabel = isTower
                   ? event.team === 'enemy'
                     ? 'Tower Destroyed'
@@ -337,16 +299,6 @@ export function PerformanceTab({
                       ? 'Kill'
                       : 'Assist'
                     : 'Death'
-
-                // color based on value: high value = bright, low value = dim
-                const getValueColor = (v: number, isTakedown: boolean) => {
-                  if (isTakedown) {
-                    return v >= 70 ? 'text-accent-light' : v >= 40 ? 'text-gold-light' : 'text-text-muted'
-                  } else {
-                    // for deaths, high value = good death (teamfight, low gold)
-                    return v >= 70 ? 'text-gold-light' : v >= 40 ? 'text-negative' : 'text-negative'
-                  }
-                }
 
                 // Map position if coordinates available
                 const hasPosition = event.x !== undefined && event.y !== undefined
@@ -418,7 +370,7 @@ export function PerformanceTab({
                           <div className="min-w-[120px]">
                             <div
                               className={clsx(
-                                'font-semibold mb-1.5 flex items-center justify-between',
+                                'font-semibold mb-1.5',
                                 isTower
                                   ? event.team === 'enemy'
                                     ? 'text-accent-light'
@@ -428,28 +380,7 @@ export function PerformanceTab({
                                     : 'text-negative'
                               )}
                             >
-                              <span>
-                                {eventLabel} at {formatTimeSec(event.t)}
-                              </span>
-                              {!isTower && (
-                                <span
-                                  className={clsx(
-                                    'ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold',
-                                    isTakedown
-                                      ? value >= 70
-                                        ? 'bg-accent-light/20'
-                                        : value >= 40
-                                          ? 'bg-gold-light/20'
-                                          : 'bg-abyss-600'
-                                      : value >= 70
-                                        ? 'bg-gold-light/20'
-                                        : 'bg-negative/20',
-                                    getValueColor(value, isTakedown)
-                                  )}
-                                >
-                                  {value}
-                                </span>
-                              )}
+                              {eventLabel} at {formatTimeSec(event.t)}
                             </div>
                             {!isTower && (
                               <div className="space-y-0.5">
@@ -471,7 +402,7 @@ export function PerformanceTab({
                                             : 'text-text-muted'
                                       )}
                                     >
-                                      {event.pos >= 60 ? 'Pushing' : event.pos <= 40 ? 'At base' : 'Mid-lane'}
+                                      {event.pos >= 60 ? 'Aggressive' : event.pos <= 40 ? 'Passive' : 'Neutral'}
                                     </span>
                                   </div>
                                 )}
@@ -520,9 +451,7 @@ export function PerformanceTab({
               {events.map((event, idx) => {
                 const isTower = event.type === 'tower'
                 const isTakedown = event.type === 'takedown'
-                const _isDeath = event.type === 'death'
                 const isKill = isTakedown && event.wasKill
-                const value = event.value ?? 50
                 const pos = event.pos
                 const eventLabel = isTower
                   ? event.team === 'enemy'
@@ -569,24 +498,6 @@ export function PerformanceTab({
                     >
                       {eventLabel}
                     </span>
-                    {!isTower && (
-                      <span
-                        className={clsx(
-                          'w-8 text-center tabular-nums font-medium rounded px-1',
-                          isTakedown
-                            ? value >= 70
-                              ? 'text-accent-light bg-accent-light/10'
-                              : value >= 40
-                                ? 'text-gold-light bg-gold-light/10'
-                                : 'text-text-muted bg-abyss-600/50'
-                            : value >= 70
-                              ? 'text-gold-light bg-gold-light/10'
-                              : 'text-negative bg-negative/10'
-                        )}
-                      >
-                        {value}
-                      </span>
-                    )}
                     {!isTower && event.gold !== undefined && event.gold > 0 && (
                       <span className="text-text-muted">
                         <span className="text-gold-light">{event.gold.toLocaleString()}g</span>
@@ -603,7 +514,7 @@ export function PerformanceTab({
                               : 'bg-abyss-600/50 text-text-muted'
                         )}
                       >
-                        {pos >= 60 ? 'PUSH' : pos <= 40 ? 'BASE' : 'MID'}
+                        {pos >= 60 ? 'AGG' : pos <= 40 ? 'PAS' : 'NEU'}
                       </span>
                     )}
                     {!isTower && event.tf && (
