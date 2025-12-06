@@ -220,23 +220,17 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   return (
     <main className="min-h-screen bg-abyss-700 text-white">
       <div className={`max-w-6xl mx-auto px-4 ${error ? 'py-4' : 'pb-8'}`}>
-        {error && !error.startsWith('wrong-region:') && (
-          <div className="bg-red-900/20 border border-red-500/50 rounded-2xl p-6 mb-6">
-            <p className="text-negative text-lg">{error}</p>
-            {error.includes('Rate limit') ? (
-              <p className="text-subtitle text-sm mt-2">
-                We're currently fetching your match history in the background. Please wait a few moments without
-                refreshing.
-              </p>
-            ) : (
-              <p className="text-subtitle text-sm mt-2">
-                Make sure the summoner name and tag are correct (e.g., hide on bush #KR1)
-              </p>
-            )}
-          </div>
+        {error && error.includes('Rate limit') && (
+          <SummonerNotFound
+            searchedRegion={regionLabel}
+            suggestedSummoners={[]}
+            ddragonVersion={ddragonVersion}
+            errorMessage="Rate limit reached"
+            errorHint="We're currently fetching your match history in the background. Please wait a few moments without refreshing."
+          />
         )}
 
-        {error && error.startsWith('wrong-region:') && suggestedSummoners.length > 0 && (
+        {error && !error.includes('Rate limit') && (
           <SummonerNotFound
             searchedRegion={regionLabel}
             suggestedSummoners={suggestedSummoners}

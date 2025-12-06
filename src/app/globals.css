@@ -22,7 +22,8 @@
   --color-gold-dark: oklch(0.4713 0.0697 81.41);
 
   --color-negative: oklch(62.451% 0.20324 17.952);
-  --color-negative-dark: oklch(45% 0.15 17.952);
+  --color-negative-dark: oklch(35.119% 0.08205 13.484);
+  --color-worst-dark: oklch(18.096% 0.03814 18.802);
   --color-warning: oklch(75% 0.18 70);
   --color-loss: oklch(33.809% 0.04742 13.776);
   --color-loss-light: oklch(40% 0.05 13.776);

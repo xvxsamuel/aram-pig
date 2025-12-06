@@ -61,6 +61,7 @@ interface ChampionStatsData {
       }
       spells?: Record<string, GameStats>
       starting?: Record<string, GameStats>
+      skills?: Record<string, GameStats>
     }
   >
 }

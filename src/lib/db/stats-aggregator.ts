@@ -142,6 +142,7 @@ interface ChampionStatsData {
       }
       spells: Record<string, GameStats>
       starting: Record<string, GameStats>
+      skills: Record<string, GameStats>
     }
   >
 }
@@ -345,6 +346,7 @@ export class StatsAggregator {
           },
           spells: {},
           starting: {},
+          skills: {},
         }
       }
       const combo = stats.core[comboKey]
@@ -414,6 +416,13 @@ export class StatsAggregator {
         if (!combo.starting[input.first_buy]) combo.starting[input.first_buy] = { games: 0, wins: 0 }
         combo.starting[input.first_buy].games += 1
         combo.starting[input.first_buy].wins += win
+      }
+
+      // combo skill order
+      if (input.skill_order && input.skill_order !== '') {
+        if (!combo.skills[input.skill_order]) combo.skills[input.skill_order] = { games: 0, wins: 0 }
+        combo.skills[input.skill_order].games += 1
+        combo.skills[input.skill_order].wins += win
       }
     }
   }

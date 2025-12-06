@@ -412,6 +412,7 @@ export default function ChampionPageClient({
               runes: comboData.runes || undefined,
               spells: comboData.spells || undefined,
               starting: comboData.starting || undefined,
+              skills: comboData.skills || undefined,
             }
           })
           // Filter: must have exactly 3 core items, minimum 100 games, AND winrate at least (champion average - 5%)
@@ -423,12 +424,13 @@ export default function ChampionPageClient({
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
-      <div className="max-w-6xl mx-auto px-12 py-8">
-        {/* champion header */}
-        <div className="bg-abyss-600 rounded-lg p-6 mb-6 border border-gold-dark/40">
-          <div className="flex items-center gap-6">
-            <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-              <div className="relative w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+      {/* Champion Header */}
+      <section className="bg-abyss-700">
+        <div className="max-w-6xl mx-auto px-8 py-6">
+          <div className="flex items-start gap-6">
+            {/* Champion icon with gold border */}
+            <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark flex-shrink-0">
+              <div className="relative w-24 h-24 rounded-[inherit] bg-abyss-800 overflow-hidden">
                 <Image
                   src={getChampionImageUrl(apiName, ddragonVersion)}
                   alt={displayName}
@@ -440,51 +442,52 @@ export default function ChampionPageClient({
                 <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
               </div>
             </div>
-            <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="text-4xl font-bold mb-2">{displayName}</h1>
-                  <div className="flex gap-6 text-lg">
-                    <div>
-                      <span className="text-subtitle">Winrate: </span>
-                      <span className="font-bold" style={{ color: getWinrateColor(data.overview.winrate) }}>
-                        {data.overview.winrate.toFixed(2)}%
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-subtitle">Games: </span>
-                      <span className="font-bold">{data.overview.games.toLocaleString()}</span>
-                    </div>
+            
+            <div className="flex-1 flex flex-col justify-between h-28">
+              <div>
+                <h1 className="text-3xl font-semibold text-white">{displayName}</h1>
+                <div className="flex gap-6 text-base mt-1">
+                  <div>
+                    <span className="text-text-muted">Winrate: </span>
+                    <span className="font-bold" style={{ color: getWinrateColor(data.overview.winrate) }}>
+                      {data.overview.winrate.toFixed(2)}%
+                    </span>
                   </div>
-                  <div className="text-sm text-subtitle mt-2">
-                    Last updated: {new Date(data.lastUpdated).toLocaleDateString()}
+                  <div>
+                    <span className="text-text-muted">Games: </span>
+                    <span className="font-bold text-white">{data.overview.games.toLocaleString()}</span>
                   </div>
-                </div>
-                <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4">
-                  <PatchFilter availablePatches={availablePatches} />
                 </div>
               </div>
+              <p className="text-xs font-light text-text-muted">
+                Last updated: {new Date(data.lastUpdated).toLocaleDateString()}
+              </p>
+            </div>
+            
+            {/* Patch filter */}
+            <div className="flex-shrink-0">
+              <PatchFilter availablePatches={availablePatches} />
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Tabbed content */}
-        <div className="bg-abyss-600 rounded-lg p-6 border border-gold-dark/40">
-          <ChampionDetailTabs
-            itemsBySlot={itemsBySlot}
-            bootsItems={bootsItems}
-            starterItems={starterItems}
-            runeStats={runeStats}
-            statPerks={data.topRunes.statPerks}
-            abilityLevelingStats={abilityLevelingStats}
-            summonerSpellStats={summonerSpellStats}
-            ddragonVersion={ddragonVersion}
-            totalGames={totalGames}
-            buildOrders={[]}
-            allBuildData={allBuildData}
-            championWinrate={data.overview.winrate}
-          />
-        </div>
+      {/* Main content */}
+      <div className="max-w-6xl mx-auto px-2 sm:px-8 pt-4">
+        <ChampionDetailTabs
+          itemsBySlot={itemsBySlot}
+          bootsItems={bootsItems}
+          starterItems={starterItems}
+          runeStats={runeStats}
+          statPerks={data.topRunes.statPerks}
+          abilityLevelingStats={abilityLevelingStats}
+          summonerSpellStats={summonerSpellStats}
+          ddragonVersion={ddragonVersion}
+          totalGames={totalGames}
+          buildOrders={[]}
+          allBuildData={allBuildData}
+          championWinrate={data.overview.winrate}
+        />
       </div>
     </main>
   )

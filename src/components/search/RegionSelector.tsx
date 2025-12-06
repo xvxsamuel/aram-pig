@@ -53,11 +53,11 @@ export default function RegionSelector({ value = 'EUW', onChange, onOpen, classN
           'w-12 h-6 flex items-center justify-center rounded-full',
           'bg-gradient-to-t from-action-200 to-action-100',
           'cursor-pointer outline-none',
-          'font-bold text-[14px] text-white',
+          'font-bold text-[14px] text-white leading-none',
           className
         )}
       >
-        <span className="translate-y-px">{value.toUpperCase()}</span>
+        <span className="-mt-px">{value.toUpperCase()}</span>
       </button>
 
       {isOpen && (

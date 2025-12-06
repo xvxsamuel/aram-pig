@@ -1,6 +1,6 @@
 'use client'
 
-import ProfileCard from '@/components/ui/ProfileCard'
+import Card from '@/components/ui/Card'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 // skeleton row for champions list
@@ -24,7 +24,7 @@ export default function SummonerLoadingSkeleton() {
       {/* left sidebar */}
       <div className="flex flex-col gap-4 xl:w-80 w-full flex-shrink-0">
         {/* Performance card */}
-        <ProfileCard title="Performance" contentClassName="pb-2">
+        <Card title="Performance" contentClassName="pb-2">
           <div className="grid grid-cols-3 gap-2">
             {/* PIG score arc placeholder */}
             <div className="flex items-center justify-start">
@@ -43,21 +43,21 @@ export default function SummonerLoadingSkeleton() {
               <div className="h-3 w-16 bg-abyss-500 rounded animate-pulse"></div>
             </div>
           </div>
-        </ProfileCard>
+        </Card>
 
         {/* Champions card */}
-        <ProfileCard title="Champions">
+        <Card title="Champions">
           <div className="-mx-2 space-y-1">
             {Array.from({ length: 7 }).map((_, i) => (
               <ChampionRowSkeleton key={i} />
             ))}
           </div>
-        </ProfileCard>
+        </Card>
       </div>
 
       {/* Match History with spinner */}
       <div className="w-full xl:flex-1 xl:min-w-0 flex flex-col">
-        <ProfileCard
+        <Card
           title="ARAM History"
           contentClassName="flex-1 flex flex-col"
           headerRight={<div className="h-7 w-48 bg-abyss-500 rounded-xl animate-pulse"></div>}
@@ -65,7 +65,7 @@ export default function SummonerLoadingSkeleton() {
           <div className="flex-1 flex items-center justify-center py-20">
             <LoadingSpinner size="lg" />
           </div>
-        </ProfileCard>
+        </Card>
       </div>
     </div>
   )

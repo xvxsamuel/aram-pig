@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getChampionImageUrl, getChampionDisplayName, getChampionUrlName } from '@/lib/ddragon'
 import { getWinrateColor, getKdaColor, getPigScoreColor } from '@/lib/ui'
-import ProfileCard from '@/components/ui/ProfileCard'
+import Card from '@/components/ui/Card'
 
 interface ChampionStats {
   championName: string
@@ -39,7 +39,7 @@ export default function SummonerTopChampions({
   }
 
   return (
-    <ProfileCard title="Champions" onTitleClick={() => onTabChange('champions')}>
+    <Card title="Champions" onTitleClick={() => onTabChange('champions')}>
       <div className="-mx-2 space-y-1">
         {championStats.length === 0
           ? // loading skeleton
@@ -112,6 +112,6 @@ export default function SummonerTopChampions({
               )
             })}
       </div>
-    </ProfileCard>
+    </Card>
   )
 }

@@ -78,6 +78,9 @@ export function createSpellKey(spell1: number, spell2: number): string {
  * 
  * Formula: (p + z²/2n - z*sqrt(p(1-p)/n + z²/4n²)) / (1 + z²/n)
  * where p = winrate (0-1), n = games, z = 1.96 for 95% confidence
+ * 
+ * Includes a small pickrate bonus: log10(games) * 0.5
+ * This helps break ties in favor of more popular/proven options.
  */
 export function calculateWilsonScore(winrate: number, games: number): number {
   if (games === 0) return 0
@@ -92,7 +95,12 @@ export function calculateWilsonScore(winrate: number, games: number): number {
   const spread = z * Math.sqrt((p * (1 - p) + z2 / (4 * n)) / n)
   const wilsonLowerBound = (centerAdjusted - spread) / denominator
   
-  return wilsonLowerBound * 100 // return as percentage
+  // Small pickrate bonus: log10(games) * 1.2
+  // This gives ~3.6% bonus at 10k games, ~4.8% at 100k games
+  // Helps break ties in favor of more popular/proven options
+  const pickrateBonus = Math.log10(Math.max(n, 1)) * 1.2
+  
+  return wilsonLowerBound * 100 + pickrateBonus
 }
 
 /**

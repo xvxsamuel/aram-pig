@@ -3,92 +3,16 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import Image from 'next/image'
 import clsx from 'clsx'
+import { motion, AnimatePresence, LayoutGroup } from 'motion/react'
 import Tooltip from '@/components/ui/Tooltip'
+import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import ItemIcon from '@/components/ui/ItemIcon'
+import Card from '@/components/ui/Card'
 import { getSummonerSpellUrl } from '@/lib/ddragon'
 import { getWinrateColor } from '@/lib/ui'
+import { RUNE_TREES, STAT_PERKS, getRuneTree } from '@/lib/game'
+import { calculateWilsonScore as calculateWilsonScoreFromWinrate } from '@/lib/scoring/build-scoring'
 import runesData from '@/data/runes.json'
-
-// rune tree structure - organized by tree, keystone, and tier
-const RUNE_TREES = {
-  precision: {
-    id: 8000,
-    name: 'Precision',
-    color: '#C8AA6E',
-    keystones: [8005, 8008, 8021, 8010], // Press the Attack, Lethal Tempo, Fleet Footwork, Conqueror
-    tier1: [9101, 8009, 9111], // Absorb Life, Presence of Mind, Triumph
-    tier2: [9104, 9103, 9105], // Legend: Alacrity, Legend: Bloodline, Legend: Haste
-    tier3: [8014, 8017, 8299], // Coup de Grace, Cut Down, Last Stand
-  },
-  domination: {
-    id: 8100,
-    name: 'Domination',
-    color: '#D44242',
-    keystones: [8112, 8128, 9923], // Electrocute, Dark Harvest, Hail of Blades
-    tier1: [8126, 8139, 8143], // Cheap Shot, Taste of Blood, Sudden Impact
-    tier2: [8137, 8140, 8141], // Sixth Sense, Grisly Mementos, Deep Ward
-    tier3: [8135, 8105, 8106], // Treasure Hunter, Relentless Hunter, Ultimate Hunter
-  },
-  sorcery: {
-    id: 8200,
-    name: 'Sorcery',
-    color: '#9FAAFC',
-    keystones: [8214, 8229, 8230], // Summon Aery, Arcane Comet, Phase Rush
-    tier1: [8224, 8226, 8275], // Nullifying Orb, Manaflow Band, Nimbus Cloak
-    tier2: [8210, 8234, 8233], // Transcendence, Celerity, Absolute Focus
-    tier3: [8237, 8232, 8236], // Scorch, Waterwalking, Gathering Storm
-  },
-  resolve: {
-    id: 8400,
-    name: 'Resolve',
-    color: '#A1D586',
-    keystones: [8437, 8439, 8465], // Grasp of the Undying, Aftershock, Guardian
-    tier1: [8446, 8463, 8401], // Demolish, Font of Life, Shield Bash
-    tier2: [8429, 8444, 8473], // Conditioning, Second Wind, Bone Plating
-    tier3: [8451, 8453, 8242], // Overgrowth, Revitalize, Unflinching
-  },
-  inspiration: {
-    id: 8300,
-    name: 'Inspiration',
-    color: '#49AAF5',
-    keystones: [8351, 8360, 8369], // Glacial Augment, Unsealed Spellbook, First Strike
-    tier1: [8306, 8304, 8313], // Hextech Flashtraption, Magical Footwear, Triple Tonic
-    tier2: [8321, 8345, 8347], // Cash Back, Biscuit Delivery, Cosmic Insight
-    tier3: [8410, 8352, 8316], // Approach Velocity, Time Warp Tonic, Jack Of All Trades
-  },
-}
-
-// Stat perk shards (tertiary runes)
-const STAT_PERKS = {
-  offense: [
-    { id: 5008, name: 'Adaptive Force', icon: 'perk-images/StatMods/StatModsAdaptiveForceIcon.png' },
-    { id: 5005, name: 'Attack Speed', icon: 'perk-images/StatMods/StatModsAttackSpeedIcon.png' },
-    { id: 5007, name: 'Ability Haste', icon: 'perk-images/StatMods/StatModsCDRScalingIcon.png' },
-  ],
-  flex: [
-    { id: 5008, name: 'Adaptive Force', icon: 'perk-images/StatMods/StatModsAdaptiveForceIcon.png' },
-    { id: 5010, name: 'Move Speed', icon: 'perk-images/StatMods/StatModsMovementSpeedIcon.png' },
-    { id: 5001, name: 'Health Scaling', icon: 'perk-images/StatMods/StatModsHealthPlusIcon.png' },
-  ],
-  defense: [
-    { id: 5011, name: 'Health', icon: 'perk-images/StatMods/StatModsHealthScalingIcon.png' },
-    { id: 5013, name: 'Tenacity', icon: 'perk-images/StatMods/StatModsTenacityIcon.png' },
-    { id: 5001, name: 'Health Scaling', icon: 'perk-images/StatMods/StatModsHealthPlusIcon.png' },
-  ],
-}
-
-// get rune tree info by rune ID
-function getRuneTree(
-  runeId: number
-): { tree: typeof RUNE_TREES.precision; tier: 'keystone' | 'tier1' | 'tier2' | 'tier3' | null } | null {
-  for (const tree of Object.values(RUNE_TREES)) {
-    if (tree.keystones.includes(runeId)) return { tree, tier: 'keystone' }
-    if (tree.tier1.includes(runeId)) return { tree, tier: 'tier1' }
-    if (tree.tier2.includes(runeId)) return { tree, tier: 'tier2' }
-    if (tree.tier3.includes(runeId)) return { tree, tier: 'tier3' }
-  }
-  return null
-}
 
 // "qew" -> "Q > E > W"
 function getAbilityMaxOrder(abilityOrder: string): string {
@@ -142,23 +66,14 @@ function getAbilityMaxOrder(abilityOrder: string): string {
   return maxOrder.join(' > ')
 }
 
-// Wilson Score Lower Bound (95% confidence)
+// wilson score lower bound (95% confidence)
 // This gives us the lower bound of what the "true" winrate likely is
 // Low sample sizes get pulled down heavily, high samples stay close to actual WR
+// Wrapper for the shared Wilson score calculation that takes (games, wins) instead of (winrate, games)
 function calculateWilsonScore(games: number, wins: number): number {
   if (games === 0) return 0
-  
-  const p = wins / games // winrate as decimal
-  const n = games
-  const z = 1.96 // 95% confidence
-  const z2 = z * z
-  
-  const denominator = 1 + z2 / n
-  const centerAdjusted = p + z2 / (2 * n)
-  const spread = z * Math.sqrt((p * (1 - p) + z2 / (4 * n)) / n)
-  const wilsonLowerBound = (centerAdjusted - spread) / denominator
-  
-  return wilsonLowerBound * 100 // return as percentage
+  const winrate = (wins / games) * 100
+  return calculateWilsonScoreFromWinrate(winrate, games)
 }
 
 interface ItemStat {
@@ -234,6 +149,7 @@ interface PreCalculatedCombo {
   }
   spells?: Record<string, { games: number; wins: number }>
   starting?: Record<string, { games: number; wins: number }>
+  skills?: Record<string, { games: number; wins: number }>
 }
 
 interface Props {
@@ -438,7 +354,7 @@ export default function ChampionDetailTabs({
     }
   }, [bestCombinations.length, worstCombinations.length]) // Only depend on length, not the arrays
 
-  // Update selector position when selection changes
+  // Update selector position when selection or view changes
   useLayoutEffect(() => {
     if (selectedCombo === null) return
     
@@ -459,8 +375,13 @@ export default function ChampionDetailTabs({
     // Run immediately and also on next frame for safety
     updatePosition()
     const rafId = requestAnimationFrame(updatePosition)
-    return () => cancelAnimationFrame(rafId)
-  }, [selectedCombo])
+    // Also run after a short delay to catch animation completion
+    const timeoutId = setTimeout(updatePosition, 250)
+    return () => {
+      cancelAnimationFrame(rafId)
+      clearTimeout(timeoutId)
+    }
+  }, [selectedCombo, coreBuildsView])
 
   // Also update selector on resize
   useEffect(() => {
@@ -485,15 +406,36 @@ export default function ChampionDetailTabs({
   // Find the selected combo data from allBuildData using originalIndex
   const selectedComboData = selectedCombo !== null ? allBuildData?.[selectedCombo] : null
   const selectedComboDisplay = [...bestCombinations, ...worstCombinations].find(c => c.originalIndex === selectedCombo)
+  
+  // Minimum games threshold for using combo-specific data (except item rows)
+  const COMBO_MIN_GAMES = 500
+  const MIN_PICKRATE = 0.02 // 2% minimum pickrate for combo data
+  const comboTotalGames = selectedComboDisplay?.estimatedGames ?? 0
+  const comboHasEnoughGames = comboTotalGames >= COMBO_MIN_GAMES
+  const useGlobalDataForNonItems = !comboHasEnoughGames && selectedComboDisplay !== undefined
+  
+  // Helper to filter by 2% pickrate within combo data
+  const meetsPickrateThreshold = (games: number) => games >= comboTotalGames * MIN_PICKRATE
+  
+  // Reusable warning icon for low sample size
+  const LowSampleWarning = useGlobalDataForNonItems ? (
+    <SimpleTooltip content={<span className="text-xs text-white">Using champion-wide data due to low sample size for this build</span>}>
+      <div className="cursor-help text-warning">
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+        </svg>
+      </div>
+    </SimpleTooltip>
+  ) : undefined
 
   return (
     <div>
-      {/* Tab Navigation */}
-      <div className="flex gap-1 mb-6 border-b border-gold-dark/40">
+      {/* Tab Navigation - outside content boxes, similar to profile page */}
+      <div className="flex gap-1 mb-4 -mt-2">
         <button
           onClick={() => setSelectedTab('overview')}
           className={clsx(
-            'px-6 py-2 font-semibold transition-all border-b-2',
+            'cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2',
             selectedTab === 'overview'
               ? 'border-accent-light text-white'
               : 'border-transparent text-text-muted hover:text-white'
@@ -504,7 +446,7 @@ export default function ChampionDetailTabs({
         <button
           onClick={() => setSelectedTab('items')}
           className={clsx(
-            'px-6 py-2 font-semibold transition-all border-b-2',
+            'cursor-pointer px-4 py-2 font-semibold tracking-wide transition-all border-b-2',
             selectedTab === 'items'
               ? 'border-accent-light text-white'
               : 'border-transparent text-text-muted hover:text-white'
@@ -515,7 +457,7 @@ export default function ChampionDetailTabs({
         <button
           onClick={() => setSelectedTab('runes')}
           className={clsx(
-            'px-6 py-2 font-semibold transition-all border-b-2',
+            'cursor-pointer px-4 py-2 font-semibold tracking-wide transition-all border-b-2',
             selectedTab === 'runes'
               ? 'border-accent-light text-white'
               : 'border-transparent text-text-muted hover:text-white'
@@ -526,28 +468,31 @@ export default function ChampionDetailTabs({
         <button
           onClick={() => setSelectedTab('leveling')}
           className={clsx(
-            'px-6 py-2 font-semibold transition-all border-b-2',
+            'cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2',
             selectedTab === 'leveling'
               ? 'border-accent-light text-white'
               : 'border-transparent text-text-muted hover:text-white'
           )}
         >
-          Leveling Order
+          Leveling
         </button>
       </div>
 
       {/* Overview Tab */}
       {selectedTab === 'overview' && (
-        <div className="grid grid-cols-12 gap-6">
+        <div className="grid grid-cols-12 gap-4 pb-8">
           {/* Left Sidebar - Item Combinations */}
           <div className="col-span-12 lg:col-span-3 xl:col-span-3">
-            <div className="bg-abyss-700 rounded-lg p-4 sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto">
+            <div className={clsx(
+              "rounded-lg border border-gold-dark/40 sticky top-20 max-h-[calc(100vh-7rem)] overflow-y-auto transition-colors duration-200",
+              coreBuildsView === 'worst' ? "bg-worst-dark" : "bg-abyss-600"
+            )}>
               {/* Container for animated selector */}
-              <div ref={containerRef} className="relative">
+              <div ref={containerRef} className="relative px-4.5 py-2 pb-2">
                 {/* Animated gold border selector - gradient border with transparent center */}
                 {selectorStyle && (
                   <div 
-                    className="absolute left-0 right-0 rounded-lg transition-all duration-300 ease-out pointer-events-none z-10"
+                    className="absolute left-4.5 right-4.5 rounded-lg transition-all duration-300 ease-out pointer-events-none z-10"
                     style={{ 
                       top: selectorStyle.top,
                       height: selectorStyle.height,
@@ -561,143 +506,154 @@ export default function ChampionDetailTabs({
                 )}
                 
                 {/* Core Builds Header with Toggle */}
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className={clsx(
-                    "text-sm font-semibold",
-                    coreBuildsView === 'best' ? 'text-white' : 'text-negative'
-                  )}>
-                    {coreBuildsView === 'best' ? 'Best' : 'Worst'} Core Builds
-                  </h2>
-                  <button
-                    onClick={() => setCoreBuildsView(coreBuildsView === 'best' ? 'worst' : 'best')}
-                    className="text-xs text-muted hover:text-white transition-colors flex items-center gap-1"
-                  >
-                    {coreBuildsView === 'best' ? 'Worst' : 'Best'} →
-                  </button>
+                <div className="mb-3">
+                  <div className="flex items-center justify-between gap-4 pb-1.5">
+                    <motion.h2
+                      key={coreBuildsView}
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-lg font-semibold"
+                    >
+                      <motion.span
+                        animate={{ 
+                          color: coreBuildsView === 'best' ? '#ffffff' : 'oklch(62% 0.15 17.952)'
+                        }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {coreBuildsView === 'best' ? 'Best' : 'Worst'} Core Builds
+                      </motion.span>
+                    </motion.h2>
+                    <button
+                      onClick={() => {
+                        const newView = coreBuildsView === 'best' ? 'worst' : 'best'
+                        setCoreBuildsView(newView)
+                        // Reset to first item in the new list
+                        const newList = newView === 'best' ? bestCombinations : worstCombinations
+                        if (newList.length > 0) {
+                          setSelectedCombo(newList[0].originalIndex)
+                        }
+                      }}
+                      className="text-xs text-text-muted hover:text-white transition-colors flex items-center gap-0.5"
+                    >
+                      {coreBuildsView === 'worst' && <span className="text-[10px]">‹</span>}
+                      <motion.span
+                        key={coreBuildsView}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {coreBuildsView === 'best' ? 'Worst' : 'Best'}
+                      </motion.span>
+                      {coreBuildsView === 'best' && <span className="text-[10px]">›</span>}
+                    </button>
+                  </div>
+                  <div className="h-px bg-gradient-to-r from-gold-dark/30 to-transparent -mx-4.5 mb-3" />
                 </div>
 
                 {/* Core Builds List */}
-                {coreBuildsView === 'best' && bestCombinations.length > 0 && (
-                  <div className="space-y-2">
-                    {(showAllBuilds ? bestCombinations : bestCombinations.slice(0, 7)).map(combo => (
-                      <button
-                        key={combo.originalIndex}
-                        ref={(el) => {
-                          if (el) buttonRefs.current.set(combo.originalIndex, el)
-                          else buttonRefs.current.delete(combo.originalIndex)
-                        }}
-                        onClick={() => setSelectedCombo(combo.originalIndex)}
+                <LayoutGroup>
+                  <motion.div layout className="space-y-2">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {(() => {
+                        const combinations = coreBuildsView === 'best' ? bestCombinations : worstCombinations
+                        const isWorst = coreBuildsView === 'worst'
+                        
+                        if (combinations.length === 0) return null
+                        
+                        const visibleCombos = showAllBuilds ? combinations : combinations.slice(0, 5)
+                        
+                        return (
+                          <>
+                            {visibleCombos.map((combo, idx) => (
+                              <motion.button
+                                layout
+                                key={`${coreBuildsView}-${combo.originalIndex}`}
+                                initial={{ opacity: 0, x: isWorst ? 20 : -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: isWorst ? -20 : 20 }}
+                                transition={{ duration: 0.2, delay: idx * 0.02 }}
+                                ref={(el) => {
+                                  if (el) buttonRefs.current.set(combo.originalIndex, el)
+                                  else buttonRefs.current.delete(combo.originalIndex)
+                                }}
+                                onClick={() => setSelectedCombo(combo.originalIndex)}
+                                className={clsx(
+                                  'w-full text-left p-3 rounded-lg transition-colors relative',
+                                  isWorst
+                                    ? selectedCombo === combo.originalIndex ? 'bg-loss-light' : 'bg-loss hover:bg-loss-light'
+                                    : selectedCombo === combo.originalIndex ? 'bg-abyss-700' : 'bg-abyss-800 hover:bg-abyss-700'
+                                )}
+                              >
+                                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                  {combo.items
+                                    .filter(item => item.item_id !== 99999)
+                                    .map((item, position) => (
+                                      <div key={position} className="flex items-center gap-1">
+                                        {position > 0 && <span className="text-gray-600 text-xs">+</span>}
+                                        <ItemIcon
+                                          itemId={item.item_id}
+                                          ddragonVersion={ddragonVersion}
+                                          size="sm"
+                                          className="flex-shrink-0 bg-abyss-900 border-gray-700"
+                                        />
+                                      </div>
+                                    ))}
+                                  {combo.hasBoots && (
+                                    <>
+                                      <span className="text-gray-600 text-xs">+</span>
+                                      <div className="w-7 h-7 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                                        <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">
+                                          Any
+                                          <br />
+                                          Boots
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-bold" style={{ color: getWinrateColor(combo.avgWinrate) }}>
+                                    {combo.avgWinrate.toFixed(1)}%
+                                  </span>
+                                  <span className="text-subtitle">{Math.round(combo.estimatedGames).toLocaleString()}</span>
+                                </div>
+                              </motion.button>
+                            ))}
+                          </>
+                        )
+                      })()}
+                    </AnimatePresence>
+                    
+                    {/* Show more/less button */}
+                    {((coreBuildsView === 'best' ? bestCombinations : worstCombinations).length > 5) && (
+                      <motion.button
+                        layout
+                        onClick={() => setShowAllBuilds(!showAllBuilds)}
                         className={clsx(
-                          'w-full text-left p-3 rounded-lg transition-colors relative',
-                          selectedCombo === combo.originalIndex ? 'bg-abyss-700' : 'bg-abyss-800 hover:bg-abyss-900'
+                          "w-full text-center py-2 text-xs text-subtitle hover:text-white transition-colors rounded-lg border border-gold-dark/40 hover:border-gold-dark/60 flex items-center justify-center gap-1",
+                          coreBuildsView === 'worst' ? "bg-loss hover:bg-loss-light" : "bg-abyss-700 hover:bg-abyss-600"
                         )}
                       >
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          {combo.items
-                            .filter(item => item.item_id !== 99999)
-                            .map((item, position) => (
-                              <div key={position} className="flex items-center gap-1">
-                                {position > 0 && <span className="text-gray-600 text-xs">+</span>}
-                                <ItemIcon
-                                  itemId={item.item_id}
-                                  ddragonVersion={ddragonVersion}
-                                  size="sm"
-                                  className="flex-shrink-0 bg-abyss-900 border-gray-700"
-                                />
-                              </div>
-                            ))}
-                          {combo.hasBoots && (
-                            <>
-                              <span className="text-gray-600 text-xs">+</span>
-                              <div className="w-7 h-7 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
-                                <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">
-                                  Any
-                                  <br />
-                                  Boots
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="font-bold" style={{ color: getWinrateColor(combo.avgWinrate) }}>
-                            {combo.avgWinrate.toFixed(1)}%
-                          </span>
-                          <span className="text-subtitle">{Math.round(combo.estimatedGames).toLocaleString()}</span>
-                        </div>
-                      </button>
-                    ))}
-                    {!showAllBuilds && bestCombinations.length > 7 && (
-                      <button
-                        onClick={() => setShowAllBuilds(true)}
-                        className="w-full text-center py-2 text-xs text-muted hover:text-white transition-colors"
-                      >
-                        Load more builds ({bestCombinations.length - 7} more)
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {coreBuildsView === 'worst' && worstCombinations.length > 0 && (
-                  <div className="space-y-2">
-                    {(showAllBuilds ? worstCombinations : worstCombinations.slice(0, 7)).map(combo => (
-                      <button
-                        key={combo.originalIndex}
-                        ref={(el) => {
-                          if (el) buttonRefs.current.set(combo.originalIndex, el)
-                          else buttonRefs.current.delete(combo.originalIndex)
-                        }}
-                        onClick={() => setSelectedCombo(combo.originalIndex)}
-                        className={clsx(
-                          'w-full text-left p-3 rounded-lg transition-colors relative',
-                          selectedCombo === combo.originalIndex ? 'bg-abyss-700' : 'bg-abyss-800 hover:bg-abyss-900'
+                        {showAllBuilds ? (
+                          <>
+                            <span>Show less</span>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </>
+                        ) : (
+                          <>
+                            <span>Show more ({(coreBuildsView === 'best' ? bestCombinations : worstCombinations).length - 5})</span>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </>
                         )}
-                      >
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          {combo.items
-                            .filter(item => item.item_id !== 99999)
-                            .map((item, position) => (
-                              <div key={position} className="flex items-center gap-1">
-                                {position > 0 && <span className="text-gray-600 text-xs">+</span>}
-                                <ItemIcon
-                                  itemId={item.item_id}
-                                  ddragonVersion={ddragonVersion}
-                                  size="sm"
-                                  className="flex-shrink-0 bg-abyss-900 border-gray-700"
-                                />
-                              </div>
-                            ))}
-                          {combo.hasBoots && (
-                            <>
-                              <span className="text-gray-600 text-xs">+</span>
-                              <div className="w-7 h-7 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
-                                <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">
-                                  Any
-                                  <br />
-                                  Boots
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span className="font-bold" style={{ color: getWinrateColor(combo.avgWinrate) }}>
-                            {combo.avgWinrate.toFixed(1)}%
-                          </span>
-                          <span className="text-subtitle">{Math.round(combo.estimatedGames).toLocaleString()}</span>
-                        </div>
-                      </button>
-                    ))}
-                    {!showAllBuilds && worstCombinations.length > 7 && (
-                      <button
-                        onClick={() => setShowAllBuilds(true)}
-                        className="w-full text-center py-2 text-xs text-muted hover:text-white transition-colors"
-                      >
-                        Load more builds ({worstCombinations.length - 7} more)
-                      </button>
+                      </motion.button>
                     )}
-                  </div>
-                )}
+                  </motion.div>
+                </LayoutGroup>
 
                 {/* Empty state */}
                 {((coreBuildsView === 'best' && bestCombinations.length === 0) ||
@@ -711,16 +667,15 @@ export default function ChampionDetailTabs({
           </div>
 
           {/* Main Content Area */}
-          <div className="col-span-12 lg:col-span-9 xl:col-span-9 space-y-6">
+          <div className="col-span-12 lg:col-span-9 xl:col-span-9 space-y-4">
             {/* Items Section with Rune Tree - shows build order when combo selected */}
-            <div className="bg-abyss-700 rounded-lg p-6">
+            <Card title="Items">
               <div className="flex flex-col lg:flex-row gap-6">
                 {/* Items Grid */}
                 <div className="flex-1">
-                  <h3 className="text-2xl font-bold mb-4">Items</h3>
                   {selectedComboData && selectedComboDisplay ? (
                     <div>
-                      <div className="text-sm text-subtitle mb-6">
+                      <div className="text-sm text-text-muted mb-6">
                         Showing most common items built in each slot with this combination (
                         {selectedComboDisplay.estimatedGames.toLocaleString()} games)
                       </div>
@@ -776,21 +731,20 @@ export default function ChampionDetailTabs({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center text-subtitle py-12">No item combinations available</div>
+                    <div className="text-center text-text-muted py-12">No item combinations available</div>
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
 
-            {/* Runes Section - Full rune page based on best keystone */}
-            <div className="bg-abyss-700 rounded-lg p-6">
-              <h3 className="text-2xl font-bold mb-4">Runes</h3>
+            {/* Runes Section - Full rune page with all options visible */}
+            <Card title="Runes" headerRight={LowSampleWarning}>
               {(() => {
                 // Convert combo runes data to RuneStat-like format if available
                 type ComboRuneData = { rune_id: number; games: number; wins: number; winrate: number }
                 let comboRunes: ComboRuneData[] = []
                 
-                if (selectedComboData?.runes) {
+                if (!useGlobalDataForNonItems && selectedComboData?.runes) {
                   // Merge primary and secondary runes from combo
                   const runeEntries: [string, { games: number; wins: number }][] = []
                   if (selectedComboData.runes.primary) {
@@ -800,15 +754,18 @@ export default function ChampionDetailTabs({
                     runeEntries.push(...Object.entries(selectedComboData.runes.secondary))
                   }
                   
-                  comboRunes = runeEntries.map(([runeId, data]) => ({
-                    rune_id: parseInt(runeId),
-                    games: data.games,
-                    wins: data.wins,
-                    winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
-                  }))
+                  // Only include runes that meet the 2% pickrate threshold
+                  comboRunes = runeEntries
+                    .filter(([, data]) => meetsPickrateThreshold(data.games))
+                    .map(([runeId, data]) => ({
+                      rune_id: parseInt(runeId),
+                      games: data.games,
+                      wins: data.wins,
+                      winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0,
+                    }))
                 }
 
-                // Decide which rune source to use
+                // Use combo runes if we have them (already filtered by useGlobalDataForNonItems)
                 const useComboRunes = comboRunes.length > 0
                 
                 // Get all runes from global stats (for fallback and tier lookup)
@@ -842,10 +799,19 @@ export default function ChampionDetailTabs({
                 // Get best rune for each tier in the primary tree
                 const primaryTreeName = primaryTreeInfo.tree.name.toLowerCase()
                 const getBestRuneForTier = (tier: 'tier1' | 'tier2' | 'tier3') => {
+                  // Filter runes for this tier from combo data
                   const tierRunes = runesSource.filter(r => {
                     const info = getRuneTree(r.rune_id)
                     return info?.tree.name.toLowerCase() === primaryTreeName && info?.tier === tier
                   })
+                  // If no combo runes meet threshold for this tier, fall back to global
+                  if (useComboRunes && tierRunes.length === 0) {
+                    const globalTierRunes = allGlobalRunes.filter(r => {
+                      const info = getRuneTree(r.rune_id)
+                      return info?.tree.name.toLowerCase() === primaryTreeName && info?.tier === tier
+                    })
+                    return globalTierRunes.sort((a, b) => getWilsonScoreForRune(b) - getWilsonScoreForRune(a))[0]
+                  }
                   return tierRunes.sort((a, b) => getWilsonScoreForRune(b) - getWilsonScoreForRune(a))[0]
                 }
 
@@ -874,160 +840,265 @@ export default function ChampionDetailTabs({
                   : null
 
                 // Get top 2 runes from secondary tree by Wilson score
-                const secondaryRunes = secondaryTreeRunes
+                const secondaryRunesList = secondaryTreeRunes
                   .filter(r => getRuneTree(r.rune_id)?.tree.name.toLowerCase() === bestSecondaryTreeName)
                   .sort((a, b) => getWilsonScoreForRune(b) - getWilsonScoreForRune(a))
                   .slice(0, 2)
 
                 const primaryTree = primaryTreeInfo.tree
-                const primaryTreeIcon = (runesData as Record<string, any>)[primaryTree.id]?.icon
-                const keystoneInfo = (runesData as Record<string, any>)[bestKeystone.rune_id.toString()]
+                const selectedRuneIds = new Set([
+                  bestKeystone.rune_id,
+                  bestTier1?.rune_id,
+                  bestTier2?.rune_id,
+                  bestTier3?.rune_id,
+                  ...secondaryRunesList.map(r => r.rune_id)
+                ].filter(Boolean) as number[])
+
+                // Get best stat perks by Wilson score - returns index
+                // Use combo-specific tertiary data if available and has enough games, otherwise fall back to global
+                type StatPerk = { id: number; name: string; icon: string }
+                type TertiaryData = Record<string, { games: number; wins: number }>
+                
+                // Get combo tertiary data if available
+                const comboTertiary = selectedComboData?.runes?.tertiary as { 
+                  offense?: TertiaryData
+                  flex?: TertiaryData
+                  defense?: TertiaryData 
+                } | undefined
+                
+                // Use combo data only if we're NOT using global for non-items
+                const useComboTertiary = !useGlobalDataForNonItems && !!comboTertiary
+                
+                const getBestStatPerkIndexFromCombo = (
+                  perks: readonly StatPerk[], 
+                  comboData: TertiaryData | undefined,
+                  globalData: StatPerkStat[],
+                  useCombo: boolean
+                ): number => {
+                  let bestIdx = 0
+                  let bestScore = 0
+                  
+                  perks.forEach((perk, idx) => {
+                    let games = 0
+                    let wins = 0
+                    
+                    // Use combo data only if it meets 2% pickrate threshold
+                    if (useCombo && comboData && comboData[perk.id.toString()]) {
+                      const comboStat = comboData[perk.id.toString()]
+                      if (meetsPickrateThreshold(comboStat.games)) {
+                        games = comboStat.games
+                        wins = comboStat.wins
+                      } else {
+                        // Fall back to global if combo doesn't meet threshold
+                        const stat = globalData.find(s => s.key === perk.id.toString())
+                        if (stat) {
+                          games = stat.games
+                          wins = stat.wins
+                        }
+                      }
+                    } else {
+                      // Fall back to global data
+                      const stat = globalData.find(s => s.key === perk.id.toString())
+                      if (stat) {
+                        games = stat.games
+                        wins = stat.wins
+                      }
+                    }
+                    
+                    if (games > 0) {
+                      const score = calculateWilsonScore(games, wins)
+                      if (score > bestScore) {
+                        bestScore = score
+                        bestIdx = idx
+                      }
+                    }
+                  })
+                  return bestIdx
+                }
+
+                const bestOffenseIdx = getBestStatPerkIndexFromCombo(
+                  STAT_PERKS.offense, 
+                  comboTertiary?.offense, 
+                  statPerks.offense,
+                  useComboTertiary
+                )
+                const bestFlexIdx = getBestStatPerkIndexFromCombo(
+                  STAT_PERKS.flex, 
+                  comboTertiary?.flex, 
+                  statPerks.flex,
+                  useComboTertiary
+                )
+                const bestDefenseIdx = getBestStatPerkIndexFromCombo(
+                  STAT_PERKS.defense, 
+                  comboTertiary?.defense, 
+                  statPerks.defense,
+                  useComboTertiary
+                )
+                
+                // Helper to render a rune icon with selected/unselected state
+                const renderRune = (runeId: number, isKeystone: boolean = false) => {
+                  const runeInfo = (runesData as Record<string, any>)[runeId.toString()]
+                  const isSelected = selectedRuneIds.has(runeId)
+                  const size = isKeystone ? 'w-9 h-9' : 'w-7 h-7'
+                  const imgSize = isKeystone ? 36 : 28
+                  
+                  return (
+                    <Tooltip key={runeId} id={runeId} type="rune">
+                      <div className={clsx(
+                        size, "rounded-full overflow-hidden cursor-pointer",
+                        isSelected ? "border-2 border-gold-light" : "border border-gray-700 opacity-30 grayscale"
+                      )}>
+                        {runeInfo?.icon && (
+                          <Image
+                            src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
+                            alt=""
+                            width={imgSize}
+                            height={imgSize}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        )}
+                      </div>
+                    </Tooltip>
+                  )
+                }
+
+                // Helper to render stat shard row
+                const renderStatShardRow = (shardOptions: readonly StatPerk[], selectedIdx: number) => {
+                  return (
+                    <div className="flex gap-1">
+                      {shardOptions.map((shard, idx) => {
+                        const isSelected = idx === selectedIdx
+                        return (
+                          <div
+                            key={shard.id}
+                            className={clsx(
+                              "w-5 h-5 rounded-full overflow-hidden",
+                              isSelected ? "border border-gold-light" : "border border-gray-700 opacity-30 grayscale"
+                            )}
+                          >
+                            <Image
+                              src={`https://ddragon.leagueoflegends.com/cdn/img/${shard.icon}`}
+                              alt={shard.name}
+                              width={20}
+                              height={20}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                }
 
                 return (
-                  <div className="flex flex-col lg:flex-row gap-8">
+                  <div>
+                    <div className="flex gap-4">
                     {/* Primary Tree */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        {primaryTreeIcon && (
-                          <div className="w-8 h-8 rounded overflow-hidden">
-                            <Image
-                              src={`https://ddragon.leagueoflegends.com/cdn/img/${primaryTreeIcon}`}
-                              alt=""
-                              width={32}
-                              height={32}
-                              className="w-full h-full"
-                              unoptimized
-                            />
-                          </div>
-                        )}
-                        <span className="text-lg font-bold" style={{ color: primaryTree.color }}>
-                          {primaryTree.name}
-                        </span>
-                        <span className="text-xs text-subtitle">Primary</span>
-                      </div>
-
-                      <div className="flex flex-col items-center gap-3">
-                        {/* Keystone */}
-                        <div className="flex items-center gap-3">
-                          <Tooltip id={bestKeystone.rune_id} type="rune">
-                            <div className="w-14 h-14 rounded-full bg-abyss-900 border-2 border-gold-dark overflow-hidden cursor-pointer">
-                              {keystoneInfo?.icon && (
-                                <Image
-                                  src={`https://ddragon.leagueoflegends.com/cdn/img/${keystoneInfo.icon}`}
-                                  alt=""
-                                  width={56}
-                                  height={56}
-                                  className="w-full h-full"
-                                  unoptimized
-                                />
-                              )}
-                            </div>
-                          </Tooltip>
-                          <div className="text-sm">
-                            <div className="font-bold" style={{ color: getWinrateColor(bestKeystone.winrate) }}>
-                              {bestKeystone.winrate.toFixed(1)}%
-                            </div>
-                            <div className="text-[10px] text-muted">{bestKeystone.games.toLocaleString()}</div>
-                          </div>
-                        </div>
-
-                        {/* Tier Runes */}
-                        {[bestTier1, bestTier2, bestTier3].map((rune, idx) => {
-                          if (!rune) return null
-                          const runeInfo = (runesData as Record<string, any>)[rune.rune_id.toString()]
+                    <div className="bg-abyss-800 rounded-lg p-3 border border-gold-dark/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        {(() => {
+                          const treeInfo = (runesData as Record<string, any>)[primaryTree.id.toString()]
                           return (
-                            <div key={idx} className="flex items-center gap-3">
-                              <Tooltip id={rune.rune_id} type="rune">
-                                <div className="w-10 h-10 rounded-full bg-abyss-900 border border-gray-700 overflow-hidden cursor-pointer">
-                                  {runeInfo?.icon && (
+                            <>
+                              {treeInfo?.icon && (
+                                <div className="w-5 h-5 rounded-full overflow-hidden">
+                                  <Image
+                                    src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
+                                    alt={primaryTree.name}
+                                    width={20}
+                                    height={20}
+                                    className="w-full h-full object-cover"
+                                    unoptimized
+                                  />
+                                </div>
+                              )}
+                              <span className="text-[10px] font-medium" style={{ color: primaryTree.color }}>
+                                {primaryTree.name}
+                              </span>
+                            </>
+                          )
+                        })()}
+                      </div>
+                      
+                      {/* Keystones */}
+                      <div className={clsx(
+                        "grid gap-1 justify-items-center mb-2",
+                        primaryTree.keystones.length === 4 ? "grid-cols-4" : "grid-cols-3"
+                      )}>
+                        {primaryTree.keystones.map(id => renderRune(id, true))}
+                      </div>
+                      
+                      <div className="border-t border-gray-700/50 my-2" />
+                      
+                      {/* Tier runes */}
+                      {[primaryTree.tier1, primaryTree.tier2, primaryTree.tier3].map((tier, idx) => (
+                        <div key={idx} className="grid grid-cols-3 gap-1 justify-items-center mb-1 last:mb-0">
+                          {tier.map(id => renderRune(id))}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Secondary Tree with Stat Shards */}
+                    {bestSecondaryTree && (
+                      <div className="bg-abyss-800 rounded-lg p-3 border border-gray-700/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          {(() => {
+                            const treeInfo = (runesData as Record<string, any>)[bestSecondaryTree.id.toString()]
+                            return (
+                              <>
+                                {treeInfo?.icon && (
+                                  <div className="w-5 h-5 rounded-full overflow-hidden">
                                     <Image
-                                      src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                                      alt=""
-                                      width={40}
-                                      height={40}
-                                      className="w-full h-full"
+                                      src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
+                                      alt={bestSecondaryTree.name}
+                                      width={20}
+                                      height={20}
+                                      className="w-full h-full object-cover"
                                       unoptimized
                                     />
-                                  )}
-                                </div>
-                              </Tooltip>
-                              <div className="text-xs">
-                                <div className="font-bold" style={{ color: getWinrateColor(rune.winrate) }}>
-                                  {rune.winrate.toFixed(1)}%
-                                </div>
-                                <div className="text-[10px] text-muted">{rune.games.toLocaleString()}</div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Secondary Tree */}
-                    {bestSecondaryTree && secondaryRunes.length > 0 && (
-                      <div className="flex-1 border-t lg:border-t-0 lg:border-l border-gray-700 pt-4 lg:pt-0 lg:pl-8">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-8 h-8 rounded overflow-hidden">
-                            <Image
-                              src={`https://ddragon.leagueoflegends.com/cdn/img/${(runesData as Record<string, any>)[bestSecondaryTree.id]?.icon}`}
-                              alt=""
-                              width={32}
-                              height={32}
-                              className="w-full h-full"
-                              unoptimized
-                            />
-                          </div>
-                          <span className="text-lg font-bold" style={{ color: bestSecondaryTree.color }}>
-                            {bestSecondaryTree.name}
-                          </span>
-                          <span className="text-xs text-subtitle">Secondary</span>
-                        </div>
-
-                        <div className="flex flex-col items-center gap-3">
-                          {secondaryRunes.map((rune, idx) => {
-                            const runeInfo = (runesData as Record<string, any>)[rune.rune_id.toString()]
-                            return (
-                              <div key={idx} className="flex items-center gap-3">
-                                <Tooltip id={rune.rune_id} type="rune">
-                                  <div className="w-10 h-10 rounded-full bg-abyss-900 border border-gray-700 overflow-hidden cursor-pointer">
-                                    {runeInfo?.icon && (
-                                      <Image
-                                        src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                                        alt=""
-                                        width={40}
-                                        height={40}
-                                        className="w-full h-full"
-                                        unoptimized
-                                      />
-                                    )}
                                   </div>
-                                </Tooltip>
-                                <div className="text-xs">
-                                  <div className="font-bold" style={{ color: getWinrateColor(rune.winrate) }}>
-                                    {rune.winrate.toFixed(1)}%
-                                  </div>
-                                  <div className="text-[10px] text-muted">{rune.games.toLocaleString()}</div>
-                                </div>
-                              </div>
+                                )}
+                                <span className="text-[10px] font-medium" style={{ color: bestSecondaryTree.color }}>
+                                  {bestSecondaryTree.name}
+                                </span>
+                              </>
                             )
-                          })}
+                          })()}
+                        </div>
+                        
+                        {/* Tier runes only (no keystones for secondary) */}
+                        {[bestSecondaryTree.tier1, bestSecondaryTree.tier2, bestSecondaryTree.tier3].map((tier, idx) => (
+                          <div key={idx} className="grid grid-cols-3 gap-1 justify-items-center mb-1 last:mb-0">
+                            {tier.map(id => renderRune(id))}
+                          </div>
+                        ))}
+                        
+                        {/* Stat Shards - under separator in secondary tree */}
+                        <div className="border-t border-gray-700/50 my-2" />
+                        <div className="flex flex-col gap-1">
+                          {renderStatShardRow(STAT_PERKS.offense, bestOffenseIdx)}
+                          {renderStatShardRow(STAT_PERKS.flex, bestFlexIdx)}
+                          {renderStatShardRow(STAT_PERKS.defense, bestDefenseIdx)}
                         </div>
                       </div>
                     )}
+                    </div>
                   </div>
                 )
               })()}
-            </div>
+            </Card>
 
             {/* Starting Items, Spells, Level Order Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Starting Items */}
-              <div className="bg-abyss-700 rounded-lg p-4">
-                <h4 className="font-bold mb-3 text-gold-light">Starting Items</h4>
+              <Card title="Starting Items" headerRight={LowSampleWarning}>
                 {(() => {
-                  // Use combo-specific starting items if available
-                  if (selectedComboData?.starting && Object.keys(selectedComboData.starting).length > 0) {
+                  // Use combo-specific starting items if available and combo has enough games
+                  if (!useGlobalDataForNonItems && selectedComboData?.starting && Object.keys(selectedComboData.starting).length > 0) {
                     const sortedStarting = Object.entries(selectedComboData.starting)
+                      .filter(([, data]) => meetsPickrateThreshold(data.games)) // 2% pickrate filter
                       .map(([key, data]) => ({
                         items: key.split(',').map(Number),
                         games: data.games,
@@ -1097,15 +1168,15 @@ export default function ChampionDetailTabs({
                   
                   return <div className="text-xs text-gray-500">No data</div>
                 })()}
-              </div>
+              </Card>
 
               {/* Summoner Spells */}
-              <div className="bg-abyss-700 rounded-lg p-4">
-                <h4 className="font-bold mb-3 text-gold-light">Spells</h4>
+              <Card title="Spells" headerRight={LowSampleWarning}>
                 {(() => {
-                  // Use combo-specific spells if available
-                  if (selectedComboData?.spells && Object.keys(selectedComboData.spells).length > 0) {
+                  // Use combo-specific spells if available and combo has enough games
+                  if (!useGlobalDataForNonItems && selectedComboData?.spells && Object.keys(selectedComboData.spells).length > 0) {
                     const sortedSpells = Object.entries(selectedComboData.spells)
+                      .filter(([, data]) => meetsPickrateThreshold(data.games)) // 2% pickrate filter
                       .map(([key, data]) => {
                         const [spell1, spell2] = key.split('_').map(Number)
                         return {
@@ -1212,14 +1283,60 @@ export default function ChampionDetailTabs({
                   
                   return <div className="text-xs text-gray-500">No data</div>
                 })()}
-              </div>
+              </Card>
 
               {/* Level Order */}
-              <div className="bg-abyss-700 rounded-lg p-4">
-                <h2 className="mb-3">Skill Max Order</h2>
+              <Card title="Skill Max Order" headerRight={useGlobalDataForNonItems ? LowSampleWarning : undefined}>
                 {(() => {
+                  // Use per-core skill data if available and has enough games
+                  const comboSkills = selectedComboData?.skills
+                  const useComboSkills = comboHasEnoughGames && comboSkills && Object.keys(comboSkills).length > 0
+                  
+                  if (useComboSkills) {
+                    // Convert combo skills to ability stats format and filter by pickrate
+                    const skillsArray = Object.entries(comboSkills)
+                      .filter(([, stats]) => meetsPickrateThreshold(stats.games))
+                      .map(([order, stats]) => ({
+                        ability_order: order,
+                        games: stats.games,
+                        wins: stats.wins,
+                        winrate: stats.games > 0 ? (stats.wins / stats.games) * 100 : 0,
+                        wilsonScore: calculateWilsonScore(stats.games, stats.wins),
+                      }))
+                      .sort((a, b) => b.wilsonScore - a.wilsonScore)
+                    
+                    if (skillsArray.length > 0) {
+                      const best = skillsArray[0]
+                      return (
+                        <div>
+                          <div className="flex gap-2 mb-3 text-sm">
+                            <div
+                              className="text-white font-bold"
+                              style={{ color: getWinrateColor(best.winrate) }}
+                            >
+                              {best.winrate.toFixed(1)}%
+                            </div>
+                            <div className="text-subtitle">{best.games.toLocaleString()}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getAbilityMaxOrder(best.ability_order)
+                              .split(' > ')
+                              .map((ability, idx, arr) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <div className="w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg bg-abyss-800 border border-gray-600 text-white">
+                                    {ability}
+                                  </div>
+                                  {idx < arr.length - 1 && <span className="text-gray-500 font-bold">&gt;</span>}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )
+                    }
+                  }
+                  
+                  // Fall back to global ability stats
                   if (abilityLevelingStats.length > 0) {
-                    // Sort by Wilson score
                     const sortedAbilities = [...abilityLevelingStats]
                       .map(s => ({
                         ...s,
@@ -1238,7 +1355,6 @@ export default function ChampionDetailTabs({
                           </div>
                           <div className="text-subtitle">{best.games.toLocaleString()}</div>
                         </div>
-                        {/* Max Order Display */}
                         <div className="flex items-center gap-2">
                           {getAbilityMaxOrder(best.ability_order)
                             .split(' > ')
@@ -1256,7 +1372,7 @@ export default function ChampionDetailTabs({
                   }
                   return null
                 })()}
-              </div>
+              </Card>
             </div>
           </div>
         </div>
@@ -1264,11 +1380,11 @@ export default function ChampionDetailTabs({
 
       {/* Items Tab */}
       {selectedTab === 'items' && (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
           {/* Starter Items Section */}
           {starterItems.length > 0 && (
             <div>
-              <h3 className="text-xl font-bold mb-3">Starter Items</h3>
+              <h2 className="text-lg font-semibold mb-3 text-gold-light">Starter Items</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {starterItems.slice(0, 10).map((build, idx) => {
                   // Group duplicate items and count them
@@ -1278,7 +1394,7 @@ export default function ChampionDetailTabs({
                   })
 
                   return (
-                    <div key={idx} className="bg-abyss-700 rounded-lg p-3">
+                    <div key={idx} className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
                       <div className="flex items-center gap-3">
                         <div className="flex gap-1">
                           {Array.from(itemCounts.entries()).map(([itemId, count], itemIdx) => (
@@ -1320,10 +1436,10 @@ export default function ChampionDetailTabs({
           {/* Boots Section */}
           {bootsItems.length > 0 && (
             <div>
-              <h3 className="text-xl font-bold mb-3">Boots</h3>
+              <h2 className="text-lg font-semibold mb-3 text-gold-light">Boots</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {bootsItems.map(item => (
-                  <div key={item.item_id} className="bg-abyss-700 rounded-lg p-3">
+                  <div key={item.item_id} className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
                     <div className="flex items-center gap-3">
                       {item.item_id === -1 || item.item_id === -2 ? (
                         <div className="w-12 h-12 rounded bg-abyss-800 border border-gray-700 flex items-center justify-center flex-shrink-0">
@@ -1363,10 +1479,10 @@ export default function ChampionDetailTabs({
 
             return (
               <div key={slot}>
-                <h3 className="text-xl font-bold mb-3">{slot === 0 ? 'Slot 1' : `Slot ${slot + 1}`}</h3>
+                <h2 className="text-lg font-semibold mb-3 text-gold-light">{slot === 0 ? 'Slot 1' : `Slot ${slot + 1}`}</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {items.slice(0, 8).map(item => (
-                    <div key={item.item_id} className="bg-abyss-700 rounded-lg p-3">
+                    <div key={item.item_id} className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
                       <div className="flex items-center gap-3">
                         <ItemIcon
                           itemId={item.item_id}
@@ -1398,7 +1514,7 @@ export default function ChampionDetailTabs({
 
       {/* Runes Tab */}
       {selectedTab === 'runes' && (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
           {(() => {
             // Collect PRIMARY runes from slots 0-3 (keystone + primary tree tiers)
             const primaryRunesMap = new Map<number, RuneStat>()
@@ -1480,7 +1596,7 @@ export default function ChampionDetailTabs({
                     if (!tree) return null
 
                     return (
-                      <div key={treeName} className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                      <div key={treeName} className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
                         {/* Tree Header */}
                         <div className="flex items-center gap-2 mb-6">
                           <h2 className="text-sm font-bold text-white">{tree.name}</h2>
@@ -1518,7 +1634,7 @@ export default function ChampionDetailTabs({
                     if (!tree) return null
 
                     return (
-                      <div key={treeName} className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                      <div key={treeName} className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
                         {/* Tree Header */}
                         <div className="flex items-center gap-2 mb-6">
                           <h2 className="text-sm font-bold text-white">{tree.name}</h2>
@@ -1541,7 +1657,7 @@ export default function ChampionDetailTabs({
                 {/* Stat Shards Section - 3 separate boxes */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Offense Box */}
-                  <div className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                  <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
                     <div className="flex items-center gap-2 mb-6">
                       <h2 className="text-sm font-bold text-white">Offense</h2>
                       <span className="text-xs text-text-muted">Stats</span>
@@ -1590,7 +1706,7 @@ export default function ChampionDetailTabs({
                   </div>
 
                   {/* Flex Box */}
-                  <div className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                  <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
                     <div className="flex items-center gap-2 mb-3">
                       <h2 className="text-sm font-bold text-white">Flex</h2>
                       <span className="text-xs text-text-muted">Stats</span>
@@ -1639,7 +1755,7 @@ export default function ChampionDetailTabs({
                   </div>
 
                   {/* Defense Box */}
-                  <div className="bg-abyss-700 rounded-lg border border-gold-dark/40 p-3">
+                  <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
                     <div className="flex items-center gap-2 mb-3">
                       <h2 className="text-sm font-bold text-white">Defense</h2>
                       <span className="text-xs text-text-muted">Stats</span>
@@ -1699,14 +1815,14 @@ export default function ChampionDetailTabs({
 
       {/* Leveling Order Tab */}
       {selectedTab === 'leveling' && (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-8">
           {abilityLevelingStats.length > 0 ? (
             <>
               <div className="text-sm text-gray-400 mb-4">Most popular skill max orders</div>
               {abilityLevelingStats.map((stat, idx) => {
                 const maxOrder = getAbilityMaxOrder(stat.ability_order)
                 return (
-                  <div key={idx} className="bg-abyss-700 rounded-lg p-4">
+                  <div key={idx} className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-4">
                     {/* Max Order Display */}
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">

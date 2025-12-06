@@ -1,7 +1,7 @@
 'use client'
 
 import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from '@/lib/ui'
-import ProfileCard from '@/components/ui/ProfileCard'
+import Card from '@/components/ui/Card'
 
 interface AggregateStats {
   games: number
@@ -120,7 +120,7 @@ export default function SummonerSummaryCard({ championStatsLoading, aggregateSta
   const showEmptyState = !isLoading && !hasData
 
   return (
-    <ProfileCard title="Performance" onTitleClick={() => onTabChange('performance')} contentClassName="pb-2">
+    <Card title="Performance" onTitleClick={() => onTabChange('performance')} contentClassName="pb-2">
       <div className="grid grid-cols-3 gap-2">
         {/* PIG score arc */}
         <div className="flex items-center justify-start">
@@ -177,6 +177,6 @@ export default function SummonerSummaryCard({ championStatsLoading, aggregateSta
           ) : null}
         </div>
       </div>
-    </ProfileCard>
+    </Card>
   )
 }

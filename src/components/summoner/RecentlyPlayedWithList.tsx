@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { RecentPlayer } from '@/types/profile'
 import { getWinrateColor } from '@/lib/ui'
-import ProfileCard from '@/components/ui/ProfileCard'
+import Card from '@/components/ui/Card'
 
 interface Props {
   players: RecentPlayer[]
@@ -18,7 +18,7 @@ export default function RecentlyPlayedWithList({ players, region, ddragonVersion
   }
 
   return (
-    <ProfileCard title="Recently played with">
+    <Card title="Recently played with">
       <div className="-mx-2 space-y-1">
         {players.map(player => {
           const winrate = (player.wins / player.games) * 100
@@ -64,6 +64,6 @@ export default function RecentlyPlayedWithList({ players, region, ddragonVersion
           )
         })}
       </div>
-    </ProfileCard>
+    </Card>
   )
 }

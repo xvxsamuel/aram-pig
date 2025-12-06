@@ -708,7 +708,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
                           <div className="flex-1 min-w-0">
                             <div className="text-white font-medium truncate">
                               {s.game_name}
-                              <span className="text-text-muted">#{s.tag_line}</span>
+                              <span className="text-text-muted"> #{s.tag_line}</span>
                             </div>
                             <div className="text-xs text-subtitle flex items-center gap-1.5">
                               <span className="px-1.5 py-0.5 bg-abyss-800 rounded text-[10px] font-medium">

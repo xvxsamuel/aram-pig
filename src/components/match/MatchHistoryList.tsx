@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import type { MatchData } from '@/types/match'
 import MatchHistoryItem from '@/components/match/MatchHistoryItem'
 import ChampionFilter from '@/components/filters/ChampionFilter'
-import ProfileCard from '@/components/ui/ProfileCard'
+import Card from '@/components/ui/Card'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 interface Props {
@@ -94,7 +94,7 @@ export default function MatchHistoryList({
 
   return (
     <div className="w-full xl:flex-1 xl:min-w-0">
-      <ProfileCard title="ARAM History" headerRight={filterDropdown}>
+      <Card title="ARAM History" headerRight={filterDropdown}>
         {initialLoading ? (
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner size="lg" />
@@ -143,7 +143,7 @@ export default function MatchHistoryList({
             )}
           </>
         )}
-      </ProfileCard>
+      </Card>
     </div>
   )
 }
