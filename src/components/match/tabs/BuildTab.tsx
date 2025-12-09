@@ -8,8 +8,10 @@ import { getItemImageUrl } from '@/lib/ddragon'
 import { getPigScoreColor } from '@/lib/ui'
 import Tooltip from '@/components/ui/Tooltip'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
-import runesData from '@/data/runes.json'
-import summonerSpellsData from '@/data/summoner-spells.json'
+import { RuneDisplay } from '@/components/game/RuneDisplay'
+import { SummonerSpellDisplay } from '@/components/game/SummonerSpellDisplay'
+import { AbilityOrderDisplay } from '@/components/game/AbilityOrderDisplay'
+import { getAbilityMaxOrder } from '@/components/champions/tabs/utils'
 import {
   TabProps,
   ItemTimelineEvent,
@@ -17,74 +19,6 @@ import {
   formatTime,
   BOOT_IDS,
 } from './shared'
-
-// Rune tree structure (same as ChampionDetailTabs)
-const RUNE_TREES = {
-  precision: {
-    id: 8000,
-    name: 'Precision',
-    color: '#C8AA6E',
-    keystones: [8005, 8008, 8021, 8010],
-    tier1: [9101, 8009, 9111],
-    tier2: [9104, 9103, 9105],
-    tier3: [8014, 8017, 8299],
-  },
-  domination: {
-    id: 8100,
-    name: 'Domination',
-    color: '#D44242',
-    keystones: [8112, 8128, 9923],
-    tier1: [8126, 8139, 8143],
-    tier2: [8136, 8120, 8138],
-    tier3: [8135, 8105, 8106],
-  },
-  sorcery: {
-    id: 8200,
-    name: 'Sorcery',
-    color: '#9FAAFC',
-    keystones: [8214, 8229, 8230],
-    tier1: [8224, 8226, 8275],
-    tier2: [8210, 8234, 8233],
-    tier3: [8237, 8232, 8236],
-  },
-  resolve: {
-    id: 8400,
-    name: 'Resolve',
-    color: '#A1D586',
-    keystones: [8437, 8439, 8465],
-    tier1: [8446, 8463, 8401],
-    tier2: [8429, 8444, 8473],
-    tier3: [8451, 8453, 8242],
-  },
-  inspiration: {
-    id: 8300,
-    name: 'Inspiration',
-    color: '#49AAF5',
-    keystones: [8351, 8360, 8369],
-    tier1: [8306, 8304, 8313],
-    tier2: [8321, 8345, 8347],
-    tier3: [8410, 8352, 8316],
-  },
-}
-
-// Stat perk shards
-const STAT_PERKS = {
-  offense: [
-    { id: 5008, name: 'Adaptive Force', icon: 'perk-images/StatMods/StatModsAdaptiveForceIcon.png' },
-    { id: 5005, name: 'Attack Speed', icon: 'perk-images/StatMods/StatModsAttackSpeedIcon.png' },
-    { id: 5007, name: 'Ability Haste', icon: 'perk-images/StatMods/StatModsCDRScalingIcon.png' },
-  ],
-  flex: [
-    { id: 5008, name: 'Adaptive Force', icon: 'perk-images/StatMods/StatModsAdaptiveForceIcon.png' },
-    { id: 5010, name: 'Move Speed', icon: 'perk-images/StatMods/StatModsMovementSpeedIcon.png' },
-    { id: 5001, name: 'Health Scaling', icon: 'perk-images/StatMods/StatModsHealthPlusIcon.png' },
-  ],
-  defense: [
-    { id: 5011, name: 'Health', icon: 'perk-images/StatMods/StatModsHealthScalingIcon.png' },
-    { id: 5013, name: 'Tenacity', icon: 'perk-images/StatMods/StatModsTenacityIcon.png' },
-    { id: 5001, name: 'Health Scaling', icon: 'perk-images/StatMods/StatModsHealthPlusIcon.png' },
-  ],
-}
 
 // Helper to find which tree a rune belongs to
 // animated glow component for scored items with pig score color
@@ -151,17 +85,19 @@ export function BuildTab({
   ddragonVersion,
   participantDetails,
   pigScoreBreakdown,
+  showPigScores = true,
 }: TabProps) {
   if (!currentPlayer) return null
 
-  // Check if we have timeline data - only show PIG labels if we do
+  // Check if we have timeline data - only show PIG labels if we do AND showPigScores is true
   const playerDetails = participantDetails.get(currentPlayer.puuid)
   const hasTimelineData = playerDetails?.item_timeline && playerDetails.item_timeline.length > 0
+  const displayPigScores = showPigScores && hasTimelineData
 
   // Calculate overall build score from sub-scores with new weights:
   // starter 5%, skills 5%, runes 10%, spells 5%, core 45%, items 30%
   const buildSubScores = pigScoreBreakdown?.buildSubScores
-  const overallBuildScore = (buildSubScores && hasTimelineData) ? Math.round(
+  const overallBuildScore = (buildSubScores && displayPigScores) ? Math.round(
     (buildSubScores.starting ?? 50) * 0.05 +
     (buildSubScores.skills ?? 50) * 0.05 +
     (buildSubScores.keystone ?? 50) * 0.10 +
@@ -241,48 +177,51 @@ export function BuildTab({
         return (
           <div className="grid grid-cols-2 gap-4">
             {/* Starter Build */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-xs font-medium text-text-muted">
-                  Starter Items
-                  {fallbackInfo?.starting && <FallbackWarning />}
-                </h3>
-                {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.starting} />}
-              </div>
-              {starterItems.length > 0 ? (
-                <div className="flex flex-col gap-1">
-                  <div className="flex gap-1 items-center">
-                    {starterItems.map((item, idx) => (
-                      <Tooltip key={idx} id={item.itemId} type="item">
-                        <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
-                          <Image
-                            src={getItemImageUrl(item.itemId, ddragonVersion)}
-                            alt={item.itemName || `Item ${item.itemId}`}
-                            width={32}
-                            height={32}
-                            className="w-full h-full object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      </Tooltip>
-                    ))}
-                  </div>
-                  {startingDetails?.playerWinrate !== undefined && (
-                    <div className="text-[10px] text-text-muted">
-                      {startingDetails.playerWinrate.toFixed(1)}% WR
-                    </div>
-                  )}
+            {displayPigScores && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-xs font-medium text-text-muted">
+                    Starter Items
+                    {fallbackInfo?.starting && <FallbackWarning />}
+                  </h3>
+                  <PigLabel score={pigScoreBreakdown?.buildSubScores?.starting} />
                 </div>
-              ) : (
-                <div className="text-xs text-text-muted">No starter data</div>
-              )}
-            </div>
+                {starterItems.length > 0 ? (
+                  <div className="flex flex-col gap-1">
+                    <div className="flex gap-1 items-center">
+                      {starterItems.map((item, idx) => (
+                        <Tooltip key={idx} id={item.itemId} type="item">
+                          <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
+                            <Image
+                              src={getItemImageUrl(item.itemId, ddragonVersion)}
+                              alt={item.itemName || `Item ${item.itemId}`}
+                              width={32}
+                              height={32}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        </Tooltip>
+                      ))}
+                    </div>
+                    {startingDetails?.playerWinrate !== undefined && (
+                      <div className="text-[10px] text-text-muted">
+                        {startingDetails.playerWinrate.toFixed(1)}% WR
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-xs text-text-muted">No starter data</div>
+                )}
+              </div>
+            )}
 
             {/* Core Build */}
-            <div>
+            {displayPigScores && (
+              <div>
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-xs font-medium text-text-muted">Core Build</h3>
-                {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.core} />}
+                {displayPigScores && <PigLabel score={pigScoreBreakdown?.buildSubScores?.core} />}
               </div>
               {coreItemIds.length > 0 ? (
                 <div className="flex flex-col gap-1">
@@ -305,7 +244,7 @@ export function BuildTab({
                       </div>
                     ))}
                   </div>
-                  {pigScoreBreakdown?.coreBuildDetails?.playerWinrate !== undefined && (
+                  {displayPigScores && pigScoreBreakdown?.coreBuildDetails?.playerWinrate !== undefined && (
                     <div className="text-[10px] text-text-muted">
                       {pigScoreBreakdown.coreBuildDetails.playerWinrate.toFixed(1)}% WR
                       {pigScoreBreakdown.coreBuildDetails.games && (
@@ -317,7 +256,8 @@ export function BuildTab({
               ) : (
                 <div className="text-xs text-text-muted">No core data</div>
               )}
-            </div>
+              </div>
+            )}
           </div>
         )
       })()}
@@ -327,9 +267,9 @@ export function BuildTab({
         <div className="flex items-center gap-2 mb-3">
           <h3 className="text-xs font-medium text-text-muted">
             Items
-            {pigScoreBreakdown?.fallbackInfo?.items && <FallbackWarning />}
+            {displayPigScores && pigScoreBreakdown?.fallbackInfo?.items && <FallbackWarning />}
           </h3>
-          {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.items} />}
+          {displayPigScores && <PigLabel score={pigScoreBreakdown?.buildSubScores?.items} />}
         </div>
         {(() => {
           const details = participantDetails.get(currentPlayer.puuid)
@@ -637,31 +577,8 @@ export function BuildTab({
         const abilityOrder = details?.ability_order
         if (!abilityOrder || details?.loading) return null
 
-        const abilities = abilityOrder.split(' ')
-
-        // determine skill max order (Q, W, E first maxed)
-        const counts = { Q: 0, W: 0, E: 0 }
-        const maxOrder: string[] = []
-        for (const ability of abilities) {
-          if (ability === 'R') continue
-          if (ability in counts) {
-            counts[ability as keyof typeof counts]++
-            // maxed at 5 points
-            if (counts[ability as keyof typeof counts] === 5 && !maxOrder.includes(ability)) {
-              maxOrder.push(ability)
-            }
-          }
-        }
-        // add any abilities not yet maxed (in order of most points)
-        const remaining = ['Q', 'W', 'E'].filter(a => !maxOrder.includes(a))
-        remaining.sort((a, b) => counts[b as keyof typeof counts] - counts[a as keyof typeof counts])
-        maxOrder.push(...remaining)
-
-        const abilityTextColors: Record<string, string> = {
-          Q: 'text-kda-3',
-          W: 'text-kda-4',
-          E: 'text-kda-5',
-        }
+        // Convert space-separated to dot-separated for AbilityOrderDisplay
+        const formattedOrder = abilityOrder.split(' ').join('.')
 
         return (
           <div>
@@ -669,41 +586,7 @@ export function BuildTab({
               <h3 className="text-xs font-medium text-text-muted">Skill Order</h3>
               {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.skills} />}
             </div>
-            <div className="space-y-3">
-              {/* Max order display */}
-              <div className="flex items-center gap-2">
-                {maxOrder.map((ability, idx) => (
-                  <div key={ability} className="flex items-center gap-1.5">
-                    {idx > 0 && <span className="text-text-muted text-sm">&gt;</span>}
-                    <div
-                      className={clsx(
-                        'w-7 h-7 rounded border bg-abyss-800 flex items-center justify-center text-xs font-bold',
-                        ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
-                        abilityTextColors[ability]
-                      )}
-                    >
-                      {ability === 'R' ? <h2 className="text-xs">{ability}</h2> : ability}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* full sequence */}
-              <div className="flex flex-wrap gap-1">
-                {abilities.map((ability, idx) => (
-                  <div
-                    key={idx}
-                    className={clsx(
-                      'w-6 h-6 rounded border bg-abyss-800 text-[12px] font-bold flex items-center justify-center',
-                      ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
-                      abilityTextColors[ability]
-                    )}
-                  >
-                    {ability === 'R' ? <h2 className="text-[12px]">{ability}</h2> : ability}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AbilityOrderDisplay abilityOrder={formattedOrder} showFullSequence />
           </div>
         )
       })()}
@@ -713,176 +596,36 @@ export function BuildTab({
         <div className="flex items-center gap-2 mb-3">
           <h3 className="text-xs font-medium text-text-muted">
             Runes
-            {pigScoreBreakdown?.fallbackInfo?.keystone && <FallbackWarning />}
+            {displayPigScores && pigScoreBreakdown?.fallbackInfo?.keystone && <FallbackWarning />}
           </h3>
           {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.keystone} />}
         </div>
-        
+
         {(() => {
           // Get player's selected runes
           const primaryTreeId = currentPlayer.perks?.styles[0]?.style
           const secondaryTreeId = currentPlayer.perks?.styles[1]?.style
           const selectedRuneIds = new Set<number>()
-          
+
           // Collect all selected rune IDs
           currentPlayer.perks?.styles[0]?.selections?.forEach(s => selectedRuneIds.add(s.perk))
           currentPlayer.perks?.styles[1]?.selections?.forEach(s => selectedRuneIds.add(s.perk))
-          
-          // Find primary and secondary trees
-          const primaryTree = Object.values(RUNE_TREES).find(t => t.id === primaryTreeId)
-          const secondaryTree = Object.values(RUNE_TREES).find(t => t.id === secondaryTreeId)
-          
-          // Helper to render a rune icon
-          const renderRune = (runeId: number, isKeystone: boolean = false) => {
-            const runeInfo = (runesData as Record<string, { icon?: string; name?: string }>)[String(runeId)]
-            const isSelected = selectedRuneIds.has(runeId)
-            const size = isKeystone ? 'w-9 h-9' : 'w-7 h-7'
-            const imgSize = isKeystone ? 36 : 28
-            
-            return (
-              <Tooltip key={runeId} id={runeId} type="rune">
-                <div className={clsx(
-                  size, "rounded-full overflow-hidden",
-                  isSelected ? "border-2 border-gold-light" : "border border-gray-700 opacity-30 grayscale"
-                )}>
-                  {runeInfo?.icon && (
-                    <Image
-                      src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
-                      alt={runeInfo.name || ''}
-                      width={imgSize}
-                      height={imgSize}
-                      className="w-full h-full object-cover"
-                      unoptimized
-                    />
-                  )}
-                </div>
-              </Tooltip>
-            )
+
+          if (!primaryTreeId || !secondaryTreeId) {
+            return <div className="text-xs text-text-muted">No rune data available</div>
           }
-          
-          // Helper to render stat shard
-          const renderStatShard = (shardOptions: typeof STAT_PERKS.offense, selectedId: number | undefined) => {
-            return (
-              <div className="flex gap-1">
-                {shardOptions.map(shard => {
-                  const isSelected = shard.id === selectedId
-                  return (
-                    <div
-                      key={shard.id}
-                      className={clsx(
-                        "w-5 h-5 rounded-full overflow-hidden",
-                        isSelected ? "border border-gold-light" : "border border-gray-700 opacity-30 grayscale"
-                      )}
-                    >
-                      <Image
-                        src={`https://ddragon.leagueoflegends.com/cdn/img/${shard.icon}`}
-                        alt={shard.name}
-                        width={20}
-                        height={20}
-                        className="w-full h-full object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          }
-          
+
           return (
-            <div className="flex gap-4">
-              {/* Primary Tree */}
-              {primaryTree && (
-                <div className="bg-abyss-800 rounded-lg p-3 border border-gold-dark/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    {(() => {
-                      const treeInfo = (runesData as Record<string, { icon?: string; name?: string }>)[String(primaryTree.id)]
-                      return (
-                        <>
-                          {treeInfo?.icon && (
-                            <div className="w-5 h-5 rounded-full overflow-hidden">
-                              <Image
-                                src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
-                                alt={primaryTree.name}
-                                width={20}
-                                height={20}
-                                className="w-full h-full object-cover"
-                                unoptimized
-                              />
-                            </div>
-                          )}
-                          <span className="text-[10px] font-medium" style={{ color: primaryTree.color }}>
-                            {primaryTree.name}
-                          </span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                  
-                  {/* Keystones */}
-                  <div className={clsx(
-                    "grid gap-1 justify-items-center mb-2",
-                    primaryTree.keystones.length === 4 ? "grid-cols-4" : "grid-cols-3"
-                  )}>
-                    {primaryTree.keystones.map(id => renderRune(id, true))}
-                  </div>
-                  
-                  <div className="border-t border-gray-700/50 my-2" />
-                  
-                  {/* Tier runes */}
-                  {[primaryTree.tier1, primaryTree.tier2, primaryTree.tier3].map((tier, idx) => (
-                    <div key={idx} className="grid grid-cols-3 gap-1 justify-items-center mb-1 last:mb-0">
-                      {tier.map(id => renderRune(id))}
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Secondary Tree */}
-              {secondaryTree && (
-                <div className="bg-abyss-800 rounded-lg p-3 border border-gray-700/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    {(() => {
-                      const treeInfo = (runesData as Record<string, { icon?: string; name?: string }>)[String(secondaryTree.id)]
-                      return (
-                        <>
-                          {treeInfo?.icon && (
-                            <div className="w-5 h-5 rounded-full overflow-hidden">
-                              <Image
-                                src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
-                                alt={secondaryTree.name}
-                                width={20}
-                                height={20}
-                                className="w-full h-full object-cover"
-                                unoptimized
-                              />
-                            </div>
-                          )}
-                          <span className="text-[10px] font-medium" style={{ color: secondaryTree.color }}>
-                            {secondaryTree.name}
-                          </span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                  
-                  {/* Tier runes only (no keystones for secondary) */}
-                  {[secondaryTree.tier1, secondaryTree.tier2, secondaryTree.tier3].map((tier, idx) => (
-                    <div key={idx} className="grid grid-cols-3 gap-1 justify-items-center mb-1 last:mb-0">
-                      {tier.map(id => renderRune(id))}
-                    </div>
-                  ))}
-                  
-                  {/* Stat Shards - under separator in secondary tree */}
-                  <div className="border-t border-gray-700/50 my-2" />
-                  <div className="flex flex-col gap-1">
-                    {renderStatShard(STAT_PERKS.offense, currentPlayer.perks?.statPerks?.offense)}
-                    {renderStatShard(STAT_PERKS.flex, currentPlayer.perks?.statPerks?.flex)}
-                    {renderStatShard(STAT_PERKS.defense, currentPlayer.perks?.statPerks?.defense)}
-                  </div>
-                </div>
-              )}
-            </div>
+            <RuneDisplay
+              primaryTreeId={primaryTreeId}
+              secondaryTreeId={secondaryTreeId}
+              selectedRuneIds={selectedRuneIds}
+              statPerks={{
+                offense: currentPlayer.perks?.statPerks?.offense,
+                flex: currentPlayer.perks?.statPerks?.flex,
+                defense: currentPlayer.perks?.statPerks?.defense,
+              }}
+            />
           )
         })()}
       </div>
@@ -893,41 +636,12 @@ export function BuildTab({
           <h3 className="text-xs font-medium text-text-muted">Summoner Spells</h3>
           {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.spells} />}
         </div>
-        <div className="flex gap-2">
-          {[currentPlayer.summoner1Id, currentPlayer.summoner2Id].map((spellId, idx) => {
-            const spellInfo = spellId ? (summonerSpellsData as Record<string, { name?: string; iconPath?: string }>)[String(spellId)] : null
-            const iconUrl = spellInfo?.iconPath
-              ? `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/${spellInfo.iconPath.toLowerCase()}`
-              : null
-            return (
-              <SimpleTooltip
-                key={idx}
-                content={
-                  <div className="text-xs">
-                    <div className="font-medium text-white">{spellInfo?.name || 'Unknown Spell'}</div>
-                  </div>
-                }
-              >
-                <div className="w-10 h-10 rounded border-2 border-gold-dark bg-abyss-800 overflow-hidden">
-                  {iconUrl ? (
-                    <Image
-                      src={iconUrl}
-                      alt={spellInfo?.name || 'Spell'}
-                      width={40}
-                      height={40}
-                      className="w-full h-full object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-text-muted text-xs">
-                      ?
-                    </div>
-                  )}
-                </div>
-              </SimpleTooltip>
-            )
-          })}
-        </div>
+        <SummonerSpellDisplay
+          spell1Id={currentPlayer.summoner1Id}
+          spell2Id={currentPlayer.summoner2Id}
+          ddragonVersion={ddragonVersion}
+          useSimpleTooltip
+        />
       </div>
     </div>
   )

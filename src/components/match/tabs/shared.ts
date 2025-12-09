@@ -152,6 +152,7 @@ export interface TabProps {
   participantDetails: Map<string, ParticipantDetails>
   pigScoreBreakdown: PigScoreBreakdown | null
   loadingBreakdown: boolean
+  showPigScores?: boolean
 }
 
 export interface OverviewTabProps extends TabProps {
@@ -173,10 +174,16 @@ export interface OverviewTabProps extends TabProps {
  * Checks if an item is a completed item based on its ID
  */
 export function isCompletedItemById(itemId: number): boolean {
-  const itemData = (itemsData as Record<string, { itemType?: string }>)[String(itemId)]
+  // Normalize ARAM-specific item IDs (12XXXX -> XXXX)
+  const itemIdStr = String(itemId)
+  const normalizedId = itemIdStr.startsWith('12') && itemIdStr.length === 6
+    ? itemIdStr.slice(2)
+    : itemIdStr
+  
+  const itemData = (itemsData as Record<string, { itemType?: string }>)[normalizedId]
   if (!itemData?.itemType) return false
   // tier 1 boots (1001) have itemType "boots" but should not count as completed
-  if (itemId === 1001) return false
+  if (itemId === 1001 || itemId === 121001) return false
   return ['legendary', 'boots', 'mythic'].includes(itemData.itemType)
 }
 
@@ -184,14 +191,26 @@ export function isCompletedItemById(itemId: number): boolean {
  * Gets the item type from the items data
  */
 export function getItemType(itemId: number): string | undefined {
-  return (itemsData as Record<string, { itemType?: string }>)[String(itemId)]?.itemType
+  // Normalize ARAM-specific item IDs (12XXXX -> XXXX)
+  const itemIdStr = String(itemId)
+  const normalizedId = itemIdStr.startsWith('12') && itemIdStr.length === 6
+    ? itemIdStr.slice(2)
+    : itemIdStr
+  
+  return (itemsData as Record<string, { itemType?: string }>)[normalizedId]?.itemType
 }
 
 /**
  * Gets the item name from the items data
  */
 export function getItemName(itemId: number): string | undefined {
-  return (itemsData as Record<string, { name?: string }>)[String(itemId)]?.name
+  // Normalize ARAM-specific item IDs (12XXXX -> XXXX)
+  const itemIdStr = String(itemId)
+  const normalizedId = itemIdStr.startsWith('12') && itemIdStr.length === 6
+    ? itemIdStr.slice(2)
+    : itemIdStr
+  
+  return (itemsData as Record<string, { name?: string }>)[normalizedId]?.name
 }
 
 /**

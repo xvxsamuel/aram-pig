@@ -216,7 +216,19 @@ export async function POST(request: Request) {
 
     const lockKey = `${region}:${gameName}:${tagLine}`.toLowerCase()
     const existingLock = processingLocks.get(lockKey)
-    if (existingLock) return existingLock
+    if (existingLock) {
+      // Wait for the existing lock to complete and return a fresh response
+      try {
+        await existingLock
+      } catch {
+        // Ignore errors from the locked request
+      }
+      // Return a new response indicating processing is ongoing
+      return NextResponse.json({ 
+        message: 'Profile update already in progress',
+        isProcessing: true 
+      })
+    }
 
     const processPromise = processProfileUpdate(region, gameName, tagLine, platform)
     processingLocks.set(lockKey, processPromise)

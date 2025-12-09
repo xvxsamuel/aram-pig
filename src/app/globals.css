@@ -30,6 +30,7 @@
   --color-win: oklch(33.989% 0.0559 265.681);
   --color-win-light: oklch(40% 0.065 265.681);
   --color-remake: oklch(34.846% 0.00004 271.152);
+  --color-remake-light: oklch(40% 0.00004 271.152);
   --color-victory: oklch(70% 0.15 265.681);
   --color-defeat: oklch(65% 0.18 17.952);
 

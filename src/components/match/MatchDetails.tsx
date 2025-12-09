@@ -295,7 +295,20 @@ export default function MatchDetails({
       return
     }
 
-    // mark as loading - fallback to API for old matches without pre-calculated data
+    // Don't fetch timeline for old matches (>365 days) or remakes that don't already have cached data
+    if (!isWithin1Year || isRemake) {
+      setParticipantDetails(prev =>
+        new Map(prev).set(puuid, {
+          ability_order: undefined,
+          item_timeline: [],
+          kill_death_timeline: undefined,
+          loading: false,
+        })
+      )
+      return
+    }
+
+    // mark as loading - fallback to API for recent matches without pre-calculated data
     setParticipantDetails(prev =>
       new Map(prev).set(puuid, {
         ability_order: undefined,
@@ -418,6 +431,7 @@ export default function MatchDetails({
             participantDetails={participantDetails}
             pigScoreBreakdown={pigScoreBreakdown}
             loadingBreakdown={loadingBreakdown}
+            showPigScores={canShowPerformanceTab}
           />
         ) : (
           <PerformanceTab

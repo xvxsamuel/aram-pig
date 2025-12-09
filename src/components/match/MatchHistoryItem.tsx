@@ -104,7 +104,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
 
   return (
     <li role="listitem" aria-label={matchLabel} className="relative rounded-lg p-px">
-      {/* animated gradient border */}
+      {/* border anim */}
       <motion.div
         className="absolute inset-0 rounded-lg bg-gradient-to-b from-gold-light to-gold-dark"
         initial={{ opacity: 0 }}
@@ -119,7 +119,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
           onClick={() => {
             if (isExpanded) {
               setIsExpanded(false)
-              setSelectedTab('overview') // reset tab when closed
+              setSelectedTab('overview') // reset
             } else {
               setIsExpanded(true)
             }
@@ -139,7 +139,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
             )}
           >
             <div className="flex items-center justify-between px-4 py-2 min-h-[84px]">
-              {/* game result & info */}
+              {/* game result */}
               <div className="flex flex-col justify-center gap-2.5 w-16 flex-shrink-0">
                 <div>
                   <div
@@ -157,16 +157,16 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 </div>
               </div>
 
-              {/* champion icon with spells & runes */}
+              {/* champion icon, spells & runes */}
               {(() => {
                 const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
                 const labels: string[] = participant.labels || []
                 const hasLabels = labels.length > 0
 
                 return (
-                  <div className={clsx('flex gap-1 flex-shrink-0', hasLabels ? 'items-end' : 'items-center')}>
+                  <div className="flex gap-1 flex-shrink-0 items-center">
                     {/* champion icon column w/ pig score */}
-                    <div className={clsx('flex flex-col items-center w-[54px]', hasLabels ? 'self-stretch' : 'gap-1')}>
+                    <div className="flex flex-col items-center w-[54px] gap-1">
                       <Link
                         href={`/champions/${getChampionUrlName(participant.championName, championNames)}`}
                         onClick={e => e.stopPropagation()}
@@ -192,28 +192,26 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                       </Link>
 
                       {hasPigScore && (
-                        <div className={clsx('flex flex-col items-center w-full', hasLabels && 'mt-auto')}>
-                          <button
-                            onClick={e => {
-                              e.stopPropagation()
-                              setSelectedTab('performance')
-                              setIsExpanded(true)
-                            }}
-                            className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full cursor-pointer flex"
-                          >
-                            <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
-                              <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
-                                {participant.pigScore}
-                              </span>
-                              <span className="text-white">PIG</span>
-                            </div>
-                          </button>
-                        </div>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            setSelectedTab('performance')
+                            setIsExpanded(true)
+                          }}
+                          className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full cursor-pointer flex"
+                        >
+                          <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
+                            <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
+                              {participant.pigScore}
+                            </span>
+                            <span className="text-white">PIG</span>
+                          </div>
+                        </button>
                       )}
                     </div>
 
                     {/* spells & runes */}
-                    <div className={clsx('flex gap-1', hasLabels ? 'items-end' : 'items-center')}>
+                    <div className="flex gap-1 items-center">
                       <div className="flex flex-col gap-0.5">
                         <Tooltip id={participant.summoner1Id} type="summoner-spell">
                           <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
@@ -274,7 +272,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                     </div>
 
                     {hasLabels && (
-                      <div className="flex items-end gap-0.5 self-stretch flex-wrap">
+                      <div className="flex items-center gap-0.5 flex-wrap">
                         {labels.map((label, idx) => (
                           <div
                             key={idx}
@@ -290,7 +288,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
               })()}
 
               {/* kda */}
-              <div className="flex flex-col justify-center items-center flex-shrink-0">
+              <div className="flex flex-col justify-center items-center flex-shrink-0 min-w-[75px]">
                 <div className="flex items-baseline gap-0.5">
                   <span className="text-lg font-bold text-white tabular-nums">{participant.kills}</span>
                   <span className="text-text-muted text-sm">/</span>
@@ -430,7 +428,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
             className={clsx(
               'flex items-end justify-center w-10 pb-2',
               isExpanded ? 'rounded-tr-lg' : 'rounded-r-lg',
-              isRemake ? 'bg-remake' : isWin ? 'bg-win-light' : 'bg-loss-light'
+              isRemake ? 'bg-remake-light' : isWin ? 'bg-win-light' : 'bg-loss-light'
             )}
           >
             <div className="gold-border-group p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">

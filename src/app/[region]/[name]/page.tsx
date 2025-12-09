@@ -16,13 +16,36 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { region, name } = await params
   const decodedName = decodeURIComponent(name)
   const displayName = decodedName.replace('-', '#')
+  
+  const regionLabel = region.toUpperCase()
+  const platformCode = LABEL_TO_PLATFORM[regionLabel]
+  
+  // Try to get proper capitalization from database
+  let properDisplayName = displayName
+  if (platformCode && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    const [gameName, tagLine] = displayName.includes('#')
+      ? displayName.split('#')
+      : [displayName, getDefaultTag(regionLabel)]
+    
+    const { data: cachedSummoner } = await supabase
+      .from('summoners')
+      .select('game_name, tag_line')
+      .ilike('game_name', gameName)
+      .ilike('tag_line', tagLine)
+      .eq('region', platformCode)
+      .single()
+    
+    if (cachedSummoner?.game_name && cachedSummoner?.tag_line) {
+      properDisplayName = `${cachedSummoner.game_name}#${cachedSummoner.tag_line}`
+    }
+  }
 
   return {
-    title: `${displayName} - ${region.toUpperCase()} | ARAM PIG`,
-    description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance on ${region.toUpperCase()} server.`,
+    title: `${properDisplayName} - ${region.toUpperCase()} | ARAM PIG`,
+    description: `View ${properDisplayName}'s ARAM stats, match history, win rate, KDA, and performance on ${region.toUpperCase()} server.`,
     openGraph: {
-      title: `${displayName} - ${region.toUpperCase()} | ARAM PIG`,
-      description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance.`,
+      title: `${properDisplayName} - ${region.toUpperCase()} | ARAM PIG`,
+      description: `View ${properDisplayName}'s ARAM stats, match history, win rate, KDA, and performance.`,
       url: `https://arampig.lol/${region}/${name}`,
       siteName: 'ARAM PIG',
       images: [
@@ -30,7 +53,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
           url: '/og-image.png',
           width: 1200,
           height: 630,
-          alt: `${displayName} ARAM Stats`,
+          alt: `${properDisplayName} ARAM Stats`,
         },
       ],
       locale: 'en_US',
@@ -38,8 +61,8 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${displayName} - ${region.toUpperCase()} | ARAM PIG`,
-      description: `View ${displayName}'s ARAM stats, match history, win rate, KDA, and performance.`,
+      title: `${properDisplayName} - ${region.toUpperCase()} | ARAM PIG`,
+      description: `View ${properDisplayName}'s ARAM stats, match history, win rate, KDA, and performance.`,
       images: ['/og-image.png'],
     },
   }

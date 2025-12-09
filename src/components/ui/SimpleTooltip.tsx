@@ -89,7 +89,7 @@ export default function SimpleTooltip({
               zIndex: 99999,
             }}
           >
-            <div className="bg-abyss-900 border border-gold-dark/80 rounded-lg px-3 py-2 shadow-xl max-w-[90vw] overflow-x-auto">
+            <div className="bg-abyss-900 border border-gold-dark/80 rounded-lg px-3 py-2 shadow-xl max-w-xs">
               {content}
             </div>
             {/* triangle - points down when tooltip is above, points up when tooltip is below */}

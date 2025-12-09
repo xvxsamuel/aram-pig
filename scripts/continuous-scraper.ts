@@ -858,21 +858,11 @@ async function main() {
             toDelete.forEach(p => dryPuuids.delete(p))
           }
 
-          // If too many consecutive dry/exhausted PUUIDs, region may be saturated
-          // Sleep to give other regions more API bandwidth
-          if (consecutiveDryPuuids >= 10) {
-            const sleepTime = Math.min(consecutiveDryPuuids * 1000, 30000) // Up to 30s
-            console.log(
-              `[${region}] ${consecutiveDryPuuids} consecutive dry PUUIDs - region saturated, sleeping ${sleepTime / 1000}s...`
-            )
-            await sleep(sleepTime)
-
-            // Also clear backtrack history to force finding new players
-            if (consecutiveDryPuuids >= 20 && backtrackHistory.length > 50) {
-              backtrackHistory.length = 0
-              console.log(`[${region}] Cleared backtrack history to force new exploration`)
-              consecutiveDryPuuids = 0
-            }
+          // Reset consecutive counter after a threshold to continue exploration
+          if (consecutiveDryPuuids >= 20 && backtrackHistory.length > 50) {
+            backtrackHistory.length = 0
+            console.log(`[${region}] Cleared backtrack history to force new exploration`)
+            consecutiveDryPuuids = 0
           }
           continue
         }

@@ -11,6 +11,15 @@ const nextConfig = {
       },
     ],
   },
+  // Suppress source map warnings from Next.js internal files
+  webpack: (config, { dev, isServer }) => {
+    if (dev) {
+      config.ignoreWarnings = [
+        { module: /node_modules\/next\/dist/ }
+      ]
+    }
+    return config
+  },
 }
 
 export default nextConfig
