@@ -11,6 +11,8 @@ const nextConfig = {
       },
     ],
   },
+  // Empty turbopack config to acknowledge Turbopack is enabled
+  turbopack: {},
   // Suppress source map warnings from Next.js internal files
   webpack: (config, { dev, isServer }) => {
     if (dev) {
