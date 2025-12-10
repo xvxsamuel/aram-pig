@@ -1,16 +1,4 @@
-'use client'
-
-import { useState, useEffect, useMemo, memo } from 'react'
-import Image from 'next/image'
-import { getTooltipData, cleanWikiMarkup, type TooltipType } from '@/lib/ui'
-import { getItemImageUrl, getLatestVersion } from '@/lib/ddragon'
-import SimpleTooltip from './SimpleTooltip'
-
-interface TooltipProps {
-  id: number
-  type?: 'item' | 'rune' | 'summoner-spell'
-  children: React.ReactNode
-}
+// shared tooltip utilities for rendering formatted descriptions
 
 const KEYWORD_ICON_MAP = new Map<string, string>([
   // status effects
@@ -60,47 +48,14 @@ const KEYWORD_ICON_MAP = new Map<string, string>([
   ['er', '/icons/tooltips/range_center.png'],
 ])
 
-// optimized keyword icon lookup
 function getKeywordIcon(keyword: string): string | null {
   return KEYWORD_ICON_MAP.get(keyword.toLowerCase().trim()) || null
 }
 
-// item type label lookup
-const ITEM_TYPE_LABELS: Record<TooltipType, string> = {
-  legendary: 'Legendary Item',
-  boots: 'Boots',
-  component: 'Component',
-  starter: 'Starter Item',
-  consumable: 'Consumable',
-  other: 'Special Item',
-}
-
-// percentage stats for formatting
-const PERCENT_STATS = new Set([
-  'critical strike',
-  'attack speed',
-  'cooldown',
-  'life steal',
-  'omnivamp',
-  'ability haste',
-  'heal and shield',
-  'tenacity',
-  'move speed',
-  'movement speed',
-])
-
-// format stat value (memoized via useMemo in parent)
-function formatStatValue(statName: string, statValue: number): string {
-  const isPercent = Array.from(PERCENT_STATS).some(s => statName.toLowerCase().includes(s))
-  return isPercent ? `${statValue}%` : `${statValue}`
-}
-
-// optimized marker regex (compiled once)
 const MARKER_REGEX =
   /(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g
 
-// render nested markers recursively (memoized per description)
-function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
+export function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
   const parts: React.ReactNode[] = []
   const segments = text.split(MARKER_REGEX)
 
@@ -111,7 +66,6 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
 
     const keyStr = `${baseKey}-${key++}`
 
-    // check tag type via startsWith (faster than regex)
     if (segment.startsWith('<ap>')) {
       parts.push(
         <span key={keyStr} style={{ color: 'var(--tooltip-ap)' }}>
@@ -250,170 +204,4 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
   }
 
   return parts
-}
-
-// format description - memoized per tooltip
-function formatDescription(desc: string, isRune: boolean = false): React.ReactNode {
-  if (!desc) return null
-
-  let cleanedDesc = desc
-  if (isRune) {
-    cleanedDesc = desc
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-  }
-
-  const lines = cleanedDesc.split('\n').filter(line => line.trim())
-
-  return lines.map((line, lineIdx) => {
-    const elements: React.ReactNode[] = []
-    let key = 0
-
-    const passiveNameMatch = line.match(/^([^:]+):/)
-    const hasPassiveName = passiveNameMatch && passiveNameMatch[1].length < 50
-
-    let currentText = line
-
-    if (hasPassiveName) {
-      elements.push(
-        <strong key={key++} className="text-gold-light font-bold uppercase">
-          {passiveNameMatch[1]}
-        </strong>
-      )
-      elements.push(<span key={key++}>: </span>)
-      currentText = line.slice(passiveNameMatch[0].length)
-    }
-
-    const cleanedText = cleanWikiMarkup(currentText)
-    const rendered = renderNestedMarkers(cleanedText, lineIdx * 10000)
-    elements.push(...rendered)
-
-    return (
-      <div key={lineIdx} className="mb-1 last:mb-0">
-        {elements}
-      </div>
-    )
-  })
-}
-
-// memoized tooltip content component
-const TooltipContent = memo(
-  ({
-    tooltipData,
-    actualId,
-    type,
-  }: {
-    tooltipData: any
-    actualId: number
-    type: 'item' | 'rune' | 'summoner-spell'
-  }) => {
-    // get cached ddragon version
-    const [ddragonVersion, setDdragonVersion] = useState<string>('15.23.1')
-
-    useEffect(() => {
-      getLatestVersion().then(setDdragonVersion)
-    }, [])
-
-    // memoize formatted description
-    const formattedDescription = useMemo(
-      () => formatDescription(tooltipData.description, type === 'rune'),
-      [tooltipData.description, type]
-    )
-
-    return (
-      <div className="w-80 text-left p-1 min-w-0 max-w-[320px]">
-        {/* header */}
-        <div className="flex items-center justify-between mb-2 gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            {type === 'item' && (
-              <div className="w-8 h-8 flex-shrink-0 rounded border border-gold-dark/40 overflow-hidden relative">
-                <Image
-                  src={getItemImageUrl(actualId, ddragonVersion)}
-                  alt={tooltipData.name}
-                  width={32}
-                  height={32}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              </div>
-            )}
-            {type === 'rune' && tooltipData.icon && (
-              <div className="w-8 h-8 flex-shrink-0 rounded-full border-2 border-gold-dark/60 overflow-hidden relative">
-                <Image
-                  src={`https://ddragon.leagueoflegends.com/cdn/img/${tooltipData.icon}`}
-                  alt={tooltipData.name}
-                  width={32}
-                  height={32}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              </div>
-            )}
-            <div className="text-sm font-semibold text-gold-light break-words min-w-0">{tooltipData.name}</div>
-          </div>
-          {tooltipData.totalCost !== undefined && tooltipData.totalCost > 0 && (
-            <div
-              className="text-sm font-semibold flex items-center gap-1 flex-shrink-0"
-              style={{ color: 'var(--tooltip-gold)' }}
-            >
-              <img src="/icons/tooltips/gold_colored_icon.png" alt="gold" className="w-4 h-4" />
-              {tooltipData.totalCost}
-            </div>
-          )}
-        </div>
-
-        {/* stats */}
-        {tooltipData.stats && Object.keys(tooltipData.stats).length > 0 && (
-          <>
-            <div className="mb-2">
-              {Object.entries(tooltipData.stats).map(([statName, statValue]) => (
-                <div key={statName} className="text-xs text-white break-words">
-                  {formatStatValue(statName, statValue as number)} {statName}
-                </div>
-              ))}
-            </div>
-            <div className="h-px bg-gradient-to-r from-gold-dark/40 to-transparent -mx-4 mb-2" />
-          </>
-        )}
-
-        {/* description */}
-        {tooltipData.description && tooltipData.description.trim() !== '' && (
-          <>
-            <div className="text-xs text-gray-300 leading-relaxed break-words overflow-wrap-anywhere mb-2">{formattedDescription}</div>
-            {tooltipData.itemType && tooltipData.itemType !== 'other' && (
-              <div className="h-px bg-gradient-to-r from-gold-dark/40 to-transparent -mx-4 mb-2" />
-            )}
-          </>
-        )}
-
-        {/* item type */}
-        {tooltipData.itemType && tooltipData.itemType !== 'other' && (
-          <div className="text-xs text-gold-dark italic">{ITEM_TYPE_LABELS[tooltipData.itemType as TooltipType]}</div>
-        )}
-      </div>
-    )
-  }
-)
-
-TooltipContent.displayName = 'TooltipContent'
-
-// main tooltip component - uses SimpleTooltip for positioning
-export default function Tooltip({ id, type = 'item', children }: TooltipProps) {
-  // hubris id override
-  const actualId = id === 126697 ? 6697 : id
-
-  // memoize tooltip data (only changes if id/type changes)
-  const tooltipData = useMemo(() => getTooltipData(actualId, type), [actualId, type])
-
-  if (id === 0 || !tooltipData) {
-    return <div className="inline-block">{children}</div>
-  }
-
-  return (
-    <SimpleTooltip content={<TooltipContent tooltipData={tooltipData} actualId={actualId} type={type} />}>
-      {children}
-    </SimpleTooltip>
-  )
 }

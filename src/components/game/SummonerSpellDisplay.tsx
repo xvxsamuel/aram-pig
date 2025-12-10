@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Tooltip from '@/components/ui/Tooltip'
+import SummonerSpellTooltip from '@/components/ui/SummonerSpellTooltip'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { getSummonerSpellUrl } from '@/lib/ddragon'
 import { getWinrateColor } from '@/lib/ui'
@@ -76,9 +76,9 @@ export function SummonerSpellDisplay({
     }
 
     return (
-      <Tooltip key={spellId} id={spellId} type="summoner-spell">
+      <SummonerSpellTooltip key={spellId} spellId={spellId}>
         {content}
-      </Tooltip>
+      </SummonerSpellTooltip>
     )
   }
 

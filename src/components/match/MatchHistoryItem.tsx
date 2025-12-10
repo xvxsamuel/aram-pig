@@ -18,6 +18,9 @@ import { getChampionUrlName } from '@/lib/ddragon'
 import { getKdaColor, getPigScoreColor } from '@/lib/ui'
 import MatchDetails from '@/components/match/MatchDetails'
 import Tooltip from '@/components/ui/Tooltip'
+import ItemTooltip from '@/components/ui/ItemTooltip'
+import RuneTooltip from '@/components/ui/RuneTooltip'
+import SummonerSpellTooltip from '@/components/ui/SummonerSpellTooltip'
 
 // preload images for MatchDetails on hover
 function preloadMatchImages(match: MatchData, ddragonVersion: string) {
@@ -213,7 +216,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                     {/* spells & runes */}
                     <div className="flex gap-1 items-center">
                       <div className="flex flex-col gap-0.5">
-                        <Tooltip id={participant.summoner1Id} type="summoner-spell">
+                        <SummonerSpellTooltip spellId={participant.summoner1Id}>
                           <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
                             <Image
                               src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
@@ -224,8 +227,8 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                               unoptimized
                             />
                           </div>
-                        </Tooltip>
-                        <Tooltip id={participant.summoner2Id} type="summoner-spell">
+                        </SummonerSpellTooltip>
+                        <SummonerSpellTooltip spellId={participant.summoner2Id}>
                           <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
                             <Image
                               src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
@@ -236,12 +239,12 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                               unoptimized
                             />
                           </div>
-                        </Tooltip>
+                        </SummonerSpellTooltip>
                       </div>
 
                       <div className="flex flex-col gap-0.5">
                         {participant.perks?.styles?.[0]?.selections?.[0]?.perk && (
-                          <Tooltip id={participant.perks.styles[0].selections[0].perk} type="rune">
+                          <RuneTooltip runeId={participant.perks.styles[0].selections[0].perk}>
                             <div className="w-6 h-6 rounded-full overflow-hidden bg-abyss-800 border border-gold-dark">
                               <Image
                                 src={getRuneImageUrl(participant.perks.styles[0].selections[0].perk)}
@@ -252,10 +255,10 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                                 unoptimized
                               />
                             </div>
-                          </Tooltip>
+                          </RuneTooltip>
                         )}
                         {participant.perks?.styles?.[1]?.style && (
-                          <Tooltip id={participant.perks.styles[1].style} type="rune">
+                          <RuneTooltip runeId={participant.perks.styles[1].style}>
                             <div className="w-6 h-6 rounded-full overflow-hidden bg-abyss-800 border border-gold-dark flex items-center justify-center">
                               <Image
                                 src={getRuneStyleImageUrl(participant.perks.styles[1].style)}
@@ -266,7 +269,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                                 unoptimized
                               />
                             </div>
-                          </Tooltip>
+                          </RuneTooltip>
                         )}
                       </div>
                     </div>
@@ -319,7 +322,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                     participant.item5,
                   ].map((itemId, idx) =>
                     itemId > 0 ? (
-                      <Tooltip key={idx} id={itemId} type="item">
+                      <ItemTooltip key={idx} itemId={itemId}>
                         <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
                           <Image
                             src={getItemImageUrl(itemId, ddragonVersion)}
@@ -330,7 +333,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                             unoptimized
                           />
                         </div>
-                      </Tooltip>
+                      </ItemTooltip>
                     ) : (
                       <div key={idx} className="w-7 h-7 rounded bg-abyss-800/50 border border-gold-dark/50" />
                     )

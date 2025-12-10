@@ -4,7 +4,7 @@ import Image from 'next/image'
 import clsx from 'clsx'
 import { getItemImageUrl } from '@/lib/ddragon'
 import { getWinrateColor } from '@/lib/ui'
-import Tooltip from '@/components/ui/Tooltip'
+import ItemTooltip from '@/components/ui/ItemTooltip'
 
 // size presets in pixels
 const SIZE_MAP = {
@@ -85,9 +85,9 @@ export default function ItemIcon({
   )
 
   const content = showTooltip ? (
-    <Tooltip id={itemId} type="item">
+    <ItemTooltip itemId={itemId}>
       {imageElement}
-    </Tooltip>
+    </ItemTooltip>
   ) : (
     imageElement
   )

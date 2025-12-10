@@ -18,8 +18,8 @@ const items = itemsData as Record<string, ItemData>
 /** ARAM starting gold */
 export const ARAM_STARTING_GOLD = 1400
 
-/** Time window after first purchase to consider as starter (30 seconds) */
-export const STARTER_TIME_WINDOW = 30000
+/** Time window after first purchase to consider as starter (1 minute) */
+export const STARTER_TIME_WINDOW = 60000
 
 /** Maximum time for starter items (1 minute) */
 export const MAX_STARTER_TIME = 60000
@@ -44,7 +44,7 @@ export function getItemCost(itemId: number): number {
  * Extract first buy (items purchased at game start in ARAM)
  * 
  * First buy criteria:
- * - Items bought within 30 seconds of first purchase
+ * - Items bought within 1 minute of first purchase
  * - Total gold spent <= 1400 (ARAM starting gold)
  * - Only includes actual purchases (not refunds/undos)
  * 

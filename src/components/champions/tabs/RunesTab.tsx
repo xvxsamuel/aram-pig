@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import clsx from 'clsx'
-import Tooltip from '@/components/ui/Tooltip'
+import RuneTooltip from '@/components/ui/RuneTooltip'
 import { getWinrateColor } from '@/lib/ui'
 import { RUNE_TREES, STAT_PERKS } from '@/lib/game/runes'
 import type { RuneStat, StatPerkStat } from '@/types/champion-stats'
@@ -57,7 +57,7 @@ export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
     const imgSize = size === 'lg' ? 40 : 32
 
     return (
-      <Tooltip key={runeId} id={runeId} type="rune">
+      <RuneTooltip key={runeId} runeId={runeId}>
         <div className="flex flex-col items-center cursor-pointer">
           <div className={clsx(sizeClass, 'rounded-full overflow-hidden', shouldGrey && 'opacity-40')}>
             {runeInfo?.icon && (
@@ -92,7 +92,7 @@ export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
             )}
           </div>
         </div>
-      </Tooltip>
+      </RuneTooltip>
     )
   }
 

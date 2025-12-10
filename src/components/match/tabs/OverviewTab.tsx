@@ -6,7 +6,7 @@ import clsx from 'clsx'
 import { ParticipantData } from '@/types/match'
 import { getChampionImageUrl, getItemImageUrl, getChampionUrlName } from '@/lib/ddragon'
 import { getPigScoreColor, getKdaColor } from '@/lib/ui'
-import Tooltip from '@/components/ui/Tooltip'
+import ItemTooltip from '@/components/ui/ItemTooltip'
 import { OverviewTabProps, formatDamage } from './shared'
 
 interface TeamData {
@@ -195,7 +195,7 @@ export function OverviewTab({
           <div className="flex gap-0.5 justify-center">
             {items.map((item, idx) =>
               item > 0 ? (
-                <Tooltip key={idx} id={item} type="item">
+                <ItemTooltip key={idx} itemId={item}>
                   <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
                     <Image
                       src={getItemImageUrl(item, ddragonVersion)}
@@ -206,7 +206,7 @@ export function OverviewTab({
                       unoptimized
                     />
                   </div>
-                </Tooltip>
+                </ItemTooltip>
               ) : (
                 <div key={idx} className="w-6 h-6 rounded bg-abyss-800/50 border border-gold-dark/50" />
               )
