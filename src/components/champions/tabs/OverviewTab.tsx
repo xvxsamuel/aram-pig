@@ -15,7 +15,7 @@ import { getAbilityMaxOrder } from './utils'
 import runesData from '@/data/runes.json'
 import type { RuneStat, StatPerkStat, StarterBuild, SummonerSpellStat, AbilityLevelingStat } from '@/types/champion-stats'
 
-export interface ComboDisplay {t
+export interface ComboDisplay {
   originalIndex: number
   itemIds: number[]
   hasBoots: boolean
