@@ -14,11 +14,12 @@ if (!RIOT_API_KEY) {
 const rAPI = new RiotAPI(RIOT_API_KEY!)
 const ddragon = new DDragon()
 
-// account-v1 endpoints
+// account-v1 endpoints (use europe for all regions to avoid 403 errors)
+// Riot's account-v1 API has limited regional routing - europe works for all
 const REGIONAL_TO_PLATFORM_ID: Record<RegionalCluster, string> = {
-  americas: 'americas',
+  americas: 'europe',
   europe: 'europe',
-  asia: 'asia',
+  asia: 'europe',
   sea: 'europe',
 }
 

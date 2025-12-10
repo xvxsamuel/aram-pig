@@ -293,9 +293,9 @@ async function crawlSummoner(
           const currentStack = crawlStackByRegion.get(region)
           const seedPool = seedPoolByRegion.get(region)!
 
-          // For current patch matches, aggressively add to stack (these players are ACTIVE)
-          // Use higher threshold to ensure we follow active player chains
-          const shouldAddToStack = !currentStack || currentStack.length < 500
+          // For current patch matches, add to stack (lower threshold to prevent over-accumulation)
+          // Balance between exploration and exploitation
+          const shouldAddToStack = !currentStack || currentStack.length < 200
 
           matchData.info.participants.forEach(p => {
             if (p.puuid && p.puuid !== puuid) {
@@ -723,16 +723,16 @@ async function main() {
             }
 
             // No seeds from pool or DB, clear dry entries and retry
-            console.log(`[${region}] No seeds available, clearing dry entries and waiting 15s...`)
+            console.log(`[${region}] No seeds available, clearing dry entries and waiting 10s...`)
 
-            // Clear dry entries to allow re-checking old players
+            // Aggressively clear dry entries to allow re-checking old players
             if (dryPuuids.size > 0) {
-              const toDelete = Array.from(dryPuuids).slice(0, Math.floor(dryPuuids.size * 0.5))
+              const toDelete = Array.from(dryPuuids).slice(0, Math.floor(dryPuuids.size * 0.8))
               toDelete.forEach(p => dryPuuids.delete(p))
-              console.log(`[${region}] Cleared ${toDelete.length} dry entries`)
+              console.log(`[${region}] Cleared ${toDelete.length} dry entries (${dryPuuids.size} remaining)`)
             }
 
-            await sleep(15000)
+            await sleep(10000)
             consecutiveBacktracks = 0
             continue
           }
@@ -764,12 +764,12 @@ async function main() {
               continue
             }
 
-            // No pool or DB seeds, short sleep and clear dry entries
-            await sleep(15000)
-            if (dryPuuids.size > 100) {
-              const toDelete = Array.from(dryPuuids).slice(0, Math.floor(dryPuuids.size * 0.5))
+            // No pool or DB seeds, short sleep and aggressively clear dry entries
+            await sleep(10000)
+            if (dryPuuids.size > 50) {
+              const toDelete = Array.from(dryPuuids).slice(0, Math.floor(dryPuuids.size * 0.8))
               toDelete.forEach(p => dryPuuids.delete(p))
-              console.log(`[${region}] Cleared ${toDelete.length} dry entries to allow re-checking`)
+              console.log(`[${region}] Cleared ${toDelete.length} dry entries to allow re-checking (${dryPuuids.size} remaining)`)
             }
             consecutiveBacktracks = 0
             continue
@@ -895,6 +895,13 @@ async function main() {
             if (!visited.has(discovered[i]) && !dryPuuids.has(discovered[i])) {
               stack.push(discovered[i])
             }
+          }
+          
+          // Aggressively prune stack if it gets too large (focus on storage instead of exploration)
+          if (stack.length > 300) {
+            const pruneCount = Math.floor(stack.length * 0.4)
+            stack.splice(0, pruneCount)
+            console.log(`  → Pruned ${pruneCount} entries from stack (was ${stack.length + pruneCount}, now ${stack.length})`)  
           }
         } else {
           consecutiveEmptyDiscoveries++

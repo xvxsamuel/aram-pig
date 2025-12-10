@@ -10,19 +10,14 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  // debug logging (remove after troubleshooting)
-  console.log('[CLEANUP] Auth header present:', !!authHeader)
-  console.log('[CLEANUP] CRON_SECRET env var present:', !!cronSecret)
-  console.log('[CLEANUP] Auth header length:', authHeader?.length)
-  console.log('[CLEANUP] Expected length:', cronSecret ? `Bearer ${cronSecret}`.length : 'N/A')
-  console.log('[CLEANUP] Auth header first 10 chars:', authHeader?.substring(0, 10))
-  console.log('[CLEANUP] Expected first 17 chars:', cronSecret ? `Bearer ${cronSecret.substring(0, 10)}` : 'N/A')
-  console.log('[CLEANUP] Auth header last 5 chars:', authHeader?.slice(-5))
-  console.log('[CLEANUP] Expected last 5 chars:', cronSecret ? cronSecret.slice(-5) : 'N/A')
+  // ALWAYS require CRON_SECRET - no exceptions
+  if (!cronSecret) {
+    console.error('[CLEANUP] CRON_SECRET not configured - endpoint disabled')
+    return NextResponse.json({ error: 'Endpoint not configured' }, { status: 503 })
+  }
 
-  // allow access if no CRON_SECRET is set (development) or if it matches
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    console.log('[CLEANUP] Authorization failed - secrets do not match')
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    console.log('[CLEANUP] Authorization failed')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
