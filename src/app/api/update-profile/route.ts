@@ -35,7 +35,7 @@ import {
 // CONFIGURATION
 // ============================================================================
 
-const CHUNK_SIZE = 12 // matches per chunk (~3s each = ~36s, under 60s timeout)
+const CHUNK_SIZE = 12 // matches per chunk (~2s each with optimized caching = ~24s)
 const processingLocks = new Map<string, Promise<Response>>()
 
 // ============================================================================
@@ -355,9 +355,18 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
   const existingMatchesMap = new Map(existingMatchesResult.data?.map((m: any) => [m.match_id, m]) || [])
   const userHasRecord = new Set(existingUserRecordsResult.data?.map((r: any) => r.match_id) || [])
 
+  // Prefetch all champion stats for the entire chunk ONCE to avoid repeated DB calls
+  let globalStatsCache: Map<string, any[]> = new Map()
+  
+  // Cache accepted patches to avoid repeated DB queries
+  const acceptedPatchesCache = new Set<string>()
+  const rejectedPatchesCache = new Set<string>()
+
   let fetchedInChunk = 0
+  const allRecordsToInsert: any[] = []
 
   try {
+    // Process matches with parallel Riot API calls but sequential DB writes
     for (const matchId of chunkToProcess) {
       try {
         const existingMatch = existingMatchesMap.get(matchId)
@@ -392,8 +401,25 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           })
         }
 
-        // prepare stats and process participants
-        const statsCache = await prepareStatsCache(match.info.participants, isOlderThan1Year, isRemake)
+        // prepare stats cache - use global cache to avoid repeated DB queries
+        // only fetch champion stats if not already in cache
+        if (globalStatsCache.size === 0 && !isOlderThan1Year && !isRemake) {
+          globalStatsCache = await prepareStatsCache(match.info.participants, isOlderThan1Year, isRemake)
+        } else if (!isOlderThan1Year && !isRemake) {
+          // Add any new champions to the cache
+          const newChampions = match.info.participants
+            .map((p: any) => p.championName)
+            .filter((name: string) => !globalStatsCache.has(name))
+          if (newChampions.length > 0) {
+            const newCache = await prepareStatsCache(
+              match.info.participants.filter((p: any) => newChampions.includes(p.championName)),
+              false,
+              false
+            )
+            newCache.forEach((value, key) => globalStatsCache.set(key, value))
+          }
+        }
+        const statsCache = isOlderThan1Year || isRemake ? new Map() : globalStatsCache
         const teamKills = calculateTeamKills(match.info.participants)
 
         const records = await processParticipants({
@@ -410,10 +436,22 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           team200Kills: teamKills.team200,
         })
 
-        const { error: insertError } = await supabase.from('summoner_matches').insert(records)
+        // Batch records for later insert
+        allRecordsToInsert.push(...records)
+
+        // Check patch acceptance with cache
+        let patchAccepted = acceptedPatchesCache.has(patch)
+        if (!patchAccepted && !rejectedPatchesCache.has(patch)) {
+          patchAccepted = await isPatchAccepted(patch)
+          if (patchAccepted) {
+            acceptedPatchesCache.add(patch)
+          } else {
+            rejectedPatchesCache.add(patch)
+          }
+        }
 
         // update champion stats for tracked user (new matches only)
-        if (!insertError && !existingMatch && (await isPatchAccepted(patch)) && !isRemake) {
+        if (!existingMatch && patchAccepted && !isRemake) {
           const trackedIdx = match.info.participants.findIndex((p: any) => p.puuid === puuid)
           if (trackedIdx !== -1) {
             const p = match.info.participants[trackedIdx]
@@ -467,6 +505,14 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
         fetchedInChunk++
       } catch (err) {
         console.error(`Failed to process match ${matchId}:`, err)
+      }
+    }
+
+    // Batch insert all summoner_matches records at once
+    if (allRecordsToInsert.length > 0) {
+      const { error: batchInsertError } = await supabase.from('summoner_matches').insert(allRecordsToInsert)
+      if (batchInsertError) {
+        console.error('[UpdateProfile] Batch insert error:', batchInsertError)
       }
     }
 
