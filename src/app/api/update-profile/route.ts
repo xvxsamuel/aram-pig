@@ -35,7 +35,7 @@ import {
 // CONFIGURATION
 // ============================================================================
 
-const CHUNK_SIZE = 12 // matches per chunk (~2s each with optimized caching = ~24s)
+const CHUNK_SIZE = 6 // matches per chunk (6 matches × 10 participants = 60 records, ~30s processing)
 const processingLocks = new Map<string, Promise<Response>>()
 
 // ============================================================================
