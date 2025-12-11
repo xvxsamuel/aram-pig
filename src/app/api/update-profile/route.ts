@@ -35,7 +35,7 @@ import {
 // CONFIGURATION
 // ============================================================================
 
-const CHUNK_SIZE = 6 // matches per chunk (6 matches × 10 participants = 60 records, ~30s processing)
+const CHUNK_SIZE = 10 // matches per chunk (parallel fetch + batch process = ~25-35s total)
 const processingLocks = new Map<string, Promise<Response>>()
 
 // ============================================================================
@@ -366,16 +366,14 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
   const allRecordsToInsert: any[] = []
 
   try {
-    // Process matches with parallel Riot API calls but sequential DB writes
-    for (const matchId of chunkToProcess) {
-      try {
-        const existingMatch = existingMatchesMap.get(matchId)
-        if (existingMatch && userHasRecord.has(matchId)) {
-          fetchedInChunk++
-          continue
-        }
+    // PARALLEL: Fetch all match data from Riot API at once
+    const matchFetchPromises = chunkToProcess.map(async (matchId) => {
+      const existingMatch = existingMatchesMap.get(matchId)
+      if (existingMatch && userHasRecord.has(matchId)) {
+        return { matchId, skip: true }
+      }
 
-        // fetch match data
+      try {
         const match = await getMatchById(matchId, region as any, 'batch')
         const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
         const gameCreation = (existingMatch as any)?.game_creation || match.info.gameCreation
@@ -388,7 +386,38 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           try { timeline = await getMatchTimeline(matchId, region as any, 'batch') } catch {}
         }
 
-        const patch = (existingMatch as any)?.patch || (match.info.gameVersion ? extractPatch(match.info.gameVersion) : getPatchFromDate(gameCreation))
+        return { matchId, match, existingMatch, gameCreation, isOlderThan1Year, isRemake, timeline, skip: false }
+      } catch (err) {
+        console.error(`Failed to fetch match ${matchId}:`, err)
+        return { matchId, skip: true, error: err }
+      }
+    })
+
+    const matchResults = await Promise.all(matchFetchPromises)
+
+    // Populate global stats cache ONCE with all champions from all matches
+    const allChampions = new Set<string>()
+    for (const result of matchResults) {
+      if (!result.skip && result.match && !result.isOlderThan1Year && !result.isRemake) {
+        result.match.info.participants.forEach((p: any) => allChampions.add(p.championName))
+      }
+    }
+    if (allChampions.size > 0) {
+      globalStatsCache = await prefetchChampionStats([...allChampions])
+    }
+
+    // SEQUENTIAL: Process results and write to DB (must be sequential for DB consistency)
+    for (const result of matchResults) {
+      if (result.skip) {
+        if (!result.error) fetchedInChunk++
+        continue
+      }
+
+      try {
+        const { matchId, match, existingMatch, gameCreation, isOlderThan1Year, isRemake, timeline } = result
+        if (!match) continue // Skip if match fetch failed
+        
+        const patch = (existingMatch as any)?.patch || (match.info.gameVersion ? extractPatch(match.info.gameVersion) : getPatchFromDate(gameCreation!))
         const gameDuration = (existingMatch as any)?.game_duration || match.info.gameDuration
 
         // store match if new
@@ -401,24 +430,6 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           })
         }
 
-        // prepare stats cache - use global cache to avoid repeated DB queries
-        // only fetch champion stats if not already in cache
-        if (globalStatsCache.size === 0 && !isOlderThan1Year && !isRemake) {
-          globalStatsCache = await prepareStatsCache(match.info.participants, isOlderThan1Year, isRemake)
-        } else if (!isOlderThan1Year && !isRemake) {
-          // Add any new champions to the cache
-          const newChampions = match.info.participants
-            .map((p: any) => p.championName)
-            .filter((name: string) => !globalStatsCache.has(name))
-          if (newChampions.length > 0) {
-            const newCache = await prepareStatsCache(
-              match.info.participants.filter((p: any) => newChampions.includes(p.championName)),
-              false,
-              false
-            )
-            newCache.forEach((value, key) => globalStatsCache.set(key, value))
-          }
-        }
         const statsCache = isOlderThan1Year || isRemake ? new Map() : globalStatsCache
         const teamKills = calculateTeamKills(match.info.participants)
 
@@ -504,7 +515,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
 
         fetchedInChunk++
       } catch (err) {
-        console.error(`Failed to process match ${matchId}:`, err)
+        console.error(`Failed to process match ${result.matchId}:`, err)
       }
     }
 
