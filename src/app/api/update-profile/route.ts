@@ -510,11 +510,15 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       }
     }
 
-    // Batch insert all summoner_matches records at once
+    // Batch insert all summoner_matches records in smaller chunks to avoid timeout
     if (allRecordsToInsert.length > 0) {
-      const { error: batchInsertError } = await supabase.from('summoner_matches').insert(allRecordsToInsert)
-      if (batchInsertError) {
-        console.error('[UpdateProfile] Batch insert error:', batchInsertError)
+      const INSERT_BATCH_SIZE = 50 // Insert 50 records at a time (5 matches worth)
+      for (let i = 0; i < allRecordsToInsert.length; i += INSERT_BATCH_SIZE) {
+        const batch = allRecordsToInsert.slice(i, i + INSERT_BATCH_SIZE)
+        const { error: batchInsertError } = await supabase.from('summoner_matches').insert(batch)
+        if (batchInsertError) {
+          console.error(`[UpdateProfile] Batch insert error (${i}-${i + batch.length}):`, batchInsertError)
+        }
       }
     }
 
