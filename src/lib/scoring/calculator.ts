@@ -338,7 +338,7 @@ export async function calculatePigScoreWithBreakdown(
   if (participant.kills !== undefined && participant.assists !== undefined && participant.teamTotalKills && participant.teamTotalKills > 0) {
     killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
     const kpScore = calculateKillParticipationScore(killParticipation)
-    const deathScore = calculateDeathsScore(participant.deaths, gameDurationMinutes)
+    const deathScore = calculateDeathsScore(participant.deaths, gameDurationMinutes, participant.deathQualityScore)
     kdaScore = kpScore * 0.6 + deathScore * 0.4
     metrics.push({ name: 'Kill Participation', score: kpScore, weight: 0.6, playerValue: killParticipation * 100 })
     metrics.push({ name: 'Deaths/Min', score: deathScore, weight: 0.4, playerValue: playerStats.deathsPerMin })

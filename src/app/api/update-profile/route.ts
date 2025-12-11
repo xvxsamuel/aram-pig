@@ -445,6 +445,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           statsCache,
           team100Kills: teamKills.team100,
           team200Kills: teamKills.team200,
+          trackedPuuid: puuid,  // only calculate PIG scores for tracked user
         })
 
         // Batch ALL participant records for stats calculation and upsert
@@ -522,7 +523,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
     // Batch upsert all summoner_matches records in smaller chunks to avoid timeout
     // Use upsert to overwrite existing records (needed for recalculating PIG scores)
     if (allRecordsToInsert.length > 0) {
-      const UPSERT_BATCH_SIZE = 50 // Upsert 50 records at a time (5 matches worth)
+      const UPSERT_BATCH_SIZE = 20 // Upsert 20 records at a time (2 matches worth, reduced due to large JSONB)
       for (let i = 0; i < allRecordsToInsert.length; i += UPSERT_BATCH_SIZE) {
         const batch = allRecordsToInsert.slice(i, i + UPSERT_BATCH_SIZE)
         const { error: batchUpsertError } = await supabase.from('summoner_matches').upsert(batch)

@@ -37,8 +37,9 @@ import { getStdDev, getZScore } from '../db/stats-aggregator'
  */
 
 // Sigmoid scaling constant - determines steepness of the S-curve
-// k=0.8 gives good spread: z=3 → ~95, z=-3 → ~5
-const SIGMOID_K = 0.8
+// k=1.0 gives more generous scoring: z=3 → ~98, z=2 → ~93, z=1 → ~79, z=-3 → ~2
+// Higher k = steeper curve = more reward for above-average performance
+const SIGMOID_K = 1.0
 
 /**
  * Convert z-score to a 0-100 score using sigmoid function
@@ -198,9 +199,10 @@ export function calculateCCTimeScore(
     return 100 // Neutral score, effectively ignored via weight
   }
 
-  // If champion avg CC 0.5-2 sec/min, CC is too inconsistent - just use ratio scoring
+  // If champion avg CC 0.5-3 sec/min, CC is too inconsistent - just use ratio scoring
   // Meeting or exceeding average = 100, below average scales down proportionally
-  if (avgValue < 2) {
+  // Threshold raised from 2 to 3 to be more generous to high CC champions
+  if (avgValue < 3) {
     const ratio = playerValue / avgValue
     if (ratio >= 1) return 100 // At or above average = perfect
     // Below average: scale from 0-100 based on how close to average
@@ -208,7 +210,7 @@ export function calculateCCTimeScore(
     return Math.round(ratio * 100)
   }
 
-  // Above 2 sec/min: use normal stat scoring with z-score
+  // Above 3 sec/min: use normal stat scoring with z-score
   return calculateStatScore(playerValue, avgValue, welfordState)
 }
 
@@ -216,9 +218,15 @@ export function calculateCCTimeScore(
  * Calculate deaths/minute score (0-100)
  * Optimal: 0.4-0.6 deaths/min = 80 (good but not perfect)
  * Very low deaths: 60 (safe play)
- * Too many deaths: penalized harshly
+ * Too many deaths: penalized, but death quality can offset
+ * 
+ * @param deathQuality - Optional death quality score (0-100) - good deaths reduce penalty
  */
-export function calculateDeathsScore(deaths: number, gameDurationMinutes: number): number {
+export function calculateDeathsScore(
+  deaths: number,
+  gameDurationMinutes: number,
+  deathQuality?: number
+): number {
   if (gameDurationMinutes <= 0) return 50
 
   const deathsPerMin = deaths / gameDurationMinutes
@@ -233,12 +241,22 @@ export function calculateDeathsScore(deaths: number, gameDurationMinutes: number
     return Math.max(60, 80 - deficit * 50)
   }
 
-  // Too many deaths - penalize more harshly
-  // 1.0 deaths/min = score ~50
+  // Too many deaths - penalize, but if death quality is good, reduce penalty
+  // 1.0 deaths/min = score ~50 (or higher with good death quality)
   // 1.5 deaths/min = score ~20
   // 2.0 deaths/min = score ~0
   const excess = deathsPerMin - 0.6
-  return Math.max(0, 80 - excess * 60)
+  let baseScore = 80 - excess * 60
+  
+  // If death quality is good (60+), dying more is less punished (you're dying in good fights)
+  // Death quality 60 = reduce penalty by 20%, 80 = reduce by 40%, 100 = reduce by 50%
+  if (deathQuality !== undefined && deathQuality >= 60) {
+    const qualityBonus = Math.min(0.5, (deathQuality - 60) / 100) // 0-50% reduction
+    const penaltyReduction = excess * 60 * qualityBonus
+    baseScore += penaltyReduction
+  }
+  
+  return Math.max(0, Math.round(baseScore))
 }
 
 /**
