@@ -436,10 +436,8 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           team200Kills: teamKills.team200,
         })
 
-        // Batch records for later insert (only if user doesn't already have this match)
-        if (!userHasRecord.has(matchId)) {
-          allRecordsToInsert.push(...records)
-        }
+        // Batch ALL participant records for stats calculation and upsert
+        allRecordsToInsert.push(...records)
 
         // Check patch acceptance with cache
         let patchAccepted = acceptedPatchesCache.has(patch)
@@ -510,14 +508,15 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       }
     }
 
-    // Batch insert all summoner_matches records in smaller chunks to avoid timeout
+    // Batch upsert all summoner_matches records in smaller chunks to avoid timeout
+    // Use upsert to overwrite existing records (needed for recalculating PIG scores)
     if (allRecordsToInsert.length > 0) {
-      const INSERT_BATCH_SIZE = 50 // Insert 50 records at a time (5 matches worth)
-      for (let i = 0; i < allRecordsToInsert.length; i += INSERT_BATCH_SIZE) {
-        const batch = allRecordsToInsert.slice(i, i + INSERT_BATCH_SIZE)
-        const { error: batchInsertError } = await supabase.from('summoner_matches').insert(batch)
-        if (batchInsertError) {
-          console.error(`[UpdateProfile] Batch insert error (${i}-${i + batch.length}):`, batchInsertError)
+      const UPSERT_BATCH_SIZE = 50 // Upsert 50 records at a time (5 matches worth)
+      for (let i = 0; i < allRecordsToInsert.length; i += UPSERT_BATCH_SIZE) {
+        const batch = allRecordsToInsert.slice(i, i + UPSERT_BATCH_SIZE)
+        const { error: batchUpsertError } = await supabase.from('summoner_matches').upsert(batch)
+        if (batchUpsertError) {
+          console.error(`[UpdateProfile] Batch upsert error (${i}-${i + batch.length}):`, batchUpsertError)
         }
       }
     }
