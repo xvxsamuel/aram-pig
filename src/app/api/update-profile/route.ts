@@ -436,8 +436,10 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           team200Kills: teamKills.team200,
         })
 
-        // Batch records for later insert
-        allRecordsToInsert.push(...records)
+        // Batch records for later insert (only if user doesn't already have this match)
+        if (!userHasRecord.has(matchId)) {
+          allRecordsToInsert.push(...records)
+        }
 
         // Check patch acceptance with cache
         let patchAccepted = acceptedPatchesCache.has(patch)
