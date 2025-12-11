@@ -545,22 +545,17 @@ export function BuildTab({
                   return (
                     <div
                       key={groupIdx}
-                      className="flex items-start"
+                      className="flex items-center"
                     >
-                      {/* Item group with gold line through center of items */}
+                      {/* Item group with solid background */}
                       <div className="bg-abyss-900 rounded-lg p-1.5 relative z-10">
-                        {/* Gold timeline line through center of items (item is 28px, padding 6px, so center is at 6 + 14 = 20px, but items have glow so ~17px works) */}
-                        <div 
-                          className="absolute left-0 right-0 h-[3px] bg-gradient-to-r from-gold-dark/60 via-gold-light/80 to-gold-dark/60 rounded-full pointer-events-none"
-                          style={{ top: '17px' }}
-                        />
-                        <div className="relative z-10">
+                        <div className="relative">
                           {groupContent}
                         </div>
                       </div>
-                      {/* Connector line to next group */}
+                      {/* Connector line through middle of item+timestamp */}
                       {!isLastGroup && (
-                        <div className="w-3 h-[3px] bg-gradient-to-r from-gold-light/60 to-gold-dark/40 flex-shrink-0" style={{ marginTop: '23px' }} />
+                        <div className="w-3 h-[1px] bg-gold-light flex-shrink-0" />
                       )}
                     </div>
                   )

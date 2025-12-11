@@ -82,7 +82,7 @@ export async function getAccountByRiotId(
   region: RegionalCluster,
   requestType: RequestType = 'overhead'
 ) {
-  await waitForRateLimit(region, requestType)
+  await waitForRateLimit(region, requestType, undefined, 'account')
 
   try {
     const account = await retryWithDelay(() =>
@@ -103,7 +103,7 @@ export async function getAccountByRiotId(
 }
 
 export async function getSummonerByPuuid(puuid: string, platform: PlatformCode, requestType: RequestType = 'overhead') {
-  await waitForRateLimit(platform, requestType)
+  await waitForRateLimit(platform, requestType, undefined, 'summoner')
 
   try {
     const summoner = await retryWithDelay(() =>
@@ -132,7 +132,7 @@ export async function getMatchIdsByPuuid(
   startTime?: number,
   endTime?: number
 ) {
-  await waitForRateLimit(region, requestType)
+  await waitForRateLimit(region, requestType, undefined, 'match-list')
 
   const limitedCount = Math.min(count, 100)
   const params: Record<string, number> = {
@@ -155,7 +155,7 @@ export async function getMatchIdsByPuuid(
 }
 
 export async function getMatchById(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
-  await waitForRateLimit(region, requestType)
+  await waitForRateLimit(region, requestType, undefined, 'match-detail')
 
   const match = await retryWithDelay(() =>
     rAPI.matchV5.getMatchById({
@@ -167,7 +167,7 @@ export async function getMatchById(matchId: string, region: RegionalCluster, req
 }
 
 export async function getMatchTimeline(matchId: string, region: RegionalCluster, requestType: RequestType = 'batch') {
-  await waitForRateLimit(region, requestType)
+  await waitForRateLimit(region, requestType, undefined, 'timeline')
 
   const timeline = await retryWithDelay(() =>
     rAPI.matchV5.getMatchTimelineById({

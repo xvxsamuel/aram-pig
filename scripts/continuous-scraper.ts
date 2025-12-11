@@ -27,9 +27,9 @@ async function getCurrentPatch(): Promise<string[]> {
 }
 
 // stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-const STATS_BUFFER_FLUSH_SIZE = 30 // flush every 30 participants (3 matches) - smaller batches to avoid DB timeout
+const STATS_BUFFER_FLUSH_SIZE = 50 // flush every 50 participants (5 matches) - reduce DB writes
 let lastStatsFlush = Date.now()
-const STATS_FLUSH_INTERVAL = 20000 // or every 20 seconds
+const STATS_FLUSH_INTERVAL = 30000 // or every 30 seconds - reduce frequency
 
 // check if stats buffer should be flushed (using match-storage's buffer)
 async function maybeFlushStats(): Promise<void> {
@@ -252,7 +252,7 @@ async function crawlSummoner(
     // With 50% throttle (50 req/2min), use smaller batches to avoid rate limit waits
     // Each match = 1 API call (match data), so batch of 5 = 5 calls
     const THROTTLE = parseInt(process.env.SCRAPER_THROTTLE || '100', 10)
-    const BATCH_SIZE = THROTTLE <= 50 ? 3 : 10
+    const BATCH_SIZE = THROTTLE <= 50 ? 2 : 5 // Reduced to lower DB IO pressure
     for (let i = 0; i < newMatchIds.length; i += BATCH_SIZE) {
       const batch = newMatchIds.slice(i, i + BATCH_SIZE)
 

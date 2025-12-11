@@ -143,12 +143,30 @@ export async function checkRateLimit(region: string): Promise<RateLimitStatus> {
 export async function waitForRateLimit(
   platformOrRegion: string,
   requestType: RequestType = 'overhead',
-  maxWaitMs?: number
+  maxWaitMs?: number,
+  method?: 'account' | 'summoner' | 'match-list' | 'match-detail' | 'timeline'
 ): Promise<void> {
+  // Riot API has TWO types of rate limits (both per-region):
+  // 1. Method rate limit: per-endpoint (account-v1, match-v5, etc)
+  // 2. Application rate limit: shared across ALL methods
+  // We must respect BOTH
+  
+  // Check application-wide limit first (shared across all methods)
   if (!redis) {
-    return waitForRateLimitMemory(platformOrRegion, requestType, maxWaitMs)
+    await waitForRateLimitMemory(platformOrRegion, requestType, maxWaitMs)
+  } else {
+    await waitForRateLimitRedisOptimized(platformOrRegion, requestType, maxWaitMs)
   }
-  return waitForRateLimitRedisOptimized(platformOrRegion, requestType, maxWaitMs)
+  
+  // Then check method-specific limit (if method specified)
+  if (method) {
+    const methodKey = `${platformOrRegion}:${method}`
+    if (!redis) {
+      await waitForRateLimitMemory(methodKey, requestType, maxWaitMs)
+    } else {
+      await waitForRateLimitRedisOptimized(methodKey, requestType, maxWaitMs)
+    }
+  }
 }
 
 // ============================================================================
