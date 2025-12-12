@@ -44,21 +44,25 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
   // calculate time since last update
   let timeAgo = 'Unknown'
   if (lastUpdated) {
-    const now = Date.now()
-    const updated = new Date(lastUpdated).getTime()
-    const diffMs = now - updated
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
+    try {
+      const now = new Date()
+      const updated = new Date(lastUpdated)
+      const diffMs = now.getTime() - updated.getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMins / 60)
+      const diffDays = Math.floor(diffHours / 24)
 
-    if (diffDays > 0) {
-      timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-    } else if (diffHours > 0) {
-      timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-    } else if (diffMins > 0) {
-      timeAgo = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
-    } else {
-      timeAgo = 'just now'
+      if (diffDays > 0) {
+        timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+      } else if (diffHours > 0) {
+        timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+      } else if (diffMins > 0) {
+        timeAgo = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+      } else {
+        timeAgo = 'just now'
+      }
+    } catch (e) {
+      timeAgo = 'Unknown'
     }
   }
 

@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import clsx from 'clsx'
+import { useMemo } from 'react'
 import { OverviewTab, type ComboDisplay, type ComboData } from './tabs/OverviewTab'
 import { ItemsTab } from './tabs/ItemsTab'
 import { RunesTab } from './tabs/RunesTab'
@@ -18,6 +17,7 @@ import type {
 } from '@/types/champion-stats'
 
 interface Props {
+  selectedTab: 'overview' | 'items' | 'runes' | 'leveling'
   itemsBySlot: Record<number, ItemStat[]>
   bootsItems: ItemStat[]
   starterItems: StarterBuild[]
@@ -37,6 +37,7 @@ interface Props {
 }
 
 export default function ChampionDetailTabs({
+  selectedTab,
   itemsBySlot,
   bootsItems,
   starterItems,
@@ -49,8 +50,6 @@ export default function ChampionDetailTabs({
   allBuildData,
   championWinrate,
 }: Props) {
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
-
   // Process build combinations for Overview tab
   const { bestCombinations, worstCombinations, processedComboData } = useMemo(() => {
     const MIN_CORE_GAMES = 50
@@ -87,54 +86,6 @@ export default function ChampionDetailTabs({
 
   return (
     <div>
-      {/* Tab Navigation */}
-      <div className="flex gap-1 mb-4 -mt-2">
-        <button
-          onClick={() => setSelectedTab('overview')}
-          className={clsx(
-            'cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2',
-            selectedTab === 'overview'
-              ? 'border-accent-light text-white'
-              : 'border-transparent text-text-muted hover:text-white'
-          )}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setSelectedTab('items')}
-          className={clsx(
-            'cursor-pointer px-4 py-2 font-semibold tracking-wide transition-all border-b-2',
-            selectedTab === 'items'
-              ? 'border-accent-light text-white'
-              : 'border-transparent text-text-muted hover:text-white'
-          )}
-        >
-          Items
-        </button>
-        <button
-          onClick={() => setSelectedTab('runes')}
-          className={clsx(
-            'cursor-pointer px-4 py-2 font-semibold tracking-wide transition-all border-b-2',
-            selectedTab === 'runes'
-              ? 'border-accent-light text-white'
-              : 'border-transparent text-text-muted hover:text-white'
-          )}
-        >
-          Runes
-        </button>
-        <button
-          onClick={() => setSelectedTab('leveling')}
-          className={clsx(
-            'cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2',
-            selectedTab === 'leveling'
-              ? 'border-accent-light text-white'
-              : 'border-transparent text-text-muted hover:text-white'
-          )}
-        >
-          Leveling
-        </button>
-      </div>
-
       {/* Tab Content */}
       {selectedTab === 'overview' && (
         <OverviewTab

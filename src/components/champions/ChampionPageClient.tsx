@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import useSWR from 'swr'
 import Image from 'next/image'
+import clsx from 'clsx'
 import { getChampionImageUrl } from '@/lib/ddragon'
 import { getWinrateColor } from '@/lib/ui'
 import ChampionDetailTabs from './ChampionDetailTabs'
@@ -20,7 +22,6 @@ interface ChampionStatsResponse {
   championName: string
   apiName: string
   patch: string
-  lastUpdated: string
   overview: {
     games: number
     wins: number
@@ -91,6 +92,7 @@ export default function ChampionPageClient({
   selectedPatch,
 }: Props) {
   const currentPatch = selectedPatch || availablePatches[0]
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
 
   // swr with stale-while-revalidate caching
   const { data, error, isLoading } = useSWR<ChampionStatsResponse | null>(
@@ -107,8 +109,8 @@ export default function ChampionPageClient({
   // loading state
   if (isLoading && !data) {
     return (
-      <main className="min-h-screen bg-accent-darker text-white">
-        <div className="max-w-6xl mx-auto px-12 py-8">
+      <>
+        <div className="max-w-6xl mx-auto px-8 py-8">
           <div className="bg-abyss-600 rounded-lg p-6 mb-6 border border-gold-dark/40">
             <div className="flex items-center gap-6">
               <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
@@ -122,29 +124,29 @@ export default function ChampionPageClient({
           </div>
           <div className="bg-abyss-600 rounded-lg p-6 border border-gold-dark/40 h-96 animate-pulse" />
         </div>
-      </main>
+      </>
     )
   }
 
   // error state
   if (error) {
     return (
-      <main className="min-h-screen bg-accent-darker text-white">
-        <div className="max-w-6xl mx-auto px-12 py-8">
+      <>
+        <div className="max-w-6xl mx-auto px-8 py-8">
           <div className="bg-red-900/50 rounded-lg p-6 text-center">
             <p className="text-xl">Error loading champion data</p>
             <p className="text-sm text-red-300 mt-2">{error.message}</p>
           </div>
         </div>
-      </main>
+      </>
     )
   }
 
   // no data state
   if (!data) {
     return (
-      <main className="min-h-screen bg-accent-darker text-white">
-        <div className="max-w-6xl mx-auto px-4 py-8">
+      <>
+        <div className="max-w-6xl mx-auto px-8 py-8">
           <div className="bg-abyss-600 rounded-lg p-6 mb-6">
             <div className="flex items-center gap-6">
               <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
@@ -179,7 +181,7 @@ export default function ChampionPageClient({
             </p>
           </div>
         </div>
-      </main>
+      </>
     )
   }
 
@@ -423,10 +425,10 @@ export default function ChampionPageClient({
     : []
 
   return (
-    <main className="min-h-screen bg-accent-darker text-white">
+    <>
       {/* Champion Header */}
       <section className="bg-abyss-700">
-        <div className="max-w-6xl mx-auto px-8 py-6">
+        <div className="max-w-6xl mx-auto px-8 py-6 pb-8">
           <div className="flex items-start gap-6">
             {/* Champion icon with gold border */}
             <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark flex-shrink-0">
@@ -459,9 +461,6 @@ export default function ChampionPageClient({
                   </div>
                 </div>
               </div>
-              <p className="text-xs font-light text-text-muted">
-                Last updated: {new Date(data.lastUpdated).toLocaleDateString()}
-              </p>
             </div>
             
             {/* Patch filter */}
@@ -469,12 +468,61 @@ export default function ChampionPageClient({
               <PatchFilter availablePatches={availablePatches} />
             </div>
           </div>
+
+          {/* tab navigation */}
+          <div className="flex gap-1 mt-4">
+            <button
+              onClick={() => setSelectedTab('overview')}
+              className={clsx(
+                'cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2',
+                selectedTab === 'overview'
+                  ? 'border-accent-light text-white'
+                  : 'border-transparent text-text-muted hover:text-white'
+              )}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setSelectedTab('items')}
+              className={clsx(
+                'cursor-pointer px-4 py-2 font-semibold tracking-wide transition-all border-b-2',
+                selectedTab === 'items'
+                  ? 'border-accent-light text-white'
+                  : 'border-transparent text-text-muted hover:text-white'
+              )}
+            >
+              Items
+            </button>
+            <button
+              onClick={() => setSelectedTab('runes')}
+              className={clsx(
+                'cursor-pointer px-4 py-2 font-semibold tracking-wide transition-all border-b-2',
+                selectedTab === 'runes'
+                  ? 'border-accent-light text-white'
+                  : 'border-transparent text-text-muted hover:text-white'
+              )}
+            >
+              Runes
+            </button>
+            <button
+              onClick={() => setSelectedTab('leveling')}
+              className={clsx(
+                'cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2',
+                selectedTab === 'leveling'
+                  ? 'border-accent-light text-white'
+                  : 'border-transparent text-text-muted hover:text-white'
+              )}
+            >
+              Leveling
+            </button>
+          </div>
         </div>
       </section>
 
       {/* Main content */}
-      <div className="max-w-6xl mx-auto px-2 sm:px-8 pt-4">
+      <div className="max-w-6xl mx-auto px-8">
         <ChampionDetailTabs
+          selectedTab={selectedTab}
           itemsBySlot={itemsBySlot}
           bootsItems={bootsItems}
           starterItems={starterItems}
@@ -489,6 +537,6 @@ export default function ChampionPageClient({
           championWinrate={data.overview.winrate}
         />
       </div>
-    </main>
+    </>
   )
 }

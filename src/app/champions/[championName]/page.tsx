@@ -10,7 +10,10 @@ import {
 import { getLatestPatches } from '@/lib/game'
 import ChampionPageClient from '@/components/champions/ChampionPageClient'
 
-export const revalidate = 0 // disable cache for patch filter to work
+// isr: Regenerate page every hour to refresh patches/stats
+// this caches the page and reduces DDragon API calls significantly
+// patch filter still works via client-side navigation
+export const revalidate = 3600
 
 // pre-render all champion pages at build time
 export async function generateStaticParams() {
@@ -73,13 +76,17 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
   const availablePatches = await getLatestPatches()
 
   return (
-    <ChampionPageClient
-      championName={championName}
-      displayName={displayName}
-      apiName={apiName}
-      ddragonVersion={ddragonVersion}
-      availablePatches={availablePatches}
-      selectedPatch={selectedPatch}
-    />
+    <main className="min-h-screen bg-accent-darker text-white">
+      <div className="max-w-6xl mx-auto px-4 pb-8">
+        <ChampionPageClient
+          championName={championName}
+          displayName={displayName}
+          apiName={apiName}
+          ddragonVersion={ddragonVersion}
+          availablePatches={availablePatches}
+          selectedPatch={selectedPatch}
+        />
+      </div>
+    </main>
   )
 }

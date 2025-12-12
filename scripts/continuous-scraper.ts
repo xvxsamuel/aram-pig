@@ -27,9 +27,9 @@ async function getCurrentPatch(): Promise<string[]> {
 }
 
 // stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-const STATS_BUFFER_FLUSH_SIZE = 50 // flush every 50 participants (5 matches) - reduce DB writes
+const STATS_BUFFER_FLUSH_SIZE = 200 // flush every 200 participants (20 matches) - reduce DB writes
 let lastStatsFlush = Date.now()
-const STATS_FLUSH_INTERVAL = 30000 // or every 30 seconds - reduce frequency
+const STATS_FLUSH_INTERVAL = 120000 // or every 2 minutes - reduce frequency
 
 // check if stats buffer should be flushed (using match-storage's buffer)
 async function maybeFlushStats(): Promise<void> {
@@ -38,6 +38,8 @@ async function maybeFlushStats(): Promise<void> {
   if (bufferCount >= STATS_BUFFER_FLUSH_SIZE || (now - lastStatsFlush > STATS_FLUSH_INTERVAL && bufferCount > 0)) {
     await flushStatsBatch()
     lastStatsFlush = Date.now()
+    // give database time to process the batch
+    await sleep(500)
   }
 }
 
@@ -133,52 +135,69 @@ function getRandomSeedsFromPool(region: RegionalCluster): string[] {
 }
 
 // fetch PUUIDs from existing matches in DB for a region
-// gets match IDs from DB, then fetches ONE match from Riot API to get participants
-// this is a last resort - uses 1 API call to get 9 new PUUIDs
+// gets match IDs from DB, then fetches matches from Riot API to get participants
+// this is a last resort - uses up to 3 API calls to get fresh PUUIDs
 async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
   const acceptedPatches = await getCurrentPatch()
   const prefixes = REGION_TO_PREFIXES[region]
   const visited = visitedPuuidsByRegion.get(region)!
   const dryPuuids = dryPuuidsByRegion.get(region)!
 
-  console.log(`[${region}] Fetching seeds from existing matches in DB (1 API call)...`)
+  console.log(`[${region}] Fetching seeds from existing matches in DB (up to 3 API calls)...`)
 
   try {
-    // get a random match from this region's prefixes
+    // get multiple random matches from this region's prefixes
     const shuffledPrefixes = prefixes.sort(() => Math.random() - 0.5)
+    const allPuuids: string[] = []
 
     for (const prefix of shuffledPrefixes) {
-      // query for recent matches, pick a random one
+      // query for recent matches, get more candidates
       const { data: matches, error } = await supabase
         .from('matches')
         .select('match_id')
         .like('match_id', `${prefix}_%`)
         .in('patch', acceptedPatches)
         .order('game_creation', { ascending: false })
-        .limit(20)
+        .limit(50) // get more candidates
 
       if (error || !matches || matches.length === 0) continue
 
-      // pick a random match
-      const randomMatch = matches[Math.floor(Math.random() * matches.length)]
+      // shuffle matches and try up to 3
+      const shuffledMatches = matches.sort(() => Math.random() - 0.5)
+      const matchesToTry = shuffledMatches.slice(0, 3)
 
-      // fetch just this one match from Riot API
-      await waitForRateLimit(region, 'batch')
-      const matchData = await getMatchById(randomMatch.match_id, region)
+      for (const match of matchesToTry) {
+        // if we already have enough seeds, stop
+        if (allPuuids.length >= 15) break
 
-      if (matchData?.info?.participants) {
-        const puuids = matchData.info.participants
-          .map(p => p.puuid)
-          .filter(p => p && !visited.has(p) && !dryPuuids.has(p))
+        try {
+          // fetch this match from Riot API
+          await waitForRateLimit(region, 'batch')
+          const matchData = await getMatchById(match.match_id, region)
 
-        if (puuids.length > 0) {
-          console.log(`[${region}] Found ${puuids.length} seeds from DB match`)
-          return puuids
+          if (matchData?.info?.participants) {
+            const puuids = matchData.info.participants
+              .map(p => p.puuid)
+              .filter(p => p && !visited.has(p) && !dryPuuids.has(p))
+
+            allPuuids.push(...puuids)
+            console.log(`[${region}] Found ${puuids.length} unvisited PUUIDs from match ${match.match_id}`)
+          }
+        } catch (err) {
+          console.error(`[${region}] Failed to fetch match ${match.match_id}:`, err)
+          continue
         }
+      }
+
+      // if we got seeds from this prefix, return them
+      if (allPuuids.length > 0) {
+        const uniquePuuids = [...new Set(allPuuids)]
+        console.log(`[${region}] Found ${uniquePuuids.length} total seeds from DB matches (tried ${matchesToTry.length} matches)`)
+        return uniquePuuids
       }
     }
 
-    console.log(`[${region}] No unvisited PUUIDs found from DB matches`)
+    console.log(`[${region}] No unvisited PUUIDs found from DB matches (all players already visited/dry)`)
     return []
   } catch (error) {
     console.error(`[${region}] Error fetching seeds from DB:`, error)
@@ -252,7 +271,7 @@ async function crawlSummoner(
     // With 50% throttle (50 req/2min), use smaller batches to avoid rate limit waits
     // Each match = 1 API call (match data), so batch of 5 = 5 calls
     const THROTTLE = parseInt(process.env.SCRAPER_THROTTLE || '100', 10)
-    const BATCH_SIZE = THROTTLE <= 50 ? 2 : 5 // Reduced to lower DB IO pressure
+    const BATCH_SIZE = THROTTLE <= 50 ? 2 : 3 // Reduced to 3 max to lower DB IO pressure
     for (let i = 0; i < newMatchIds.length; i += BATCH_SIZE) {
       const batch = newMatchIds.slice(i, i + BATCH_SIZE)
 
@@ -322,6 +341,8 @@ async function crawlSummoner(
             // Add to cache after successful storage
             knownMatchIds.add(matchId)
           }
+          // Small delay to prevent overwhelming the database
+          await sleep(100)
         }
       }
 
@@ -722,14 +743,32 @@ async function main() {
               continue
             }
 
-            // No seeds from pool or DB, clear dry entries and retry
-            console.log(`[${region}] No seeds available, clearing dry entries and waiting 10s...`)
+            // No seeds from pool or DB - region is exhausted
+            // Clear both dry AND visited entries to allow re-checking players
+            console.log(`[${region}] No seeds available, clearing dry + visited entries and waiting 10s...`)
 
             // Aggressively clear dry entries to allow re-checking old players
             if (dryPuuids.size > 0) {
               const toDelete = Array.from(dryPuuids).slice(0, Math.floor(dryPuuids.size * 0.8))
               toDelete.forEach(p => dryPuuids.delete(p))
               console.log(`[${region}] Cleared ${toDelete.length} dry entries (${dryPuuids.size} remaining)`)
+            }
+
+            // Also clear visited set to allow re-crawling for new matches
+            // Keep seed pool intact - it has good players we want to check
+            if (visited.size > 50) {
+              const visitedArray = Array.from(visited)
+              const toDelete = visitedArray.slice(0, Math.floor(visited.size * 0.5))
+              toDelete.forEach(p => visited.delete(p))
+              console.log(`[${region}] Cleared ${toDelete.length} visited entries (${visited.size} remaining) - will re-check for new matches`)
+            }
+
+            // Push seed pool back onto stack for re-checking
+            const seedPool = seedPoolByRegion.get(region)!
+            if (seedPool.size > 0) {
+              const seedsToRecheck = Array.from(seedPool).slice(0, 20)
+              seedsToRecheck.forEach(p => stack.push(p))
+              console.log(`[${region}] Re-queued ${seedsToRecheck.length} seeds from pool for re-checking`)
             }
 
             await sleep(10000)
@@ -764,13 +803,33 @@ async function main() {
               continue
             }
 
-            // No pool or DB seeds, short sleep and aggressively clear dry entries
+            // No pool or DB seeds - clear dry + visited to allow re-checking
+            console.log(`[${region}] Region saturated, clearing dry + visited entries and waiting 10s...`)
+            
             await sleep(10000)
+            
             if (dryPuuids.size > 50) {
               const toDelete = Array.from(dryPuuids).slice(0, Math.floor(dryPuuids.size * 0.8))
               toDelete.forEach(p => dryPuuids.delete(p))
-              console.log(`[${region}] Cleared ${toDelete.length} dry entries to allow re-checking (${dryPuuids.size} remaining)`)
+              console.log(`[${region}] Cleared ${toDelete.length} dry entries (${dryPuuids.size} remaining)`)
             }
+            
+            // Clear visited set to allow re-crawling
+            if (visited.size > 50) {
+              const visitedArray = Array.from(visited)
+              const toDelete = visitedArray.slice(0, Math.floor(visited.size * 0.5))
+              toDelete.forEach(p => visited.delete(p))
+              console.log(`[${region}] Cleared ${toDelete.length} visited entries (${visited.size} remaining)`)
+            }
+            
+            // Re-queue seeds for checking
+            const seedPool = seedPoolByRegion.get(region)!
+            if (seedPool.size > 0) {
+              const seedsToRecheck = Array.from(seedPool).slice(0, 20)
+              seedsToRecheck.forEach(p => stack.push(p))
+              console.log(`[${region}] Re-queued ${seedsToRecheck.length} seeds from pool`)
+            }
+            
             consecutiveBacktracks = 0
             continue
           }

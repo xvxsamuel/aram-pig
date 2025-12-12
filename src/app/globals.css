@@ -24,6 +24,7 @@
   --color-negative: oklch(62.451% 0.20324 17.952);
   --color-negative-dark: oklch(35.119% 0.08205 13.484);
   --color-worst-dark: oklch(18.096% 0.03814 18.802);
+   --color-worst-darker: oklch(13.276% 0.03423 17.025);
   --color-warning: oklch(75% 0.18 70);
   --color-loss: oklch(33.809% 0.04742 13.776);
   --color-loss-light: oklch(40% 0.05 13.776);
@@ -56,6 +57,17 @@
   --tooltip-heal: oklab(79.099% -0.17555 0.11299);
   --tooltip-gold: oklch(76.652% 0.13861 91.065);
   --tooltip-vamp: oklch(53.081% 0.19688 19.524);
+}
+
+/* Hide scrollbar */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 body {

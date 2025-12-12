@@ -1,5 +1,6 @@
 'use client'
 
+import Card from '@/components/ui/Card'
 import ItemIcon from '@/components/ui/ItemIcon'
 import { getWinrateColor } from '@/lib/ui'
 import type { ItemStat, StarterBuild } from '@/types/champion-stats'
@@ -13,11 +14,10 @@ interface ItemsTabProps {
 
 export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion }: ItemsTabProps) {
   return (
-    <div className="space-y-6 pb-8">
+    <div className="flex flex-col gap-4 pb-8">
       {/* Starter Items Section */}
       {starterItems.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3 text-gold-light">Starter Items</h2>
+        <Card title="Starter Items">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {starterItems.slice(0, 10).map((build, idx) => {
               // Group duplicate items and count them
@@ -63,13 +63,12 @@ export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion
               )
             })}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Boots Section */}
       {bootsItems.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3 text-gold-light">Boots</h2>
+        <Card title="Boots">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {bootsItems.map(item => (
               <div key={item.item_id} className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
@@ -102,7 +101,7 @@ export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Item Slots */}
@@ -111,8 +110,7 @@ export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion
         if (!items || items.length === 0) return null
 
         return (
-          <div key={slot}>
-            <h2 className="text-lg font-semibold mb-3 text-gold-light">{slot === 0 ? 'Slot 1' : `Slot ${slot + 1}`}</h2>
+          <Card key={slot} title={slot === 0 ? 'Slot 1' : `Slot ${slot + 1}`}>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {items.slice(0, 8).map(item => (
                 <div key={item.item_id} className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
@@ -139,7 +137,7 @@ export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         )
       })}
     </div>

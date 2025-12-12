@@ -148,7 +148,7 @@ export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-8">
       {/* Primary Runes Section */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {treeOrder.map(treeName => {

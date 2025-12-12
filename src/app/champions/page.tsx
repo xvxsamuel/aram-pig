@@ -8,10 +8,12 @@ export const metadata: Metadata = {
   description: 'View champion statistics and performance in ARAM.',
 }
 
-export const revalidate = 0 // disable cache for filters to work
+// ISR: Regenerate page every hour to refresh patches/champion data
+// This caches the page and reduces DDragon API calls significantly
+export const revalidate = 3600 // 1 hour (patches change ~every 2 weeks)
 
 export default async function ChampionsPage() {
-  // Get latest 3 patches from Riot API
+  // get latest 3 patches from Riot API
   const availablePatches = await getLatestPatches()
   const ddragonVersion = await getLatestVersion()
   const championNames = await fetchChampionNames(ddragonVersion)
