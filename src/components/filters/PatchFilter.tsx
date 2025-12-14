@@ -10,6 +10,7 @@ interface PatchFilterProps {
 // temporarily hide patches we didn't scrape data for (site didn't exist yet)
 // remove this when new patches come out and push these off the list
 const HIDDEN_PATCHES = ['25.22']
+const DEFAULT_PATCH = '25.24'
 
 export default function PatchFilter({ availablePatches }: PatchFilterProps) {
   const router = useRouter()
@@ -34,7 +35,7 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
 
     // Only support patch filtering now
     const filter = 'patch'
-    const patch = urlPatch || savedPatch || (visiblePatches.length > 0 ? visiblePatches[0] : null)
+    const patch = urlPatch || savedPatch || DEFAULT_PATCH
 
     setCurrentFilter(filter)
     setCurrentPatch(patch)

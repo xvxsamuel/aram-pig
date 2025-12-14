@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useLayoutEffect } from 'react'
+import { useState, useEffect, useRef, useLayoutEffect, Fragment } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import ItemIcon from '@/components/ui/ItemIcon'
@@ -24,20 +24,20 @@ export function CoreBuildsSelector({
 }: CoreBuildsSelectorProps) {
   const [selectedBestCombo, setSelectedBestCombo] = useState<number | null>(null)
   const [selectedWorstCombo, setSelectedWorstCombo] = useState<number | null>(null)
-  const [showAllBuilds, setShowAllBuilds] = useState(false)
   const [coreBuildsView, setCoreBuildsView] = useState<'best' | 'worst'>('best')
   const [selectorStyle, setSelectorStyle] = useState<{ top: number; height: number } | null>(null)
-  const [mounted, setMounted] = useState(false)
   const [viewJustChanged, setViewJustChanged] = useState(false)
+  const [isScrollable, setIsScrollable] = useState(false)
+  const [isAtBottom, setIsAtBottom] = useState(false)
   const prevViewRef = useRef<'best' | 'worst'>('best')
   
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
   const buildsListRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   // initialize selected combos for each view
   useEffect(() => {
-    setMounted(true)
     if (selectedBestCombo === null && bestCombinations.length > 0) {
       setSelectedBestCombo(bestCombinations[0].originalIndex)
     }
@@ -79,14 +79,65 @@ export function CoreBuildsSelector({
         setSelectorStyle(newStyle)
       }
     }
-  }, [selectedCombo, coreBuildsView, showAllBuilds])
+  }, [selectedCombo, coreBuildsView])
 
   const combinations = coreBuildsView === 'best' ? bestCombinations : worstCombinations
   const isWorst = coreBuildsView === 'worst'
-  const visibleCombos = showAllBuilds ? combinations : combinations.slice(0, 5)
+
+  // check if content is scrollable
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const checkScrollable = () => {
+        const element = scrollContainerRef.current
+        if (element) {
+          const scrollable = element.scrollHeight > element.clientHeight
+          setIsScrollable(scrollable)
+          
+          // Check if at bottom
+          if (scrollable) {
+            const isBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 5
+            setIsAtBottom(isBottom)
+          } else {
+            setIsAtBottom(false)
+          }
+        }
+      }
+      
+      const element = scrollContainerRef.current
+      
+      checkScrollable()
+      // Recheck after animations/layout changes
+      const timer = setTimeout(checkScrollable, 400)
+      
+      // Add scroll listener
+      const handleScroll = () => {
+        if (element) {
+          const isBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 5
+          setIsAtBottom(isBottom)
+        }
+      }
+      
+      // Prevent page scroll when scrolling this element
+      const handleWheel = (e: WheelEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        // Manually handle scrolling - faster scroll speed
+        element.scrollTop += e.deltaY * 2
+      }
+      
+      element.addEventListener('scroll', handleScroll)
+      element.addEventListener('wheel', handleWheel, { passive: false })
+      
+      return () => {
+        clearTimeout(timer)
+        element.removeEventListener('scroll', handleScroll)
+        element.removeEventListener('wheel', handleWheel)
+      }
+    }
+  }, [combinations, coreBuildsView])
 
   return (
-    <div className="sticky top-20 max-w-full" style={{ maxHeight: 'calc(100vh)' }}>
+    <div className="w-full lg:sticky lg:top-20">
       {/* fixed Header */}
       <div className={clsx(
         "rounded-t-lg border border-b-0 border-gold-dark/40 px-4.5 py-2 pb-0 transition-colors duration-200",
@@ -97,7 +148,14 @@ export function CoreBuildsSelector({
             {coreBuildsView === 'best' ? 'Best' : 'Worst'} Core Builds
           </h2>
           <button
-            onClick={() => setCoreBuildsView(coreBuildsView === 'best' ? 'worst' : 'best')}
+            onClick={() => {
+              // Reset scroll position before switching views
+              if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTop = 0
+              }
+              setIsAtBottom(false)
+              setCoreBuildsView(coreBuildsView === 'best' ? 'worst' : 'best')
+            }}
             className="text-xs text-text-muted hover:text-white transition-colors flex items-center gap-0.5"
           >
             {isWorst && <span className="text-[10px]">‹</span>}
@@ -109,43 +167,42 @@ export function CoreBuildsSelector({
       </div>
 
       {/* animated content Area */}
-      <motion.div
-        layout
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
+      <div
         className={clsx(
-          "rounded-b-lg border border-t-0 border-gold-dark/40 overflow-hidden transition-colors duration-200",
+          "rounded-b-lg border border-t-0 border-gold-dark/40 overflow-hidden transition-colors duration-200 relative",
           isWorst ? "bg-worst-dark" : "bg-abyss-600"
         )}
       >
-        <div ref={containerRef} className="px-4.5 pb-2 pt-2">
-          <motion.div 
-            layout 
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-y-auto scrollbar-hide" 
-            style={{ maxHeight: 'calc(100vh - 12rem)' }}
-          >
-          {combinations.length === 0 ? (
-            <motion.div
-              key={`${coreBuildsView}-empty`}
-              initial={{ x: isWorst ? 200 : -200, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: isWorst ? -200 : 200, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="text-sm text-text-muted text-center py-4 px-6"
-            >
-              No core builds discovered yet, check back later!
-            </motion.div>
-          ) : (
-            <motion.div
-              ref={buildsListRef}
-              key={coreBuildsView}
-              layout
-              initial={mounted ? { x: isWorst ? 200 : -200, opacity: 0 } : false}
-              animate={{ x: 0, opacity: 1 }}
-              exit={mounted ? { x: isWorst ? -200 : 200, opacity: 0 } : undefined}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-              className="space-y-2 relative"
-            >
+        <div ref={containerRef} className="px-4.5 pb-2 pt-2 relative overflow-hidden" style={{ minHeight: '100px' }}>
+          <AnimatePresence mode="wait" initial={false}>
+            {combinations.length === 0 ? (
+              <motion.div
+                key={`${coreBuildsView}-empty`}
+                initial={{ x: isWorst ? 200 : -200, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: isWorst ? -200 : 200, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="text-sm text-text-muted text-center py-4 px-6"
+              >
+                No core builds discovered yet, check back later!
+              </motion.div>
+            ) : (
+              <motion.div
+                key={coreBuildsView}
+                initial={{ x: isWorst ? 200 : -200, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: isWorst ? -200 : 200, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+              >
+                <div 
+                  ref={scrollContainerRef}
+                  className="overflow-y-auto overflow-x-hidden scrollbar-hide" 
+                  style={{ maxHeight: '500px' }}
+                >
+                  <div
+                    ref={buildsListRef}
+                    className="space-y-2 relative"
+                  >
                 {/* selector */}
                 {selectedCombo !== null && selectorStyle && (
                   <div
@@ -165,7 +222,7 @@ export function CoreBuildsSelector({
                   />
                 )}
                 
-                {visibleCombos.map((combo) => (
+                {combinations.map((combo) => (
                   <button
                     key={`${coreBuildsView}-${combo.originalIndex}`}
                     ref={(el) => {
@@ -187,10 +244,10 @@ export function CoreBuildsSelector({
                     <div className="mb-2">
                       <div className="flex items-center justify-between">
                         {combo.itemIds.map((itemId, position) => (
-                          <>
-                            {position > 0 && <span key={`plus-${position}`} className="text-gray-600 text-xs">+</span>}
-                            <ItemIcon key={itemId} itemId={itemId} ddragonVersion={ddragonVersion} size="sm" className="flex-shrink-0 bg-abyss-900 border-gray-700" />
-                          </>
+                          <Fragment key={`${combo.originalIndex}-item-${position}`}>
+                            {position > 0 && <span className="text-gray-600 text-xs">+</span>}
+                            <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="sm" className="flex-shrink-0 bg-abyss-900 border-gray-700" />
+                          </Fragment>
                         ))}
                         {combo.hasBoots && (
                           <>
@@ -208,37 +265,42 @@ export function CoreBuildsSelector({
                     </div>
                   </button>
                 ))}
-                
-                {combinations.length > 5 && (
-                  <button
-                    onClick={() => setShowAllBuilds(!showAllBuilds)}
-                    className={clsx(
-                      "w-full text-center py-2 text-xs text-subtitle hover:text-white transition-colors rounded-lg border border-gold-dark/40 hover:border-gold-dark/60 flex items-center justify-center gap-1",
-                      isWorst ? "bg-loss hover:bg-loss-light" : "bg-abyss-700 hover:bg-abyss-600"
-                    )}
-                  >
-                    {showAllBuilds ? (
-                      <>
-                        <span>Show less</span>
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
-                      </>
-                    ) : (
-                      <>
-                        <span>Show more ({combinations.length - 5})</span>
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </>
-                    )}
-                  </button>
-                )}
+                  </div>
+                </div>
               </motion.div>
             )}
-        </motion.div>
+          </AnimatePresence>
         </div>
-      </motion.div>
+        
+        {/* scroll indicator */}
+        <AnimatePresence>
+          {isScrollable && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: isAtBottom ? 0 : 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none flex items-end justify-center pb-1"
+              style={{
+                background: isWorst 
+                  ? 'linear-gradient(to bottom, transparent, oklch(25% 0.03 17.952))' 
+                  : 'linear-gradient(to bottom, transparent, oklch(22% 0.02 240))'
+              }}
+            >
+              <motion.svg
+                className="w-4 h-4 text-gold-light"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                animate={{ y: [0, 3, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </motion.svg>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }
