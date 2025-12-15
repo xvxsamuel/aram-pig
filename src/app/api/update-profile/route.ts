@@ -67,7 +67,7 @@ async function getActiveJob(supabase: any, puuid: string): Promise<UpdateJob | n
     .in('status', ['pending', 'processing'])
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
   return data
 }
 
@@ -239,6 +239,7 @@ export async function POST(request: Request) {
     // Check for existing active job in database (works across serverless instances)
     const existingJob = await getActiveJob(supabase, accountData.puuid)
     if (existingJob) {
+      console.log(`[UpdateProfile] Found existing job ${existingJob.id} for ${accountData.puuid}, status: ${existingJob.status}, pending: ${existingJob.pending_match_ids?.length || 0}`)
       // Job already exists - check if it needs continuation
       if (existingJob.pending_match_ids && existingJob.pending_match_ids.length > 0) {
         return await continueProcessingJob(supabase, existingJob, region, accountData.puuid)
@@ -336,6 +337,14 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
 
     jobId = await createJob(supabase, accountData.puuid, newMatchIds, region)
 
+    // Double-check no other job was created in the meantime (race condition)
+    const raceCheckJob = await getActiveJob(supabase, accountData.puuid)
+    if (raceCheckJob && raceCheckJob.id !== jobId) {
+      // Another job was created, fail this one and use the existing
+      await failJob(supabase, jobId, 'duplicate job detected')
+      return await continueProcessingJob(supabase, raceCheckJob, region, accountData.puuid)
+    }
+
     const job: UpdateJob = {
       id: jobId,
       puuid: accountData.puuid,
@@ -367,6 +376,8 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
 async function continueProcessingJob(supabase: any, job: UpdateJob, region: string, puuid: string): Promise<Response> {
   const pendingMatchIds = job.pending_match_ids || []
 
+  console.log(`[UpdateProfile] Continue job ${job.id}: ${pendingMatchIds.length} pending matches`)
+
   if (pendingMatchIds.length === 0) {
     await finalizeJob(supabase, job.id, puuid)
     return NextResponse.json({ message: 'Update completed', jobId: job.id, newMatches: job.total_matches, completed: true })
@@ -374,6 +385,8 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
 
   const chunkToProcess = pendingMatchIds.slice(0, CHUNK_SIZE)
   const remainingMatchIds = pendingMatchIds.slice(CHUNK_SIZE)
+
+  console.log(`[UpdateProfile] Processing chunk of ${chunkToProcess.length} matches (${remainingMatchIds.length} remaining)`)
 
   // pre-check existing records
   const [existingMatchesResult, existingUserRecordsResult] = await Promise.all([
