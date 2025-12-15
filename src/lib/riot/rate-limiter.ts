@@ -11,11 +11,15 @@ const redis = USE_REDIS
     })
   : null
 
-// rate limit windows
+// Riot API Rate Limits (per region per application)
+// Source: https://hextechdocs.dev/rate-limiting/
+// Application rate limits apply PER REGION - each region has independent counters
+// Method rate limits also apply PER REGION and PER METHOD
+// A single request counts against BOTH application and method limits simultaneously
 const SHORT_WINDOW = 1 // seconds
-const SHORT_LIMIT = 20 // requests per second
+const SHORT_LIMIT = 20 // requests per second (application-wide per region)
 const LONG_WINDOW = 120 // seconds (2 minutes)
-const LONG_LIMIT = 100 // requests per 2 minutes
+const LONG_LIMIT = 100 // requests per 2 minutes (application-wide per region)
 
 // throttle percentage (0-100)
 const THROTTLE_PERCENT = Math.min(100, Math.max(10, parseInt(process.env.SCRAPER_THROTTLE || '100', 10)))
@@ -146,31 +150,147 @@ export async function waitForRateLimit(
   maxWaitMs?: number,
   method?: 'account' | 'summoner' | 'match-list' | 'match-detail' | 'timeline'
 ): Promise<void> {
-  // Riot API has TWO types of rate limits (both per-region):
-  // 1. Method rate limit: per-endpoint (account-v1, match-v5, etc)
-  // 2. Application rate limit: shared across ALL methods
-  // We must respect BOTH
+  // Riot API has TWO types of rate limits:
+  // 1. Application rate limit: PER REGION, shared across ALL methods (20/sec, 100/2min)
+  // 2. Method rate limit: PER REGION PER METHOD (varies by endpoint)
+  //
+  // IMPORTANT: Rate limits are COMPLETELY INDEPENDENT per region!
+  // - na1 has its own 100/2min limit
+  // - euw1 has its own separate 100/2min limit
+  // - Each method (summoner, match-list, etc.) also has per-region limits
+  //
+  // A single request counts against BOTH app + method limits simultaneously
+  // We track both limits and wait for whichever is more restrictive
   
-  // Check application-wide limit first (shared across all methods)
+  const appKey = platformOrRegion // e.g., 'na1', 'euw1', 'americas', 'europe'
+  const methodKey = method ? `${platformOrRegion}:${method}` : null // e.g., 'na1:match-list'
+  
   if (!redis) {
-    await waitForRateLimitMemory(platformOrRegion, requestType, maxWaitMs)
+    await waitForRateLimitMemoryDual(appKey, methodKey, requestType, maxWaitMs)
   } else {
-    await waitForRateLimitRedisOptimized(platformOrRegion, requestType, maxWaitMs)
-  }
-  
-  // Then check method-specific limit (if method specified)
-  if (method) {
-    const methodKey = `${platformOrRegion}:${method}`
-    if (!redis) {
-      await waitForRateLimitMemory(methodKey, requestType, maxWaitMs)
-    } else {
-      await waitForRateLimitRedisOptimized(methodKey, requestType, maxWaitMs)
-    }
+    await waitForRateLimitRedisDual(appKey, methodKey, requestType, maxWaitMs)
   }
 }
 
 // ============================================================================
-// OPTIMIZED REDIS RATE LIMITING
+// OPTIMIZED REDIS RATE LIMITING (DUAL-TRACKING)
+// ============================================================================
+
+async function waitForRateLimitRedisDual(
+  appKey: string,
+  methodKey: string | null,
+  requestType: RequestType,
+  maxWaitMs?: number
+): Promise<void> {
+  if (!redis) throw new Error('Redis not initialized')
+
+  const appCache = getOrCreateCache(appKey)
+  const methodCache = methodKey ? getOrCreateCache(methodKey) : null
+  const now = Date.now()
+
+  let effectiveShortLimit = SHORT_LIMIT
+  let effectiveLongLimit = LONG_LIMIT
+  if (requestType === 'batch') {
+    effectiveShortLimit = SHORT_LIMIT - RESERVED_OVERHEAD_SHORT
+    effectiveLongLimit = Math.min(THROTTLED_LONG_LIMIT, LONG_LIMIT - RESERVED_OVERHEAD_LONG)
+  }
+
+  // Sync both caches if needed
+  const shouldSyncApp =
+    appCache.pendingIncrement >= SYNC_EVERY_REQUESTS || now - appCache.lastSync > SYNC_EVERY_MS || appCache.longCount === 0
+  const shouldSyncMethod =
+    methodCache && (methodCache.pendingIncrement >= SYNC_EVERY_REQUESTS || now - methodCache.lastSync > SYNC_EVERY_MS || methodCache.longCount === 0)
+
+  if (shouldSyncApp) await syncWithRedis(appKey, appCache)
+  if (shouldSyncMethod) await syncWithRedis(methodKey!, methodCache!)
+
+  resetExpiredWindows(appCache)
+  if (methodCache) resetExpiredWindows(methodCache)
+
+  // Calculate wait time for BOTH limits (take the maximum)
+  let waitTime = 0
+
+  if (appCache.shortCount >= effectiveShortLimit) {
+    waitTime = Math.max(waitTime, appCache.shortExpiry - now)
+  }
+  if (appCache.longCount >= effectiveLongLimit) {
+    waitTime = Math.max(waitTime, appCache.longExpiry - now)
+  }
+
+  if (methodCache) {
+    if (methodCache.shortCount >= effectiveShortLimit) {
+      waitTime = Math.max(waitTime, methodCache.shortExpiry - now)
+    }
+    if (methodCache.longCount >= effectiveLongLimit) {
+      waitTime = Math.max(waitTime, methodCache.longExpiry - now)
+    }
+  }
+
+  if (waitTime > 0) {
+    // Re-sync to get latest counts
+    await syncWithRedis(appKey, appCache)
+    if (methodCache) await syncWithRedis(methodKey!, methodCache!)
+    
+    resetExpiredWindows(appCache)
+    if (methodCache) resetExpiredWindows(methodCache)
+
+    // Recalculate wait time
+    waitTime = 0
+    if (appCache.shortCount >= effectiveShortLimit) {
+      waitTime = Math.max(waitTime, appCache.shortExpiry - now)
+    }
+    if (appCache.longCount >= effectiveLongLimit) {
+      waitTime = Math.max(waitTime, appCache.longExpiry - now)
+    }
+    if (methodCache) {
+      if (methodCache.shortCount >= effectiveShortLimit) {
+        waitTime = Math.max(waitTime, methodCache.shortExpiry - now)
+      }
+      if (methodCache.longCount >= effectiveLongLimit) {
+        waitTime = Math.max(waitTime, methodCache.longExpiry - now)
+      }
+    }
+
+    if (waitTime > 0) {
+      if (maxWaitMs !== undefined && waitTime > maxWaitMs) {
+        throw new Error('TIMEOUT_EXCEEDED')
+      }
+
+      const limitLabel = methodKey || appKey
+      console.log(
+        `[RATE LIMIT] Limit reached for ${limitLabel} (app:${appCache.longCount}/${effectiveLongLimit}${methodCache ? `, method:${methodCache.longCount}/${effectiveLongLimit}` : ''}), waiting ${(waitTime / 1000).toFixed(1)}s`
+      )
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+      return waitForRateLimitRedisDual(appKey, methodKey, requestType, maxWaitMs)
+    }
+  }
+
+  // Increment BOTH counters (same request counts against both limits)
+  appCache.shortCount++
+  appCache.longCount++
+  appCache.pendingIncrement++
+
+  if (methodCache) {
+    methodCache.shortCount++
+    methodCache.longCount++
+    methodCache.pendingIncrement++
+  }
+
+  // Background sync if needed
+  if (appCache.pendingIncrement >= SYNC_EVERY_REQUESTS) {
+    syncWithRedis(appKey, appCache).catch(err => {
+      console.error('[RATE LIMIT] Background sync error (app):', err)
+    })
+  }
+  if (methodCache && methodCache.pendingIncrement >= SYNC_EVERY_REQUESTS) {
+    syncWithRedis(methodKey!, methodCache).catch(err => {
+      console.error('[RATE LIMIT] Background sync error (method):', err)
+    })
+  }
+}
+
+// ============================================================================
+// OPTIMIZED REDIS RATE LIMITING (SINGLE KEY - LEGACY)
 // ============================================================================
 
 async function waitForRateLimitRedisOptimized(
@@ -310,10 +430,98 @@ async function syncWithRedis(region: string, cache: LocalCache): Promise<void> {
 }
 
 // ============================================================================
-// IN-MEMORY RATE LIMITING
+// IN-MEMORY RATE LIMITING (DUAL-TRACKING)
 // ============================================================================
 
 const rateLimitLocks = new Map<string, Promise<void>>()
+
+async function waitForRateLimitMemoryDual(
+  appKey: string,
+  methodKey: string | null,
+  requestType: RequestType,
+  maxWaitMs?: number
+): Promise<void> {
+  // Lock on the app key to prevent race conditions
+  while (rateLimitLocks.has(appKey)) {
+    await rateLimitLocks.get(appKey)
+  }
+
+  let releaseLock: () => void
+  const lockPromise = new Promise<void>(resolve => {
+    releaseLock = resolve
+  })
+  rateLimitLocks.set(appKey, lockPromise)
+
+  try {
+    const appCache = getOrCreateCache(appKey)
+    const methodCache = methodKey ? getOrCreateCache(methodKey) : null
+    
+    resetExpiredWindows(appCache)
+    if (methodCache) resetExpiredWindows(methodCache)
+
+    let effectiveShortLimit = SHORT_LIMIT
+    let effectiveLongLimit = LONG_LIMIT
+    if (requestType === 'batch') {
+      effectiveShortLimit = SHORT_LIMIT - RESERVED_OVERHEAD_SHORT
+      effectiveLongLimit = Math.min(THROTTLED_LONG_LIMIT, LONG_LIMIT - RESERVED_OVERHEAD_LONG)
+    }
+
+    const now = Date.now()
+    let waitTime = 0
+
+    // Check BOTH limits, take the maximum wait time
+    if (appCache.shortCount >= effectiveShortLimit) {
+      waitTime = Math.max(waitTime, appCache.shortExpiry - now)
+    }
+    if (appCache.longCount >= effectiveLongLimit) {
+      waitTime = Math.max(waitTime, appCache.longExpiry - now)
+    }
+
+    if (methodCache) {
+      if (methodCache.shortCount >= effectiveShortLimit) {
+        waitTime = Math.max(waitTime, methodCache.shortExpiry - now)
+      }
+      if (methodCache.longCount >= effectiveLongLimit) {
+        waitTime = Math.max(waitTime, methodCache.longExpiry - now)
+      }
+    }
+
+    if (waitTime > 0) {
+      if (maxWaitMs !== undefined && waitTime > maxWaitMs) {
+        throw new Error('TIMEOUT_EXCEEDED')
+      }
+
+      if (waitTime > 1000) {
+        const limitLabel = methodKey || appKey
+        console.log(
+          `[RATE LIMIT] Limit reached for ${limitLabel} (app:${appCache.longCount}/${effectiveLongLimit}${methodCache ? `, method:${methodCache.longCount}/${effectiveLongLimit}` : ''}), waiting ${(waitTime / 1000).toFixed(1)}s`
+        )
+      }
+
+      rateLimitLocks.delete(appKey)
+      releaseLock!()
+
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+      return waitForRateLimitMemoryDual(appKey, methodKey, requestType, maxWaitMs)
+    }
+
+    // Increment BOTH counters
+    appCache.shortCount++
+    appCache.longCount++
+
+    if (methodCache) {
+      methodCache.shortCount++
+      methodCache.longCount++
+    }
+  } finally {
+    rateLimitLocks.delete(appKey)
+    releaseLock!()
+  }
+}
+
+// ============================================================================
+// IN-MEMORY RATE LIMITING (SINGLE KEY - LEGACY)
+// ============================================================================
 
 async function waitForRateLimitMemory(region: string, requestType: RequestType, maxWaitMs?: number): Promise<void> {
   while (rateLimitLocks.has(region)) {
