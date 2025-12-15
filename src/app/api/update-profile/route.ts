@@ -270,21 +270,6 @@ export async function POST(request: Request) {
     console.error('[UpdateProfile] Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
-      })
-    }
-
-    const processPromise = processProfileUpdate(region, gameName, tagLine, platform, accountData)
-    processingLocks.set(lockKey, processPromise)
-    try {
-      return await processPromise
-    } finally {
-      processingLocks.delete(lockKey)
-    }
-  } catch (error) {
-    console.error('[UpdateProfile] Error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
 }
 
 async function processProfileUpdate(region: string, gameName: string, tagLine: string, platform: string, accountData: any): Promise<Response> {
