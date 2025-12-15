@@ -35,7 +35,7 @@ import {
 // CONFIGURATION
 // ============================================================================
 
-const CHUNK_SIZE = 10 // matches per chunk (parallel fetch + batch process = ~25-35s total)
+const CHUNK_SIZE = 12 // matches per chunk (~24 API calls: 12 match + 12 timeline)
 const processingLocks = new Map<string, Promise<Response>>()
 
 // ============================================================================
@@ -230,23 +230,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    const supabase = createAdminClient()
+
+    // Get account to find puuid
+    const accountData = await getAccountByRiotId(gameName, tagLine, region as any)
+    if (!accountData) return NextResponse.json({ error: 'Account not found' }, { status: 404 })
+
+    // Check for existing active job in database (works across serverless instances)
+    const existingJob = await getActiveJob(supabase, accountData.puuid)
+    if (existingJob) {
+      // Job already exists - check if it needs continuation
+      if (existingJob.pending_match_ids && existingJob.pending_match_ids.length > 0) {
+        return await continueProcessingJob(supabase, existingJob, region, accountData.puuid)
+      }
+      // Job is complete but not finalized yet
+      await finalizeJob(supabase, existingJob.id, accountData.puuid)
+      return NextResponse.json({ message: 'Update completed', jobId: existingJob.id, newMatches: existingJob.total_matches, completed: true })
+    }
+
+    // No existing job - proceed with normal flow
     const lockKey = `${region}:${gameName}:${tagLine}`.toLowerCase()
     const existingLock = processingLocks.get(lockKey)
     if (existingLock) {
-      // Wait for the existing lock to complete and return a fresh response
-      try {
-        await existingLock
-      } catch {
-        // Ignore errors from the locked request
-      }
-      // Return a new response indicating processing is ongoing
+      // In-memory lock for same function instance only
       return NextResponse.json({ 
         message: 'Profile update already in progress',
         isProcessing: true 
       })
     }
 
-    const processPromise = processProfileUpdate(region, gameName, tagLine, platform)
+    const processPromise = processProfileUpdate(region, gameName, tagLine, platform, accountData)
+    processingLocks.set(lockKey, processPromise)
+    try {
+      return await processPromise
+    } finally {
+      processingLocks.delete(lockKey)
+    }
+  } catch (error) {
+    console.error('[UpdateProfile] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+} 
+      })
+    }
+
+    const processPromise = processProfileUpdate(region, gameName, tagLine, platform, accountData)
     processingLocks.set(lockKey, processPromise)
     try {
       return await processPromise
@@ -259,17 +287,17 @@ export async function POST(request: Request) {
   }
 }
 
-async function processProfileUpdate(region: string, gameName: string, tagLine: string, platform: string): Promise<Response> {
+async function processProfileUpdate(region: string, gameName: string, tagLine: string, platform: string, accountData: any): Promise<Response> {
   let jobId: string | null = null
   const supabase = createAdminClient()
 
   try {
     await cleanupStaleJobs(supabase)
 
-    const accountData = await getAccountByRiotId(gameName, tagLine, region as any)
+    // accountData already fetched in POST handler
     if (!accountData) return NextResponse.json({ error: 'Account not found' }, { status: 404 })
 
-    // check for existing active job
+    // check for existing active job (double-check in case of race condition)
     const existingJob = await getActiveJob(supabase, accountData.puuid)
     if (existingJob) {
       if (existingJob.pending_match_ids && existingJob.pending_match_ids.length > 0) {
@@ -386,6 +414,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
     const matchFetchPromises = chunkToProcess.map(async (matchId) => {
       const existingMatch = existingMatchesMap.get(matchId)
       if (existingMatch && userHasRecord.has(matchId)) {
+        // Skip fetch - already have this match for this user
         return { matchId, skip: true }
       }
 
@@ -396,9 +425,9 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
         const isOlderThan1Year = gameCreation < oneYearAgo
         const isRemake = match.info.participants.some((p: any) => p.gameEndedInEarlySurrender)
 
-        // fetch timeline for recent matches (within 1 year)
+        // fetch timeline for recent matches (within 1 year) only
         let timeline = null
-        if (!isOlderThan1Year) {
+        if (!isOlderThan1Year && !isRemake) {
           try { timeline = await getMatchTimeline(matchId, region as any, 'overhead') } catch {}
         }
 
@@ -586,10 +615,19 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
 }
 
 async function finalizeJob(supabase: any, jobId: string, puuid: string) {
-  await supabase.from('summoners').update({ last_updated: new Date().toISOString() }).eq('puuid', puuid)
-  await calculateMissingPigScores(supabase, puuid)
-  await recalculateProfileStatsForPlayers([puuid])
-  const result = await flushAggregatedStats()
-  if (!result.success && result.error) console.error('[UpdateProfile] Failed to flush stats:', result.error)
+  // Run independent operations in parallel for faster finalization
+  const [, , statsResult] = await Promise.allSettled([
+    supabase.from('summoners').update({ last_updated: new Date().toISOString() }).eq('puuid', puuid),
+    calculateMissingPigScores(supabase, puuid),
+    Promise.all([
+      recalculateProfileStatsForPlayers([puuid]),
+      flushAggregatedStats(),
+    ]),
+  ])
+  
+  if (statsResult.status === 'rejected' || (statsResult.value[1] && !statsResult.value[1].success)) {
+    console.error('[UpdateProfile] Failed to flush stats:', statsResult.status === 'rejected' ? statsResult.reason : statsResult.value[1].error)
+  }
+  
   await completeJob(supabase, jobId)
 }
