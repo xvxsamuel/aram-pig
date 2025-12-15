@@ -161,9 +161,10 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
   const championNames = [...new Set<string>(needsPigScore.map((m: any) => m.champion_name))]
   const statsCache = await prefetchChampionStats(championNames)
 
-  let calculated = 0
-  for (let i = 0; i < needsPigScore.length; i += 5) {
-    await Promise.all(needsPigScore.slice(i, i + 5).map(async (match: any) => {
+  // Calculate all breakdowns in parallel (batches of 10 for memory efficiency)
+  const updatesToApply: any[] = []
+  for (let i = 0; i < needsPigScore.length; i += 10) {
+    const batch = await Promise.all(needsPigScore.slice(i, i + 10).map(async (match: any) => {
       try {
         const breakdown = await calculatePigScoreWithBreakdownCached({
           championName: match.champion_name,
@@ -190,17 +191,32 @@ async function calculateMissingPigScores(supabase: any, puuid: string) {
         }, statsCache)
 
         if (breakdown) {
-          await supabase
-            .from('summoner_matches')
-            .update({ match_data: { ...match.match_data, pigScore: breakdown.finalScore, pigScoreBreakdown: breakdown } })
-            .eq('match_id', match.match_id)
-            .eq('puuid', match.puuid)
-          calculated++
+          return {
+            match_id: match.match_id,
+            puuid: match.puuid,
+            match_data: { ...match.match_data, pigScore: breakdown.finalScore, pigScoreBreakdown: breakdown }
+          }
         }
       } catch {}
+      return null
     }))
+    updatesToApply.push(...batch.filter(u => u !== null))
   }
-  return calculated
+
+  // Batch upsert all updates at once (with retry on failure)
+  if (updatesToApply.length > 0) {
+    const { error: batchError } = await supabase.from('summoner_matches').upsert(updatesToApply)
+    if (batchError) {
+      console.error('[CalculateMissingPigScores] Batch upsert failed, retrying individually:', batchError)
+      // Retry failed batch individually as fallback
+      for (const update of updatesToApply) {
+        try {
+          await supabase.from('summoner_matches').upsert(update)
+        } catch {}
+      }
+    }
+  }
+  return updatesToApply.length
 }
 
 // ============================================================================
@@ -406,7 +422,28 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       globalStatsCache = await prefetchChampionStats([...allChampions])
     }
 
-    // SEQUENTIAL: Process results and write to DB (must be sequential for DB consistency)
+    // Batch all new match inserts together
+    const newMatchInserts = matchResults
+      .filter(r => !r.skip && r.match && !r.existingMatch)
+      .map(r => ({
+        match_id: r.match.metadata.matchId,
+        game_creation: r.gameCreation,
+        game_duration: r.match.info.gameDuration,
+        patch: r.match.info.gameVersion ? extractPatch(r.match.info.gameVersion) : getPatchFromDate(r.gameCreation!),
+      }))
+    
+    if (newMatchInserts.length > 0) {
+      const { error: matchInsertError } = await supabase.from('matches').upsert(newMatchInserts)
+      if (matchInsertError) {
+        console.error('[UpdateProfile] Batch match insert failed:', matchInsertError)
+        // Retry individually as fallback
+        for (const insert of newMatchInserts) {
+          try { await supabase.from('matches').upsert(insert) } catch {}
+        }
+      }
+    }
+
+    // Process results and collect participant records
     for (const result of matchResults) {
       if (result.skip) {
         if (!result.error) fetchedInChunk++
@@ -419,16 +456,6 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
         
         const patch = (existingMatch as any)?.patch || (match.info.gameVersion ? extractPatch(match.info.gameVersion) : getPatchFromDate(gameCreation!))
         const gameDuration = (existingMatch as any)?.game_duration || match.info.gameDuration
-
-        // store match if new
-        if (!existingMatch) {
-          await supabase.from('matches').upsert({
-            match_id: match.metadata.matchId,
-            game_creation: gameCreation,
-            game_duration: gameDuration,
-            patch,
-          })
-        }
 
         const statsCache = isOlderThan1Year || isRemake ? new Map() : globalStatsCache
         const teamKills = calculateTeamKills(match.info.participants)
@@ -520,15 +547,23 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       }
     }
 
-    // Batch upsert all summoner_matches records in smaller chunks to avoid timeout
+    // Batch upsert all summoner_matches records in chunks
     // Use upsert to overwrite existing records (needed for recalculating PIG scores)
     if (allRecordsToInsert.length > 0) {
-      const UPSERT_BATCH_SIZE = 20 // Upsert 20 records at a time (2 matches worth, reduced due to large JSONB)
+      const UPSERT_BATCH_SIZE = 100 // Supabase handles 100-200 records easily
       for (let i = 0; i < allRecordsToInsert.length; i += UPSERT_BATCH_SIZE) {
         const batch = allRecordsToInsert.slice(i, i + UPSERT_BATCH_SIZE)
         const { error: batchUpsertError } = await supabase.from('summoner_matches').upsert(batch)
         if (batchUpsertError) {
           console.error(`[UpdateProfile] Batch upsert error (${i}-${i + batch.length}):`, batchUpsertError)
+          // Retry failed batch individually as fallback
+          for (const record of batch) {
+            try {
+              await supabase.from('summoner_matches').upsert(record)
+            } catch (retryError) {
+              console.error(`[UpdateProfile] Individual retry failed for ${record.match_id}:`, retryError)
+            }
+          }
         }
       }
     }
