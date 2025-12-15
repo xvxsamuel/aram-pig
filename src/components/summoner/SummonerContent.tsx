@@ -140,6 +140,7 @@ export default function SummonerContentV2({
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [updateError, setUpdateError] = useState<{ matchesFetched?: number; totalMatches?: number } | null>(null)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const continuationInFlightRef = useRef(false) // prevent duplicate continuation requests
 
   // champion image for header
   const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
@@ -236,6 +237,14 @@ export default function SummonerContentV2({
         } else if (data.job.status === 'processing') {
           // job is still processing - trigger continuation by calling update-profile
           // this will process the next chunk of matches
+          
+          // prevent duplicate continuation requests
+          if (continuationInFlightRef.current) {
+            return // already have a continuation request in flight
+          }
+          
+          continuationInFlightRef.current = true
+          
           const decodedName = decodeURIComponent(name)
           const summonerName = decodedName.replace('-', '#')
           const [gameName, tagLine] = summonerName.includes('#')
@@ -250,7 +259,13 @@ export default function SummonerContentV2({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ region: regionalCode, gameName, tagLine, platform: platformCode }),
-          }).catch(() => {}) // ignore errors, next poll will retry
+          })
+            .then(() => {
+              continuationInFlightRef.current = false
+            })
+            .catch(() => {
+              continuationInFlightRef.current = false
+            })
         }
       } else if (!data.hasActiveJob && jobProgress) {
         setJobProgress(null)

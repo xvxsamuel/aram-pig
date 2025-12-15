@@ -120,7 +120,7 @@ async function failJob(supabase: any, jobId: string, error: string) {
 // RIOT API HELPERS
 // ============================================================================
 
-async function fetchMatchIds(region: string, puuid: string, count?: number, requestType: RequestType = 'batch') {
+async function fetchMatchIds(region: string, puuid: string, count?: number, requestType: RequestType = 'overhead') {
   const allMatchIds: string[] = []
   let start = 0
   while (true) {
@@ -390,7 +390,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       }
 
       try {
-        const match = await getMatchById(matchId, region as any, 'batch')
+        const match = await getMatchById(matchId, region as any, 'overhead')
         const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
         const gameCreation = (existingMatch as any)?.game_creation || match.info.gameCreation
         const isOlderThan1Year = gameCreation < oneYearAgo
@@ -399,7 +399,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
         // fetch timeline for recent matches (within 1 year)
         let timeline = null
         if (!isOlderThan1Year) {
-          try { timeline = await getMatchTimeline(matchId, region as any, 'batch') } catch {}
+          try { timeline = await getMatchTimeline(matchId, region as any, 'overhead') } catch {}
         }
 
         return { matchId, match, existingMatch, gameCreation, isOlderThan1Year, isRemake, timeline, skip: false }
