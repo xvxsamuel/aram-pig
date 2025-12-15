@@ -424,7 +424,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
 
     // Batch all new match inserts together
     const newMatchInserts = matchResults
-      .filter(r => !r.skip && r.match && !r.existingMatch)
+      .filter((r): r is typeof r & { match: NonNullable<typeof r.match> } => !r.skip && !!r.match && !r.existingMatch)
       .map(r => ({
         match_id: r.match.metadata.matchId,
         game_creation: r.gameCreation,
