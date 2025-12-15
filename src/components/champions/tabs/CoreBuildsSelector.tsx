@@ -22,44 +22,38 @@ export function CoreBuildsSelector({
   onComboSelect,
   selectedCombo,
 }: CoreBuildsSelectorProps) {
-  const [selectedBestCombo, setSelectedBestCombo] = useState<number | null>(null)
-  const [selectedWorstCombo, setSelectedWorstCombo] = useState<number | null>(null)
   const [coreBuildsView, setCoreBuildsView] = useState<'best' | 'worst'>('best')
   const [selectorStyle, setSelectorStyle] = useState<{ top: number; height: number } | null>(null)
   const [viewJustChanged, setViewJustChanged] = useState(false)
+  const [hideScrollIndicator, setHideScrollIndicator] = useState(false)
   const [isScrollable, setIsScrollable] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(false)
+  const [contentNode, setContentNode] = useState<HTMLDivElement | null>(null)
   const prevViewRef = useRef<'best' | 'worst'>('best')
   
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
-  const buildsListRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  // initialize selected combos for each view
-  useEffect(() => {
-    if (selectedBestCombo === null && bestCombinations.length > 0) {
-      setSelectedBestCombo(bestCombinations[0].originalIndex)
-    }
-    if (selectedWorstCombo === null && worstCombinations.length > 0) {
-      setSelectedWorstCombo(worstCombinations[0].originalIndex)
-    }
-  }, [bestCombinations, worstCombinations, selectedBestCombo, selectedWorstCombo])
+  const combinations = coreBuildsView === 'best' ? bestCombinations : worstCombinations
+  const isWorst = coreBuildsView === 'worst'
 
-  // sync with parent and notify on changes
+  // Initialize selection if null
   useEffect(() => {
-    const currentCombo = coreBuildsView === 'best' ? selectedBestCombo : selectedWorstCombo
-    if (currentCombo !== null && currentCombo !== selectedCombo) {
-      onComboSelect(currentCombo)
+    if (selectedCombo === null && bestCombinations.length > 0) {
+      onComboSelect(bestCombinations[0].originalIndex)
     }
-  }, [coreBuildsView, selectedBestCombo, selectedWorstCombo, selectedCombo, onComboSelect])
+  }, [selectedCombo, bestCombinations, onComboSelect])
 
   // update selector position
   useLayoutEffect(() => {
-    if (selectedCombo === null) return
+    if (selectedCombo === null || !contentNode) {
+      setSelectorStyle(null)
+      return
+    }
     
     const button = buttonRefs.current.get(selectedCombo)
-    const buildsList = buildsListRef.current
+    const buildsList = contentNode
     if (button && buildsList) {
       const buildsListRect = buildsList.getBoundingClientRect()
       const buttonRect = button.getBoundingClientRect()
@@ -73,71 +67,88 @@ export function CoreBuildsSelector({
         setViewJustChanged(true)
         setSelectorStyle(newStyle)
         prevViewRef.current = coreBuildsView
-        // Reset flag after animation completes
+        // reset flag after animation
         setTimeout(() => setViewJustChanged(false), 200)
       } else {
         setSelectorStyle(newStyle)
       }
+    } else {
+      // If button not found (e.g. during view switch before selection update), hide selector
+      setSelectorStyle(null)
     }
-  }, [selectedCombo, coreBuildsView])
-
-  const combinations = coreBuildsView === 'best' ? bestCombinations : worstCombinations
-  const isWorst = coreBuildsView === 'worst'
+  }, [selectedCombo, coreBuildsView, combinations, contentNode])
 
   // check if content is scrollable
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      const checkScrollable = () => {
-        const element = scrollContainerRef.current
-        if (element) {
-          const scrollable = element.scrollHeight > element.clientHeight
-          setIsScrollable(scrollable)
-          
-          // Check if at bottom
-          if (scrollable) {
-            const isBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 5
-            setIsAtBottom(isBottom)
-          } else {
-            setIsAtBottom(false)
-          }
-        }
-      }
+    const scrollContainer = scrollContainerRef.current
+    const content = contentNode
+    
+    if (!scrollContainer || !content) return
+
+    const checkScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer
+      const scrollable = scrollHeight > clientHeight
+      setIsScrollable(scrollable)
       
-      const element = scrollContainerRef.current
-      
-      checkScrollable()
-      // Recheck after animations/layout changes
-      const timer = setTimeout(checkScrollable, 400)
-      
-      // Add scroll listener
-      const handleScroll = () => {
-        if (element) {
-          const isBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 5
-          setIsAtBottom(isBottom)
-        }
-      }
-      
-      // Prevent page scroll when scrolling this element
-      const handleWheel = (e: WheelEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        // Manually handle scrolling - faster scroll speed
-        element.scrollTop += e.deltaY * 2
-      }
-      
-      element.addEventListener('scroll', handleScroll)
-      element.addEventListener('wheel', handleWheel, { passive: false })
-      
-      return () => {
-        clearTimeout(timer)
-        element.removeEventListener('scroll', handleScroll)
-        element.removeEventListener('wheel', handleWheel)
+      if (scrollable) {
+        // Use a small tolerance for float/zoom issues
+        const isBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 2
+        setIsAtBottom(isBottom)
+      } else {
+        setIsAtBottom(false)
       }
     }
-  }, [combinations, coreBuildsView])
+    
+    // Initial check
+    checkScroll()
+    
+    // Observe content size changes
+    const resizeObserver = new ResizeObserver(() => {
+      checkScroll()
+    })
+    resizeObserver.observe(content)
+    resizeObserver.observe(scrollContainer)
+    
+    // Scroll listener
+    const handleScroll = () => {
+      requestAnimationFrame(checkScroll)
+    }
+    
+    scrollContainer.addEventListener('scroll', handleScroll)
+    
+    return () => {
+      resizeObserver.disconnect()
+      scrollContainer.removeEventListener('scroll', handleScroll)
+    }
+  }, [contentNode]) // Re-run when content node changes (mounts/unmounts)
+
+  const handleViewSwitch = () => {
+    // Hide scroll indicator immediately
+    setHideScrollIndicator(true)
+    
+    const newView = coreBuildsView === 'best' ? 'worst' : 'best'
+    const newCombinations = newView === 'best' ? bestCombinations : worstCombinations
+    
+    // Reset scroll position
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0
+    }
+    setIsAtBottom(false)
+    
+    // Update view state
+    setCoreBuildsView(newView)
+    
+    // Immediately select the first item of the new view
+    if (newCombinations.length > 0) {
+      onComboSelect(newCombinations[0].originalIndex)
+    }
+    
+    // Re-enable scroll indicator after animation
+    setTimeout(() => setHideScrollIndicator(false), 400)
+  }
 
   return (
-    <div className="w-full lg:sticky lg:top-20">
+    <div className="w-full h-full flex flex-col">
       {/* fixed Header */}
       <div className={clsx(
         "rounded-t-lg border border-b-0 border-gold-dark/40 px-4.5 py-2 pb-0 transition-colors duration-200",
@@ -148,14 +159,7 @@ export function CoreBuildsSelector({
             {coreBuildsView === 'best' ? 'Best' : 'Worst'} Core Builds
           </h2>
           <button
-            onClick={() => {
-              // Reset scroll position before switching views
-              if (scrollContainerRef.current) {
-                scrollContainerRef.current.scrollTop = 0
-              }
-              setIsAtBottom(false)
-              setCoreBuildsView(coreBuildsView === 'best' ? 'worst' : 'best')
-            }}
+            onClick={handleViewSwitch}
             className="text-xs text-text-muted hover:text-white transition-colors flex items-center gap-0.5"
           >
             {isWorst && <span className="text-[10px]">‹</span>}
@@ -167,13 +171,14 @@ export function CoreBuildsSelector({
       </div>
 
       {/* animated content Area */}
-      <div
+      <motion.div
+        layout
         className={clsx(
-          "rounded-b-lg border border-t-0 border-gold-dark/40 overflow-hidden transition-colors duration-200 relative",
+          "rounded-b-lg border border-t-0 border-gold-dark/40 overflow-hidden transition-colors duration-200 relative flex-1",
           isWorst ? "bg-worst-dark" : "bg-abyss-600"
         )}
       >
-        <div ref={containerRef} className="px-4.5 pb-2 pt-2 relative overflow-hidden" style={{ minHeight: '100px' }}>
+        <div ref={containerRef} className="px-4.5 pb-3 pt-3 relative overflow-hidden" style={{ minHeight: '100px' }}>
           <AnimatePresence mode="wait" initial={false}>
             {combinations.length === 0 ? (
               <motion.div
@@ -196,12 +201,12 @@ export function CoreBuildsSelector({
               >
                 <div 
                   ref={scrollContainerRef}
-                  className="overflow-y-auto overflow-x-hidden scrollbar-hide" 
+                  className="overflow-y-auto overflow-x-hidden scrollbar-hide overscroll-contain" 
                   style={{ maxHeight: '500px' }}
                 >
                   <div
-                    ref={buildsListRef}
-                    className="space-y-2 relative"
+                    ref={setContentNode}
+                    className="space-y-2 relative pb-3"
                   >
                 {/* selector */}
                 {selectedCombo !== null && selectorStyle && (
@@ -229,13 +234,7 @@ export function CoreBuildsSelector({
                       if (el) buttonRefs.current.set(combo.originalIndex, el)
                       else buttonRefs.current.delete(combo.originalIndex)
                     }}
-                    onClick={() => {
-                      if (coreBuildsView === 'best') {
-                        setSelectedBestCombo(combo.originalIndex)
-                      } else {
-                        setSelectedWorstCombo(combo.originalIndex)
-                      }
-                    }}
+                    onClick={() => onComboSelect(combo.originalIndex)}
                     className={clsx(
                       'w-full text-left p-3 rounded-lg relative',
                       isWorst ? 'bg-worst-darker' : 'bg-abyss-800'
@@ -273,14 +272,15 @@ export function CoreBuildsSelector({
         </div>
         
         {/* scroll indicator */}
-        <AnimatePresence>
-          {isScrollable && (
+        <AnimatePresence mode="wait">
+          {isScrollable && !hideScrollIndicator && (
             <motion.div
+              key={coreBuildsView}
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: isAtBottom ? 0 : 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none flex items-end justify-center pb-1"
+              className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none flex items-end justify-center pb-1 z-50 "
               style={{
                 background: isWorst 
                   ? 'linear-gradient(to bottom, transparent, oklch(25% 0.03 17.952))' 
@@ -300,7 +300,7 @@ export function CoreBuildsSelector({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   )
 }

@@ -44,7 +44,7 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
     console.log(`[DB] Flushing ${aggregatedStats.length} champion+patch combos (${participantCount} participants)...`)
 
     const supabase = createAdminClient()
-    const BATCH_SIZE = 20 // Increased to reduce RPC calls (IO optimization)
+    const BATCH_SIZE = 100 // Larger batches = fewer RPC calls = less I/O
     let totalFlushed = 0
     let failedBatches = 0
 
@@ -70,6 +70,11 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
       }
 
       totalFlushed += data || batch.length
+      
+      // Add delay between batches to spread I/O load
+      if (i + BATCH_SIZE < aggregatedStats.length) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
     }
 
     statsAggregator.clear()

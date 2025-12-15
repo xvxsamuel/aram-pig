@@ -27,9 +27,9 @@ async function getCurrentPatch(): Promise<string[]> {
 }
 
 // stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-const STATS_BUFFER_FLUSH_SIZE = 200 // flush every 200 participants (20 matches) - reduce DB writes
+const STATS_BUFFER_FLUSH_SIZE = 1000 // flush every 1000 participants (100 matches) - massive I/O reduction
 let lastStatsFlush = Date.now()
-const STATS_FLUSH_INTERVAL = 120000 // or every 2 minutes - reduce frequency
+const STATS_FLUSH_INTERVAL = 600000 // or every 10 minutes - even less frequent writes
 
 // check if stats buffer should be flushed (using match-storage's buffer)
 async function maybeFlushStats(): Promise<void> {
@@ -38,8 +38,8 @@ async function maybeFlushStats(): Promise<void> {
   if (bufferCount >= STATS_BUFFER_FLUSH_SIZE || (now - lastStatsFlush > STATS_FLUSH_INTERVAL && bufferCount > 0)) {
     await flushStatsBatch()
     lastStatsFlush = Date.now()
-    // give database time to process the batch
-    await sleep(500)
+    // give database more time to process the batch and reduce I/O spikes
+    await sleep(2000)
   }
 }
 
@@ -158,7 +158,7 @@ async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
         .like('match_id', `${prefix}_%`)
         .in('patch', acceptedPatches)
         .order('game_creation', { ascending: false })
-        .limit(50) // get more candidates
+        .limit(100) // get more candidates to reduce query frequency
 
       if (error || !matches || matches.length === 0) continue
 
@@ -233,7 +233,7 @@ async function crawlSummoner(
     // Filter out matches we already know about (in-memory cache)
     const potentiallyNewMatchIds = matchIds.filter((id: string) => !knownMatchIds.has(id))
 
-    // Only query DB for matches not in cache
+    // Only query DB for matches not in cache - check in batches to reduce I/O
     let newMatchIds: string[] = []
     if (potentiallyNewMatchIds.length === 0) {
       // All matches are in cache - this player is "exhausted" (all matches already scraped)
@@ -243,12 +243,24 @@ async function crawlSummoner(
     } else {
       console.log(`  ${potentiallyNewMatchIds.length} potentially new, checking DB...`)
 
-      const { data: existingMatches } = await supabase
-        .from('matches')
-        .select('match_id')
-        .in('match_id', potentiallyNewMatchIds)
-
-      const existingIds = new Set(existingMatches?.map(m => m.match_id) || [])
+      // Check DB in batches of 100 to reduce query overhead even more
+      const DB_CHECK_BATCH_SIZE = 100
+      const existingIds = new Set<string>()
+      
+      for (let i = 0; i < potentiallyNewMatchIds.length; i += DB_CHECK_BATCH_SIZE) {
+        const batch = potentiallyNewMatchIds.slice(i, i + DB_CHECK_BATCH_SIZE)
+        const { data: existingMatches } = await supabase
+          .from('matches')
+          .select('match_id')
+          .in('match_id', batch)
+        
+        existingMatches?.forEach(m => existingIds.add(m.match_id))
+        // Small delay between DB checks to avoid overwhelming I/O
+        if (i + DB_CHECK_BATCH_SIZE < potentiallyNewMatchIds.length) {
+          await sleep(200)
+        }
+      }
+      
       // Add all checked matches to cache (existing and new)
       potentiallyNewMatchIds.forEach(id => knownMatchIds.add(id))
 
@@ -341,8 +353,8 @@ async function crawlSummoner(
             // Add to cache after successful storage
             knownMatchIds.add(matchId)
           }
-          // Small delay to prevent overwhelming the database
-          await sleep(100)
+          // Increased delay to reduce database I/O pressure
+          await sleep(250)
         }
       }
 
@@ -986,7 +998,7 @@ async function main() {
   // Periodic summary logger and state saver
   const statsLogger = async () => {
     while (true) {
-      await sleep(15000) // Report every 15 seconds
+      await sleep(30000) // Report every 30 seconds to reduce I/O
       const runtime = Date.now() - startTime
       const avgRate = totalMatchesScraped / (runtime / 1000 / 60)
       const acceptedPatches = await getCurrentPatch()

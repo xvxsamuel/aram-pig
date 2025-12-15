@@ -1,9 +1,9 @@
-// Shared utilities for Champion Detail Tabs
+// shared utilities for Champion Detail Tabs
 import { calculateWilsonScore as calculateWilsonScoreFromWinrate } from '@/lib/scoring/build-scoring'
 
 /**
- * Converts ability order string to display format
- * Returns array of abilities in max order
+ * converts ability order string to display format
+ * returns array of abilities in max order
  */
 export function getAbilityMaxOrder(abilityOrder: string): string[] {
   if (!abilityOrder || abilityOrder.trim() === '') return ['Q', 'W', 'E']
@@ -58,8 +58,8 @@ export function getAbilityMaxOrder(abilityOrder: string): string[] {
 }
 
 /**
- * Wilson score lower bound (95% confidence)
- * Wrapper for the shared Wilson score calculation that takes (games, wins) instead of (winrate, games)
+ * wilson score lower bound (95% confidence)
+ * wrapper for the shared Wilson score calculation that takes (games, wins) instead of (winrate, games)
  */
 export function calculateWilsonScore(games: number, wins: number): number {
   if (games === 0) return 0

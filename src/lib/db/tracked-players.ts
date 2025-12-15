@@ -3,7 +3,7 @@ import { createAdminClient } from './supabase'
 
 let trackedPuuidsCache: Set<string> | null = null
 let trackedPuuidsCacheExpiry = 0
-const TRACKED_PUUIDS_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const TRACKED_PUUIDS_CACHE_TTL = 15 * 60 * 1000 // 15 minutes - reduced DB query frequency
 
 export async function getTrackedPuuids(): Promise<Set<string>> {
   const now = Date.now()

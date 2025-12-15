@@ -87,9 +87,10 @@ export function OverviewTab({
   ) : undefined
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 pb-8">
-      {/* Core Builds Selector */}
-      <div className="w-full lg:w-52 xl:w-56 lg:flex-shrink-0">
+    <div className="relative flex flex-col lg:flex-row gap-4 pb-8">
+      {/* Core Builds Selector - Absolute on desktop to track height of right column */}
+      <div className="hidden lg:block lg:w-52 xl:w-56 lg:flex-shrink-0" />
+      <div className="w-full lg:w-52 xl:w-56 lg:absolute lg:top-0 lg:bottom-8 lg:left-0 flex flex-col">
         <CoreBuildsSelector
           bestCombinations={bestCombinations}
           worstCombinations={worstCombinations}
@@ -104,10 +105,10 @@ export function OverviewTab({
         {/* items and runes row */}
         <div className="flex flex-col lg:flex-row gap-4">
         {/* items by slot */}
-        <Card title="Items" className="flex-1">
+        <Card title="Items" className="flex-1 min-h-[400px]">
           {selectedComboData && selectedComboDisplay ? (
-            <div>
-              <div className="flex justify-between gap-4">
+            <div className="h-full">
+              <div className="flex gap-2 h-full">
                 {[1, 2, 3, 4, 5, 6].map(slotNum => {
                   const itemsInSlot: Array<{ itemId: number; games: number; winrate: number }> = []
                   if (selectedComboData.itemStats) {
@@ -127,7 +128,7 @@ export function OverviewTab({
                   const top3 = itemsInSlot.slice(0, 3)
 
                   return (
-                    <div key={slotNum}>
+                    <div key={slotNum} className="flex-1">
                       <div className="text-center text-xl font-bold mb-3 text-white">{slotNum}</div>
                       <div className="space-y-2">
                         {top3.length > 0 ? (
@@ -137,7 +138,7 @@ export function OverviewTab({
                             </div>
                           ))
                         ) : (
-                          <div className="text-center text-xs text-gray-600 py-2">No items</div>
+                          <div className="text-center text-xs text-text-muted py-2">No items</div>
                         )}
                       </div>
                     </div>
@@ -151,7 +152,7 @@ export function OverviewTab({
         </Card>
 
         {/* Runes Card */}
-        <Card title="Runes" headerRight={LowSampleWarning} className="lg:w-80 xl:w-96 lg:flex-shrink-0">
+        <Card title="Runes" headerRight={LowSampleWarning} className="flex-shrink-0 min-h-[400px]">
           {(() => {
             // Get all global runes for fallback
             const allGlobalRunes: RuneStat[] = []
@@ -243,7 +244,7 @@ export function OverviewTab({
               ...secondaryRunesList.map(r => r.rune_id)
             ].filter(Boolean) as number[])
 
-            // Get best stat perks
+            // get best stat perks
             const getBestStatPerkIndex = (perks: readonly { id: number }[], category: 'offense' | 'flex' | 'defense'): number => {
               let bestIdx = 0
               let bestGames = 0
@@ -263,17 +264,17 @@ export function OverviewTab({
             const bestFlexIdx = getBestStatPerkIndex(STAT_PERKS.flex, 'flex')
             const bestDefenseIdx = getBestStatPerkIndex(STAT_PERKS.defense, 'defense')
 
-            // Render rune helper
-            const renderRune = (runeId: number, isKeystone: boolean = false) => {
+            // render rune helper
+            const renderRune = (runeId: number, isKeystone: boolean = false, isSecondary: boolean = false) => {
               const runeInfo = (runesData as Record<string, any>)[runeId.toString()]
               const isSelected = selectedRuneIds.has(runeId)
-              const size = isKeystone ? 'w-9 h-9' : 'w-8 h-8'
-              const imgSize = isKeystone ? 36 : 32
+              const size = isKeystone ? 'w-9 h-9' : isSecondary ? 'w-6 h-6' : 'w-8 h-8'
+              const imgSize = isKeystone ? 36 : isSecondary ? 24 : 32
               
               return (
                 <RuneTooltip key={runeId} runeId={runeId}>
                   <div className={clsx(
-                    size, "rounded-full overflow-hidden cursor-pointer",
+                    size, "rounded-full overflow-hidden cursor-pointer flex-shrink-0",
                     isKeystone
                       ? isSelected ? "border-2 border-gold-light" : "opacity-30 grayscale"
                       : isSelected ? "border-2 border-gold-light" : "border border-gray-700 opacity-30 grayscale"
@@ -293,10 +294,10 @@ export function OverviewTab({
               )
             }
 
-            // Render stat shard row
+            // render stat shard row
             const renderStatShardRow = (shardOptions: readonly { id: number; icon: string; name: string }[], selectedIdx: number) => {
               return (
-                <div className="flex gap-1">
+                <div className="flex justify-between px-2">
                   {shardOptions.map((shard, idx) => {
                     const isSelected = idx === selectedIdx
                     return (
@@ -323,9 +324,9 @@ export function OverviewTab({
             }
 
             return (
-              <div className="flex gap-4">
+              <div className="flex gap-4 h-full">
                 {/* Primary Tree */}
-                <div className="bg-abyss-800 rounded-lg p-4 border border-gold-dark/30">
+                <div className="bg-abyss-800 rounded-lg p-4 flex-1 flex flex-col">
                   <div className="flex items-center gap-2 mb-3">
                     {(() => {
                       const treeInfo = (runesData as Record<string, any>)[primaryTree.id.toString()]
@@ -361,16 +362,18 @@ export function OverviewTab({
                   <div className="border-t border-gray-700/50 my-3" />
                   
                   {/* Tier runes */}
-                  {[primaryTree.tier1, primaryTree.tier2, primaryTree.tier3].map((tier, idx) => (
-                    <div key={idx} className="flex justify-between mb-3 last:mb-0">
-                      {tier.map(id => renderRune(id))}
-                    </div>
-                  ))}
+                  <div className="flex-1 flex flex-col justify-between">
+                    {[primaryTree.tier1, primaryTree.tier2, primaryTree.tier3].map((tier, idx) => (
+                      <div key={idx} className="flex justify-between mb-3 last:mb-0">
+                        {tier.map(id => renderRune(id))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 
                 {/* Secondary Tree with Stat Shards */}
                 {bestSecondaryTree && (
-                  <div className="bg-abyss-800 rounded-lg p-4 border border-gray-700/30">
+                  <div className="bg-abyss-800 rounded-lg p-4 flex-1 flex flex-col">
                     <div className="flex items-center gap-2 mb-3">
                       {(() => {
                         const treeInfo = (runesData as Record<string, any>)[bestSecondaryTree.id.toString()]
@@ -396,19 +399,21 @@ export function OverviewTab({
                       })()}
                     </div>
                     
-                    {/* Tier runes only */}
-                    {[bestSecondaryTree.tier1, bestSecondaryTree.tier2, bestSecondaryTree.tier3].map((tier, idx) => (
-                      <div key={idx} className="flex justify-between mb-3 last:mb-0">
-                        {tier.map(id => renderRune(id))}
+                    <div className="flex-1 flex flex-col justify-between">
+                      {/* Tier runes only */}
+                      {[bestSecondaryTree.tier1, bestSecondaryTree.tier2, bestSecondaryTree.tier3].map((tier, idx) => (
+                        <div key={idx} className="flex gap-4 justify-center mb-3 last:mb-0">
+                          {tier.map(id => renderRune(id, false, true))}
+                        </div>
+                      ))}
+                      
+                      {/* Stat Shards */}
+                      <div className="border-t border-gray-700/50 my-3" />
+                      <div className="flex flex-col gap-3">
+                        {renderStatShardRow(STAT_PERKS.offense, bestOffenseIdx)}
+                        {renderStatShardRow(STAT_PERKS.flex, bestFlexIdx)}
+                        {renderStatShardRow(STAT_PERKS.defense, bestDefenseIdx)}
                       </div>
-                    ))}
-                    
-                    {/* Stat Shards */}
-                    <div className="border-t border-gray-700/50 my-3" />
-                    <div className="flex flex-col gap-1">
-                      {renderStatShardRow(STAT_PERKS.offense, bestOffenseIdx)}
-                      {renderStatShardRow(STAT_PERKS.flex, bestFlexIdx)}
-                      {renderStatShardRow(STAT_PERKS.defense, bestDefenseIdx)}
                     </div>
                   </div>
                 )}
@@ -422,7 +427,7 @@ export function OverviewTab({
         <div className="flex gap-4">
           {/* Starting Items */}
           <div className="flex-1">
-          <Card title="Starting Items" headerRight={LowSampleWarning}>
+          <Card title="Starting Items" headerRight={LowSampleWarning} className="h-full">
             {(() => {
               if (!useGlobalData && selectedComboData?.starting) {
                 const sortedStarting = Object.entries(selectedComboData.starting)
@@ -472,7 +477,7 @@ export function OverviewTab({
 
           {/* Summoner Spells */}
           <div className="flex-1">
-          <Card title="Spells" headerRight={LowSampleWarning}>
+          <Card title="Spells" headerRight={LowSampleWarning} className="h-full">
             {(() => {
               if (!useGlobalData && selectedComboData?.spells) {
                 const sortedSpells = Object.entries(selectedComboData.spells)
@@ -531,7 +536,7 @@ export function OverviewTab({
           <div className="flex-1">
           <Card title="Skill Max Order" headerRight={useGlobalData ? LowSampleWarning : undefined}>
             {(() => {
-              // Map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
+              // map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
               const getAbilityColor = (ability: string, position: number): string => {
                 if (ability === 'R') return 'text-gold-light'
                 const colorMap = ['text-kda-3', 'text-kda-4', 'text-kda-5']
