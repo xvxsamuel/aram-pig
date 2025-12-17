@@ -11,6 +11,7 @@ import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { RuneDisplay } from '@/components/game/RuneDisplay'
 import { SummonerSpellDisplay } from '@/components/game/SummonerSpellDisplay'
 import { AbilityOrderDisplay } from '@/components/game/AbilityOrderDisplay'
+import ChampionAbility from '@/components/ui/ChampionAbility'
 import { getAbilityMaxOrder } from '@/components/champions/tabs/utils'
 import {
   TabProps,
@@ -581,7 +582,7 @@ export function BuildTab({
               <h3 className="text-xs font-medium text-text-muted">Skill Order</h3>
               {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.skills} />}
             </div>
-            <AbilityOrderDisplay abilityOrder={formattedOrder} showFullSequence />
+            <AbilityOrderDisplay abilityOrder={formattedOrder} showFullSequence championName={currentPlayer.championName} />
           </div>
         )
       })()}

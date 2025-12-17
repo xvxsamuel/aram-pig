@@ -3,17 +3,20 @@
 import clsx from 'clsx'
 import { getAbilityMaxOrder } from '@/components/champions/tabs/utils'
 import { getWinrateColor } from '@/lib/ui'
+import ChampionAbility from '@/components/ui/ChampionAbility'
 
 interface AbilityOrderDisplayProps {
   abilityOrder: string
   showFullSequence?: boolean
   compact?: boolean
+  championName?: string
 }
 
 export function AbilityOrderDisplay({
   abilityOrder,
   showFullSequence = true,
   compact = false,
+  championName,
 }: AbilityOrderDisplayProps) {
   const abilities = abilityOrder.split('.')
   const maxOrder = getAbilityMaxOrder(abilityOrder)
@@ -29,20 +32,33 @@ export function AbilityOrderDisplay({
     <div className="space-y-3">
       {/* Max order display */}
       <div className="flex items-center gap-2">
-        {maxOrder.map((ability, idx) => (
-          <div key={ability} className="flex items-center gap-1.5">
-            {idx > 0 && <span className="text-text-muted text-sm">&gt;</span>}
-            <div
-              className={clsx(
-                'w-7 h-7 rounded border bg-abyss-800 flex items-center justify-center text-xs font-bold',
-                ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
-                getAbilityColor(ability, idx)
-              )}
-            >
-              {ability === 'R' ? <h2 className="text-xs">{ability}</h2> : ability}
+        {championName ? (
+          maxOrder.map((ability, idx) => (
+            <div key={ability} className="flex items-center gap-1.5">
+              {idx > 0 && <span className="text-text-muted text-sm">&gt;</span>}
+              <ChampionAbility 
+                championName={championName} 
+                ability={ability as 'P' | 'Q' | 'W' | 'E' | 'R'} 
+                size="lg"
+              />
             </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          maxOrder.map((ability, idx) => (
+            <div key={ability} className="flex items-center gap-1.5">
+              {idx > 0 && <span className="text-text-muted text-sm">&gt;</span>}
+              <div
+                className={clsx(
+                  'w-7 h-7 rounded border bg-abyss-800 flex items-center justify-center text-xs font-bold',
+                  ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
+                  getAbilityColor(ability, idx)
+                )}
+              >
+                {ability === 'R' ? <h2 className="text-xs">{ability}</h2> : ability}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Full sequence */}
@@ -75,6 +91,7 @@ interface AbilityOrderWithStatsProps {
   winrate: number
   pickrate: number
   games: number
+  championName: string
   showFullSequence?: boolean
 }
 
@@ -83,20 +100,11 @@ export function AbilityOrderWithStats({
   winrate,
   pickrate,
   games,
+  championName,
   showFullSequence = false,
 }: AbilityOrderWithStatsProps) {
   const abilities = abilityOrder.split('.')
   const maxOrder = getAbilityMaxOrder(abilityOrder)
-
-  // Map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
-  const getAbilityColor = (ability: string, position: number): string => {
-    if (ability === 'R') return 'text-gold-light'
-    // position 0 = first max (lowest priority) = kda-3 (green)
-    // position 1 = second max (medium priority) = kda-4 (blue)
-    // position 2 = third max (highest priority) = kda-5 (pink)
-    const colorMap = ['text-kda-3', 'text-kda-4', 'text-kda-5']
-    return colorMap[position] || 'text-white'
-  }
 
   return (
     <div className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
@@ -106,14 +114,12 @@ export function AbilityOrderWithStats({
           {maxOrder.map((ability, idx) => (
             <div key={ability} className="flex items-center">
               {idx > 0 && <span className="text-gray-500 font-bold text-lg">&gt;</span>}
-              <div
-                className={clsx(
-                  'w-7 h-7 rounded border bg-abyss-800 flex items-center justify-center text-xs font-bold mx-0.5',
-                  ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
-                  getAbilityColor(ability, idx)
-                )}
-              >
-                {ability}
+              <div className="mx-0.5">
+                <ChampionAbility 
+                  championName={championName} 
+                  ability={ability as 'P' | 'Q' | 'W' | 'E' | 'R'} 
+                  size="lg"
+                />
               </div>
             </div>
           ))}

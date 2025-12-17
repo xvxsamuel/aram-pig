@@ -49,6 +49,7 @@ export default function ChampionDetailTabs({
   totalGames,
   allBuildData,
   championWinrate,
+  championName,
 }: Props) {
   // Process build combinations for Overview tab
   const { bestCombinations, worstCombinations, processedComboData } = useMemo(() => {
@@ -99,6 +100,7 @@ export default function ChampionDetailTabs({
           summonerSpellStats={summonerSpellStats}
           abilityLevelingStats={abilityLevelingStats}
           totalGames={totalGames}
+          championName={championName}
         />
       )}
 
@@ -122,6 +124,9 @@ export default function ChampionDetailTabs({
       {selectedTab === 'leveling' && (
         <LevelingTab
           abilityLevelingStats={abilityLevelingStats}
+          summonerSpellStats={summonerSpellStats}
+          ddragonVersion={ddragonVersion}
+          championName={championName}
         />
       )}
     </div>

@@ -8,6 +8,7 @@ import ItemIcon from '@/components/ui/ItemIcon'
 import Card from '@/components/ui/Card'
 import RuneTooltip from '@/components/ui/RuneTooltip'
 import SummonerSpellTooltip from '@/components/ui/SummonerSpellTooltip'
+import ChampionAbility from '@/components/ui/ChampionAbility'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { CoreBuildsSelector } from './CoreBuildsSelector'
 import { getWinrateColor } from '@/lib/ui'
@@ -53,6 +54,7 @@ interface OverviewTabProps {
   summonerSpellStats: SummonerSpellStat[]
   abilityLevelingStats: AbilityLevelingStat[]
   totalGames: number
+  championName: string
   onComboSelect?: (index: number) => void
 }
 
@@ -66,6 +68,7 @@ export function OverviewTab({
   starterItems,
   summonerSpellStats,
   abilityLevelingStats,
+  championName,
 }: OverviewTabProps) {
   const [selectedCombo, setSelectedCombo] = useState<number | null>(null)
   const [scrollStates, setScrollStates] = useState<Record<number, { isScrollable: boolean; isAtBottom: boolean }>>({})
@@ -204,7 +207,7 @@ export function OverviewTab({
         </Card>
 
         {/* Runes Card */}
-        <Card title="Runes" headerRight={LowSampleWarning} className="flex-shrink-0 min-h-[400px]">
+        <Card title="Runes" headerRight={LowSampleWarning} className="flex-shrink-0 min-h-[400px] flex flex-col" paddingClassName="flex-1 flex flex-col" contentClassName="flex-1 flex">
           {(() => {
             // Get all global runes for fallback
             const allGlobalRunes: RuneStat[] = []
@@ -227,7 +230,7 @@ export function OverviewTab({
               return null
             }
 
-            // Use combo runes if available
+            // use combo runes if available
             let comboRunes: Array<{ rune_id: number; games: number; wins: number; winrate: number }> = []
             if (!useGlobalData && selectedComboData?.runes) {
               const runeEntries: [string, { games: number; wins: number }][] = []
@@ -243,7 +246,7 @@ export function OverviewTab({
 
             const runesSource = comboRunes.length > 0 ? comboRunes : allGlobalRunes
 
-            // Find best keystone
+            // find best keystone
             const keystones = runesSource.filter(r => getRuneTree(r.rune_id)?.tier === 'keystone')
             const bestKeystone = keystones.sort((a, b) => b.games - a.games)[0]
             if (!bestKeystone) return <div className="text-center text-subtitle py-4">No rune data available</div>
@@ -251,7 +254,7 @@ export function OverviewTab({
             const primaryTreeInfo = getRuneTree(bestKeystone.rune_id)
             if (!primaryTreeInfo) return null
 
-            // Get best rune for each tier
+            // get best rune for each tier
             const primaryTreeName = primaryTreeInfo.tree.name.toLowerCase()
             const getBestRuneForTier = (tier: 'tier1' | 'tier2' | 'tier3') => {
               const tierRunes = runesSource.filter(r => {
@@ -376,8 +379,8 @@ export function OverviewTab({
             }
 
             return (
-              <div className="flex gap-4 h-full">
-                {/* Primary Tree */}
+              <div className="flex gap-4 h-full min-h-full">
+                {/* primary Tree */}
                 <div className="bg-abyss-800 rounded-lg p-4 flex-1 flex flex-col">
                   <div className="flex items-center gap-2 mb-3">
                     {(() => {
@@ -396,7 +399,7 @@ export function OverviewTab({
                               />
                             </div>
                           )}
-                          <span className="text-[10px] font-medium" style={{ color: primaryTree.color }}>
+                          <span className="text-[12px] font-medium" style={{ color: primaryTree.color }}>
                             {primaryTree.name}
                           </span>
                         </>
@@ -404,26 +407,26 @@ export function OverviewTab({
                     })()}
                   </div>
                   
-                  {/* Keystones */}
+                  {/* keystones */}
                   <div className={clsx(
-                    "flex justify-between mb-3",
+                    "flex justify-between",
                   )}>
                     {primaryTree.keystones.map(id => renderRune(id, true))}
                   </div>
                   
-                  <div className="border-t border-gray-700/50 my-3" />
+                  <div className="border-t border-gold-dark/40 my-8" />
                   
-                  {/* Tier runes */}
+                  {/* tier runes */}
                   <div className="flex-1 flex flex-col justify-between">
                     {[primaryTree.tier1, primaryTree.tier2, primaryTree.tier3].map((tier, idx) => (
-                      <div key={idx} className="flex justify-between mb-3 last:mb-0">
+                      <div key={idx} className="flex justify-between">
                         {tier.map(id => renderRune(id))}
                       </div>
                     ))}
                   </div>
                 </div>
                 
-                {/* Secondary Tree with Stat Shards */}
+                {/* secondary tree w/ stats */}
                 {bestSecondaryTree && (
                   <div className="bg-abyss-800 rounded-lg p-4 flex-1 flex flex-col">
                     <div className="flex items-center gap-2 mb-3">
@@ -443,7 +446,7 @@ export function OverviewTab({
                                 />
                               </div>
                             )}
-                            <span className="text-[10px] font-medium" style={{ color: bestSecondaryTree.color }}>
+                            <span className="text-[12px] font-medium" style={{ color: bestSecondaryTree.color }}>
                               {bestSecondaryTree.name}
                             </span>
                           </>
@@ -452,15 +455,14 @@ export function OverviewTab({
                     </div>
                     
                     <div className="flex-1 flex flex-col justify-between">
-                      {/* Tier runes only */}
                       {[bestSecondaryTree.tier1, bestSecondaryTree.tier2, bestSecondaryTree.tier3].map((tier, idx) => (
-                        <div key={idx} className="flex gap-4 justify-center mb-3 last:mb-0">
+                        <div key={idx} className="flex gap-4 justify-center">
                           {tier.map(id => renderRune(id, false, true))}
                         </div>
                       ))}
                       
-                      {/* Stat Shards */}
-                      <div className="border-t border-gray-700/50 my-3" />
+                      {/* stat Shards */}
+                      <div className="border-t border-gold-dark/40 my-4" />
                       <div className="flex flex-col gap-3">
                         {renderStatShardRow(STAT_PERKS.offense, bestOffenseIdx)}
                         {renderStatShardRow(STAT_PERKS.flex, bestFlexIdx)}
@@ -477,7 +479,7 @@ export function OverviewTab({
 
         {/* starting Items, spells, skills Row */}
         <div className="flex gap-4">
-          {/* Starting Items */}
+          {/* starting Items */}
           <div className="flex-1">
           <Card title="Starting Items" headerRight={LowSampleWarning} className="h-full">
             {(() => {
@@ -491,7 +493,7 @@ export function OverviewTab({
                   .sort((a, b) => b.games - a.games)
                 if (sortedStarting.length > 0) {
                   const best = sortedStarting[0]
-                  // Count duplicate items
+                  // count duplicate items
                   const itemCounts = new Map<number, number>()
                   best.items.forEach(itemId => {
                     itemCounts.set(itemId, (itemCounts.get(itemId) || 0) + 1)
@@ -507,8 +509,8 @@ export function OverviewTab({
                           <div key={idx} className="relative">
                             <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="lg" />
                             {count > 1 && (
-                              <div className="absolute bottom-2 right-0.5 w-4 h-4 rounded-full bg-abyss-900 border border-gray-600 flex items-center justify-center">
-                                <span className="text-[9px] font-bold text-white leading-none">{count}</span>
+                              <div className="absolute bottom-2 right-0 w-4 h-4 rounded-sm bg-abyss-900 border border-gold-dark flex items-center justify-center">
+                                <span className="text-[9px] font-regular text-white leading-none">{count}</span>
                               </div>
                             )}
                           </div>
@@ -520,7 +522,7 @@ export function OverviewTab({
               }
               if (starterItems.length > 0) {
                 const best = starterItems[0]
-                // Count duplicate items
+                // count duplicate items
                 const itemCounts = new Map<number, number>()
                 best.items.forEach(itemId => {
                   itemCounts.set(itemId, (itemCounts.get(itemId) || 0) + 1)
@@ -551,9 +553,9 @@ export function OverviewTab({
           </Card>
           </div>
 
-          {/* Summoner Spells */}
+          {/* summoner spells */}
           <div className="flex-1">
-          <Card title="Spells" headerRight={LowSampleWarning} className="h-full">
+          <Card title="Summoner Spells" headerRight={LowSampleWarning} className="h-full">
             {(() => {
               if (!useGlobalData && selectedComboData?.spells) {
                 const sortedSpells = Object.entries(selectedComboData.spells)
@@ -608,9 +610,9 @@ export function OverviewTab({
           </Card>
           </div>
 
-          {/* Skill Max Order */}
+          {/* leveling order */}
           <div className="flex-1">
-          <Card title="Skill Max Order" headerRight={useGlobalData ? LowSampleWarning : undefined} className="h-full">
+          <Card title="Levelling Order" headerRight={useGlobalData ? LowSampleWarning : undefined} className="h-full">
             {(() => {
               // map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
               const getAbilityColor = (ability: string, position: number): string => {
@@ -635,11 +637,7 @@ export function OverviewTab({
                       <div className="flex items-center gap-2">
                         {maxOrder.map((ability, idx) => (
                           <div key={idx} className="flex items-center gap-2">
-                            <div className={clsx(
-                              "w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg",
-                              "bg-abyss-800",
-                              getAbilityColor(ability, idx)
-                            )}>{ability}</div>
+                            <ChampionAbility championName={championName} ability={ability as 'P' | 'Q' | 'W' | 'E' | 'R'} />
                             {idx < maxOrder.length - 1 && <span className="text-gray-500 font-bold">&gt;</span>}
                           </div>
                         ))}
@@ -660,11 +658,7 @@ export function OverviewTab({
                     <div className="flex items-center gap-2">
                       {maxOrder.map((ability, idx) => (
                         <div key={idx} className="flex items-center gap-2">
-                          <div className={clsx(
-                            "w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg",
-                            "bg-abyss-800",
-                            getAbilityColor(ability, idx)
-                          )}>{ability}</div>
+                          <ChampionAbility championName={championName} ability={ability as 'P' | 'Q' | 'W' | 'E' | 'R'} />
                           {idx < maxOrder.length - 1 && <span className="text-gray-500 font-bold">&gt;</span>}
                         </div>
                       ))}

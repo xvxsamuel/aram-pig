@@ -532,7 +532,7 @@ export default function ChampionPageClient({
                   : 'border-transparent text-text-muted hover:text-white'
               )}
             >
-              Leveling
+              More Stats
             </button>
           </div>
         </div>
@@ -554,6 +554,7 @@ export default function ChampionPageClient({
           buildOrders={[]}
           allBuildData={allBuildData}
           championWinrate={data.overview.winrate}
+          championName={championName}
         />
       </div>
     </>

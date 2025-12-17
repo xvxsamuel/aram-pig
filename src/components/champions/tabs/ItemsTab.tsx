@@ -40,13 +40,13 @@ function ItemRow({ title, items, ddragonVersion, isStarter, starterBuilds }: Ite
 
                 return (
                   <div key={idx} className="bg-abyss-700 rounded-lg p-2 flex-shrink-0">
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col">
                       <div className="flex gap-1 flex-wrap justify-center">
                         {Array.from(itemCounts.entries()).map(([itemId, count], itemIdx) => (
                           <div key={itemIdx} className="relative">
                             <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="lg" />
                             {count > 1 && (
-                              <div className="absolute bottom-2 right-0 w-4 h-4 rounded-full bg-abyss-900 border border-gold-dark flex items-center justify-center">
+                              <div className="absolute bottom-2 right-0 w-4 h-4 rounded-sm bg-abyss-900 border border-gold-dark flex items-center justify-center">
                                 <span className="text-[9px] font-regular text-white leading-none">{count}</span>
                               </div>
                             )}
@@ -104,7 +104,7 @@ function ItemRow({ title, items, ddragonVersion, isStarter, starterBuilds }: Ite
 export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion }: ItemsTabProps) {
   return (
     <div className="flex flex-col gap-4 pb-8">
-      {/* Starter Items */}
+      {/* starter items */}
       {starterItems.length > 0 && (
         <ItemRow 
           title="Starter Items" 
@@ -115,12 +115,12 @@ export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion
         />
       )}
 
-      {/* Boots */}
+      {/* boots */}
       {bootsItems.length > 0 && (
         <ItemRow title="Boots" items={bootsItems} ddragonVersion={ddragonVersion} />
       )}
 
-      {/* Item Slots */}
+      {/* item Slots */}
       {[0, 1, 2, 3, 4, 5].map(slot => {
         const items = itemsBySlot[slot]
         if (!items || items.length === 0) return null

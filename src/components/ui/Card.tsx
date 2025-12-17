@@ -21,6 +21,8 @@ interface Props {
   padding?: string
   /** variant for different bg colors */
   variant?: 'default' | 'worst'
+  /** extra classes for the padding wrapper */
+  paddingClassName?: string
 }
 
 /**
@@ -37,6 +39,7 @@ export default function Card({
   headerRight,
   padding = 'px-4.5 py-2',
   variant = 'default',
+  paddingClassName = '',
 }: Props) {
   const TitleElement = onTitleClick ? 'button' : 'div'
 
@@ -48,7 +51,7 @@ export default function Card({
         className
       )}
     >
-      <div className={padding}>
+      <div className={clsx(padding, paddingClassName)}>
         {title && (
           <>
             <div className="flex items-center justify-between gap-4 pb-1.5 relative z-20">
