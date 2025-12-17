@@ -34,6 +34,7 @@ interface Props {
   buildOrders: string[]
   allBuildData: PreCalculatedCombo[]
   championWinrate: number
+  championName: string
 }
 
 export default function ChampionDetailTabs({
