@@ -218,12 +218,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // top builds sorted by games
     topItems: {
-      slot1: topByGames(rawData.items?.['1'], 10),
-      slot2: topByGames(rawData.items?.['2'], 10),
-      slot3: topByGames(rawData.items?.['3'], 10),
-      slot4: topByGames(rawData.items?.['4'], 10),
-      slot5: topByGames(rawData.items?.['5'], 10),
-      slot6: topByGames(rawData.items?.['6'], 10),
+      slot1: allByGames(rawData.items?.['1']),
+      slot2: allByGames(rawData.items?.['2']),
+      slot3: allByGames(rawData.items?.['3']),
+      slot4: allByGames(rawData.items?.['4']),
+      slot5: allByGames(rawData.items?.['5']),
+      slot6: allByGames(rawData.items?.['6']),
     },
 
     // top runes - return ALL runes for complete display
@@ -245,7 +245,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     topSpells: topByGames(rawData.spells, 10),
 
     // top starting items
-    topStarters: topByGames(rawData.starting, 15),
+    topStarters: allByGames(rawData.starting),
 
     // top skill orders
     topSkillOrders: topByGames(rawData.skills, 10),

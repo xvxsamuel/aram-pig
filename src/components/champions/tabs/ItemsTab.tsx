@@ -12,132 +12,120 @@ interface ItemsTabProps {
   ddragonVersion: string
 }
 
+interface ItemRowProps {
+  title: string
+  items: ItemStat[]
+  ddragonVersion: string
+  isStarter?: boolean
+  starterBuilds?: StarterBuild[]
+}
+
+function ItemRow({ title, items, ddragonVersion, isStarter, starterBuilds }: ItemRowProps) {
+  return (
+    <Card title={title}>
+      <div className="flex gap-3">
+        <div className="flex flex-col space-y-1 text-[10px] text-subtitle pt-[52px]">
+          <div className="h-[14px] leading-[14px]">Win Rate</div>
+          <div className="h-[14px] leading-[14px]">Pick Rate</div>
+          <div className="h-[14px] leading-[14px]">Games</div>
+        </div>
+        <div className="overflow-x-auto flex-1 -mr-4.5">
+          <div className="flex gap-2 pr-4.5 pb-1">
+            {isStarter && starterBuilds ? (
+              starterBuilds.map((build, idx) => {
+                const itemCounts = new Map<number, number>()
+                build.items.forEach(itemId => {
+                  itemCounts.set(itemId, (itemCounts.get(itemId) || 0) + 1)
+                })
+
+                return (
+                  <div key={idx} className="bg-abyss-700 rounded-lg p-2 flex-shrink-0">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex gap-1 flex-wrap justify-center">
+                        {Array.from(itemCounts.entries()).map(([itemId, count], itemIdx) => (
+                          <div key={itemIdx} className="relative">
+                            <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="lg" />
+                            {count > 1 && (
+                              <div className="absolute bottom-2 right-0 w-4 h-4 rounded-full bg-abyss-900 border border-gold-dark flex items-center justify-center">
+                                <span className="text-[9px] font-regular text-white leading-none">{count}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-[10px] font-bold text-center" style={{ color: getWinrateColor(build.winrate) }}>
+                          {build.winrate.toFixed(1)}%
+                        </div>
+                        <div className="text-[10px] font-bold text-white text-center">
+                          {build.pickrate.toFixed(1)}%
+                        </div>
+                        <div className="text-[10px] font-bold text-text-muted text-center">
+                          {build.games.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              items.map(item => (
+                <div key={item.item_id} className="bg-abyss-700 rounded-lg p-2 flex-shrink-0">
+                  <div className="flex flex-col gap-1">
+                    {item.item_id === -1 || item.item_id === -2 ? (
+                      <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 flex items-center justify-center mx-auto">
+                        <span className="text-xl text-gray-500">∅</span>
+                      </div>
+                    ) : (
+                      <ItemIcon itemId={item.item_id} ddragonVersion={ddragonVersion} size="lg" />
+                    )}
+                    <div className="space-y-0.5">
+                      <div className="text-[10px] font-bold text-center" style={{ color: getWinrateColor(item.winrate) }}>
+                        {item.winrate.toFixed(1)}%
+                      </div>
+                      <div className="text-[10px] font-bold text-white text-center">
+                        {item.pickrate.toFixed(1)}%
+                      </div>
+                      <div className="text-[10px] font-bold text-text-muted text-center">
+                        {item.games.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion }: ItemsTabProps) {
   return (
     <div className="flex flex-col gap-4 pb-8">
-      {/* Starter Items Section */}
+      {/* Starter Items */}
       {starterItems.length > 0 && (
-        <Card title="Starter Items">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {starterItems.slice(0, 10).map((build, idx) => {
-              // Group duplicate items and count them
-              const itemCounts = new Map<number, number>()
-              build.items.forEach(itemId => {
-                itemCounts.set(itemId, (itemCounts.get(itemId) || 0) + 1)
-              })
-
-              return (
-                <div key={idx} className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex gap-1">
-                      {Array.from(itemCounts.entries()).map(([itemId, count], itemIdx) => (
-                        <div key={itemIdx} className="relative">
-                          <ItemIcon
-                            itemId={itemId}
-                            ddragonVersion={ddragonVersion}
-                            size="lg"
-                            className="bg-abyss-800 border-gray-700 flex-shrink-0"
-                          />
-                          {count > 1 && (
-                            <div className="absolute bottom-0 right-0 bg-abyss-900 border border-gray-700 rounded-tl px-1 text-[10px] font-bold text-white leading-tight">
-                              {count}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-subtitle">Pick</span>
-                        <span className="font-bold">{build.pickrate.toFixed(1)}%</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-subtitle">Win</span>
-                        <span className="font-bold" style={{ color: getWinrateColor(build.winrate) }}>
-                          {build.winrate.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Card>
+        <ItemRow 
+          title="Starter Items" 
+          items={[]} 
+          ddragonVersion={ddragonVersion} 
+          isStarter 
+          starterBuilds={starterItems} 
+        />
       )}
 
-      {/* Boots Section */}
+      {/* Boots */}
       {bootsItems.length > 0 && (
-        <Card title="Boots">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {bootsItems.map(item => (
-              <div key={item.item_id} className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
-                <div className="flex items-center gap-3">
-                  {item.item_id === -1 || item.item_id === -2 ? (
-                    <div className="w-12 h-12 rounded bg-abyss-800 border border-gray-700 flex items-center justify-center flex-shrink-0">
-                      <span className="text-2xl text-gray-500">∅</span>
-                    </div>
-                  ) : (
-                    <ItemIcon
-                      itemId={item.item_id}
-                      ddragonVersion={ddragonVersion}
-                      size="xl"
-                      className="bg-abyss-800 border-gray-700 flex-shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-subtitle">Pick</span>
-                      <span className="font-bold">{item.pickrate.toFixed(1)}%</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-subtitle">Win</span>
-                      <span className="font-bold" style={{ color: getWinrateColor(item.winrate) }}>
-                        {item.winrate.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <ItemRow title="Boots" items={bootsItems} ddragonVersion={ddragonVersion} />
       )}
 
       {/* Item Slots */}
       {[0, 1, 2, 3, 4, 5].map(slot => {
         const items = itemsBySlot[slot]
         if (!items || items.length === 0) return null
-
         return (
-          <Card key={slot} title={slot === 0 ? 'Slot 1' : `Slot ${slot + 1}`}>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {items.slice(0, 8).map(item => (
-                <div key={item.item_id} className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
-                  <div className="flex items-center gap-3">
-                    <ItemIcon
-                      itemId={item.item_id}
-                      ddragonVersion={ddragonVersion}
-                      size="xl"
-                      className="bg-abyss-800 border-gray-700 flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-subtitle">Pick</span>
-                        <span className="font-bold">{item.pickrate.toFixed(1)}%</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-subtitle">Win</span>
-                        <span className="font-bold" style={{ color: getWinrateColor(item.winrate) }}>
-                          {item.winrate.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <ItemRow key={slot} title={`Slot ${slot + 1}`} items={items} ddragonVersion={ddragonVersion} />
         )
       })}
     </div>

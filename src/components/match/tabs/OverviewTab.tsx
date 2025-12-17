@@ -94,7 +94,7 @@ export function OverviewTab({
         <td className="py-1.25 pl-3">
           <div className="flex items-center gap-2">
             <Link href={championUrl} className="relative flex-shrink-0 hover:brightness-75 transition-all">
-              <div className="w-9 h-9 rounded-lg overflow-hidden border border-gold-dark bg-abyss-800">
+              <div className="w-9 h-9 rounded-lg overflow-hidden bg-abyss-800">
                 <Image
                   src={getChampionImageUrl(p.championName, ddragonVersion)}
                   alt={p.championName}
@@ -104,7 +104,7 @@ export function OverviewTab({
                   unoptimized
                 />
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 text-[10px] font-bold bg-abyss-700 text-white px-1 rounded border border-gold-dark/50">
+              <span className="absolute -bottom-0.5 -right-0.5 text-[10px] font-bold bg-abyss-700 text-white px-1 rounded">
                 {p.champLevel}
               </span>
             </Link>
@@ -196,7 +196,7 @@ export function OverviewTab({
             {items.map((item, idx) =>
               item > 0 ? (
                 <ItemTooltip key={idx} itemId={item}>
-                  <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
+                  <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800">
                     <Image
                       src={getItemImageUrl(item, ddragonVersion)}
                       alt=""
@@ -208,7 +208,7 @@ export function OverviewTab({
                   </div>
                 </ItemTooltip>
               ) : (
-                <div key={idx} className="w-6 h-6 rounded bg-abyss-800/50 border border-gold-dark/50" />
+                <div key={idx} className="w-6 h-6 rounded bg-abyss-800/50" />
               )
             )}
           </div>

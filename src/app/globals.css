@@ -62,8 +62,8 @@
 /* Hide scrollbar */
 @layer utilities {
   .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
@@ -77,21 +77,22 @@ body {
 
 /* scrollbar */
 * {
-  scrollbar-color: var(--color-gold-dark) color-mix(in oklch, var(--color-accent-dark) 50%, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gold-dark) color-mix(in oklch, var(--color-abyss-400) 50%, transparent);
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 *::-webkit-scrollbar-track {
-  background: color-mix(in oklch, var(--color-accent-dark) 50%, transparent);
+  background: var(--color-accent-dark);
 }
 
 *::-webkit-scrollbar-thumb {
   background: var(--color-gold-dark);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 *::-webkit-scrollbar-thumb:hover {

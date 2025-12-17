@@ -584,10 +584,6 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
               <div
                 className="max-h-80 overflow-y-auto"
                 onMouseLeave={() => setSelectedIndex(-1)}
-                style={{
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',
-                }}
               >
                 {/* Champions Section */}
                 {displayedChampions.length > 0 && (

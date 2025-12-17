@@ -356,6 +356,9 @@ export function calculateRecentlyPlayedWith(
     const currentPlayer = participants.find(p => p.puuid === currentPuuid)
     if (!currentPlayer) continue
 
+    // Skip remakes - don't count them for recently played with
+    if (currentPlayer.gameEndedInEarlySurrender) continue
+
     const teammates = participants.filter(p => p.teamId === currentPlayer.teamId && p.puuid !== currentPuuid)
 
     for (const teammate of teammates) {

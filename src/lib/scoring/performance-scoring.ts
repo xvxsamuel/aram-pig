@@ -22,24 +22,25 @@ import { getStdDev, getZScore } from '../db/stats-aggregator'
  * Uses a sigmoid function for smooth, natural scoring with no hard clamps.
  * Average performance gives 50, excellence approaches 100 asymptotically.
  *
- * SCORE MAPPING:
- * | Z-Score | True CDF% | Score  |
- * |---------|-----------|--------|
- * | +3.0    | 99.87%    | ~95    | (soft cap)
- * | +2.0    | 97.72%    | ~88    |
- * | +1.0    | 84.13%    | ~73    |
- * | 0.0     | 50.00%    | 50     | AVERAGE
- * | -1.0    | 15.87%    | ~27    |
- * | -2.0    | 2.28%     | ~12    |
- * | -3.0    | 0.13%     | ~5     | (soft floor)
+ * SCORE MAPPING (with k=1.6):
+ * | Z-Score | True CDF% | Score  | % of Avg  |
+ * |---------|-----------|--------|-----------|
+ * | +2.0    | 97.72%    | ~96    | ~150%     |
+ * | +1.5    | 93.32%    | ~92    | ~130%     |
+ * | +1.0    | 84.13%    | ~86    | ~115%     |
+ * | 0.0     | 50.00%    | 50     | 100% AVG  |
+ * | -1.0    | 15.87%    | ~14    | ~85%      |
+ * | -1.5    | 6.68%     | ~8     | ~75%      |
+ * | -2.0    | 2.28%     | ~4     | ~70%      |
  *
- * Formula: score = 100 / (1 + e^(-k * z)), where k ≈ 0.8
+ * Formula: score = 100 / (1 + e^(-k * z)), where k ≈ 1.6
+ * Higher k = more generous scoring for above-average performance
  */
 
 // Sigmoid scaling constant - determines steepness of the S-curve
-// k=1.0 gives more generous scoring: z=3 → ~98, z=2 → ~93, z=1 → ~79, z=-3 → ~2
-// Higher k = steeper curve = more reward for above-average performance
-const SIGMOID_K = 1.0
+// k=1.6 gives generous scoring: 150% of avg (~z=2) → ~96, 130% (~z=1.5) → ~92, 115% (~z=1) → ~86
+// This rewards good performance more and makes scoring less strict
+const SIGMOID_K = 1.6
 
 /**
  * Convert z-score to a 0-100 score using sigmoid function
@@ -111,6 +112,7 @@ function logTransform(value: number): number {
 
 /**
  * Calculate z-score using log-transformed values (for skewed distributions)
+ * Caps CV to make scoring more generous - high variance shouldn't punish good performance
  */
 function getLogZScore(playerValue: number, welfordState: WelfordState): number {
   // Transform both the player value and the distribution parameters
@@ -118,10 +120,13 @@ function getLogZScore(playerValue: number, welfordState: WelfordState): number {
   const logMean = logTransform(welfordState.mean)
   
   // For log-normal, stddev in log space ≈ coefficient of variation in original space
-  // But we can estimate from the Welford stddev
   const stdDev = getStdDev(welfordState)
   const cv = stdDev / welfordState.mean // coefficient of variation
-  const logStdDev = Math.sqrt(Math.log1p(cv * cv)) // log-normal sigma approximation
+  
+  // Cap CV at 0.35 to prevent overly harsh scoring
+  // Most damage distributions have CV ~0.20-0.30, capping prevents outliers from skewing scores
+  const cappedCV = Math.min(cv, 0.35)
+  const logStdDev = Math.sqrt(Math.log1p(cappedCV * cappedCV)) // log-normal sigma approximation
   
   if (logStdDev <= 0.01) return 0 // Too little variance
   
@@ -167,17 +172,18 @@ export function calculateStatScore(
   if (useLogTransform && avgValue > 0 && playerValue > 0) {
     const logRatio = Math.log(playerValue / avgValue)
     // In log space, 0 = equal, positive = above average
-    // Typical CV for damage stats is ~0.3, so logStdDev ≈ 0.29
-    const estimatedLogStdDev = 0.29
+    // Typical CV for damage stats is ~0.2-0.25, so logStdDev ≈ 0.20
+    // This means 150% of avg (logRatio ≈ 0.405) → z ≈ 2.0 → score ~96
+    const estimatedLogStdDev = 0.20
     const equivalentZScore = logRatio / estimatedLogStdDev
     return zScoreToScore(equivalentZScore)
   }
 
   // Standard ratio-based fallback
-  // Assume 15% of mean ≈ 1 standard deviation
+  // Assume 25% of mean ≈ 1 standard deviation (more realistic than 15%)
+  // This gives: 150% of avg → z = 2.0 → score ~96
   const performanceRatio = playerValue / avgValue
-  // Convert ratio to equivalent z-score: (ratio - 1) / 0.15
-  const equivalentZScore = (performanceRatio - 1) / 0.15
+  const equivalentZScore = (performanceRatio - 1) / 0.25
   return zScoreToScore(equivalentZScore)
 }
 
@@ -261,21 +267,24 @@ export function calculateDeathsScore(
 
 /**
  * Calculate kill participation score (0-100)
- * 95%+ KP = 90, scales down from there
+ * Uses a smooth power curve: score = 100 * (kp / 0.9)^0.9
+ * 
+ * This gives:
+ * - 90%+ KP = 100 score (perfect)
+ * - 85% KP = ~95 score
+ * - 70% KP = ~79 score
+ * - 50% KP = ~57 score
+ * - Smooth curve throughout
  */
 export function calculateKillParticipationScore(killParticipation: number): number {
-  const EXCELLENT_KP = 0.95
-  const GOOD_KP = 0.8
-
-  if (killParticipation >= EXCELLENT_KP) return 90
-  if (killParticipation >= GOOD_KP) {
-    // 80% = 70, 95% = 90
-    return 70 + ((killParticipation - GOOD_KP) / (EXCELLENT_KP - GOOD_KP)) * 20
-  }
-
-  // Linear scale from 0 to good
-  // 0% KP = 0 score, 80% KP = 70 score
-  return Math.max(0, (killParticipation / GOOD_KP) * 70)
+  // Cap at 90% KP for perfect score
+  const cappedKP = Math.min(killParticipation, 0.9)
+  
+  // Power curve with exponent 0.9 gives gentle scaling
+  // Normalizing by 0.9 means 90% KP = 1.0 → 100 score
+  const score = 100 * Math.pow(cappedKP / 0.9, 0.9)
+  
+  return Math.max(0, Math.round(score))
 }
 
 /**

@@ -350,6 +350,19 @@ export default function SummonerContentV2({
           return
         }
 
+        // Update job progress with actual match count immediately
+        if (result.jobId && result.newMatches > 0) {
+          setJobProgress({
+            jobId: result.jobId,
+            status: 'processing',
+            totalMatches: result.newMatches,
+            fetchedMatches: result.progress || 0,
+            progressPercentage: Math.round(((result.progress || 0) / result.newMatches) * 100),
+            etaSeconds: result.newMatches * 2, // estimate 2s per match
+            startedAt: new Date().toISOString(),
+          })
+        }
+
         setTimeout(() => pollJobStatus(), 500)
       } else {
         setJobProgress(null)

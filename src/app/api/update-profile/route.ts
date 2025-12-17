@@ -470,16 +470,16 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       }
     }
 
-    // Process results and collect participant records
-    for (const result of matchResults) {
+    // Process results and collect participant records IN PARALLEL
+    const matchProcessingPromises = matchResults.map(async (result) => {
       if (result.skip) {
         if (!result.error) fetchedInChunk++
-        continue
+        return { statsUpdate: null, records: [], success: !result.error }
       }
 
       try {
         const { matchId, match, existingMatch, gameCreation, isOlderThan1Year, isRemake, timeline } = result
-        if (!match) continue // Skip if match fetch failed
+        if (!match) return { statsUpdate: null, records: [], success: false }
         
         const patch = (existingMatch as any)?.patch || (match.info.gameVersion ? extractPatch(match.info.gameVersion) : getPatchFromDate(gameCreation!))
         const gameDuration = (existingMatch as any)?.game_duration || match.info.gameDuration
@@ -499,13 +499,10 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           statsCache,
           team100Kills: teamKills.team100,
           team200Kills: teamKills.team200,
-          trackedPuuid: puuid,  // only calculate PIG scores for tracked user
+          trackedPuuid: puuid,
         })
 
-        // Batch ALL participant records for stats calculation and upsert
-        allRecordsToInsert.push(...records)
-
-        // Check patch acceptance with cache
+        // Check patch acceptance with cache (this is fast, no need to parallelize)
         let patchAccepted = acceptedPatchesCache.has(patch)
         if (!patchAccepted && !rejectedPatchesCache.has(patch)) {
           patchAccepted = await isPatchAccepted(patch)
@@ -516,7 +513,8 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           }
         }
 
-        // update champion stats for tracked user (new matches only)
+        // prepare stats update for tracked user (new matches only)
+        let statsUpdate = null
         if (!existingMatch && patchAccepted && !isRemake) {
           const trackedIdx = match.info.participants.findIndex((p: any) => p.puuid === puuid)
           if (trackedIdx !== -1) {
@@ -537,7 +535,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
 
             const runes = extractRunes(p)
 
-            statsAggregator.add({
+            statsUpdate = {
               champion_name: p.championName,
               patch,
               win: p.win,
@@ -564,14 +562,24 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
               cc_time: p.timeCCingOthers || 0,
               game_duration: gameDuration,
               deaths: p.deaths || 0,
-            })
+            }
           }
         }
 
-        fetchedInChunk++
+        return { statsUpdate, records, success: true }
       } catch (err) {
         console.error(`Failed to process match ${result.matchId}:`, err)
+        return { statsUpdate: null, records: [], success: false }
       }
+    })
+
+    const processedMatches = await Promise.all(matchProcessingPromises)
+
+    // Collect all records and stats updates
+    for (const processed of processedMatches) {
+      if (processed.success) fetchedInChunk++
+      if (processed.records.length > 0) allRecordsToInsert.push(...processed.records)
+      if (processed.statsUpdate) statsAggregator.add(processed.statsUpdate)
     }
 
     // Batch upsert all summoner_matches records in chunks

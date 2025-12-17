@@ -98,7 +98,7 @@ export default function ItemIcon({
       <div className="flex flex-col items-center">
         {content}
         {winrate !== undefined && (
-          <div className="text-xs font-bold" style={{ color: getWinrateColor(winrate) }}>
+          <div className="text-xs font-bold mt-1" style={{ color: getWinrateColor(winrate) }}>
             {winrate.toFixed(1)}%
           </div>
         )}

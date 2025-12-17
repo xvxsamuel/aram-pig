@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import clsx from 'clsx'
 import Image from 'next/image'
@@ -68,6 +68,8 @@ export function OverviewTab({
   abilityLevelingStats,
 }: OverviewTabProps) {
   const [selectedCombo, setSelectedCombo] = useState<number | null>(null)
+  const [scrollStates, setScrollStates] = useState<Record<number, { isScrollable: boolean; isAtBottom: boolean }>>({})
+  const scrollRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
   const selectedComboData = selectedCombo !== null ? allComboData[selectedCombo] : null
   const selectedComboDisplay = [...bestCombinations, ...worstCombinations].find(c => c.originalIndex === selectedCombo)
@@ -75,6 +77,47 @@ export function OverviewTab({
   // Check if combo has enough games for combo-specific stats (500 games minimum)
   const comboHasEnoughGames = selectedComboDisplay && selectedComboDisplay.games >= 500
   const useGlobalData = !comboHasEnoughGames
+
+  // Set up scroll tracking for each slot
+  useEffect(() => {
+    const observers: ResizeObserver[] = []
+    const cleanupFns: (() => void)[] = []
+
+    scrollRefs.current.forEach((scrollContainer, slotNum) => {
+      if (!scrollContainer) return
+
+      const checkScroll = () => {
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer
+        const scrollable = scrollHeight > clientHeight
+        const isBottom = scrollable ? Math.abs(scrollHeight - clientHeight - scrollTop) < 2 : false
+        
+        setScrollStates(prev => ({
+          ...prev,
+          [slotNum]: { isScrollable: scrollable, isAtBottom: isBottom }
+        }))
+      }
+
+      // Initial check
+      checkScroll()
+
+      // Observe size changes
+      const resizeObserver = new ResizeObserver(checkScroll)
+      resizeObserver.observe(scrollContainer)
+      observers.push(resizeObserver)
+
+      // Scroll listener
+      const handleScroll = () => {
+        requestAnimationFrame(checkScroll)
+      }
+      scrollContainer.addEventListener('scroll', handleScroll)
+      cleanupFns.push(() => scrollContainer.removeEventListener('scroll', handleScroll))
+    })
+
+    return () => {
+      observers.forEach(observer => observer.disconnect())
+      cleanupFns.forEach(fn => fn())
+    }
+  }, [selectedComboData]) // Re-run when combo changes
   
   const LowSampleWarning = useGlobalData ? (
     <SimpleTooltip content={<span className="text-xs text-white">Using champion-wide data due to low sample size for this build</span>}>
@@ -105,46 +148,55 @@ export function OverviewTab({
         {/* items and runes row */}
         <div className="flex flex-col lg:flex-row gap-4">
         {/* items by slot */}
-        <Card title="Items" className="flex-1 min-h-[400px]">
+        <Card title="Items" className="flex-1 flex flex-col overflow-hidden" contentClassName="flex-1 flex flex-col min-h-0 pb-0">
           {selectedComboData && selectedComboDisplay ? (
-            <div className="h-full">
-              <div className="flex gap-2 h-full">
-                {[1, 2, 3, 4, 5, 6].map(slotNum => {
-                  const itemsInSlot: Array<{ itemId: number; games: number; winrate: number }> = []
-                  if (selectedComboData.itemStats) {
-                    Object.entries(selectedComboData.itemStats).forEach(([itemIdStr, itemData]) => {
-                      const itemId = parseInt(itemIdStr)
-                      if (itemData.positions?.[slotNum]) {
-                        const posData = itemData.positions[slotNum]
-                        itemsInSlot.push({
-                          itemId,
-                          games: posData.games,
-                          winrate: posData.games > 0 ? (posData.wins / posData.games) * 100 : 0,
-                        })
-                      }
-                    })
-                  }
-                  itemsInSlot.sort((a, b) => b.games - a.games)
-                  const top3 = itemsInSlot.slice(0, 3)
+            <div className="flex flex-1 min-h-0" style={{ maxHeight: '330px' }}>
+              {[1, 2, 3, 4, 5, 6].map(slotNum => {
+                const itemsInSlot: Array<{ itemId: number; games: number; winrate: number }> = []
+                if (selectedComboData.itemStats) {
+                  Object.entries(selectedComboData.itemStats).forEach(([itemIdStr, itemData]) => {
+                    const itemId = parseInt(itemIdStr)
+                    if (itemData.positions?.[slotNum]) {
+                      const posData = itemData.positions[slotNum]
+                      itemsInSlot.push({
+                        itemId,
+                        games: posData.games,
+                        winrate: posData.games > 0 ? (posData.wins / posData.games) * 100 : 0,
+                      })
+                    }
+                  })
+                }
+                itemsInSlot.sort((a, b) => b.games - a.games)
 
-                  return (
-                    <div key={slotNum} className="flex-1">
-                      <div className="text-center text-xl font-bold mb-3 text-white">{slotNum}</div>
-                      <div className="space-y-2">
-                        {top3.length > 0 ? (
-                          top3.map((itemData, idx) => (
-                            <div key={idx} className="flex justify-center mb-1">
-                              <ItemIcon itemId={itemData.itemId} ddragonVersion={ddragonVersion} size="xl" winrate={itemData.winrate} games={itemData.games} />
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center text-xs text-text-muted py-2">No items</div>
-                        )}
-                      </div>
+                return (
+                  <div 
+                    key={slotNum} 
+                    className={clsx(
+                      "flex-1 flex flex-col min-w-0 rounded-lg px-2 py-2 relative",
+                      slotNum % 2 === 1 ? "bg-abyss-600" : "bg-abyss-700"
+                    )}
+                  >
+                    <div className="text-center text-xl font-bold mb-3 text-white flex-shrink-0">{slotNum}</div>
+                    <div 
+                      ref={(el) => {
+                        if (el) scrollRefs.current.set(slotNum, el)
+                        else scrollRefs.current.delete(slotNum)
+                      }}
+                      className="overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-hide space-y-3 rounded-b-lg"
+                    >
+                      {itemsInSlot.length > 0 ? (
+                        itemsInSlot.map((itemData, idx) => (
+                          <div key={idx} className="flex justify-center">
+                            <ItemIcon itemId={itemData.itemId} ddragonVersion={ddragonVersion} size="lg" winrate={itemData.winrate} games={itemData.games} />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-xs text-text-muted py-2">No items</div>
+                      )}
                     </div>
-                  )
-                })}
-              </div>
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div className="text-center text-text-muted py-12">No item combinations available</div>
@@ -439,6 +491,11 @@ export function OverviewTab({
                   .sort((a, b) => b.games - a.games)
                 if (sortedStarting.length > 0) {
                   const best = sortedStarting[0]
+                  // Count duplicate items
+                  const itemCounts = new Map<number, number>()
+                  best.items.forEach(itemId => {
+                    itemCounts.set(itemId, (itemCounts.get(itemId) || 0) + 1)
+                  })
                   return (
                     <div>
                       <div className="flex gap-2 mb-2 text-sm">
@@ -446,8 +503,15 @@ export function OverviewTab({
                         <div className="text-subtitle">{best.games.toLocaleString()}</div>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {best.items.map((itemId, idx) => (
-                          <ItemIcon key={idx} itemId={itemId} ddragonVersion={ddragonVersion} size="lg" className="bg-abyss-800 border-gray-700" />
+                        {Array.from(itemCounts.entries()).map(([itemId, count], idx) => (
+                          <div key={idx} className="relative">
+                            <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="lg" />
+                            {count > 1 && (
+                              <div className="absolute bottom-2 right-0.5 w-4 h-4 rounded-full bg-abyss-900 border border-gray-600 flex items-center justify-center">
+                                <span className="text-[9px] font-bold text-white leading-none">{count}</span>
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -456,6 +520,11 @@ export function OverviewTab({
               }
               if (starterItems.length > 0) {
                 const best = starterItems[0]
+                // Count duplicate items
+                const itemCounts = new Map<number, number>()
+                best.items.forEach(itemId => {
+                  itemCounts.set(itemId, (itemCounts.get(itemId) || 0) + 1)
+                })
                 return (
                   <div>
                     <div className="flex gap-2 mb-2 text-sm">
@@ -463,8 +532,15 @@ export function OverviewTab({
                       <div className="text-subtitle">{best.games.toLocaleString()}</div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {best.items.map((itemId, idx) => (
-                        <ItemIcon key={idx} itemId={itemId} ddragonVersion={ddragonVersion} size="lg" className="bg-abyss-800 border-gray-700" />
+                      {Array.from(itemCounts.entries()).map(([itemId, count], idx) => (
+                        <div key={idx} className="relative">
+                          <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="lg" />
+                          {count > 1 && (
+                            <div className="absolute bottom-2 right-0.5 w-4 h-4 rounded-full bg-abyss-900 border border-gray-600 flex items-center justify-center">
+                              <span className="text-[9px] font-bold text-white leading-none">{count}</span>
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -497,7 +573,7 @@ export function OverviewTab({
                       <div className="flex gap-2">
                         {[best.spell1_id, best.spell2_id].map((spellId, idx) => (
                           <SummonerSpellTooltip key={idx} spellId={spellId}>
-                            <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden cursor-pointer">
+                            <div className="w-10 h-10 rounded bg-abyss-800 border border-gold-dark overflow-hidden cursor-pointer">
                               <Image src={getSummonerSpellUrl(spellId, ddragonVersion)} alt="" width={40} height={40} className="w-full h-full object-cover" unoptimized />
                             </div>
                           </SummonerSpellTooltip>
@@ -518,7 +594,7 @@ export function OverviewTab({
                     <div className="flex gap-2">
                       {[best.spell1_id, best.spell2_id].map((spellId, idx) => (
                         <SummonerSpellTooltip key={idx} spellId={spellId}>
-                          <div className="w-10 h-10 rounded bg-abyss-800 border border-gray-700 overflow-hidden cursor-pointer">
+                          <div className="w-10 h-10 rounded bg-abyss-800 border border-gold-dark overflow-hidden cursor-pointer">
                             <Image src={getSummonerSpellUrl(spellId, ddragonVersion)} alt="" width={40} height={40} className="w-full h-full object-cover" unoptimized />
                           </div>
                         </SummonerSpellTooltip>
@@ -534,7 +610,7 @@ export function OverviewTab({
 
           {/* Skill Max Order */}
           <div className="flex-1">
-          <Card title="Skill Max Order" headerRight={useGlobalData ? LowSampleWarning : undefined}>
+          <Card title="Skill Max Order" headerRight={useGlobalData ? LowSampleWarning : undefined} className="h-full">
             {(() => {
               // map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
               const getAbilityColor = (ability: string, position: number): string => {
@@ -552,7 +628,7 @@ export function OverviewTab({
                   const maxOrder = getAbilityMaxOrder(best.ability_order)
                   return (
                     <div>
-                      <div className="flex gap-2 mb-3 text-sm">
+                      <div className="flex gap-2 mb-2 text-sm">
                         <div className="font-bold" style={{ color: getWinrateColor(best.winrate) }}>{best.winrate.toFixed(1)}%</div>
                         <div className="text-subtitle">{best.games.toLocaleString()}</div>
                       </div>
@@ -560,8 +636,7 @@ export function OverviewTab({
                         {maxOrder.map((ability, idx) => (
                           <div key={idx} className="flex items-center gap-2">
                             <div className={clsx(
-                              "w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg border",
-                              ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
+                              "w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg",
                               "bg-abyss-800",
                               getAbilityColor(ability, idx)
                             )}>{ability}</div>
@@ -578,7 +653,7 @@ export function OverviewTab({
                 const maxOrder = getAbilityMaxOrder(best.ability_order)
                 return (
                   <div>
-                    <div className="flex gap-2 mb-3 text-sm">
+                    <div className="flex gap-2 mb-2 text-sm">
                       <div className="font-bold" style={{ color: getWinrateColor(best.winrate) }}>{best.winrate.toFixed(1)}%</div>
                       <div className="text-subtitle">{best.games.toLocaleString()}</div>
                     </div>
@@ -586,8 +661,7 @@ export function OverviewTab({
                       {maxOrder.map((ability, idx) => (
                         <div key={idx} className="flex items-center gap-2">
                           <div className={clsx(
-                            "w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg border",
-                            ability === 'R' ? 'border-gold-light' : 'border-gold-dark',
+                            "w-10 h-10 flex items-center justify-center rounded-lg font-bold text-lg",
                             "bg-abyss-800",
                             getAbilityColor(ability, idx)
                           )}>{ability}</div>

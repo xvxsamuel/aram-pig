@@ -4,6 +4,7 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import Image from 'next/image'
 import clsx from 'clsx'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { getChampionImageUrl } from '@/lib/ddragon'
 import { getWinrateColor } from '@/lib/ui'
 import ChampionDetailTabs from './ChampionDetailTabs'
@@ -111,18 +112,36 @@ export default function ChampionPageClient({
     return (
       <>
         <div className="max-w-6xl mx-auto px-8 py-8">
-          <div className="bg-abyss-600 rounded-lg p-6 mb-6 border border-gold-dark/40">
+          <div className="bg-abyss-600 rounded-lg p-6 mb-6">
             <div className="flex items-center gap-6">
               <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-                <div className="relative w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden animate-pulse" />
+                <div className="relative w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+                  <Image
+                    src={getChampionImageUrl(apiName, ddragonVersion)}
+                    alt={displayName}
+                    width={96}
+                    height={96}
+                    className="w-full h-full object-cover scale-110"
+                    unoptimized
+                  />
+                </div>
               </div>
               <div className="flex-1">
-                <div className="h-10 w-48 bg-abyss-800 rounded animate-pulse mb-4" />
-                <div className="h-6 w-32 bg-abyss-800 rounded animate-pulse" />
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h1 className="text-4xl font-bold mb-2">{displayName}</h1>
+                    <div className="text-subtitle">Loading champion data...</div>
+                  </div>
+                  <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4">
+                    <PatchFilter availablePatches={availablePatches} />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div className="bg-abyss-600 rounded-lg p-6 border border-gold-dark/40 h-96 animate-pulse" />
+          <div className="bg-abyss-600 rounded-lg p-12 flex justify-center items-center">
+            <LoadingSpinner size="lg" />
+          </div>
         </div>
       </>
     )

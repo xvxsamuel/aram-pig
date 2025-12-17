@@ -80,15 +80,8 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
 
       {isOpen && (
         <div className="absolute top-full mt-2 left-0 w-full bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-30 overflow-hidden">
-          <div
-            className="max-h-64 overflow-y-auto"
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'var(--color-gold-dark) var(--color-accent-dark)',
-              WebkitOverflowScrolling: 'touch',
-              willChange: 'scroll-position',
-            }}
-          >
+          <div className="max-h-64 overflow-y-auto">
+
             <button
               onClick={() => handleSelect('')}
               className="w-full px-3 py-1.5 text-left text-xs hover:bg-gold-light/20 text-gold-light"
@@ -102,7 +95,7 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
                 <button
                   key={champion}
                   onClick={() => handleSelect(champion)}
-                  className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gold-light/20 flex items-center gap-2 ${
+                  className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gold-light/20 transition-colors flex items-center gap-2 ${
                     value === champion ? ' bg-accent-light/20' : 'text-white'
                   }`}
                 >

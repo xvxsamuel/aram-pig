@@ -7,7 +7,7 @@ interface PatchFilterProps {
   availablePatches: string[]
 }
 
-// temporarily hide patches we didn't scrape data for (site didn't exist yet)
+// temporarily hide patches we didn't scrape data for
 // remove this when new patches come out and push these off the list
 const HIDDEN_PATCHES = ['25.22']
 const DEFAULT_PATCH = '25.24'
@@ -32,8 +32,6 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
 
     const urlFilter = searchParams.get('filter')
     const urlPatch = searchParams.get('patch')
-
-    // Only support patch filtering now
     const filter = 'patch'
     const patch = urlPatch || savedPatch || DEFAULT_PATCH
 
@@ -117,8 +115,8 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
                 <button
                   key={patch}
                   onClick={() => handleFilterChange(patch)}
-                  className={`w-full px-4 py-2 text-left hover:bg-accent-light/20 transition-colors text-sm ${
-                    currentPatch === patch ? 'bg-accent-light/20 text-accent-light' : 'text-white'
+                  className={`w-full px-4 py-2 text-left hover:bg-gold-light/20 transition-colors text-sm text-white ${
+                    currentPatch === patch ? 'bg-accent-light/20' : ''
                   }`}
                 >
                   Patch {patch}

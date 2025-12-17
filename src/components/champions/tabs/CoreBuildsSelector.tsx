@@ -245,13 +245,13 @@ export function CoreBuildsSelector({
                         {combo.itemIds.map((itemId, position) => (
                           <Fragment key={`${combo.originalIndex}-item-${position}`}>
                             {position > 0 && <span className="text-gray-600 text-xs">+</span>}
-                            <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="sm" className="flex-shrink-0 bg-abyss-900 border-gray-700" />
+                            <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="sm" className="flex-shrink-0" />
                           </Fragment>
                         ))}
                         {combo.hasBoots && (
                           <>
                             <span className="text-gray-600 text-xs">+</span>
-                            <div className="w-7 h-7 rounded bg-abyss-900 border border-gray-700 flex items-center justify-center flex-shrink-0">
+                            <div className="w-7 h-7 rounded bg-abyss-900 border border-gold-dark flex items-center justify-center flex-shrink-0">
                               <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">Any<br />Boots</span>
                             </div>
                           </>

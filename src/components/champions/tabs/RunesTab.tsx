@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import clsx from 'clsx'
+import Card from '@/components/ui/Card'
 import RuneTooltip from '@/components/ui/RuneTooltip'
 import { getWinrateColor } from '@/lib/ui'
 import { RUNE_TREES, STAT_PERKS } from '@/lib/game/runes'
@@ -150,116 +151,98 @@ export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
   return (
     <div className="space-y-4 pb-8">
       {/* Primary Runes Section */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {treeOrder.map(treeName => {
-          const tree = RUNE_TREES[treeName as keyof typeof RUNE_TREES]
-          if (!tree) return null
+      <Card title="Primary">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {treeOrder.map(treeName => {
+            const tree = RUNE_TREES[treeName as keyof typeof RUNE_TREES]
+            if (!tree) return null
 
-          return (
-            <div key={treeName} className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
-              {/* Tree Header */}
-              <div className="flex items-center gap-2 mb-6">
-                <h2 className="text-sm font-bold text-white">{tree.name}</h2>
-                <span className="text-xs text-text-muted">Primary</span>
-              </div>
-
-              {/* Keystones Row */}
-              <div
-                className={clsx(
-                  'grid gap-1 justify-items-center mb-3',
-                  tree.keystones.length === 4 ? 'grid-cols-4' : 'grid-cols-3'
-                )}
-              >
-                {tree.keystones.map(runeId => renderRune(runeId, primaryRunesMap, 'lg'))}
-              </div>
-
-              {/* Separator */}
-              <div className="border-t border-gold-dark/40 my-3" />
-
-              {/* Tier Runes */}
-              {[tree.tier1, tree.tier2, tree.tier3].map((tierRuneIds, tierIdx) => (
-                <div key={tierIdx} className="mb-2 last:mb-0">
-                  <div className="grid grid-cols-3 gap-1 justify-items-center">
-                    {tierRuneIds.map(runeId => renderRune(runeId, primaryRunesMap))}
-                  </div>
+            return (
+              <div key={treeName} className="bg-abyss-700 rounded-lg px-4.5 py-2">
+                {/* Keystones Row */}
+                <div
+                  className={clsx(
+                    'grid gap-1 justify-items-center mb-3',
+                    tree.keystones.length === 4 ? 'grid-cols-4' : 'grid-cols-3'
+                  )}
+                >
+                  {tree.keystones.map(runeId => renderRune(runeId, primaryRunesMap, 'lg'))}
                 </div>
-              ))}
-            </div>
-          )
-        })}
-      </div>
+
+                {/* Separator */}
+                <div className="border-t border-gold-dark/40 my-3" />
+
+                {/* Tier Runes */}
+                {[tree.tier1, tree.tier2, tree.tier3].map((tierRuneIds, tierIdx) => (
+                  <div key={tierIdx} className="mb-2 last:mb-0">
+                    <div className="grid grid-cols-3 gap-1 justify-items-center">
+                      {tierRuneIds.map(runeId => renderRune(runeId, primaryRunesMap))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      </Card>
 
       {/* Secondary Runes Section */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {treeOrder.map(treeName => {
-          const tree = RUNE_TREES[treeName as keyof typeof RUNE_TREES]
-          if (!tree) return null
+      <Card title="Secondary">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {treeOrder.map(treeName => {
+            const tree = RUNE_TREES[treeName as keyof typeof RUNE_TREES]
+            if (!tree) return null
 
-          return (
-            <div key={treeName} className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
-              {/* Tree Header */}
-              <div className="flex items-center gap-2 mb-6">
-                <h2 className="text-sm font-bold text-white">{tree.name}</h2>
-                <span className="text-xs text-text-muted">Secondary</span>
-              </div>
-
-              {/* Tier Runes Only (no keystones for secondary) */}
-              {[tree.tier1, tree.tier2, tree.tier3].map((tierRuneIds, tierIdx) => (
-                <div key={tierIdx} className="mb-2 last:mb-0">
-                  <div className="grid grid-cols-3 gap-1 justify-items-center">
-                    {tierRuneIds.map(runeId => renderRune(runeId, secondaryRunesMap))}
+            return (
+              <div key={treeName} className="bg-abyss-700 rounded-lg px-4.5 py-2">
+                {/* Tier Runes Only (no keystones for secondary) */}
+                {[tree.tier1, tree.tier2, tree.tier3].map((tierRuneIds, tierIdx) => (
+                  <div key={tierIdx} className="mb-2 last:mb-0">
+                    <div className="grid grid-cols-3 gap-1 justify-items-center">
+                      {tierRuneIds.map(runeId => renderRune(runeId, secondaryRunesMap))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* Stat Shards Section */}
+      <Card title="Stats">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Offense Box */}
+          <div className="bg-abyss-700 rounded-lg px-4.5 py-2">
+            <div className="grid grid-cols-3 gap-2 justify-items-center">
+              {STAT_PERKS.offense.map((perk, idx) => {
+                const stat = statPerks.offense.find(s => s.key === perk.id.toString())
+                return renderStatPerk(perk, stat, idx, 'offense')
+              })}
             </div>
-          )
-        })}
-      </div>
-
-      {/* Stat Shards Section - 3 separate boxes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Offense Box */}
-        <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
-          <div className="flex items-center gap-2 mb-6">
-            <h2 className="text-sm font-bold text-white">Offense</h2>
-            <span className="text-xs text-text-muted">Stats</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 justify-items-center">
-            {STAT_PERKS.offense.map((perk, idx) => {
-              const stat = statPerks.offense.find(s => s.key === perk.id.toString())
-              return renderStatPerk(perk, stat, idx, 'offense')
-            })}
+
+          {/* Flex Box */}
+          <div className="bg-abyss-700 rounded-lg px-4.5 py-2">
+            <div className="grid grid-cols-3 gap-2 justify-items-center">
+              {STAT_PERKS.flex.map((perk, idx) => {
+                const stat = statPerks.flex.find(s => s.key === perk.id.toString())
+                return renderStatPerk(perk, stat, idx, 'flex')
+              })}
+            </div>
+          </div>
+
+          {/* Defense Box */}
+          <div className="bg-abyss-700 rounded-lg px-4.5 py-2">
+            <div className="grid grid-cols-3 gap-2 justify-items-center">
+              {STAT_PERKS.defense.map((perk, idx) => {
+                const stat = statPerks.defense.find(s => s.key === perk.id.toString())
+                return renderStatPerk(perk, stat, idx, 'defense')
+              })}
+            </div>
           </div>
         </div>
-
-        {/* Flex Box */}
-        <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-sm font-bold text-white">Flex</h2>
-            <span className="text-xs text-text-muted">Stats</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 justify-items-center">
-            {STAT_PERKS.flex.map((perk, idx) => {
-              const stat = statPerks.flex.find(s => s.key === perk.id.toString())
-              return renderStatPerk(perk, stat, idx, 'flex')
-            })}
-          </div>
-        </div>
-
-        {/* Defense Box */}
-        <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 p-3">
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-sm font-bold text-white">Defense</h2>
-            <span className="text-xs text-text-muted">Stats</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 justify-items-center">
-            {STAT_PERKS.defense.map((perk, idx) => {
-              const stat = statPerks.defense.find(s => s.key === perk.id.toString())
-              return renderStatPerk(perk, stat, idx, 'defense')
-            })}
-          </div>
-        </div>
-      </div>
+      </Card>
     </div>
   )
 }

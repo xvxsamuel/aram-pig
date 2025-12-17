@@ -17,21 +17,61 @@ export default function SimpleTooltip({
   forceVisible = false,
 }: SimpleTooltipProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+  const [opacity, setOpacity] = useState(0)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const [actualPosition, setActualPosition] = useState<'top' | 'bottom'>('top')
   const [mounted, setMounted] = useState(false)
   const triggerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
-
-  const isVisible = isHovered || forceVisible
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // wait for client-side mount for portal
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // handle tooltip visibility with gradual fade-in
   useEffect(() => {
-    if (!isVisible || !triggerRef.current) return
+    if (isHovered) {
+      // start showing at 200ms with opacity 0
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsVisible(true)
+        setOpacity(0)
+        // animate to full opacity over next 300ms
+        fadeTimeoutRef.current = setTimeout(() => {
+          setOpacity(1)
+        }, 10)
+      }, 200)
+    } else {
+      // immediately hide when mouse leaves
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+        hoverTimeoutRef.current = null
+      }
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current)
+        fadeTimeoutRef.current = null
+      }
+      setIsVisible(false)
+      setOpacity(0)
+    }
+
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current)
+      }
+    }
+  }, [isHovered])
+
+  const shouldShow = isVisible || forceVisible
+
+  useEffect(() => {
+    if (!shouldShow || !triggerRef.current) return
 
     const updatePosition = () => {
       const rect = triggerRef.current?.getBoundingClientRect()
@@ -74,10 +114,10 @@ export default function SimpleTooltip({
       window.removeEventListener('scroll', updatePosition, true)
       window.removeEventListener('resize', updatePosition)
     }
-  }, [isVisible, position])
+  }, [shouldShow, position])
 
   const tooltipContent =
-    isVisible && mounted
+    shouldShow && mounted
       ? createPortal(
           <div
             ref={tooltipRef}
@@ -87,6 +127,8 @@ export default function SimpleTooltip({
               top: `${tooltipPosition.y}px`,
               transform: actualPosition === 'top' ? 'translate(-50%, calc(-100% - 8px))' : 'translate(-50%, 8px)',
               zIndex: 99999,
+              opacity,
+              transition: 'opacity 300ms ease-out',
             }}
           >
             <div className="bg-abyss-900 border border-gold-dark/80 rounded-lg px-3 py-2 shadow-xl max-w-xs">
