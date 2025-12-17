@@ -126,14 +126,13 @@ interface ProcessParticipantsOptions {
   statsCache: ChampionStatsCache
   team100Kills: number
   team200Kills: number
-  trackedPuuid?: string  // only calculate PIG scores for this puuid
 }
 
 // process all participants in a match
 export async function processParticipants(options: ProcessParticipantsOptions) {
   const {
     match, matchId, patch, gameCreation, gameDuration, timeline,
-    isOlderThan1Year, isRemake, statsCache, team100Kills, team200Kills, trackedPuuid
+    isOlderThan1Year, isRemake, statsCache, team100Kills, team200Kills
   } = options
 
   return Promise.all(

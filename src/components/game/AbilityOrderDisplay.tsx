@@ -5,6 +5,13 @@ import { getAbilityMaxOrder } from '@/components/champions/tabs/utils'
 import { getWinrateColor } from '@/lib/ui'
 import ChampionAbility from '@/components/ui/ChampionAbility'
 
+// Map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
+const getAbilityColor = (ability: string, position: number): string => {
+  if (ability === 'R') return 'text-gold-light'
+  const colorMap = ['text-kda-3', 'text-kda-4', 'text-kda-5']
+  return colorMap[position] || 'text-white'
+}
+
 interface AbilityOrderDisplayProps {
   abilityOrder: string
   showFullSequence?: boolean
@@ -15,18 +22,11 @@ interface AbilityOrderDisplayProps {
 export function AbilityOrderDisplay({
   abilityOrder,
   showFullSequence = true,
-  compact = false,
+  compact: _compact = false,
   championName,
 }: AbilityOrderDisplayProps) {
   const abilities = abilityOrder.split('.')
   const maxOrder = getAbilityMaxOrder(abilityOrder)
-
-  // Map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
-  const getAbilityColor = (ability: string, position: number): string => {
-    if (ability === 'R') return 'text-gold-light'
-    const colorMap = ['text-kda-3', 'text-kda-4', 'text-kda-5']
-    return colorMap[position] || 'text-white'
-  }
 
   return (
     <div className="space-y-3">

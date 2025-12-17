@@ -54,7 +54,7 @@ function formatRuneDescription(desc: string): React.ReactNode {
   })
 }
 
-const RuneTooltipContent = memo(({ tooltipData, runeId }: { tooltipData: any; runeId: number }) => {
+const RuneTooltipContent = memo(({ tooltipData, runeId: _runeId }: { tooltipData: any; runeId: number }) => {
   const formattedDescription = useMemo(() => formatRuneDescription(tooltipData.description), [tooltipData.description])
 
   return (

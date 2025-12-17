@@ -61,7 +61,7 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
       } else {
         timeAgo = 'just now'
       }
-    } catch (e) {
+    } catch (_e) {
       timeAgo = 'Unknown'
     }
   }

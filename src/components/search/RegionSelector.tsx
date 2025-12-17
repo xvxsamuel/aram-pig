@@ -68,7 +68,7 @@ export default function RegionSelector({ value = 'EUW', onChange, onOpen, classN
       {isOpen && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-16 bg-abyss-700 rounded-xl border border-gold-dark/40 shadow-xl z-50 overflow-hidden">
           <div className="max-h-40 overflow-y-auto scrollbar-hide">
-            {REGIONS.map((region: (typeof REGIONS)[number], idx: number) => (
+            {REGIONS.map((region: (typeof REGIONS)[number]) => (
               <button
                 key={region.code}
                 ref={value === region.label ? selectedButtonRef : null}

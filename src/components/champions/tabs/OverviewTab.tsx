@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion'
 import clsx from 'clsx'
 import Image from 'next/image'
 import ItemIcon from '@/components/ui/ItemIcon'
@@ -71,7 +70,7 @@ export function OverviewTab({
   championName,
 }: OverviewTabProps) {
   const [selectedCombo, setSelectedCombo] = useState<number | null>(null)
-  const [scrollStates, setScrollStates] = useState<Record<number, { isScrollable: boolean; isAtBottom: boolean }>>({})
+  const [_scrollStates, setScrollStates] = useState<Record<number, { isScrollable: boolean; isAtBottom: boolean }>>({})
   const scrollRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
   const selectedComboData = selectedCombo !== null ? allComboData[selectedCombo] : null
@@ -614,13 +613,6 @@ export function OverviewTab({
           <div className="flex-1">
           <Card title="Levelling Order" headerRight={useGlobalData ? LowSampleWarning : undefined} className="h-full">
             {(() => {
-              // map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
-              const getAbilityColor = (ability: string, position: number): string => {
-                if (ability === 'R') return 'text-gold-light'
-                const colorMap = ['text-kda-3', 'text-kda-4', 'text-kda-5']
-                return colorMap[position] || 'text-white'
-              }
-
               if (!useGlobalData && selectedComboData?.skills) {
                 const skillsArray = Object.entries(selectedComboData.skills)
                   .map(([order, data]) => ({ ability_order: order, ...data, winrate: data.games > 0 ? (data.wins / data.games) * 100 : 0 }))

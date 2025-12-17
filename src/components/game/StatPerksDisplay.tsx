@@ -11,7 +11,7 @@ interface StatPerksDisplayProps {
   compact?: boolean
 }
 
-export function StatPerksDisplay({ offense, flex, defense, compact = false }: StatPerksDisplayProps) {
+export function StatPerksDisplay({ offense, flex, defense, compact: _compact = false }: StatPerksDisplayProps) {
   const renderStatShard = (
     shardOptions: ReadonlyArray<{ readonly id: number; readonly name: string; readonly icon: string }>,
     selectedId: number | undefined

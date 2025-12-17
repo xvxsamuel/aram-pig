@@ -8,7 +8,6 @@ import {
   extractRunes,
   processParticipants,
   calculateTeamKills,
-  prepareStatsCache,
 } from '@/lib/db'
 import {
   getAccountByRiotId,

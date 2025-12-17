@@ -17,7 +17,7 @@ import {
 import { getChampionUrlName } from '@/lib/ddragon'
 import { getKdaColor, getPigScoreColor } from '@/lib/ui'
 import MatchDetails from '@/components/match/MatchDetails'
-import Tooltip from '@/components/ui/Tooltip'
+// Tooltip import removed - unused
 import ItemTooltip from '@/components/ui/ItemTooltip'
 import RuneTooltip from '@/components/ui/RuneTooltip'
 import SummonerSpellTooltip from '@/components/ui/SummonerSpellTooltip'

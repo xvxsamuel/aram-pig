@@ -290,146 +290,6 @@ async function waitForRateLimitRedisDual(
 }
 
 // ============================================================================
-// OPTIMIZED REDIS RATE LIMITING (SINGLE KEY - LEGACY)
-// ============================================================================
-
-async function waitForRateLimitRedisOptimized(
-  region: string,
-  requestType: RequestType,
-  maxWaitMs?: number
-): Promise<void> {
-  if (!redis) throw new Error('Redis not initialized')
-
-  const cache = getOrCreateCache(region)
-  const now = Date.now()
-
-  let effectiveShortLimit = SHORT_LIMIT
-  let effectiveLongLimit = LONG_LIMIT
-  if (requestType === 'batch') {
-    effectiveShortLimit = SHORT_LIMIT - RESERVED_OVERHEAD_SHORT
-    effectiveLongLimit = Math.min(THROTTLED_LONG_LIMIT, LONG_LIMIT - RESERVED_OVERHEAD_LONG)
-  }
-
-  const shouldSync =
-    cache.pendingIncrement >= SYNC_EVERY_REQUESTS || now - cache.lastSync > SYNC_EVERY_MS || cache.longCount === 0
-
-  if (shouldSync) {
-    await syncWithRedis(region, cache)
-  }
-
-  resetExpiredWindows(cache)
-
-  let waitTime = 0
-
-  if (cache.shortCount >= effectiveShortLimit) {
-    waitTime = Math.max(waitTime, cache.shortExpiry - now)
-  }
-
-  if (cache.longCount >= effectiveLongLimit) {
-    waitTime = Math.max(waitTime, cache.longExpiry - now)
-  }
-
-  if (waitTime > 0) {
-    await syncWithRedis(region, cache)
-    resetExpiredWindows(cache)
-
-    waitTime = 0
-    if (cache.shortCount >= effectiveShortLimit) {
-      waitTime = Math.max(waitTime, cache.shortExpiry - now)
-    }
-    if (cache.longCount >= effectiveLongLimit) {
-      waitTime = Math.max(waitTime, cache.longExpiry - now)
-    }
-
-    if (waitTime > 0) {
-      if (maxWaitMs !== undefined && waitTime > maxWaitMs) {
-        throw new Error('TIMEOUT_EXCEEDED')
-      }
-
-      console.log(
-        `[RATE LIMIT] Limit reached for ${region} (${cache.longCount}/${effectiveLongLimit}), waiting ${(waitTime / 1000).toFixed(1)}s`
-      )
-      await new Promise(resolve => setTimeout(resolve, waitTime))
-      return waitForRateLimitRedisOptimized(region, requestType, maxWaitMs)
-    }
-  }
-
-  cache.shortCount++
-  cache.longCount++
-  cache.pendingIncrement++
-
-  if (cache.pendingIncrement >= SYNC_EVERY_REQUESTS) {
-    syncWithRedis(region, cache).catch(err => {
-      console.error('[RATE LIMIT] Background sync error:', err)
-    })
-  }
-}
-
-async function syncWithRedis(region: string, cache: LocalCache): Promise<void> {
-  if (!redis) return
-
-  const shortKey = `ratelimit:${region}:short`
-  const longKey = `ratelimit:${region}:long`
-  const pendingToSync = cache.pendingIncrement
-
-  try {
-    if (pendingToSync > 0) {
-      const pipeline = redis.pipeline()
-      pipeline.incrby(shortKey, pendingToSync)
-      pipeline.incrby(longKey, pendingToSync)
-      pipeline.ttl(shortKey)
-      pipeline.ttl(longKey)
-      const results = await pipeline.exec()
-
-      cache.shortCount = Number(results[0] || 0)
-      cache.longCount = Number(results[1] || 0)
-
-      const shortTtl = Number(results[2])
-      const longTtl = Number(results[3])
-
-      if (shortTtl < 0) {
-        await redis.expire(shortKey, SHORT_WINDOW)
-        cache.shortExpiry = Date.now() + SHORT_WINDOW * 1000
-      } else if (shortTtl > 0) {
-        cache.shortExpiry = Date.now() + shortTtl * 1000
-      }
-
-      if (longTtl < 0) {
-        await redis.expire(longKey, LONG_WINDOW)
-        cache.longExpiry = Date.now() + LONG_WINDOW * 1000
-      } else if (longTtl > 0) {
-        cache.longExpiry = Date.now() + longTtl * 1000
-      }
-    } else {
-      const pipeline = redis.pipeline()
-      pipeline.get(shortKey)
-      pipeline.get(longKey)
-      pipeline.ttl(shortKey)
-      pipeline.ttl(longKey)
-      const results = await pipeline.exec()
-
-      cache.shortCount = Number(results[0] || 0)
-      cache.longCount = Number(results[1] || 0)
-
-      const shortTtl = Number(results[2])
-      const longTtl = Number(results[3])
-
-      if (shortTtl > 0) {
-        cache.shortExpiry = Date.now() + shortTtl * 1000
-      }
-      if (longTtl > 0) {
-        cache.longExpiry = Date.now() + longTtl * 1000
-      }
-    }
-
-    cache.pendingIncrement = 0
-    cache.lastSync = Date.now()
-  } catch (error) {
-    console.error('[RATE LIMIT] Redis sync error:', error)
-  }
-}
-
-// ============================================================================
 // IN-MEMORY RATE LIMITING (DUAL-TRACKING)
 // ============================================================================
 
@@ -519,65 +379,67 @@ async function waitForRateLimitMemoryDual(
   }
 }
 
-// ============================================================================
-// IN-MEMORY RATE LIMITING (SINGLE KEY - LEGACY)
-// ============================================================================
+async function syncWithRedis(region: string, cache: LocalCache): Promise<void> {
+  if (!redis) return
 
-async function waitForRateLimitMemory(region: string, requestType: RequestType, maxWaitMs?: number): Promise<void> {
-  while (rateLimitLocks.has(region)) {
-    await rateLimitLocks.get(region)
-  }
-
-  let releaseLock: () => void
-  const lockPromise = new Promise<void>(resolve => {
-    releaseLock = resolve
-  })
-  rateLimitLocks.set(region, lockPromise)
+  const shortKey = `ratelimit:${region}:short`
+  const longKey = `ratelimit:${region}:long`
+  const pendingToSync = cache.pendingIncrement
 
   try {
-    const cache = getOrCreateCache(region)
-    resetExpiredWindows(cache)
+    if (pendingToSync > 0) {
+      const pipeline = redis.pipeline()
+      pipeline.incrby(shortKey, pendingToSync)
+      pipeline.incrby(longKey, pendingToSync)
+      pipeline.ttl(shortKey)
+      pipeline.ttl(longKey)
+      const results = await pipeline.exec()
 
-    let effectiveShortLimit = SHORT_LIMIT
-    let effectiveLongLimit = LONG_LIMIT
-    if (requestType === 'batch') {
-      effectiveShortLimit = SHORT_LIMIT - RESERVED_OVERHEAD_SHORT
-      effectiveLongLimit = Math.min(THROTTLED_LONG_LIMIT, LONG_LIMIT - RESERVED_OVERHEAD_LONG)
-    }
+      cache.shortCount = Number(results[0] || 0)
+      cache.longCount = Number(results[1] || 0)
 
-    const now = Date.now()
-    let waitTime = 0
+      const shortTtl = Number(results[2])
+      const longTtl = Number(results[3])
 
-    if (cache.shortCount >= effectiveShortLimit) {
-      waitTime = Math.max(waitTime, cache.shortExpiry - now)
-    }
-    if (cache.longCount >= effectiveLongLimit) {
-      waitTime = Math.max(waitTime, cache.longExpiry - now)
-    }
-
-    if (waitTime > 0) {
-      if (maxWaitMs !== undefined && waitTime > maxWaitMs) {
-        throw new Error('TIMEOUT_EXCEEDED')
+      if (shortTtl < 0) {
+        await redis.expire(shortKey, SHORT_WINDOW)
+        cache.shortExpiry = Date.now() + SHORT_WINDOW * 1000
+      } else if (shortTtl > 0) {
+        cache.shortExpiry = Date.now() + shortTtl * 1000
       }
 
-      if (waitTime > 1000) {
-        console.log(
-          `[RATE LIMIT] Limit reached for ${region} (${cache.longCount}/${effectiveLongLimit}), waiting ${(waitTime / 1000).toFixed(1)}s`
-        )
+      if (longTtl < 0) {
+        await redis.expire(longKey, LONG_WINDOW)
+        cache.longExpiry = Date.now() + LONG_WINDOW * 1000
+      } else if (longTtl > 0) {
+        cache.longExpiry = Date.now() + longTtl * 1000
       }
+    } else {
+      const pipeline = redis.pipeline()
+      pipeline.get(shortKey)
+      pipeline.get(longKey)
+      pipeline.ttl(shortKey)
+      pipeline.ttl(longKey)
+      const results = await pipeline.exec()
 
-      rateLimitLocks.delete(region)
-      releaseLock!()
+      cache.shortCount = Number(results[0] || 0)
+      cache.longCount = Number(results[1] || 0)
 
-      await new Promise(resolve => setTimeout(resolve, waitTime))
-      return waitForRateLimitMemory(region, requestType, maxWaitMs)
+      const shortTtl = Number(results[2])
+      const longTtl = Number(results[3])
+
+      if (shortTtl > 0) {
+        cache.shortExpiry = Date.now() + shortTtl * 1000
+      }
+      if (longTtl > 0) {
+        cache.longExpiry = Date.now() + longTtl * 1000
+      }
     }
 
-    cache.shortCount++
-    cache.longCount++
-  } finally {
-    rateLimitLocks.delete(region)
-    releaseLock!()
+    cache.pendingIncrement = 0
+    cache.lastSync = Date.now()
+  } catch (error) {
+    console.error('[RATE LIMIT] Redis sync error:', error)
   }
 }
 

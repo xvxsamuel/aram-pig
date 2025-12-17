@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import clsx from 'clsx'
-import { RUNE_TREES, STAT_PERKS, getRuneTreeById } from '@/lib/game/runes'
+import { STAT_PERKS, getRuneTreeById } from '@/lib/game/runes'
 import RuneTooltip from '@/components/ui/RuneTooltip'
 import runesData from '@/data/runes.json'
 
@@ -23,7 +23,7 @@ export function RuneDisplay({
   secondaryTreeId,
   selectedRuneIds,
   statPerks,
-  compact = false,
+  compact: _compact = false,
 }: RuneDisplayProps) {
   const primaryTree = getRuneTreeById(primaryTreeId)
   const secondaryTree = getRuneTreeById(secondaryTreeId)

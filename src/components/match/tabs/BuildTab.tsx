@@ -11,8 +11,6 @@ import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { RuneDisplay } from '@/components/game/RuneDisplay'
 import { SummonerSpellDisplay } from '@/components/game/SummonerSpellDisplay'
 import { AbilityOrderDisplay } from '@/components/game/AbilityOrderDisplay'
-import ChampionAbility from '@/components/ui/ChampionAbility'
-import { getAbilityMaxOrder } from '@/components/champions/tabs/utils'
 import {
   TabProps,
   ItemTimelineEvent,
