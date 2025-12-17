@@ -498,7 +498,6 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           statsCache,
           team100Kills: teamKills.team100,
           team200Kills: teamKills.team200,
-          trackedPuuid: puuid,
         })
 
         // Check patch acceptance with cache (this is fast, no need to parallelize)
