@@ -3,12 +3,24 @@
 export function cleanWikiMarkup(text: string): string {
   let cleaned = text
 
+  // '''text''' - bold (three single quotes) - process FIRST before templates
+  cleaned = cleaned.replace(/'''(.+?)'''/g, '<bold>$1</bold>')
+
+  // ''text'' - italic (two single quotes) - process FIRST before templates
+  cleaned = cleaned.replace(/''(.+?)''/g, '<italic>$1</italic>')
+
   // keep replacing nested templates until none left
   let prevCleaned = ''
   let iterations = 0
   while (cleaned !== prevCleaned && cleaned.includes('{{') && iterations < 20) {
     prevCleaned = cleaned
     iterations++
+
+    // {{#vardefineecho:varname|value}} - MediaWiki variable definition, extract the value
+    cleaned = cleaned.replace(/\{\{#vardefineecho:[^|]+\|([^}]+)\}\}/g, '$1')
+    
+    // {{#var:varname}} - MediaWiki variable reference, just remove it (we don't track variables)
+    cleaned = cleaned.replace(/\{\{#var:[^}]+\}\}/g, '')
 
     // ability power, evaluate math expressions if needed
     cleaned = cleaned.replace(/\{\{ap\|([^}]+)\}\}/g, (match, value) => {
@@ -143,7 +155,7 @@ export function cleanWikiMarkup(text: string): string {
 
       // then check for single words at the end
       const words = lower
-        .replace(/['''()%]/g, '')
+        .replace(/[()%]/g, '')
         .trim()
         .split(/\s+/)
       const lastWord = words[words.length - 1]
@@ -210,11 +222,8 @@ export function cleanWikiMarkup(text: string): string {
     '<rd><tip>melee|||ICONONLY</tip> $1 / <tip>ranged|||ICONONLY</tip> $2</rd>'
   )
 
-  // '''text''' - bold (three single quotes)
-  cleaned = cleaned.replace(/'''(.+?)'''/g, '<bold>$1</bold>')
-
-  // ''text'' - italic (two single quotes)
-  cleaned = cleaned.replace(/''(.+?)''/g, '<italic>$1</italic>')
+  // remove leading ": " (wiki markup indentation)
+  cleaned = cleaned.replace(/^:\s+/gm, '')
 
   return cleaned
 }
