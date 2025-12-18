@@ -242,26 +242,28 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
   return (
     <main className="min-h-screen bg-abyss-700 text-white">
-      <div className={`max-w-6xl mx-auto px-4 ${error ? 'py-4' : 'pb-8'}`}>
-        {error && error.includes('Rate limit') && (
-          <SummonerNotFound
-            searchedRegion={regionLabel}
-            suggestedSummoners={[]}
-            ddragonVersion={ddragonVersion}
-            errorMessage="Rate limit reached"
-            errorHint="We're currently fetching your match history in the background. Please wait a few moments without refreshing."
-          />
-        )}
+      {error ? (
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          {error.includes('Rate limit') && (
+            <SummonerNotFound
+              searchedRegion={regionLabel}
+              suggestedSummoners={[]}
+              ddragonVersion={ddragonVersion}
+              errorMessage="Rate limit reached"
+              errorHint="We're currently fetching your match history in the background. Please wait a few moments without refreshing."
+            />
+          )}
 
-        {error && !error.includes('Rate limit') && (
-          <SummonerNotFound
-            searchedRegion={regionLabel}
-            suggestedSummoners={suggestedSummoners}
-            ddragonVersion={ddragonVersion}
-          />
-        )}
-
-        {summonerData && (
+          {!error.includes('Rate limit') && (
+            <SummonerNotFound
+              searchedRegion={regionLabel}
+              suggestedSummoners={suggestedSummoners}
+              ddragonVersion={ddragonVersion}
+            />
+          )}
+        </div>
+      ) : (
+        summonerData && (
           <SummonerContent
             summonerData={summonerData}
             region={region}
@@ -272,8 +274,8 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
             lastUpdated={lastUpdated}
             hasMatches={hasMatches}
           />
-        )}
-      </div>
+        )
+      )}
     </main>
   )
 }

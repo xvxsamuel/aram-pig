@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import clsx from 'clsx'
+import { useState, useEffect } from 'react'
 
 // size presets in pixels (matching ItemIcon)
 const SIZE_MAP = {
@@ -30,11 +31,12 @@ interface ChampionAbilityProps {
   patch?: string
 }
 
-/**
- * Get the CDragon ability icon URL
- * Uses latest patch by default for caching
- */
-function getAbilityIconUrl(championName: string, ability: AbilityType, patch: string = 'latest'): string {
+function getLocalAbilityIconUrl(championName: string, ability: AbilityType): string {
+  const abilityKey = ability.toLowerCase()
+  return `/icons/abilities/${championName}/${abilityKey}.png`
+}
+
+function getCdnAbilityIconUrl(championName: string, ability: AbilityType, patch: string = 'latest'): string {
   const abilityKey = ability.toLowerCase()
   return `https://cdn.communitydragon.org/${patch}/champion/${championName}/ability-icon/${abilityKey}`
 }
@@ -48,7 +50,14 @@ export default function ChampionAbility({
   patch = 'latest',
 }: ChampionAbilityProps) {
   const pixelSize = typeof size === 'number' ? size : SIZE_MAP[size]
-  const abilityUrl = getAbilityIconUrl(championName, ability, patch)
+  
+  // Start with local URL
+  const [imgSrc, setImgSrc] = useState(getLocalAbilityIconUrl(championName, ability))
+
+  // Reset when props change
+  useEffect(() => {
+    setImgSrc(getLocalAbilityIconUrl(championName, ability))
+  }, [championName, ability])
 
   return (
     <div className="relative inline-block">
@@ -61,12 +70,18 @@ export default function ChampionAbility({
         style={{ width: pixelSize, height: pixelSize }}
       >
         <Image
-          src={abilityUrl}
+          src={imgSrc}
           alt={`${championName} ${ability}`}
           width={pixelSize}
           height={pixelSize}
           className="w-full h-full object-cover"
           unoptimized
+          onError={() => {
+            // Fallback to CDN if local fails
+            if (!imgSrc.startsWith('http')) {
+                setImgSrc(getCdnAbilityIconUrl(championName, ability, patch))
+            }
+          }}
         />
       </div>
       {/* Ability letter badge */}

@@ -88,7 +88,7 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
             {/* table header - matches ChampionTable */}
             <div className="flex items-stretch gap-3 px-3 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
               <div className="w-14 flex items-center justify-center py-3">Rank</div>
-              <div className="w-32 flex items-center justify-center py-3">Champion</div>
+              <div className="w-44 flex items-center justify-center py-3">Champion</div>
               <div className="flex-1" />
               <div className="w-20 sm:w-24 flex items-center justify-center py-3">
                 <span className="hidden sm:inline">Win Rate</span>

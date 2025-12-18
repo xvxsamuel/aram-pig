@@ -77,16 +77,14 @@ export default async function ChampionDetailPage({ params, searchParams }: Props
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
-      <div className="max-w-6xl mx-auto px-4 pb-8">
-        <ChampionPageClient
-          championName={championName}
-          displayName={displayName}
-          apiName={apiName}
-          ddragonVersion={ddragonVersion}
-          availablePatches={availablePatches}
-          selectedPatch={selectedPatch}
-        />
-      </div>
+      <ChampionPageClient
+        championName={championName}
+        displayName={displayName}
+        apiName={apiName}
+        ddragonVersion={ddragonVersion}
+        availablePatches={availablePatches}
+        selectedPatch={selectedPatch}
+      />
     </main>
   )
 }

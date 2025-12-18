@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Image from 'next/image'
 import clsx from 'clsx'
@@ -94,6 +94,16 @@ export default function ChampionPageClient({
 }: Props) {
   const currentPatch = selectedPatch || availablePatches[0]
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
+  const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (apiName) {
+      const url = `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${apiName}_0.jpg`
+      fetch(url)
+        .then(res => (res.ok ? setChampionImageUrl(res.url) : null))
+        .catch(() => {})
+    }
+  }, [apiName])
 
   // swr with stale-while-revalidate caching
   const { data, error, isLoading } = useSWR<ChampionStatsResponse | null>(
@@ -446,10 +456,31 @@ export default function ChampionPageClient({
   return (
     <>
       {/* Champion Header */}
-      <section className="bg-abyss-700">
-        <div className="max-w-6xl mx-auto px-8 py-6 pb-8">
-          <div className="flex items-start gap-6">
-            {/* Champion icon with gold border */}
+      <section className="relative overflow-hidden bg-abyss-700">
+        {championImageUrl && (
+          <>
+            <div className="absolute inset-0 flex justify-center overflow-hidden">
+              <div className="w-full max-w-6xl relative h-full">
+                <div className="absolute right-[-2%] top-[-20%] bottom-[-80%] w-[80%] opacity-50">
+                  <Image
+                    src={championImageUrl}
+                    alt={displayName}
+                    fill
+                    className="object-cover"
+                    style={{ objectPosition: 'center 20%' }}
+                    unoptimized
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--color-abyss-700)_70%)]" />
+                </div>
+              </div>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-abyss-700 from-30% via-transparent to-transparent" />
+          </>
+        )}
+        <div className="max-w-6xl mx-auto px-8 py-6 pb-8 relative z-10">
+          <div className="flex items-start gap-4">
+            {/* champion icon*/}
             <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark flex-shrink-0">
               <div className="relative w-24 h-24 rounded-[inherit] bg-abyss-800 overflow-hidden">
                 <Image
@@ -482,14 +513,14 @@ export default function ChampionPageClient({
               </div>
             </div>
             
-            {/* Patch filter */}
+            {/* patch filter */}
             <div className="flex-shrink-0">
               <PatchFilter availablePatches={availablePatches} />
             </div>
           </div>
 
           {/* tab navigation */}
-          <div className="flex gap-1 mt-4">
+          <div className="flex gap-6 mt-4">
             <button
               onClick={() => setSelectedTab('overview')}
               className={clsx(
@@ -538,7 +569,7 @@ export default function ChampionPageClient({
         </div>
       </section>
 
-      {/* Main content */}
+      {/* main content */}
       <div className="max-w-6xl mx-auto px-8">
         <ChampionDetailTabs
           selectedTab={selectedTab}

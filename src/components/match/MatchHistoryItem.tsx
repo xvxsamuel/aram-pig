@@ -16,6 +16,7 @@ import {
 } from '@/lib/ddragon'
 import { getChampionUrlName } from '@/lib/ddragon'
 import { getKdaColor, getPigScoreColor } from '@/lib/ui'
+import { calculateMatchLabels } from '@/lib/scoring/labels'
 import MatchDetails from '@/components/match/MatchDetails'
 // Tooltip import removed - unused
 import ItemTooltip from '@/components/ui/ItemTooltip'
@@ -160,60 +161,36 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 </div>
               </div>
 
-              {/* champion icon, spells & runes */}
-              {(() => {
-                const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
-                const labels: string[] = participant.labels || []
-                const hasLabels = labels.length > 0
-
-                return (
-                  <div className="flex gap-1 flex-shrink-0 items-center">
-                    {/* champion icon column w/ pig score */}
-                    <div className="flex flex-col items-center w-[54px] gap-1">
-                      <Link
-                        href={`/champions/${getChampionUrlName(participant.championName, championNames)}`}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg">
-                          <div className="relative w-12 h-12 rounded-[calc(0.5rem-1px)] overflow-hidden bg-abyss-800">
-                            <Image
-                              src={getChampionImageUrl(participant.championName, ddragonVersion)}
-                              alt={participant.championName}
-                              width={64}
-                              height={64}
-                              className="w-full h-full scale-112 object-cover"
-                              unoptimized
-                            />
-                            <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
-                          </div>
-                          <div className="absolute -bottom-0.5 -right-0.5 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
-                            <div className="bg-abyss-600 rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-normal leading-none text-white pt-px">
-                              {participant.champLevel}
-                            </div>
+              {/* Middle Section: Champ/KDA/Items + Pig/Labels */}
+              <div className="flex flex-col flex-1 min-w-0 mx-4 justify-center">
+                {/* Top Row: Champ + KDA + Items */}
+                <div className="flex items-center justify-between">
+                  {/* Champion + Spells/Runes */}
+                  <div className="flex gap-2 items-center">
+                    <Link
+                      href={`/champions/${getChampionUrlName(participant.championName, championNames)}`}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg">
+                        <div className="relative w-12 h-12 rounded-[calc(0.5rem-1px)] overflow-hidden bg-abyss-800">
+                          <Image
+                            src={getChampionImageUrl(participant.championName, ddragonVersion)}
+                            alt={participant.championName}
+                            width={64}
+                            height={64}
+                            className="w-full h-full scale-112 object-cover"
+                            unoptimized
+                          />
+                          <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
+                          <div className="bg-abyss-600 rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-normal leading-none text-white pt-px">
+                            {participant.champLevel}
                           </div>
                         </div>
-                      </Link>
+                      </div>
+                    </Link>
 
-                      {hasPigScore && (
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            setSelectedTab('performance')
-                            setIsExpanded(true)
-                          }}
-                          className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full cursor-pointer flex"
-                        >
-                          <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
-                            <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
-                              {participant.pigScore}
-                            </span>
-                            <span className="text-white">PIG</span>
-                          </div>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* spells & runes */}
                     <div className="flex gap-1 items-center">
                       <div className="flex flex-col gap-0.5">
                         <SummonerSpellTooltip spellId={participant.summoner1Id}>
@@ -273,72 +250,152 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                         )}
                       </div>
                     </div>
-
-                    {hasLabels && (
-                      <div className="flex items-center gap-0.5 flex-wrap">
-                        {labels.map((label, idx) => (
-                          <div
-                            key={idx}
-                            className="px-1.5 py-1 bg-abyss-700 border border-gold-dark/50 rounded text-[10px] font-medium text-text-muted"
-                          >
-                            {label}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                )
-              })()}
 
-              {/* kda */}
-              <div className="flex flex-col justify-center items-center flex-shrink-0 min-w-[75px]">
-                <div className="flex items-baseline gap-0.5">
-                  <span className="text-lg font-bold text-white tabular-nums">{participant.kills}</span>
-                  <span className="text-text-muted text-sm">/</span>
-                  <span className="text-lg font-bold text-negative tabular-nums">{participant.deaths}</span>
-                  <span className="text-text-muted text-sm">/</span>
-                  <span className="text-lg font-bold text-white tabular-nums">{participant.assists}</span>
-                </div>
-                <div
-                  className="text-xs font-semibold"
-                  style={{ color: kda === 'Perfect' ? getKdaColor(99) : getKdaColor(Number(kda)) }}
-                >
-                  {kda} KDA
-                </div>
-                <div className="text-xs text-text-muted">
-                  {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
-                </div>
-              </div>
+                  {/* KDA */}
+                  <div className="flex flex-col justify-center items-center flex-shrink-0 min-w-[75px] mx-4">
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-lg font-bold text-white tabular-nums">{participant.kills}</span>
+                      <span className="text-text-muted text-sm">/</span>
+                      <span className="text-lg font-bold text-negative tabular-nums">{participant.deaths}</span>
+                      <span className="text-text-muted text-sm">/</span>
+                      <span className="text-lg font-bold text-white tabular-nums">{participant.assists}</span>
+                    </div>
+                    <div
+                      className="text-xs font-semibold"
+                      style={{ color: kda === 'Perfect' ? getKdaColor(99) : getKdaColor(Number(kda)) }}
+                    >
+                      {kda} KDA
+                    </div>
+                    <div className="text-xs text-text-muted">
+                      {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
+                    </div>
+                  </div>
 
-              {/* items */}
-              <div className="flex-shrink-0 flex justify-center items-center">
-                <div className="grid grid-cols-3 grid-rows-2 gap-0.5">
-                  {[
-                    participant.item0,
-                    participant.item1,
-                    participant.item2,
-                    participant.item3,
-                    participant.item4,
-                    participant.item5,
-                  ].map((itemId, idx) =>
-                    itemId > 0 ? (
-                      <ItemTooltip key={idx} itemId={itemId}>
-                        <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
-                          <Image
-                            src={getItemImageUrl(itemId, ddragonVersion)}
-                            alt={`Item ${itemId}`}
-                            width={28}
-                            height={28}
-                            className="w-full h-full object-cover"
-                            unoptimized
+                  {/* Items */}
+                  <div className="flex-shrink-0 flex justify-center items-center">
+                    <div className="grid grid-cols-3 grid-rows-2 gap-0.5">
+                      {[
+                        participant.item0,
+                        participant.item1,
+                        participant.item2,
+                        participant.item3,
+                        participant.item4,
+                        participant.item5,
+                      ].map((itemId, idx) =>
+                        itemId > 0 ? (
+                          <ItemTooltip key={idx} itemId={itemId}>
+                            <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
+                              <Image
+                                src={getItemImageUrl(itemId, ddragonVersion)}
+                                alt={`Item ${itemId}`}
+                                width={28}
+                                height={28}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            </div>
+                          </ItemTooltip>
+                        ) : (
+                          <div key={idx} className="w-7 h-7 rounded bg-abyss-800/50 border border-gold-dark/50" />
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Row: Pig Score + Labels */}
+                {(() => {
+                  const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
+                  const labels = calculateMatchLabels(match, participant)
+                  const hasLabels = hasPigScore && labels.length > 0
+
+                  return (
+                    <div className="flex gap-2 items-center mt-0.5 w-full min-w-0">
+                      {/* pig Score - aligned with Icon */}
+                      <div className="w-[54px] flex justify-center flex-shrink-0">
+                        {hasPigScore && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation()
+                              setSelectedTab('performance')
+                              setIsExpanded(true)
+                            }}
+                            className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full cursor-pointer flex"
+                          >
+                            <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
+                              <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
+                                {participant.pigScore}
+                              </span>
+                              <span className="text-white">PIG</span>
+                            </div>
+                          </button>
+                        )}
+                      </div>
+
+                      {/*labels */}
+                      {hasLabels && (
+                        <div className="relative flex-1 w-0 group/labels self-center">
+                          <div className="flex gap-1 overflow-x-auto items-center py-1.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-abyss-900/50 [&::-webkit-scrollbar-thumb]:rounded-full">
+                            {labels.map(label => {
+                              const getLabelStyle = (type: string) => {
+                                switch (type) {
+                                  case 'good':
+                                    return {
+                                      gradient: 'from-kda-3 to-kda-3-dark',
+                                      text: 'text-kda-3',
+                                    }
+                                  case 'bad':
+                                    return {
+                                      gradient: 'from-negative to-negative-dark',
+                                      text: 'text-negative',
+                                    }
+                                  case 'playstyle':
+                                    return {
+                                      gradient: 'from-accent-light to-accent-dark',
+                                      text: 'text-accent-light',
+                                    }
+                                  case 'social':
+                                    return {
+                                      gradient: 'from-kda-4 to-kda-4-dark',
+                                      text: 'text-kda-4',
+                                    }
+                                  default:
+                                    return {
+                                      gradient: 'from-gold-light to-gold-dark',
+                                      text: 'text-gold-light',
+                                    }
+                                }
+                              }
+                              const style = getLabelStyle(label.type)
+
+                              return (
+                                <div
+                                  key={label.id}
+                                  className={clsx(
+                                    'p-px bg-gradient-to-b rounded-full flex-shrink-0',
+                                    style.gradient
+                                  )}
+                                  title={label.description}
+                                >
+                                  <div className="bg-abyss-700 rounded-full px-2 py-1.5 text-[10px] font-bold leading-none flex items-center">
+                                    <span className={style.text}>{label.label}</span>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          <div
+                            className={clsx(
+                              'absolute right-0 top-0 bottom-1.5 w-8 bg-gradient-to-l to-transparent pointer-events-none',
+                              isRemake ? 'from-remake' : isWin ? 'from-win' : 'from-loss'
+                            )}
                           />
                         </div>
-                      </ItemTooltip>
-                    ) : (
-                      <div key={idx} className="w-7 h-7 rounded bg-abyss-800/50 border border-gold-dark/50" />
-                    )
-                  )}
-                </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* teams - hidden on small screens */}

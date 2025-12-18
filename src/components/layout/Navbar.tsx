@@ -12,8 +12,8 @@ export default function Navbar() {
   const isLandingPage = pathname === '/'
   const [sidebarHovered, setSidebarHovered] = useState(false)
 
-  // Check if current page is active
-  const isChampionsActive = pathname?.startsWith('/champions')
+  // check if current page is active
+  const isChampionsActive = pathname === '/champions'
   const isAboutActive = pathname?.startsWith('/about')
 
   return (

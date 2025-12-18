@@ -97,18 +97,23 @@ export default function ProfileHeader({
     <section className="relative overflow-hidden bg-abyss-700">
       {mostPlayedChampion && championImageUrl && (
         <>
-          <div className="absolute inset-0 opacity-50" style={{ right: '-20%' }}>
-            <Image
-              src={championImageUrl}
-              alt={mostPlayedChampion}
-              fill
-              className="object-cover"
-              style={{ objectPosition: 'center 25%' }}
-              unoptimized
-              priority
-            />
+          <div className="absolute inset-0 flex justify-center overflow-hidden">
+            <div className="w-full max-w-6xl relative h-full">
+              <div className="absolute right-[-2%] top-[-20%] bottom-[-80%] w-[80%] opacity-50">
+                <Image
+                  src={championImageUrl}
+                  alt={mostPlayedChampion}
+                  fill
+                  className="object-cover"
+                  style={{ objectPosition: 'center 20%' }}
+                  unoptimized
+                  priority
+                />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--color-abyss-700)_70%)]" />
+              </div>
+            </div>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-abyss-700 from-35% via-transparent/30 via-60% to-abyss-700" />
+          <div className="absolute inset-0 bg-gradient-to-r from-abyss-700 from-30% via-transparent to-transparent" />
         </>
       )}
       <div className="max-w-6xl mx-auto px-8 py-6 pb-8 min-h-40 relative z-10">
@@ -250,7 +255,7 @@ export default function ProfileHeader({
         </div>
 
         {/* tab navigation */}
-        <div className="flex gap-1 mt-4">
+        <div className="flex gap-4 mt-4">
           {tabs.map(tab => (
             <button
               key={tab.id}

@@ -539,7 +539,7 @@ export default function SummonerContentV2({
             statusMessage={statusMessage}
           />
 
-          <div className="max-w-6xl mx-auto px-8">
+          <div className="max-w-6xl mx-auto px-8 pb-8">
             {updateError && (
               <div className="mb-4">
                 <UpdateErrorMessage

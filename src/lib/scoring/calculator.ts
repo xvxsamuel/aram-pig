@@ -301,7 +301,7 @@ export async function calculatePigScoreWithBreakdown(
   const buildPenalties = await calculateAllBuildPenalties(
     participant,
     championName,
-    selectedStats.patch === participant.patch ? (data as ChampionStatsData) : null
+    data as ChampionStatsData
   )
 
   const penaltyToScore = (p: number, max: number) => Math.max(0, 100 - (p / max) * 100)

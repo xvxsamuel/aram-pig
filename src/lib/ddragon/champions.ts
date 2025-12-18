@@ -39,7 +39,14 @@ export async function fetchChampionNames(version: string): Promise<Record<string
 }
 
 export function getChampionDisplayName(apiName: string, championNames: Record<string, string>): string {
-  return championNames[apiName] || apiName
+  if (championNames[apiName]) return championNames[apiName]
+
+  // Case-insensitive fallback for legacy IDs (e.g. FiddleSticks -> Fiddlesticks)
+  const lowerApiName = apiName.toLowerCase()
+  const foundKey = Object.keys(championNames).find(k => k.toLowerCase() === lowerApiName)
+  if (foundKey) return championNames[foundKey]
+
+  return apiName
 }
 
 export function getChampionUrlName(apiName: string, championNames: Record<string, string>): string {

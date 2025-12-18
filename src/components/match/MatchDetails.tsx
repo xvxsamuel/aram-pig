@@ -111,6 +111,7 @@ export default function MatchDetails({
   const [pigScoresFetched, setPigScoresFetched] = useState(false)
   const [pigScoreBreakdown, setPigScoreBreakdown] = useState<PigScoreBreakdown | null>(null)
   const [loadingBreakdown, setLoadingBreakdown] = useState(false)
+  const [breakdownFetchAttempted, setBreakdownFetchAttempted] = useState(false)
   const [, setEnrichError] = useState<string | null>(null)
   const enrichFetchingRef = useRef(false) // prevent double-fetch
 
@@ -199,7 +200,12 @@ export default function MatchDetails({
 
   // Use pig score breakdown from match data (pre-calculated) or fetch if needed
   useEffect(() => {
-    if ((selectedTab === 'performance' || selectedTab === 'build') && !pigScoreBreakdown && !loadingBreakdown) {
+    if (
+      (selectedTab === 'performance' || selectedTab === 'build') &&
+      !pigScoreBreakdown &&
+      !loadingBreakdown &&
+      !breakdownFetchAttempted
+    ) {
       // First, try to use the breakdown from match data (already calculated during update-profile)
       const cachedBreakdown = currentPlayer?.pigScoreBreakdown as PigScoreBreakdown | undefined
       if (cachedBreakdown && cachedBreakdown.itemDetails && cachedBreakdown.itemDetails.length > 0) {
@@ -215,8 +221,15 @@ export default function MatchDetails({
         }
       }
 
+      // Don't fetch if game is too old (API will reject it anyway)
+      if (!isWithin1Year) {
+        setBreakdownFetchAttempted(true)
+        return
+      }
+
       // Fallback: fetch from API (will recalculate and cache if needed)
       setLoadingBreakdown(true)
+      setBreakdownFetchAttempted(true)
       fetch(`/api/pig-score-breakdown?matchId=${match.metadata.matchId}&puuid=${currentPuuid}`)
         .then(res => (res.ok ? res.json() : null))
         .then(data => {
@@ -235,6 +248,8 @@ export default function MatchDetails({
     currentPlayer?.firstBuy,
     pigScoreBreakdown,
     loadingBreakdown,
+    breakdownFetchAttempted,
+    isWithin1Year,
   ])
 
   // separate teams

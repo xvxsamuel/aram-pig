@@ -97,8 +97,8 @@ export async function GET(request: Request) {
         .from('summoner_matches')
         .select('puuid, match_data, patch, champion_name')
         .eq('match_id', matchId),
-      // Get match record for game_duration
-      supabase.from('matches').select('game_duration, patch').eq('match_id', matchId).single(),
+      // Get match record for game_duration and game_creation
+      supabase.from('matches').select('game_duration, patch, game_creation').eq('match_id', matchId).single(),
     ])
 
     if (participantsResult.error || !participantsResult.data) {
@@ -113,6 +113,14 @@ export async function GET(request: Request) {
 
     const allParticipants = participantsResult.data as ParticipantRecord[]
     const matchRecord = matchResult.data
+
+    // Check if game is older than 365 days
+    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
+    const gameAge = Date.now() - matchRecord.game_creation
+    if (gameAge > ONE_YEAR_MS) {
+      console.log(`[pig-score-breakdown] Game is too old (${Math.round(gameAge / (24 * 60 * 60 * 1000))} days), skipping breakdown`)
+      return NextResponse.json({ error: 'Game is too old for detailed scoring' }, { status: 404 })
+    }
 
     // Find our specific player from the participants
     const participantData = allParticipants.find(p => p.puuid === puuid)

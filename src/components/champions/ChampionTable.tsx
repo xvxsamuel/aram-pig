@@ -96,7 +96,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
         <div className="w-14 flex items-center justify-center py-3">Rank</div>
         <button
           onClick={() => handleSort('champion')}
-          className={`w-32 flex items-center justify-center hover:text-white transition-colors cursor-pointer py-3 relative ${sortKey === 'champion' ? 'text-white' : ''}`}
+          className={`w-44 flex items-center justify-center hover:text-white transition-colors cursor-pointer py-3 relative ${sortKey === 'champion' ? 'text-white' : ''}`}
         >
           Champion
           {sortKey === 'champion' && (
@@ -161,7 +161,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
               </div>
 
               {/* champion icon + name */}
-              <div className="w-32 flex items-center gap-3">
+              <div className="w-44 flex items-center gap-3">
                 <div className="w-10 h-10 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg flex-shrink-0">
                   <div className="relative w-full h-full rounded-[inherit] overflow-hidden bg-accent-dark">
                     <Image
