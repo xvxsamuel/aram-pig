@@ -1,4 +1,4 @@
-// load more matches API - uses shared query functions
+// load more matches api - uses shared query functions
 import { NextResponse } from 'next/server'
 import { getMatchesAsMatchData } from '@/lib/db'
 

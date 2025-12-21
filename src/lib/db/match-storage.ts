@@ -1,5 +1,5 @@
-// Match storage - store match data to database
-// Used by: continuous-scraper.ts, update-profile API
+// match storage - store match data to database
+// used by: continuous-scraper.ts, update-profile api
 import { createAdminClient } from './supabase'
 import type { MatchData } from '@/types/match'
 import type { RegionalCluster } from '../game/regions'
@@ -8,12 +8,12 @@ import { extractAbilityOrder } from '../game/ability-leveling'
 import { extractPatch, getPatchFromDate, isPatchAccepted } from '../game/patch'
 import { extractFirstBuy, formatFirstBuy } from '../game/items'
 import { extractItemPurchases } from '../game/item-history'
-import { StatsAggregator } from './stats-aggregator'
+import { StatsAggregator, type ParticipantStatsInput } from './stats-aggregator'
 import { getTrackedPuuids } from './tracked-players'
 
-// ============================================================================
-// STATS AGGREGATOR - module-level state for batch processing
-// ============================================================================
+export type ParticipantStatsData = ParticipantStatsInput
+
+// stats aggregator - module-level state for batch processing
 const statsAggregator = new StatsAggregator()
 
 export function getStatsBufferCount(): number {
@@ -44,7 +44,7 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
     console.log(`[DB] Flushing ${aggregatedStats.length} champion+patch combos (${participantCount} participants)...`)
 
     const supabase = createAdminClient()
-    const BATCH_SIZE = 100 // Larger batches = fewer RPC calls = less I/O
+    const BATCH_SIZE = 100 // larger batches = fewer rpc calls = less i/o
     let totalFlushed = 0
     let failedBatches = 0
 
@@ -71,7 +71,7 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
 
       totalFlushed += data || batch.length
       
-      // Add delay between batches to spread I/O load
+      // add delay between batches to spread i/o load
       if (i + BATCH_SIZE < aggregatedStats.length) {
         await new Promise(resolve => setTimeout(resolve, 500))
       }
@@ -93,9 +93,7 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
 
 export const flushStatsBatch = flushAggregatedStats
 
-// ============================================================================
-// SKILL ORDER EXTRACTION
-// ============================================================================
+// skill order extraction
 
 function extractSkillOrderAbbreviation(abilityOrder: string): string {
   if (!abilityOrder || abilityOrder.length === 0) return ''
@@ -127,11 +125,8 @@ function extractSkillOrderAbbreviation(abilityOrder: string): string {
   return result
 }
 
-// ============================================================================
-// STATS DATA TYPE
-// ============================================================================
-
-export interface ParticipantStatsData {
+// stats data type
+interface StatsData {
   champion_name: string
   patch: string
   win: boolean
@@ -160,10 +155,7 @@ export interface ParticipantStatsData {
   deaths: number
 }
 
-// ============================================================================
-// MAIN STORE FUNCTION
-// ============================================================================
-
+// main store function
 export async function storeMatchData(
   matchData: MatchData,
   region?: RegionalCluster,
@@ -227,6 +219,14 @@ export async function storeMatchData(
     const participantFirstBuys: (string | null)[] = []
     const participantBuildOrders: (string | null)[] = []
 
+    // Calculate team damage totals
+    const teamDamage: Record<number, number> = { 100: 0, 200: 0 }
+    matchData.info.participants.forEach(p => {
+      if (p.teamId === 100 || p.teamId === 200) {
+        teamDamage[p.teamId] += p.totalDamageDealtToChampions
+      }
+    })
+
     const participantRows = matchData.info.participants.map((p, index) => {
       const participantId = index + 1
       const abilityOrder = timeline ? extractAbilityOrder(timeline, participantId) : null
@@ -271,6 +271,7 @@ export async function storeMatchData(
 
           stats: {
             damage: p.totalDamageDealtToChampions,
+            teamDamage: teamDamage[p.teamId] || 0,
             gold: p.goldEarned,
             cs: p.totalMinionsKilled,
             doubleKills: p.doubleKills || 0,

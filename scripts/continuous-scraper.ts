@@ -1,4 +1,4 @@
-// Environment variables are loaded by load-env.ts (see package.json scripts)
+// environment variables are loaded by load-env.ts (see package.json scripts)
 import { writeFileSync, readFileSync, existsSync } from 'fs'
 import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
@@ -27,7 +27,7 @@ async function getCurrentPatch(): Promise<string[]> {
 }
 
 // stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-const STATS_BUFFER_FLUSH_SIZE = 1000 // flush every 1000 participants (100 matches) - massive I/O reduction
+const STATS_BUFFER_FLUSH_SIZE = 1000 // flush every 1000 participants (100 matches) - massive i/o reduction
 let lastStatsFlush = Date.now()
 const STATS_FLUSH_INTERVAL = 600000 // or every 10 minutes - even less frequent writes
 
@@ -38,12 +38,12 @@ async function maybeFlushStats(): Promise<void> {
   if (bufferCount >= STATS_BUFFER_FLUSH_SIZE || (now - lastStatsFlush > STATS_FLUSH_INTERVAL && bufferCount > 0)) {
     await flushStatsBatch()
     lastStatsFlush = Date.now()
-    // give database more time to process the batch and reduce I/O spikes
+    // give database more time to process the batch and reduce i/o spikes
     await sleep(2000)
   }
 }
 
-// DFS state per region: stack of PUUIDs to crawl
+// dfs state per region: stack of puuids to crawl
 const crawlStackByRegion = new Map<RegionalCluster, string[]>([
   ['europe', []],
   ['americas', []],
@@ -51,7 +51,7 @@ const crawlStackByRegion = new Map<RegionalCluster, string[]>([
   ['sea', []],
 ])
 
-// track visited PUUIDs to avoid cycles
+// track visited puuids to avoid cycles
 const visitedPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
   ['europe', new Set()],
   ['americas', new Set()],
@@ -59,7 +59,7 @@ const visitedPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
   ['sea', new Set()],
 ])
 
-// track "dry" PUUIDs (players with no recent ARAM matches) - avoid re-visiting them
+// track "dry" puuids (players with no recent aram matches) - avoid re-visiting them
 const dryPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
   ['europe', new Set()],
   ['americas', new Set()],
@@ -75,10 +75,10 @@ const backtrackHistoryByRegion = new Map<RegionalCluster, string[]>([
   ['sea', []],
 ])
 
-// cache: known match IDs (avoid redundant DB queries)
+// cache: known match ids (avoid redundant db queries)
 const knownMatchIds = new Set<string>()
 
-// seed pool: all PUUIDs discovered from matches (for re-seeding when stuck)
+// seed pool: all puuids discovered from matches (for re-seeding when stuck)
 const seedPoolByRegion = new Map<RegionalCluster, Set<string>>([
   ['europe', new Set()],
   ['americas', new Set()],
@@ -104,7 +104,7 @@ const _PLATFORM_TO_REGION: Record<string, RegionalCluster> = {
   vn2: 'sea',
 }
 
-// reverse mapping: regional cluster to platform prefixes for match ID filtering
+// reverse mapping: regional cluster to platform prefixes for match id filtering
 const REGION_TO_PREFIXES: Record<RegionalCluster, string[]> = {
   americas: ['NA1', 'BR1', 'LA1', 'LA2'],
   europe: ['EUW1', 'EUN1', 'TR1', 'RU'],
@@ -112,13 +112,13 @@ const REGION_TO_PREFIXES: Record<RegionalCluster, string[]> = {
   sea: ['OC1', 'SG2', 'TW2', 'VN2', 'PH2', 'TH2'],
 }
 
-// get random seeds from the seed pool (PUUIDs we've seen from matches)
+// get random seeds from the seed pool (puuids we've seen from matches)
 function getRandomSeedsFromPool(region: RegionalCluster): string[] {
   const seedPool = seedPoolByRegion.get(region)!
   const visited = visitedPuuidsByRegion.get(region)!
   const dryPuuids = dryPuuidsByRegion.get(region)!
 
-  // filter to unvisited, non-dry PUUIDs
+  // filter to unvisited, non-dry puuids
   const available = Array.from(seedPool).filter(p => !visited.has(p) && !dryPuuids.has(p))
 
   if (available.length === 0) {
@@ -134,9 +134,9 @@ function getRandomSeedsFromPool(region: RegionalCluster): string[] {
   return seeds
 }
 
-// fetch PUUIDs from existing matches in DB for a region
-// gets match IDs from DB, then fetches matches from Riot API to get participants
-// this is a last resort - uses up to 3 API calls to get fresh PUUIDs
+// fetch puuids from existing matches in db for a region
+// gets match ids from db, then fetches matches from riot api to get participants
+// this is a last resort - uses up to 3 api calls to get fresh puuids
 async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
   const acceptedPatches = await getCurrentPatch()
   const prefixes = REGION_TO_PREFIXES[region]
@@ -171,7 +171,7 @@ async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
         if (allPuuids.length >= 15) break
 
         try {
-          // fetch this match from Riot API
+          // fetch this match from riot api
           await waitForRateLimit(region, 'batch')
           const matchData = await getMatchById(match.match_id, region)
 
@@ -205,7 +205,7 @@ async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
   }
 }
 
-// DFS crawler: process a summoner and return discovered summoners
+// dfs crawler: process a summoner and return discovered summoners
 async function crawlSummoner(
   puuid: string,
   region: RegionalCluster
@@ -215,7 +215,7 @@ async function crawlSummoner(
     const discovered: string[] = []
     const dryPuuids = dryPuuidsByRegion.get(region)!
 
-    // Fetch matches from last 14 days for maximum data collection
+    // fetch matches from last 14 days for maximum data collection
     const twoWeeksAgo = new Date()
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
     const startTime = Math.floor(twoWeeksAgo.getTime() / 1000)
@@ -223,27 +223,27 @@ async function crawlSummoner(
     await waitForRateLimit(region, 'batch')
     const matchIds = await getMatchIdsByPuuid(puuid, region, 450, 100, 0, 'batch', startTime)
 
-    // Skip if no recent ARAM matches - mark as dry
+    // skip if no recent aram matches - mark as dry
     if (!matchIds || matchIds.length === 0) {
       return { stored: 0, discovered: [], isDry: true }
     }
 
     console.log(`  Found ${matchIds.length} matches for PUUID ${puuid.substring(0, 8)}`)
 
-    // Filter out matches we already know about (in-memory cache)
+    // filter out matches we already know about (in-memory cache)
     const potentiallyNewMatchIds = matchIds.filter((id: string) => !knownMatchIds.has(id))
 
-    // Only query DB for matches not in cache - check in batches to reduce I/O
+    // only query db for matches not in cache - check in batches to reduce i/o
     let newMatchIds: string[] = []
     if (potentiallyNewMatchIds.length === 0) {
-      // All matches are in cache - this player is "exhausted" (all matches already scraped)
-      // Don't waste API calls discovering from their matches
+      // all matches are in cache - this player is "exhausted" (all matches already scraped)
+      // don't waste api calls discovering from their matches
       console.log(`  All ${matchIds.length} matches already known (cache hit) - player exhausted`)
       return { stored: 0, discovered: [], isDry: true }
     } else {
       console.log(`  ${potentiallyNewMatchIds.length} potentially new, checking DB...`)
 
-      // Check DB in batches of 100 to reduce query overhead even more
+      // check db in batches of 100 to reduce query overhead even more
       const DB_CHECK_BATCH_SIZE = 100
       const existingIds = new Set<string>()
       
@@ -255,13 +255,13 @@ async function crawlSummoner(
           .in('match_id', batch)
         
         existingMatches?.forEach(m => existingIds.add(m.match_id))
-        // Small delay between DB checks to avoid overwhelming I/O
+        // small delay between db checks to avoid overwhelming i/o
         if (i + DB_CHECK_BATCH_SIZE < potentiallyNewMatchIds.length) {
           await sleep(200)
         }
       }
       
-      // Add all checked matches to cache (existing and new)
+      // add all checked matches to cache (existing and new)
       potentiallyNewMatchIds.forEach(id => knownMatchIds.add(id))
 
       newMatchIds = potentiallyNewMatchIds.filter((id: string) => !existingIds.has(id))
@@ -269,21 +269,21 @@ async function crawlSummoner(
 
     console.log(`  ${newMatchIds.length} new matches, ${matchIds.length - newMatchIds.length} already in DB`)
 
-    // If no new matches after DB check, player is exhausted
+    // if no new matches after db check, player is exhausted
     if (newMatchIds.length === 0 && matchIds.length > 0) {
       console.log(`  Player exhausted - all matches already in DB`)
       return { stored: 0, discovered: [], isDry: true }
     }
 
-    // For new matches: fetch them to discover PUUIDs, but only store if they're from current patch
+    // for new matches: fetch them to discover puuids, but only store if they're from current patch
     let stored = 0
     let skippedOldPatch = 0
 
-    // Process matches in parallel batches
-    // With 50% throttle (50 req/2min), use smaller batches to avoid rate limit waits
-    // Each match = 1 API call (match data), so batch of 5 = 5 calls
+    // process matches in parallel batches
+    // with 50% throttle (50 req/2min), use smaller batches to avoid rate limit waits
+    // each match = 1 api call (match data), so batch of 5 = 5 calls
     const THROTTLE = parseInt(process.env.SCRAPER_THROTTLE || '100', 10)
-    const BATCH_SIZE = THROTTLE <= 50 ? 2 : 3 // Reduced to 3 max to lower DB IO pressure
+    const BATCH_SIZE = THROTTLE <= 50 ? 2 : 3 // reduced to 3 max to lower db io pressure
     for (let i = 0; i < newMatchIds.length; i += BATCH_SIZE) {
       const batch = newMatchIds.slice(i, i + BATCH_SIZE)
 

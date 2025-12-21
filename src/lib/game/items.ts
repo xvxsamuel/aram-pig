@@ -1,9 +1,9 @@
-// Item utilities - re-exports from modular items/ directory
-// This file maintains backward compatibility with existing imports
+// item utilities - re-exports from modular items/ directory
+// this file maintains backward compatibility with existing imports
 
-// Re-export all from the modular items/ directory
+// re-export all from the modular items/ directory
 export {
-  // Build order constants and utilities
+  // build order constants and utilities
   BOOT_IDS,
   TIER1_BOOTS,
   BOOTS_NORMALIZED,
@@ -18,7 +18,7 @@ export {
   extractCompletedBuildOrder,
   formatBuildOrder,
   parseBuildOrder,
-  // First buy utilities
+  // first buy utilities
   ARAM_STARTING_GOLD,
   STARTER_TIME_WINDOW,
   MAX_STARTER_TIME,

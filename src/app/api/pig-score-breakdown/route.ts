@@ -29,7 +29,7 @@ function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefin
   return result
 }
 
-// Define types for match data to avoid type mismatches
+// define types for match data to avoid type mismatches
 interface MatchData {
   pigScoreBreakdown?: unknown
   teamId?: number
@@ -51,8 +51,8 @@ interface MatchData {
   }
   spells?: number[]
   abilityOrder?: string
-  buildOrder?: string | { itemId: number; timestamp: number }[] // Can be string (new) or array (legacy)
-  firstBuy?: string // comma-separated starting item IDs
+  buildOrder?: string | { itemId: number; timestamp: number }[] // can be string (new) or array (legacy)
+  firstBuy?: string // comma-separated starting item ids
 }
 
 interface ParticipantRecord {
@@ -62,13 +62,13 @@ interface ParticipantRecord {
   champion_name: string
 }
 
-// buildOrder is already stored as a comma-separated string in match_data
-// Just pass it through, ensuring it's a string or undefined
+// buildorder is already stored as a comma-separated string in match_data
+// just pass it through, ensuring it's a string or undefined
 function formatBuildOrderForScoring(buildOrder: string | { itemId: number; timestamp: number }[] | undefined): string | undefined {
   if (!buildOrder) return undefined
-  // If it's already a string, return it
+  // if it's already a string, return it
   if (typeof buildOrder === 'string') return buildOrder
-  // If it's an array (legacy format), convert it
+  // if it's an array (legacy format), convert it
   if (Array.isArray(buildOrder) && buildOrder.length > 0) {
     return buildOrder.map(b => b.itemId).join(',')
   }
@@ -89,15 +89,15 @@ export async function GET(request: Request) {
 
     console.log(`[pig-score-breakdown] Request for matchId=${matchId}, puuid=${puuid.slice(0, 8)}...`)
 
-    // CONSOLIDATED QUERY: Fetch all match data in parallel
-    // This ensures we get consistent data from the same point in time
+    // consolidated query: fetch all match data in parallel
+    // this ensures we get consistent data from the same point in time
     const [participantsResult, matchResult] = await Promise.all([
-      // Get ALL participants for this match (includes our player + teammates for team kills)
+      // get all participants for this match (includes our player + teammates for team kills)
       supabase
         .from('summoner_matches')
         .select('puuid, match_data, patch, champion_name')
         .eq('match_id', matchId),
-      // Get match record for game_duration and game_creation
+      // get match record for game_duration and game_creation
       supabase.from('matches').select('game_duration, patch, game_creation').eq('match_id', matchId).single(),
     ])
 

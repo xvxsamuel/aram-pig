@@ -70,9 +70,13 @@ export default function ProfileHeader({
   // trigger animation when borderColors changes from null to a value
   useEffect(() => {
     if (longestWinStreak >= 10) {
+      // reset animation first
+      setAnimateColor(false)
       // small delay to ensure initial render happens first
       const timer = setTimeout(() => setAnimateColor(true), 100)
       return () => clearTimeout(timer)
+    } else {
+      setAnimateColor(false)
     }
   }, [longestWinStreak])
 
@@ -90,8 +94,104 @@ export default function ProfileHeader({
   const tabs = [
     { id: 'overview' as const, label: 'Overview' },
     { id: 'champions' as const, label: 'Champions' },
-    { id: 'performance' as const, label: 'Performance' },
+    // { id: 'performance' as const, label: 'Performance' },
   ]
+
+  const profileIconElement = (
+    <div className="relative flex-shrink-0" onMouseEnter={() => longestWinStreak >= 10 ? setGlintKey(k => k + 1) : undefined}>
+      <div
+        className="rounded-xl p-px relative overflow-hidden"
+        style={{ background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))' }}
+      >
+        {/* animated color overlay */}
+        {borderColors && (
+          <div
+            className="absolute inset-0 rounded-xl transition-transform duration-500 ease-out"
+            style={{
+              background: `linear-gradient(to bottom, ${borderColors.from}, ${borderColors.to})`,
+              transform: animateColor ? 'translateY(0)' : 'translateY(100%)',
+            }}
+          />
+        )}
+        {/* glint effect for highest tier */}
+        {isHighestTier && animateColor && (
+          <motion.div
+            key={glintKey}
+            className="absolute top-0 bottom-0 rounded-xl pointer-events-none"
+            animate={{
+              left: ['-35%', '135%'],
+              opacity: [0, 0.5, 0.6, 0.5, 0],
+            }}
+            transition={{
+              duration: 1.2,
+              repeat: Infinity,
+              repeatDelay: 3,
+              ease: 'easeInOut',
+              times: [0, 0.2, 0.5, 0.8, 1],
+            }}
+            style={{
+              background:
+                'linear-gradient(90deg, transparent, rgba(255,255,255,0.2) 35%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.2) 65%, transparent)',
+              width: '40%',
+            }}
+          />
+        )}
+        <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden relative">
+          <Image
+            src={iconError ? profileIconUrl.replace(/\d+\.png$/, '29.png') : profileIconUrl}
+            alt="Profile Icon"
+            width={120}
+            height={120}
+            className="w-full h-full object-cover"
+            unoptimized
+            priority
+            onError={() => setIconError(true)}
+          />
+        </div>
+      </div>
+      <div
+        className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-lg p-px overflow-hidden"
+        style={{ background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))' }}
+      >
+        {/* animated color overlay for level badge */}
+        {borderColors && (
+          <div
+            className="absolute inset-0 rounded-lg transition-transform duration-150"
+            style={{
+              background: `linear-gradient(to bottom, ${borderColors.from}, ${borderColors.to})`,
+              transform: animateColor ? 'translateY(0)' : 'translateY(100%)',
+            }}
+          />
+        )}
+        {/* glint effect for level badge */}
+        {isHighestTier && animateColor && (
+          <motion.div
+            key={`badge-${glintKey}`}
+            className="absolute top-0 bottom-0 rounded-lg pointer-events-none"
+            animate={{
+              left: ['-45%', '145%'],
+              opacity: [0, 0.4, 0.5, 0.4, 0],
+            }}
+            transition={{
+              duration: 0.9,
+              repeat: Infinity,
+              repeatDelay: 3.3,
+              ease: 'easeInOut',
+              times: [0, 0.2, 0.5, 0.8, 1],
+            }}
+            style={{
+              background:
+                'linear-gradient(90deg, transparent, rgba(255,255,255,0.15) 35%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.15) 65%, transparent)',
+              width: '45%',
+            }}
+          />
+        )}
+        <div className="px-2 rounded-[inherit] bg-abyss-500 relative">
+          <span className="text-sm font-bold text-white">{summonerLevel}</span>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <section className="relative overflow-hidden bg-abyss-700">
@@ -118,120 +218,32 @@ export default function ProfileHeader({
       )}
       <div className="max-w-6xl mx-auto px-8 py-6 pb-8 min-h-40 relative z-10">
         <div className="flex items-start gap-6">
-          <SimpleTooltip
-            content={
-              <span className="flex items-center gap-1">
-                <span
-                  className={`text-sm font-bold ${
-                    longestWinStreak >= 50
-                      ? 'text-kda-5'
-                      : longestWinStreak >= 20
-                        ? 'text-kda-4'
-                        : longestWinStreak >= 10
-                          ? 'text-kda-3'
-                          : 'text-gold-light'
-                  }`}
-                >
-                  {longestWinStreak}
+          {longestWinStreak >= 10 ? (
+            <SimpleTooltip
+              content={
+                <span className="flex items-center gap-1">
+                  <span
+                    className={`text-sm font-bold ${
+                      longestWinStreak >= 50
+                        ? 'text-kda-5'
+                        : longestWinStreak >= 20
+                          ? 'text-kda-4'
+                          : longestWinStreak >= 10
+                            ? 'text-kda-3'
+                            : 'text-gold-light'
+                    }`}
+                  >
+                    {longestWinStreak}
+                  </span>
+                  <span className="text-white text-sm font-light"> Winstreak</span>
                 </span>
-                <span className="text-white text-sm font-light"> Winstreak</span>
-              </span>
-            }
-          >
-            <div className="relative flex-shrink-0 cursor-help" onMouseEnter={() => setGlintKey(k => k + 1)}>
-              <div
-                className="rounded-xl p-px relative overflow-hidden"
-                style={{ background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))' }}
-              >
-                {/* animated color overlay */}
-                {borderColors && (
-                  <div
-                    className="absolute inset-0 rounded-xl transition-transform duration-500 ease-out"
-                    style={{
-                      background: `linear-gradient(to bottom, ${borderColors.from}, ${borderColors.to})`,
-                      transform: animateColor ? 'translateY(0)' : 'translateY(100%)',
-                    }}
-                  />
-                )}
-                {/* glint effect for highest tier */}
-                {isHighestTier && animateColor && (
-                  <motion.div
-                    key={glintKey}
-                    className="absolute top-0 bottom-0 rounded-xl pointer-events-none"
-                    animate={{
-                      left: ['-35%', '135%'],
-                      opacity: [0, 0.5, 0.6, 0.5, 0],
-                    }}
-                    transition={{
-                      duration: 1.2,
-                      repeat: Infinity,
-                      repeatDelay: 3,
-                      ease: 'easeInOut',
-                      times: [0, 0.2, 0.5, 0.8, 1],
-                    }}
-                    style={{
-                      background:
-                        'linear-gradient(90deg, transparent, rgba(255,255,255,0.2) 35%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.2) 65%, transparent)',
-                      width: '40%',
-                    }}
-                  />
-                )}
-                <div className="w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden relative">
-                  <Image
-                    src={iconError ? profileIconUrl.replace(/\d+\.png$/, '29.png') : profileIconUrl}
-                    alt="Profile Icon"
-                    width={120}
-                    height={120}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                    priority
-                    onError={() => setIconError(true)}
-                  />
-                </div>
-              </div>
-              <div
-                className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-lg p-px overflow-hidden"
-                style={{ background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))' }}
-              >
-                {/* animated color overlay for level badge */}
-                {borderColors && (
-                  <div
-                    className="absolute inset-0 rounded-lg transition-transform duration-150"
-                    style={{
-                      background: `linear-gradient(to bottom, ${borderColors.from}, ${borderColors.to})`,
-                      transform: animateColor ? 'translateY(0)' : 'translateY(100%)',
-                    }}
-                  />
-                )}
-                {/* glint effect for level badge */}
-                {isHighestTier && animateColor && (
-                  <motion.div
-                    key={`badge-${glintKey}`}
-                    className="absolute top-0 bottom-0 rounded-lg pointer-events-none"
-                    animate={{
-                      left: ['-45%', '145%'],
-                      opacity: [0, 0.4, 0.5, 0.4, 0],
-                    }}
-                    transition={{
-                      duration: 0.9,
-                      repeat: Infinity,
-                      repeatDelay: 3.3,
-                      ease: 'easeInOut',
-                      times: [0, 0.2, 0.5, 0.8, 1],
-                    }}
-                    style={{
-                      background:
-                        'linear-gradient(90deg, transparent, rgba(255,255,255,0.15) 35%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.15) 65%, transparent)',
-                      width: '45%',
-                    }}
-                  />
-                )}
-                <div className="px-2 rounded-[inherit] bg-abyss-500 relative">
-                  <span className="text-sm font-bold text-white">{summonerLevel}</span>
-                </div>
-              </div>
-            </div>
-          </SimpleTooltip>
+              }
+            >
+              {profileIconElement}
+            </SimpleTooltip>
+          ) : (
+            profileIconElement
+          )}
           <div className="flex-1 flex flex-col justify-between h-28">
             <h1 className="text-3xl font-semibold text-white">
               {gameName}

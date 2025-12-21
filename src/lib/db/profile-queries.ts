@@ -1,11 +1,9 @@
-// Profile database queries
+// profile database queries
 import { supabase } from './supabase'
 import type { ChampionStats, ProfileSummary, RecentPlayer } from '@/types/profile'
 import type { MatchData } from '@/types/match'
 
-/**
- * Get summoner basic info from database
- */
+// get summoner basic info from database
 export async function getSummonerInfo(puuid: string) {
   const { data, error } = await supabase
     .from('summoners')
@@ -27,9 +25,7 @@ export async function getSummonerInfo(puuid: string) {
   }
 }
 
-/**
- * Get champion stats - prefers cached profile_data, falls back to aggregation
- */
+// get champion stats - prefers cached profile_data, falls back to aggregation
 export async function getChampionStats(puuid: string, profileData?: Record<string, unknown>): Promise<ChampionStats[]> {
   // use cached data if available
   const champData = profileData?.champions as Record<string, Record<string, number>> | undefined
@@ -113,9 +109,7 @@ export async function getChampionStats(puuid: string, profileData?: Record<strin
   }))
 }
 
-/**
- * Calculate profile summary from champion stats
- */
+// calculate profile summary from champion stats
 export function calculateSummary(champions: ChampionStats[], longestWinStreak: number = 0): ProfileSummary {
   if (champions.length === 0) {
     return {
@@ -163,9 +157,7 @@ export function calculateSummary(champions: ChampionStats[], longestWinStreak: n
   }
 }
 
-/**
- * Transform DB participant to MatchData participant format
- */
+// transform db participant to matchdata participant format
 function transformToMatchDataParticipant(
   p: Record<string, unknown>,
   nameOverride?: { puuid: string; gameName: string; tagLine: string }
@@ -237,7 +229,7 @@ function transformToMatchDataParticipant(
     pentaKills: stats?.pentaKills || 0,
     pigScore: (matchData?.pigScore as number) ?? undefined,
     pigScoreBreakdown: (matchData?.pigScoreBreakdown as Record<string, unknown>) ?? undefined,
-    // Include timeline-derived data for Build tab
+    // include timeline-derived data for build tab
     buildOrder: (matchData?.buildOrder as string) ?? undefined,
     firstBuy: (matchData?.firstBuy as string) ?? undefined,
     abilityOrder: (matchData?.abilityOrder as string) ?? undefined,
@@ -245,9 +237,7 @@ function transformToMatchDataParticipant(
   }
 }
 
-/**
- * Get matches in MatchData format (for match history display)
- */
+// get matches in matchdata format (for match history display)
 export async function getMatchesAsMatchData(
   puuid: string,
   limit: number = 20,
@@ -313,9 +303,7 @@ export async function getMatchesAsMatchData(
 
 /**
  * Calculate longest win streak from match history
- */
-export async function getLongestWinStreak(puuid: string): Promise<number> {
-  const { data: matches } = await supabase
+ / calculate longest win streak from match historyonst { data: matches } = await supabase
     .from('summoner_matches')
     .select('win, match_data, game_creation')
     .eq('puuid', puuid)
@@ -342,7 +330,7 @@ export async function getLongestWinStreak(puuid: string): Promise<number> {
 }
 
 /**
- * Get recently played with players from matches
+ * get recently played with players from matches
  */
 export function calculateRecentlyPlayedWith(
   matches: MatchData[],
@@ -408,10 +396,10 @@ export async function getProfileIcons(puuids: string[]): Promise<Record<string, 
 }
 
 /**
- * Check update job status for a puuid
+ * check update job status for a puuid
  */
 export async function getUpdateStatus(puuid: string): Promise<{ hasActiveJob: boolean; cooldownUntil: string | null }> {
-  const { data: job } = await supabase
+  const { data } = await supabase
     .from('update_jobs')
     .select('status')
     .eq('puuid', puuid)
@@ -419,7 +407,7 @@ export async function getUpdateStatus(puuid: string): Promise<{ hasActiveJob: bo
     .limit(1)
     .single()
 
-  const hasActiveJob = !!job
+  const hasActiveJob = !!data
 
   const { data: summoner } = await supabase.from('summoners').select('last_updated').eq('puuid', puuid).single()
 
@@ -433,3 +421,36 @@ export async function getUpdateStatus(puuid: string): Promise<{ hasActiveJob: bo
 
   return { hasActiveJob, cooldownUntil }
 }
+
+/**
+ * Get longest win streak for a summoner
+ * Checks ALL matches to find the longest consecutive win streak (excluding remakes)
+ */
+export async function getLongestWinStreak(puuid: string): Promise<number> {
+  const { data } = await supabase
+    .from('summoner_matches')
+    .select('win, match_data')
+    .eq('puuid', puuid)
+    .order('game_creation', { ascending: true }) // oldest first to calculate streak chronologically
+
+  if (!data || data.length === 0) return 0
+
+  let maxStreak = 0
+  let currentStreak = 0
+
+  for (const match of data) {
+    // skip remakes - they don't count for winstreak
+    if ((match.match_data as any)?.isRemake) continue
+    
+    if (match.win) {
+      currentStreak++
+      maxStreak = Math.max(maxStreak, currentStreak)
+    } else {
+      currentStreak = 0
+    }
+  }
+
+  return maxStreak
+}
+
+

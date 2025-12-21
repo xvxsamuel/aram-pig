@@ -52,7 +52,7 @@ export default function ChampionDetailTabs({
   championWinrate,
   championName,
 }: Props) {
-  // Process build combinations for Overview tab
+  // process build combinations for overview tab
   const { bestCombinations, worstCombinations, processedComboData } = useMemo(() => {
     const MIN_CORE_GAMES = 50
     
@@ -88,7 +88,7 @@ export default function ChampionDetailTabs({
 
   return (
     <div>
-      {/* Tab Content */}
+      {/* tab content */}
       {selectedTab === 'overview' && (
         <OverviewTab
           bestCombinations={bestCombinations}

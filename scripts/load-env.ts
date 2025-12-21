@@ -1,9 +1,9 @@
-// This file must be imported first to load environment variables
+// this file must be imported first to load environment variables
 import { config } from 'dotenv'
 import { resolve } from 'path'
 import { existsSync } from 'fs'
 
-// Only load .env.local if it exists (not in CI where env vars are pre-set)
+// only load .env.local if it exists (not in ci where env vars are pre-set)
 const envPath = resolve(process.cwd(), '.env.local')
 if (existsSync(envPath)) {
   config({ path: envPath })

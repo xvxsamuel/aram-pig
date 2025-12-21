@@ -147,9 +147,16 @@ export default function SummonerContentV2({
 
   useEffect(() => {
     if (mostPlayedChampion) {
-      fetch(`https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${mostPlayedChampion}_0.jpg`)
-        .then(res => (res.ok ? setChampionImageUrl(res.url) : null))
+      const imageUrl = `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${mostPlayedChampion}_0.jpg`
+      fetch(imageUrl)
+        .then(res => {
+          if (res.ok) {
+            setChampionImageUrl(imageUrl)
+          }
+        })
         .catch(() => {})
+    } else {
+      setChampionImageUrl(undefined)
     }
   }, [mostPlayedChampion])
 
@@ -494,6 +501,7 @@ export default function SummonerContentV2({
       {showSkeleton ? (
         <>
           <ProfileHeader
+            key={`${puuid}-${lastUpdated || 'initial'}-loading`}
             gameName={summonerData.account.gameName}
             tagLine={summonerData.account.tagLine}
             summonerLevel={summonerData.summoner.summonerLevel}
@@ -520,6 +528,7 @@ export default function SummonerContentV2({
       ) : (
         <>
           <ProfileHeader
+            key={`${puuid}-${lastUpdated || 'initial'}`}
             gameName={summonerData.account.gameName}
             tagLine={summonerData.account.tagLine}
             summonerLevel={summonerData.summoner.summonerLevel}

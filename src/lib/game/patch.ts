@@ -1,22 +1,18 @@
-// Patch version utilities
-// Handles patch version conversion and fetching from Riot's DDragon API
+// patch version utilities
+// handles patch version conversion and fetching from riot's ddragon api
 import { getLatestPatches as getDDragonPatches } from '@/lib/ddragon/assets'
 
-// Number of patches to keep detailed stats for
+// number of patches to keep detailed stats for
 export const PATCHES_TO_KEEP = 3
 
-/**
- * Fetches the latest patch versions from cached DDragon data
- * Uses shared cache - only fetches from API when DDragon version changes
- * Returns patches in ARAM PIG format (25.x)
- */
+// fetches the latest patch versions from cached ddragon data
+// uses shared cache - only fetches from api when ddragon version changes
+// returns patches in aram pig format (25.x)
 export async function getLatestPatches(count: number = PATCHES_TO_KEEP): Promise<string[]> {
   return getDDragonPatches(count)
 }
 
-/**
- * Check if a patch is in the accepted list (latest patches)
- */
+// check if a patch is in the accepted list (latest patches)
 export async function isPatchAccepted(patch: string): Promise<boolean> {
   const latestPatches = await getLatestPatches(PATCHES_TO_KEEP)
   return latestPatches.includes(patch)

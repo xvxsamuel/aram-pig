@@ -1,12 +1,10 @@
-// Ability leveling extraction from match timeline
+// ability leveling extraction from match timeline
 import type { MatchTimeline } from '@/types/match'
 
-/**
- * Extract ability leveling order from timeline data for a specific participant
- * @param timeline - Match timeline data from Riot API
- * @param participantId - Participant ID (1-10)
- * @returns Formatted string like "Q W E Q Q R Q W Q W R W W E E R E E" or null if unavailable
- */
+// extract ability leveling order from timeline data for a specific participant
+// @param timeline - match timeline data from riot api
+// @param participantid - participant id (1-10)
+// @returns formatted string like "q w e q q r q w q w r w w e e r e e" or null if unavailable
 export function extractAbilityOrder(timeline: MatchTimeline | null | undefined, participantId: number): string | null {
   if (!timeline?.info?.frames) {
     return null
@@ -55,9 +53,7 @@ export function extractAbilityOrder(timeline: MatchTimeline | null | undefined, 
   return skillLevelUps.map(levelUp => abilityMap[levelUp.skillSlot] || '?').join(' ')
 }
 
-/**
- * Format ability order as human-readable string
- */
+// format ability order as human-readable string
 export function formatAbilityOrder(abilityOrder: string | null): string | null {
   return abilityOrder
 }

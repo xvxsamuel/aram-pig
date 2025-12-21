@@ -17,7 +17,7 @@ interface SummonerSpellDisplayProps {
     winrate: number
     games: number
   }
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'item'
   useSimpleTooltip?: boolean
 }
 
@@ -34,12 +34,14 @@ export function SummonerSpellDisplay({
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
     lg: 'w-12 h-12',
+    item: 'w-9 h-9',
   }
 
   const sizePixels = {
     sm: 32,
     md: 40,
     lg: 48,
+    item: 36,
   }
 
   const renderSpell = (spellId: number) => {

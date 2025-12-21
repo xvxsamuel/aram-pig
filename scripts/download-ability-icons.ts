@@ -15,24 +15,38 @@ async function fetchJson(url: string) {
   return res.json();
 }
 
-async function downloadImage(url: string, destPath: string, retries = 3) {
+async function fetchWithTimeout(url: string, timeout = 5000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
   try {
-    // Check if file exists
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return res;
+  } catch (e) {
+    clearTimeout(id);
+    throw e;
+  }
+}
+
+async function downloadImage(url: string, destPath: string, retries = 20) {
+  try {
+    // check if file exists
     try {
       await fs.access(destPath);
       // console.log(`Skipping ${destPath} (already exists)`);
       return;
     } catch {
-      // File doesn't exist, continue
+      // file doesn't exist, continue
     }
 
     for (let i = 0; i < retries; i++) {
       try {
-        const res = await fetch(url);
+        const res = await fetchWithTimeout(url, 5000);
         
         if (res.status === 404) {
             // console.warn(`Image not found (404): ${url}`);
-            return;
+            // retry on 404 as well, in case of cdn propagation issues or flakiness
+            throw new Error(`404 Not Found`);
         }
 
         if (!res.ok) {
@@ -47,9 +61,14 @@ async function downloadImage(url: string, destPath: string, retries = 3) {
         console.log(`Downloaded: ${destPath}`);
         return;
       } catch (err) {
-        if (i === retries - 1) throw err;
-        // Exponential backoff: 1s, 2s, 4s
-        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+        if (i === retries - 1) {
+            console.error(`Failed to download ${url} after ${retries} attempts:`, err);
+            return;
+        }
+        // exponential backoff: 1s, 1.5s, 2.25s...
+        const delay = 1000 * Math.pow(1.2, i);
+        console.log(`Retry ${i + 1}/${retries} for ${url} in ${Math.round(delay)}ms`);
+        await new Promise(r => setTimeout(r, delay));
       }
     }
   } catch (error) {
@@ -65,32 +84,47 @@ async function main() {
     console.log(`Latest version: ${version}`);
 
     console.log('Fetching champion list...');
-    const championData = await fetchJson(`https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/champion.json`);
+    // use championFull.json to get spell filenames
+    const championData = await fetchJson(`https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/championFull.json`);
     const champions = Object.values(championData.data) as any[];
     
     console.log(`Found ${champions.length} champions.`);
 
     const abilities = ['p', 'q', 'w', 'e', 'r'];
     
-    // Process in chunks to avoid overwhelming the server or file system
+    // process in chunks to avoid overwhelming the server or file system
     const chunkSize = 5;
     for (let i = 0; i < champions.length; i += chunkSize) {
       const chunk = champions.slice(i, i + chunkSize);
       await Promise.all(chunk.map(async (champion) => {
         const championId = champion.id; // e.g. "Aatrox", "MonkeyKing"
         
+        // map abilities to image filenames and base urls
+        const abilityMap: Record<string, { filename: string, type: 'spell' | 'passive' }> = {};
+        
+        if (champion.passive && champion.passive.image) {
+            abilityMap['p'] = { filename: champion.passive.image.full, type: 'passive' };
+        }
+        
+        if (champion.spells) {
+            if (champion.spells[0]) abilityMap['q'] = { filename: champion.spells[0].image.full, type: 'spell' };
+            if (champion.spells[1]) abilityMap['w'] = { filename: champion.spells[1].image.full, type: 'spell' };
+            if (champion.spells[2]) abilityMap['e'] = { filename: champion.spells[2].image.full, type: 'spell' };
+            if (champion.spells[3]) abilityMap['r'] = { filename: champion.spells[3].image.full, type: 'spell' };
+        }
+
         for (const ability of abilities) {
-            // Use 'latest' or specific version. CommunityDragon supports 'latest' or version.
-            // Using specific version ensures consistency with the champion list we fetched.
-            // However, CommunityDragon might not have the exact same version string format or might be slightly behind/ahead.
-            // 'latest' is usually safe for icons.
-            // But the user mentioned "cdn endpoint is prob rather slow", so we want to cache them.
-            
-            // CommunityDragon URL structure:
-            // https://cdn.communitydragon.org/{version}/champion/{champion}/ability-icon/{ability}
-            // ability is p, q, w, e, r
-            
-            const url = `https://cdn.communitydragon.org/${version}/champion/${championId}/ability-icon/${ability}`;
+            const info = abilityMap[ability];
+            if (!info) {
+                // console.warn(`Missing info for ${championId} ability ${ability}`);
+                continue;
+            }
+
+            const baseUrl = info.type === 'passive' 
+                ? `https://ddragon.leagueoflegends.com/cdn/${version}/img/passive`
+                : `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell`;
+                
+            const url = `${baseUrl}/${info.filename}`;
             const destPath = path.join(ICONS_DIR, championId, `${ability}.png`);
             
             await downloadImage(url, destPath);

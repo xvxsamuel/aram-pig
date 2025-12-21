@@ -1,4 +1,4 @@
-// Supabase client initialization
+// supabase client initialization
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!

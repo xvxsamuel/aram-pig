@@ -1,4 +1,4 @@
-// unified champion stats API - returns all data for a champion with computed statistics
+// unified champion stats api - returns all data for a champion with computed statistics
 // cached with stale-while-revalidate for performance
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, getVariance, getStdDev, type WelfordState } from '@/lib/db'
@@ -66,7 +66,7 @@ interface ChampionStatsData {
   >
 }
 
-// compute derived stats from Welford state
+// compute derived stats from welford state
 function computeWelfordStats(welford: WelfordState | undefined) {
   if (!welford || welford.n < 2) {
     return { mean: welford?.mean ?? 0, stdDev: 0, variance: 0, sampleSize: welford?.n ?? 0 }

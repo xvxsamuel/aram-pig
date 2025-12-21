@@ -38,9 +38,9 @@ import { getStdDev, getZScore } from '../db/stats-aggregator'
  */
 
 // Sigmoid scaling constant - determines steepness of the S-curve
-// k=1.6 gives generous scoring: 150% of avg (~z=2) → ~96, 130% (~z=1.5) → ~92, 115% (~z=1) → ~86
-// This rewards good performance more and makes scoring less strict
-const SIGMOID_K = 1.6
+// k=1.7 gives a balanced spread: 150% of avg (~z=1.8 with low variance) → ~96
+// This makes high scores achievable but keeps the 0-100 range meaningful
+const SIGMOID_K = 1.7
 
 /**
  * Convert z-score to a 0-100 score using sigmoid function
@@ -123,9 +123,10 @@ function getLogZScore(playerValue: number, welfordState: WelfordState): number {
   const stdDev = getStdDev(welfordState)
   const cv = stdDev / welfordState.mean // coefficient of variation
   
-  // Cap CV at 0.35 to prevent overly harsh scoring
+  // Cap CV at 0.22 to prevent overly harsh scoring
   // Most damage distributions have CV ~0.20-0.30, capping prevents outliers from skewing scores
-  const cappedCV = Math.min(cv, 0.35)
+  // Lower cap (0.22) assumes tighter distribution, rewarding high performance more
+  const cappedCV = Math.min(cv, 0.22)
   const logStdDev = Math.sqrt(Math.log1p(cappedCV * cappedCV)) // log-normal sigma approximation
   
   if (logStdDev <= 0.01) return 0 // Too little variance
@@ -141,14 +142,26 @@ function getLogZScore(playerValue: number, welfordState: WelfordState): number {
  * @param avgValue - The champion's average value
  * @param welfordState - Optional Welford running statistics for z-score calculation
  * @param useLogTransform - true for naturally skewed stats (damage, healing, gold)
+ * @param gameDurationMinutes - Optional game duration to adjust expectations for short games
  */
 export function calculateStatScore(
   playerValue: number,
   avgValue: number,
   welfordState?: WelfordState,
-  useLogTransform: boolean = false
+  useLogTransform: boolean = false,
+  gameDurationMinutes?: number
 ): number {
   if (avgValue <= 0) return 50 // Default to average if no data
+
+  // Short game adjustment:
+  // In short games (< 15 mins), it's harder to reach high per-minute stats (less items, less scaling).
+  // We reduce the expected average to make scoring more lenient.
+  // Example: 10 min game -> expectation reduced to ~81% of normal
+  let adjustedAvg = avgValue
+  if (gameDurationMinutes && gameDurationMinutes < 15) {
+    const durationFactor = Math.pow(gameDurationMinutes / 15, 0.5)
+    adjustedAvg = avgValue * durationFactor
+  }
 
   // If we have Welford stats with enough samples, use z-score
   if (welfordState && welfordState.n >= 30) {
@@ -158,19 +171,35 @@ export function calculateStatScore(
     if (stdDev > welfordState.mean * 0.05) {
       // Use log transform for skewed distributions
       if (useLogTransform && welfordState.mean > 0) {
-        const zScore = getLogZScore(playerValue, welfordState)
+        // Adjust mean in welford state temporarily for short games?
+        // No, we can't easily modify welford state.
+        // Instead, we scale the player value UP by the inverse factor to simulate a "normal length" game performance
+        // This is mathematically equivalent to lowering the mean in the z-score formula
+        let adjustedPlayerValue = playerValue
+        if (gameDurationMinutes && gameDurationMinutes < 15) {
+           const durationFactor = Math.pow(gameDurationMinutes / 15, 0.5)
+           adjustedPlayerValue = playerValue / durationFactor
+        }
+
+        const zScore = getLogZScore(adjustedPlayerValue, welfordState)
         return zScoreToScore(zScore)
       }
       // Standard z-score for normal distributions
-      const zScore = getZScore(playerValue, welfordState)
+      // Same adjustment logic
+      let adjustedPlayerValue = playerValue
+      if (gameDurationMinutes && gameDurationMinutes < 15) {
+          const durationFactor = Math.pow(gameDurationMinutes / 15, 0.5)
+          adjustedPlayerValue = playerValue / durationFactor
+      }
+      const zScore = getZScore(adjustedPlayerValue, welfordState)
       return zScoreToScore(zScore)
     }
   }
 
   // Fallback: ratio-based score
   // For log-transformed stats, use log ratio
-  if (useLogTransform && avgValue > 0 && playerValue > 0) {
-    const logRatio = Math.log(playerValue / avgValue)
+  if (useLogTransform && adjustedAvg > 0 && playerValue > 0) {
+    const logRatio = Math.log(playerValue / adjustedAvg)
     // In log space, 0 = equal, positive = above average
     // Typical CV for damage stats is ~0.2-0.25, so logStdDev ≈ 0.20
     // This means 150% of avg (logRatio ≈ 0.405) → z ≈ 2.0 → score ~96
@@ -182,9 +211,64 @@ export function calculateStatScore(
   // Standard ratio-based fallback
   // Assume 25% of mean ≈ 1 standard deviation (more realistic than 15%)
   // This gives: 150% of avg → z = 2.0 → score ~96
-  const performanceRatio = playerValue / avgValue
+  const performanceRatio = playerValue / adjustedAvg
   const equivalentZScore = (performanceRatio - 1) / 0.25
   return zScoreToScore(equivalentZScore)
+}
+
+/**
+ * Calculate damage score with team share mitigation
+ * If raw damage is low but damage share is high (team got stomped), mitigate the penalty
+ */
+export function calculateDamageScore(
+  playerDamage: number,
+  avgDamage: number,
+  welfordState: WelfordState | undefined,
+  gameDurationMinutes: number,
+  teamDamageShare?: number
+): number {
+  const rawScore = calculateStatScore(playerDamage, avgDamage, welfordState, true, gameDurationMinutes)
+  
+  // If score is good, or we don't have share data, return raw score
+  if (rawScore >= 50 || teamDamageShare === undefined) {
+    return rawScore
+  }
+
+  // We have a low score (< 50). Check if we had a good damage share.
+  // A "good" share in ARAM (5 players) is typically around 20%+.
+  // If share > 25%, you definitely carried your weight relative to team -> Score should be at least ~50-60?
+  // If share > 20%, you did average relative to team -> Score should be at least ~45-50?
+  
+  // Define a "share score" based on the share.
+  // 30% share = 100 (excellent)
+  // 20% share = 50 (average)
+  // 10% share = 0 (poor)
+  // score = (share - 0.10) / 0.20 * 100
+  // This is a linear mapping.
+  
+  let shareScore = 0
+  if (teamDamageShare >= 0.30) {
+    shareScore = 100
+  } else if (teamDamageShare <= 0.10) {
+    shareScore = 0
+  } else {
+    // Linear interpolation between 0.10 (0) and 0.30 (100)
+    shareScore = ((teamDamageShare - 0.10) / 0.20) * 100
+  }
+  
+  // If share score is better than raw score, blend them.
+  // We don't want to fully replace raw score because raw damage still matters.
+  // But if the team got stomped, share matters more.
+  
+  if (shareScore > rawScore) {
+    // Blend: 60% raw, 40% share?
+    // Or take the max? No, that's too generous.
+    // Let's boost raw score towards share score.
+    // boosted = raw + (share - raw) * 0.5
+    return Math.round(rawScore + (shareScore - rawScore) * 0.5)
+  }
+  
+  return rawScore
 }
 
 /**
@@ -196,7 +280,8 @@ export function calculateStatScore(
 export function calculateCCTimeScore(
   playerValue: number,
   avgValue: number,
-  welfordState?: WelfordState
+  welfordState?: WelfordState,
+  gameDurationMinutes?: number
 ): number {
   if (avgValue <= 0) return 50 // Default to average if no data
 
@@ -217,7 +302,7 @@ export function calculateCCTimeScore(
   }
 
   // Above 3 sec/min: use normal stat scoring with z-score
-  return calculateStatScore(playerValue, avgValue, welfordState)
+  return calculateStatScore(playerValue, avgValue, welfordState, false, gameDurationMinutes)
 }
 
 /**
@@ -237,28 +322,29 @@ export function calculateDeathsScore(
 
   const deathsPerMin = deaths / gameDurationMinutes
 
-  // Optimal range: 0.4-0.6 deaths/min = score 80 (good, not perfect)
-  if (deathsPerMin >= 0.4 && deathsPerMin <= 0.6) return 80
+  // Optimal range: 0.5-0.7 deaths/min = score 100 (perfect tempo)
+  if (deathsPerMin >= 0.5 && deathsPerMin <= 0.7) return 100
 
-  // Very few deaths (safe play, not necessarily bad)
-  // 0 deaths/min = score 60
-  if (deathsPerMin < 0.4) {
-    const deficit = 0.4 - deathsPerMin
-    return Math.max(60, 80 - deficit * 50)
+  // Too few deaths (holding gold, not resetting)
+  // 0.5 dpm = 100
+  // 0.3 dpm = ~60 (severe penalty for playing too safe)
+  // 0.0 dpm = 0
+  if (deathsPerMin < 0.5) {
+    return Math.max(0, Math.round(100 - (0.5 - deathsPerMin) * 200))
   }
 
-  // Too many deaths - penalize, but if death quality is good, reduce penalty
-  // 1.0 deaths/min = score ~50 (or higher with good death quality)
-  // 1.5 deaths/min = score ~20
-  // 2.0 deaths/min = score ~0
-  const excess = deathsPerMin - 0.6
-  let baseScore = 80 - excess * 60
+  // Too many deaths
+  // 0.7 dpm = 100
+  // 0.75 dpm = ~94
+  // 1.0 dpm = ~64
+  const excess = deathsPerMin - 0.7
+  let baseScore = 100 - excess * 120
   
   // If death quality is good (60+), dying more is less punished (you're dying in good fights)
   // Death quality 60 = reduce penalty by 20%, 80 = reduce by 40%, 100 = reduce by 50%
   if (deathQuality !== undefined && deathQuality >= 60) {
     const qualityBonus = Math.min(0.5, (deathQuality - 60) / 100) // 0-50% reduction
-    const penaltyReduction = excess * 60 * qualityBonus
+    const penaltyReduction = excess * 120 * qualityBonus
     baseScore += penaltyReduction
   }
   

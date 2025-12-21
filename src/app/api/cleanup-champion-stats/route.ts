@@ -3,14 +3,14 @@ import { createAdminClient } from '@/lib/db'
 import { getLatestPatches, PATCHES_TO_KEEP } from '@/lib/game'
 
 // this endpoint should be called by a cron job to clean up old champion stats
-// it deletes all champion_stats entries for patches not in the latest N patches
+// it deletes all champion_stats entries for patches not in the latest n patches
 
 export async function GET(request: Request) {
   // verify cron secret to prevent unauthorized access
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  // ALWAYS require CRON_SECRET - no exceptions
+  // always require cron_secret - no exceptions
   if (!cronSecret) {
     console.error('[CLEANUP] CRON_SECRET not configured - endpoint disabled')
     return NextResponse.json({ error: 'Endpoint not configured' }, { status: 503 })

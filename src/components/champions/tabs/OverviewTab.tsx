@@ -76,11 +76,11 @@ export function OverviewTab({
   const selectedComboData = selectedCombo !== null ? allComboData[selectedCombo] : null
   const selectedComboDisplay = [...bestCombinations, ...worstCombinations].find(c => c.originalIndex === selectedCombo)
   
-  // Check if combo has enough games for combo-specific stats (500 games minimum)
+  // check if combo has enough games for combo-specific stats (500 games minimum)
   const comboHasEnoughGames = selectedComboDisplay && selectedComboDisplay.games >= 500
   const useGlobalData = !comboHasEnoughGames
 
-  // Set up scroll tracking for each slot
+  // set up scroll tracking for each slot
   useEffect(() => {
     const observers: ResizeObserver[] = []
     const cleanupFns: (() => void)[] = []

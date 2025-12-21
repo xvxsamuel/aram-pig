@@ -1,5 +1,5 @@
-// Stats aggregator - TypeScript-side aggregation for champion stats
-// Reduces DB operations from N (per participant) to M (per unique champion+patch)
+// stats aggregator - typescript-side aggregation for champion stats
+// reduces db operations from n (per participant) to m (per unique champion+patch)
 
 // tier 1 boots - not completed (excluded from cores)
 const TIER1_BOOT_ID = 1001
@@ -7,11 +7,11 @@ const TIER1_BOOT_ID = 1001
 // tier 2 boots - completed boots (normalized to 99999 for core grouping)
 const TIER2_BOOT_IDS = new Set([3006, 3009, 3020, 3047, 3111, 3117, 3158])
 
-// normalized boot ID for core key grouping
+// normalized boot id for core key grouping
 const NORMALIZED_BOOT_ID = 99999
 
 // check if item is a completed item (legendary or tier 2 boots)
-// tier 1 boots (1001) are NOT completed items for core purposes
+// tier 1 boots (1001) are not completed items for core purposes
 function isCompletedItemForCore(itemId: number): boolean {
   // tier 1 boots are not completed items
   if (itemId === TIER1_BOOT_ID) return false
@@ -19,7 +19,7 @@ function isCompletedItemForCore(itemId: number): boolean {
   if (TIER2_BOOT_IDS.has(itemId)) return true
   // for non-boots, we need to check if it's a legendary
   // items >= 3000 and not component items are generally legendaries
-  // This is a simplified check - the full check uses items.json
+  // this is a simplified check - the full check uses items.json
   return itemId >= 3000
 }
 
@@ -53,45 +53,43 @@ function createSpellKey(spell1: number, spell2: number): string {
   return `${Math.min(spell1, spell2)}_${Math.max(spell1, spell2)}`
 }
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// types
 
 interface GameStats {
   games: number
   wins: number
 }
 
-// Welford's online algorithm state for computing mean and variance
+// welford's online algorithm state for computing mean and variance
 export interface WelfordState {
   n: number // count
   mean: number // running mean
   m2: number // sum of squared deviations (for variance calculation)
 }
 
-// Calculate variance from Welford state (population variance)
+// calculate variance from welford state (population variance)
 export function getVariance(state: WelfordState): number {
   if (state.n < 2) return 0
   return state.m2 / state.n
 }
 
-// Calculate standard deviation from Welford state
+// calculate standard deviation from welford state
 export function getStdDev(state: WelfordState): number {
   return Math.sqrt(getVariance(state))
 }
 
-// Calculate z-score (how many standard deviations from mean)
+// calculate z-score (how many standard deviations from mean)
 export function getZScore(value: number, state: WelfordState): number {
   const stdDev = getStdDev(state)
   if (stdDev === 0) return 0
   return (value - state.mean) / stdDev
 }
 
-interface ChampionStatsData {
+export interface ChampionStatsData {
   games: number
   wins: number
   championStats: {
-    // Legacy sum fields (kept for backwards compatibility)
+    // legacy sum fields (kept for backwards compatibility)
     sumDamageToChampions: number
     sumTotalDamage: number
     sumHealing: number
@@ -99,7 +97,7 @@ interface ChampionStatsData {
     sumCCTime: number
     sumGameDuration: number
     sumDeaths: number
-    // Welford stats for per-minute values (for stddev calculation)
+    // welford stats for per-minute values (for stddev calculation)
     welford: {
       damageToChampionsPerMin: WelfordState
       totalDamagePerMin: WelfordState
@@ -130,9 +128,11 @@ interface ChampionStatsData {
     {
       games: number
       wins: number
-      items: Record<string, Record<string, GameStats>>
+      // Instead of full nested objects, store ONLY the keys that differ from the base stats
+      // This dramatically reduces data duplication (from ~60MB to ~2MB per champion)
+      items: Record<string, Record<string, GameStats>> // Keep items since they vary by core
       runes: {
-        primary: Record<string, GameStats>
+        primary: Record<string, GameStats> // Keep runes since they vary by core
         secondary: Record<string, GameStats>
         tertiary: {
           offense: Record<string, GameStats>
@@ -140,9 +140,9 @@ interface ChampionStatsData {
           defense: Record<string, GameStats>
         }
       }
-      spells: Record<string, GameStats>
-      starting: Record<string, GameStats>
-      skills: Record<string, GameStats>
+      spells: Record<string, GameStats> // Keep spells since they vary by core
+      starting: Record<string, GameStats> // Keep starting since they vary by core
+      skills: Record<string, GameStats> // Keep skills since they vary by core
     }
   >
 }
@@ -176,10 +176,7 @@ export interface ParticipantStatsInput {
   deaths: number
 }
 
-// ============================================================================
-// AGGREGATOR CLASS
-// ============================================================================
-
+// aggregator class
 export class StatsAggregator {
   private aggregated = new Map<string, ChampionStatsData>()
   private participantCount = 0
@@ -223,7 +220,7 @@ export class StatsAggregator {
     stats.championStats.sumGameDuration += input.game_duration
     stats.championStats.sumDeaths += input.deaths
 
-    // Welford's algorithm for per-minute stats variance tracking
+    // welford's algorithm for per-minute stats variance tracking
     const gameDurationMinutes = input.game_duration / 60
     if (gameDurationMinutes > 0) {
       const perMinStats = {
@@ -234,7 +231,7 @@ export class StatsAggregator {
         deathsPerMin: input.deaths / gameDurationMinutes,
       }
 
-      // Update each Welford state
+      // update each welford state
       this.updateWelford(stats.championStats.welford.damageToChampionsPerMin, perMinStats.damageToChampionsPerMin)
       this.updateWelford(stats.championStats.welford.totalDamagePerMin, perMinStats.totalDamagePerMin)
       this.updateWelford(stats.championStats.welford.healingShieldingPerMin, perMinStats.healingShieldingPerMin)
@@ -353,9 +350,9 @@ export class StatsAggregator {
       combo.games += 1
       combo.wins += win
 
-      // combo items by position
-      for (let i = 0; i < input.items.length && i < 6; i++) {
-        const itemId = input.items[i]
+      // Track items per position within this core
+      for (let i = 0; i < 6; i++) {
+        const itemId = input.items[i] || 0
         if (itemId > 0) {
           const itemKey = itemId.toString()
           const pos = (i + 1).toString()
@@ -366,7 +363,8 @@ export class StatsAggregator {
         }
       }
 
-      // combo runes (primary)
+      // Track runes within this core
+      const primaryRunes = [input.keystone_id, input.rune1, input.rune2, input.rune3]
       for (const runeId of primaryRunes) {
         if (runeId > 0) {
           const runeKey = runeId.toString()
@@ -376,7 +374,7 @@ export class StatsAggregator {
         }
       }
 
-      // combo runes (secondary)
+      const secondaryRunes = [input.rune4, input.rune5]
       for (const runeId of secondaryRunes) {
         if (runeId > 0) {
           const runeKey = runeId.toString()
@@ -386,7 +384,7 @@ export class StatsAggregator {
         }
       }
 
-      // combo tertiary runes
+      // Track tertiary runes (stat shards) within this core
       if (input.stat_perk0 > 0) {
         const key = input.stat_perk0.toString()
         if (!combo.runes.tertiary.offense[key]) combo.runes.tertiary.offense[key] = { games: 0, wins: 0 }

@@ -59,7 +59,7 @@
   --tooltip-vamp: oklch(53.081% 0.19688 19.524);
 }
 
-/* Hide scrollbar */
+/* hide scrollbar */
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none !important;

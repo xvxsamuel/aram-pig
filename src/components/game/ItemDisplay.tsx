@@ -12,7 +12,7 @@ interface ItemWithStatsProps {
 }
 
 export function ItemWithStats({ item, ddragonVersion, size = 'xl', showStats = true }: ItemWithStatsProps) {
-  // Handle special cases (no boots)
+  // handle special cases (no boots)
   if (item.item_id === -1 || item.item_id === -2) {
     return (
       <div className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
@@ -96,7 +96,7 @@ interface StarterBuildDisplayProps {
 }
 
 export function StarterBuildDisplay({ build, ddragonVersion }: StarterBuildDisplayProps) {
-  // Group duplicate items and count them
+  // group duplicate items and count them
   const itemCounts = new Map<number, number>()
   build.items.forEach(itemId => {
     itemCounts.set(itemId, (itemCounts.get(itemId) || 0) + 1)

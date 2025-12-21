@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -18,12 +18,13 @@ import { getChampionUrlName } from '@/lib/ddragon'
 import { getKdaColor, getPigScoreColor } from '@/lib/ui'
 import { calculateMatchLabels } from '@/lib/scoring/labels'
 import MatchDetails from '@/components/match/MatchDetails'
-// Tooltip import removed - unused
+// tooltip import removed - unused
 import ItemTooltip from '@/components/ui/ItemTooltip'
 import RuneTooltip from '@/components/ui/RuneTooltip'
 import SummonerSpellTooltip from '@/components/ui/SummonerSpellTooltip'
+import SimpleTooltip from '@/components/ui/SimpleTooltip'
 
-// preload images for MatchDetails on hover
+// preload images for matchdetails on hover
 function preloadMatchImages(match: MatchData, ddragonVersion: string) {
   const urls: string[] = []
 
@@ -105,6 +106,36 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
   const showBorder = isExpanded || isHovered
 
   const matchLabel = `Match ${match.metadata.matchId.split('_')[1]}, ${participant.championName}, ${isRemake ? 'Remake' : isWin ? 'Victory' : 'Defeat'}, ${participant.kills}/${participant.deaths}/${participant.assists}`
+
+  const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
+  const labels = calculateMatchLabels(match, participant)
+  const hasLabels = hasPigScore && labels.length > 0
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      // only intercept scroll if content is actually scrollable (overflowing)
+      if (container.scrollWidth <= container.clientWidth) return
+
+      if (e.deltaY !== 0) {
+        e.preventDefault()
+        container.scrollBy({
+          left: e.deltaY,
+          behavior: 'smooth',
+        })
+      }
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel)
+    }
+  }, [hasLabels])
 
   return (
     <li role="listitem" aria-label={matchLabel} className="relative rounded-lg p-px">
@@ -254,7 +285,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
 
                   {/* KDA */}
                   <div className="flex flex-col justify-center items-center flex-shrink-0 min-w-[75px] mx-4">
-                    <div className="flex items-baseline gap-0.5">
+                    <div className="flex items-baseline gap-1">
                       <span className="text-lg font-bold text-white tabular-nums">{participant.kills}</span>
                       <span className="text-text-muted text-sm">/</span>
                       <span className="text-lg font-bold text-negative tabular-nums">{participant.deaths}</span>
@@ -305,97 +336,65 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 </div>
 
                 {/* Bottom Row: Pig Score + Labels */}
-                {(() => {
-                  const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
-                  const labels = calculateMatchLabels(match, participant)
-                  const hasLabels = hasPigScore && labels.length > 0
-
-                  return (
-                    <div className="flex gap-2 items-center mt-0.5 w-full min-w-0">
-                      {/* pig Score - aligned with Icon */}
-                      <div className="w-[54px] flex justify-center flex-shrink-0">
-                        {hasPigScore && (
-                          <button
-                            onClick={e => {
-                              e.stopPropagation()
-                              setSelectedTab('performance')
-                              setIsExpanded(true)
-                            }}
-                            className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full cursor-pointer flex"
-                          >
-                            <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
-                              <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
-                                {participant.pigScore}
-                              </span>
-                              <span className="text-white">PIG</span>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-
-                      {/*labels */}
-                      {hasLabels && (
-                        <div className="relative flex-1 w-0 group/labels self-center">
-                          <div className="flex gap-1 overflow-x-auto items-center py-1.5 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-abyss-900/50 [&::-webkit-scrollbar-thumb]:rounded-full">
-                            {labels.map(label => {
-                              const getLabelStyle = (type: string) => {
-                                switch (type) {
-                                  case 'good':
-                                    return {
-                                      gradient: 'from-kda-3 to-kda-3-dark',
-                                      text: 'text-kda-3',
-                                    }
-                                  case 'bad':
-                                    return {
-                                      gradient: 'from-negative to-negative-dark',
-                                      text: 'text-negative',
-                                    }
-                                  case 'playstyle':
-                                    return {
-                                      gradient: 'from-accent-light to-accent-dark',
-                                      text: 'text-accent-light',
-                                    }
-                                  case 'social':
-                                    return {
-                                      gradient: 'from-kda-4 to-kda-4-dark',
-                                      text: 'text-kda-4',
-                                    }
-                                  default:
-                                    return {
-                                      gradient: 'from-gold-light to-gold-dark',
-                                      text: 'text-gold-light',
-                                    }
-                                }
-                              }
-                              const style = getLabelStyle(label.type)
-
-                              return (
-                                <div
-                                  key={label.id}
-                                  className={clsx(
-                                    'p-px bg-gradient-to-b rounded-full flex-shrink-0',
-                                    style.gradient
-                                  )}
-                                  title={label.description}
-                                >
-                                  <div className="bg-abyss-700 rounded-full px-2 py-1.5 text-[10px] font-bold leading-none flex items-center">
-                                    <span className={style.text}>{label.label}</span>
-                                  </div>
-                                </div>
-                              )
-                            })}
+                <div className="flex gap-2 items-center mt-0.5 w-full min-w-0">
+                  {/* pig Score - aligned with Icon */}
+                  <div className="w-[54px] flex justify-center flex-shrink-0">
+                    {hasPigScore && (
+                      <SimpleTooltip content="Pig Score">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            setSelectedTab('performance')
+                            setIsExpanded(true)
+                          }}
+                          className="w-full p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full cursor-pointer flex"
+                        >
+                          <div className="w-full bg-abyss-700 rounded-full px-2 py-1.5 text-[10px] font-bold leading-none flex items-center justify-center gap-1 whitespace-nowrap">
+                            <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
+                              {participant.pigScore}
+                            </span>
+                            <span className="text-white">PIG</span>
                           </div>
-                          <div
-                            className={clsx(
-                              'absolute right-0 top-0 bottom-1.5 w-8 bg-gradient-to-l to-transparent pointer-events-none',
-                              isRemake ? 'from-remake' : isWin ? 'from-win' : 'from-loss'
-                            )}
-                          />
-                        </div>
-                      )}
+                        </button>
+                      </SimpleTooltip>
+                    )}
+                  </div>
+
+                  {/*labels */}
+                  {hasLabels && (
+                    <div className="relative flex-1 w-0 group/labels self-center">
+                      <div
+                        ref={scrollContainerRef}
+                        className="flex gap-1 overflow-x-auto items-center py-0.5 [&::-webkit-scrollbar]:hidden after:content-[''] after:block after:w-3 after:h-px after:flex-shrink-0"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                      >
+                        {labels.map(label => {
+                          const isBad = label.type === 'bad'
+                          return (
+                            <SimpleTooltip key={label.id} content={label.description}>
+                              <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full flex-shrink-0">
+                                <div
+                                  className={clsx(
+                                    'rounded-full px-3 py-1.5 text-[10px] font-normal leading-none flex items-center whitespace-nowrap',
+                                    isBad ? 'bg-worst-dark' : 'bg-abyss-700'
+                                  )}
+                                >
+                                  <span className="text-white">{label.label}</span>
+                                </div>
+                              </div>
+                            </SimpleTooltip>
+                          )
+                        })}
+                      </div>
+                      <div
+                        className={clsx(
+                          'absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l to-transparent pointer-events-none',
+                          isRemake ? 'from-remake' : isWin ? 'from-win' : 'from-loss'
+                        )}
+                      />
                     </div>
-                  )
-                })()}
+                  )}
+                </div>
               </div>
 
               {/* teams - hidden on small screens */}

@@ -10,8 +10,8 @@ import {
 import { getLatestPatches } from '@/lib/game'
 import ChampionPageClient from '@/components/champions/ChampionPageClient'
 
-// isr: Regenerate page every hour to refresh patches/stats
-// this caches the page and reduces DDragon API calls significantly
+// isr: regenerate page every hour to refresh patches/stats
+// this caches the page and reduces ddragon api calls significantly
 // patch filter still works via client-side navigation
 export const revalidate = 3600
 

@@ -1,4 +1,4 @@
-// DDragon utilities barrel export (all client-safe)
+// ddragon utilities barrel export (all client-safe)
 export {
   getLatestVersion,
   preloadDDragonVersion,

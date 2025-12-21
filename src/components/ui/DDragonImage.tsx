@@ -1,20 +1,20 @@
 /**
- * DDragonImage - Wrapper for Next.js Image optimized for DDragon assets
+ * DDragonImage - wrapper for Next.js image optimized for DDragon assets
  *
  * DDragon images are already optimized PNGs from Riot, so we:
- * - Always use unoptimized={true} to skip Next.js image optimization
- * - Provide consistent defaults for common use cases
- * - Handle loading states and errors gracefully
+ * - always use unoptimized={true} to skip Next.js image optimization
+ * - arovide consistent defaults for common use cases
+ * - handle loading states and errors gracefully
  */
 'use client'
 
 import Image, { ImageProps } from 'next/image'
 import { useState } from 'react'
 
-// All DDragon image functions consolidated here for easy import
+// all DDragon image functions consolidated here for easy import
 const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com'
 
-// Champion name normalization for DDragon URLs
+// champion name normalization for DDragon URLs
 function normalizeChampionName(championName: string): string {
   const nameMap: Record<string, string> = {
     FiddleSticks: 'Fiddlesticks',
@@ -84,10 +84,10 @@ export default function DDragonImage({ src, alt, fallback, className = '', ...pr
   const [error, setError] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
-  // Use fallback if error occurred
+  // use fallback if error occurred
   const imageSrc = error && fallback ? fallback : src
 
-  // Don't render if no src
+  // don't render if no src
   if (!imageSrc) return null
 
   return (
@@ -107,7 +107,7 @@ export default function DDragonImage({ src, alt, fallback, className = '', ...pr
   )
 }
 
-// Specialized components for common use cases
+// specialized components for common use cases
 
 interface ChampionImageProps {
   championName: string

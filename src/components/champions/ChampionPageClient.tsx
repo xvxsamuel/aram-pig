@@ -11,7 +11,7 @@ import ChampionDetailTabs from './ChampionDetailTabs'
 import PatchFilter from '@/components/filters/PatchFilter'
 import itemsData from '@/data/items.json'
 
-// SWR fetcher
+// swr fetcher
 const fetcher = (url: string) =>
   fetch(url).then(res => {
     if (res.status === 404) return null

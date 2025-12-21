@@ -1,61 +1,49 @@
-/**
- * PENALTIES MODULE
- * ================
- * 
- * Re-exports from the split modules for convenient imports.
- * Import directly from:
- * - './performance-scoring' for stat-based scoring
- * - './build-scoring' for build choice scoring
- * 
- * PIG SCORE BREAKDOWN:
- * ====================
- * 
- * Final Score = Performance (50%) + Build (50%)
- * 
- * PERFORMANCE COMPONENT (50%):
- * - Damage to Champions (log-transformed, vs champion avg)
- * - Total Damage (log-transformed, vs champion avg)
- * - Healing/Shielding (log-transformed, only if champion avg >= 300/min)
- * - CC Time (special scoring, only if champion avg >= 1 sec/min)
- * - Each stat weighted by relevance to the champion
- * 
- * BUILD COMPONENT (50%):
- * - Items: Per-slot item choice vs Bayesian-ranked options for your core
- * - Keystone: Rune choice ranked by Bayesian score
- * - Spells: Summoner spell combo ranked by Bayesian score  
- * - Skills: Skill max order ranked by Bayesian score
- * - Core: Is your 3-item core a good core? (ranked by Bayesian score)
- * - Starting: Starter items ranked by Bayesian score
- * 
- * SCORING SYSTEM:
- * ===============
- * 
- * All components produce 0-100 scores:
- * - 50 = Average performance
- * - 100 = Excellent (approaches asymptotically)
- * - 0 = Poor (approaches asymptotically)
- * 
- * Sigmoid Function: score = 100 / (1 + e^(-0.8 * z))
- * - z=+3 → ~95 (soft cap)
- * - z=0 → 50 (average)
- * - z=-3 → ~5 (soft floor)
- * 
- * BUILD RANKING:
- * ==============
- * 
- * Items/runes/spells are ranked by Bayesian score:
- * bayesianScore = (games × winrate + prior × avgWinrate) / (games + prior)
- * 
- * Scoring is distance-based from best option:
- * score = 100 - (bestBayesian - playerBayesian) * 5
- * 
- * CORE FAMILY:
- * ============
- * 
- * Cores are grouped by their 2 non-boot items (the "core identity").
- * Different boot choices are merged since boots are game-specific.
- * This increases sample size and makes rankings more stable.
- */
+// penalties module
+// re-exports from the split modules for convenient imports.
+// import directly from:
+// - './performance-scoring' for stat-based scoring
+// - './build-scoring' for build choice scoring
+//
+// pig score breakdown:
+// final score = performance (50%) + build (50%)
+//
+// performance component (50%):
+// - damage to champions (log-transformed, vs champion avg)
+// - total damage (log-transformed, vs champion avg)
+// - healing/shielding (log-transformed, only if champion avg >= 300/min)
+// - cc time (special scoring, only if champion avg >= 1 sec/min)
+// - each stat weighted by relevance to the champion
+//
+// build component (50%):
+// - items: per-slot item choice vs bayesian-ranked options for your core
+// - keystone: rune choice ranked by bayesian score
+// - spells: summoner spell combo ranked by bayesian score
+// - skills: skill max order ranked by bayesian score
+// - core: is your 3-item core a good core? (ranked by bayesian score)
+// - starting: starter items ranked by bayesian score
+//
+// scoring system:
+// all components produce 0-100 scores:
+// - 50 = average performance
+// - 100 = excellent (approaches asymptotically)
+// - 0 = poor (approaches asymptotically)
+//
+// sigmoid function: score = 100 / (1 + e^(-0.8 * z))
+// - z=+3 → ~95 (soft cap)
+// - z=0 → 50 (average)
+// - z=-3 → ~5 (soft floor)
+//
+// build ranking:
+// items/runes/spells are ranked by bayesian score:
+// bayesianscore = (games × winrate + prior × avgwinrate) / (games + prior)
+//
+// scoring is distance-based from best option:
+// score = 100 - (bestbayesian - playerbayesian) * 5
+//
+// core family:
+// cores are grouped by their 2 non-boot items (the "core identity").
+// different boot choices are merged since boots are game-specific.
+// this increases sample size and makes rankings more stable.
 
 // Re-export everything from performance-scoring
 export {
@@ -63,6 +51,7 @@ export {
   zScoreToPercentile,
   percentileToScore,
   calculateStatScore,
+  calculateDamageScore,
   calculateCCTimeScore,
   calculateDeathsScore,
   calculateKillParticipationScore,

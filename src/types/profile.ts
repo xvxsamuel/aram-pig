@@ -1,4 +1,4 @@
-// unified profile types used across API and frontend
+// unified profile types used across api and frontend
 
 import type { MatchData } from '@/types/match'
 
@@ -41,7 +41,7 @@ export interface RecentPlayer {
   profileIconId: number
 }
 
-// complete profile data returned by API
+// complete profile data returned by api
 export interface ProfileData {
   // summoner info
   summoner: {

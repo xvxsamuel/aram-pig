@@ -1,7 +1,5 @@
-/**
- * Participant processing utilities for match storage
- * Extracts common logic for processing match participants
- */
+// participant processing utilities for match storage
+// extracts common logic for processing match participants
 
 import { calculatePigScoreWithBreakdownCached, prefetchChampionStats, type ChampionStatsCache } from '@/lib/scoring'
 import {
@@ -24,7 +22,7 @@ export function isFinishedItem(itemId: number): boolean {
   return type === 'legendary' || type === 'boots'
 }
 
-// helper to extract skill max order abbreviation (e.g., "qwe" for Q>W>E)
+// helper to extract skill max order abbreviation (e.g., "qwe" for q>w>e)
 export function extractSkillOrderAbbreviation(abilityOrder: string): string {
   if (!abilityOrder || abilityOrder.length === 0) return ''
 

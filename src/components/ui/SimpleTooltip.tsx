@@ -131,7 +131,7 @@ export default function SimpleTooltip({
               transition: 'opacity 300ms ease-out',
             }}
           >
-            <div className="bg-abyss-900 border border-gold-dark/80 rounded-lg px-3 py-2 shadow-xl max-w-xs">
+            <div className="bg-abyss-900 border border-gold-dark/80 rounded-lg px-3 py-2 shadow-xl max-w-sm text-xs font-medium text-white text-center">
               {content}
             </div>
             {/* triangle - points down when tooltip is above, points up when tooltip is below */}

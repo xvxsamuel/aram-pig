@@ -1,4 +1,4 @@
-// match data types from Riot API
+// match data types from riot api
 
 export interface MatchTimeline {
   metadata: {
@@ -53,14 +53,14 @@ export interface TimelineEvent {
   // building kill event fields
   buildingType?: string // 'TOWER_BUILDING', 'INHIBITOR_BUILDING'
   teamId?: number // team that lost the building
-  laneType?: string // 'MID_LANE' for ARAM
+  laneType?: string // 'MID_LANE' for aram
   towerType?: string // 'OUTER_TURRET', 'INNER_TURRET', etc.
 }
 
 export interface MatchData {
   metadata: {
     matchId: string
-    participants: string[] // array of PUUIDs - not summoner names
+    participants: string[] // array of puuids - not summoner names
   }
   info: {
     gameCreation: number
@@ -111,9 +111,9 @@ export interface ParticipantData {
   item5: number
   pigScore?: number
   pigScoreBreakdown?: Record<string, unknown>
-  // Timeline-derived data
-  buildOrder?: string // comma-separated item IDs in purchase order
-  firstBuy?: string // comma-separated starting item IDs
+  // timeline-derived data
+  buildOrder?: string // comma-separated item ids in purchase order
+  firstBuy?: string // comma-separated starting item ids
   abilityOrder?: string // space-separated ability order (e.g., "Q W Q E Q R...")
   itemPurchases?: Array<{
     itemId: number

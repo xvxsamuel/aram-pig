@@ -1,4 +1,4 @@
-// UI utilities barrel exports
+// ui utilities barrel exports
 export { getWinrateColor, getKdaColor, getPigScoreColor, getPigScoreGradientColors } from './colors'
 
 export {

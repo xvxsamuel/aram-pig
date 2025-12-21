@@ -1,6 +1,6 @@
 // scoring module barrel exports
 
-// Types - standardized stats extraction and comparison types
+// types - standardized stats extraction and comparison types
 export {
   type MatchStats,
   type BasicMatchStats,
@@ -20,7 +20,7 @@ export {
   getConfidence,
 } from './types'
 
-// Stat extractors - modular helpers for extracting match stats
+// stat extractors - modular helpers for extracting match stats
 export {
   isCompletedItem as isCompletedItemExtractor,
   isLegendaryOrBoots,
@@ -40,7 +40,7 @@ export {
   type MatchDataJsonb,
 } from './stat-extractors'
 
-// Stat comparison - z-score based comparison against profile stats
+// stat comparison - z-score based comparison against profile stats
 export {
   zScoreToScore as zScoreToScoreComparison,
   compareMetric,
@@ -52,7 +52,7 @@ export {
   compareBuildChoices,
 } from './stat-comparison'
 
-// Calculator - main PIG score calculation
+// calculator - main pig score calculation
 export {
   calculatePigScore,
   calculatePigScoreWithBreakdown,
@@ -63,7 +63,7 @@ export {
   type ChampionStatsCache,
 } from './calculator'
 
-// Performance scoring - stat-based scoring (z-score, sigmoid, CDF)
+// performance scoring - stat-based scoring (z-score, sigmoid, cdf)
 export {
   zScoreToScore,
   zScoreToPercentile,
@@ -75,7 +75,7 @@ export {
   calculateDistanceBasedScore,
 } from './performance-scoring'
 
-// Build scoring - build choice scoring (items, runes, spells, cores)
+// build scoring - build choice scoring (items, runes, spells, cores)
 export {
   isCompletedItem,
   normalizeBootId,
@@ -105,7 +105,6 @@ export {
 export {
   recalculateProfileChampionStats,
   recalculateProfileStatsForPlayers,
-  getTrackedPlayersFromMatches,
   type ChampionProfileStats,
   type ProfileChampions,
 } from './profile-stats'

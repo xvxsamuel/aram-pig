@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/db'
 import { getMatchTimeline } from '@/lib/riot/api'
 
-// GET: View timeline data for a match
-// Shows stored timeline if available, or fetches from Riot API
+// get: view timeline data for a match
+// shows stored timeline if available, or fetches from riot api
 export async function GET(request: Request, { params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
   const { searchParams } = new URL(request.url)
@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ matc
 
   const supabase = createAdminClient()
 
-  // Check for stored timeline first
+  // check for stored timeline first
   const { data: match } = await supabase
     .from('matches')
     .select('timeline_data, game_creation, patch')
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ matc
     })
   }
 
-  // Fetch from Riot API
+  // fetch from riot api
   try {
     const timeline = await getMatchTimeline(matchId, region as any, 'overhead')
 

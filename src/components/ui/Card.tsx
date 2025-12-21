@@ -4,10 +4,10 @@ import { ReactNode } from 'react'
 import clsx from 'clsx'
 
 interface Props {
-  /** card title - optional, if not provided no header is shown */
+  /** card title - optional */
   title?: string
   children: ReactNode
-  /** optional click handler for title (makes it a button) */
+  /** optional click handler for title */
   onTitleClick?: () => void
   /** extra classes for the wrapper div */
   className?: string
@@ -15,9 +15,9 @@ interface Props {
   contentClassName?: string
   /** hide the divider line */
   hideDivider?: boolean
-  /** right side header content (e.g., filter dropdown) */
+  /** right side header content (e.g., filter dropdown for match history) */
   headerRight?: ReactNode
-  /** custom padding (default: px-4.5 py-2 to match ProfileCard) */
+  /** custom padding override (default: px-4.5 py-2) */
   padding?: string
   /** variant for different bg colors */
   variant?: 'default' | 'worst'
@@ -25,10 +25,6 @@ interface Props {
   paddingClassName?: string
 }
 
-/**
- * Reusable card component for consistent styling across the app.
- * Provides consistent border, background, padding, and optional header with divider.
- */
 export default function Card({
   title,
   children,

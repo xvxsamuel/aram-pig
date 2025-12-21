@@ -11,9 +11,9 @@ const nextConfig = {
       },
     ],
   },
-  // Empty turbopack config to acknowledge Turbopack is enabled
+  // empty turbopack config to acknowledge turbopack is enabled
   turbopack: {},
-  // Suppress source map warnings from Next.js internal files
+  // suppress source map warnings from next.js internal files
   webpack: (config, { dev }) => {
     if (dev) {
       config.ignoreWarnings = [

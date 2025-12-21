@@ -13,10 +13,10 @@ import {
 } from '@/lib/game'
 import { getKillDeathSummary } from '@/lib/game/kill-timeline'
 
-// in-memory lock to prevent concurrent processing of the same match (handles Strict Mode double-invoke)
+// in-memory lock to prevent concurrent processing of the same match (handles strict mode double-invoke)
 const processingLocks = new Map<string, Promise<{ data: any; status: number }>>()
 
-// Timeline data is available from Riot API for 365 days
+// timeline data is available from riot api for 365 days
 const TIMELINE_AVAILABILITY_DAYS = 365
 
 // finished items are legendaries and all boots (including tier 1)
@@ -66,8 +66,8 @@ interface EnrichRequest {
   region: string // regional routing (europe, americas, asia, sea)
 }
 
-// POST: Enrich a match with timeline data, pig scores, and champion stats
-// Called when user expands match details for a match that needs enrichment
+// post: enrich a match with timeline data, pig scores, and champion stats
+// called when user expands match details for a match that needs enrichment
 export async function POST(request: Request) {
   try {
     const { matchId, region }: EnrichRequest = await request.json()
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'matchId and region are required' }, { status: 400 })
     }
 
-    // check if already processing this match (handles Strict Mode double-invoke)
+    // check if already processing this match (handles strict mode double-invoke)
     const existingLock = processingLocks.get(matchId)
     if (existingLock) {
       console.log(`[EnrichMatch] Already processing ${matchId}, waiting for result...`)
@@ -213,9 +213,11 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
 
     // Pre-calculate team kills for kill participation
     const teamKills: Record<number, number> = {}
+    const teamDamage: Record<number, number> = {}
     if (matchData?.info?.participants) {
       for (const p of matchData.info.participants) {
         teamKills[p.teamId] = (teamKills[p.teamId] || 0) + (p.kills || 0)
+        teamDamage[p.teamId] = (teamDamage[p.teamId] || 0) + (p.totalDamageDealtToChampions || 0)
       }
     }
 
@@ -264,6 +266,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
             kills: matchParticipant.kills || 0,
             assists: matchParticipant.assists || 0,
             teamTotalKills: teamKills[matchParticipant.teamId] || 0,
+            teamTotalDamage: teamDamage[matchParticipant.teamId] || 0,
             item0: matchParticipant.item0 || 0,
             item1: matchParticipant.item1 || 0,
             item2: matchParticipant.item2 || 0,

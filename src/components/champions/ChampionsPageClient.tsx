@@ -24,7 +24,7 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
   const filter = searchParams.get('filter')
   const patch = searchParams.get('patch')
 
-  // SWR with stale-while-revalidate
+  // swr with stale-while-revalidate
   const { data, isLoading } = useSWR(
     filter && patch ? `/api/champions?offset=0&limit=200&filter=${filter}&patch=${patch}` : null,
     fetcher,
@@ -85,7 +85,7 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
         {/* champion table or skeleton */}
         {loading || !filter || !patch ? (
           <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-            {/* table header - matches ChampionTable */}
+            {/* table header - matches championtable */}
             <div className="flex items-stretch gap-3 px-3 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
               <div className="w-14 flex items-center justify-center py-3">Rank</div>
               <div className="w-44 flex items-center justify-center py-3">Champion</div>

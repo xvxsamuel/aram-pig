@@ -2,9 +2,9 @@
 
 import Image from 'next/image'
 import clsx from 'clsx'
-import { useState, useEffect } from 'react'
+import abilityIcons from '@/data/ability-icons.json'
 
-// size presets in pixels (matching ItemIcon)
+// size presets in pixels
 const SIZE_MAP = {
   xs: 20,
   sm: 28,
@@ -31,14 +31,28 @@ interface ChampionAbilityProps {
   patch?: string
 }
 
-function getLocalAbilityIconUrl(championName: string, ability: AbilityType): string {
-  const abilityKey = ability.toLowerCase()
-  return `/icons/abilities/${championName}/${abilityKey}.png`
-}
+function getDDragonAbilityIconUrl(championName: string, ability: AbilityType, patch: string): string {
+  // Handle Wukong edge case if necessary, but usually we use IDs
+  const championData = (abilityIcons as Record<string, Record<string, string>>)[championName]
+  
+  if (!championData) {
+    // Fallback to community dragon if map lookup fails
+    const abilityKey = ability.toLowerCase()
+    return `https://cdn.communitydragon.org/${patch === 'latest' ? 'latest' : patch}/champion/${championName}/ability-icon/${abilityKey}`
+  }
+  
+  const filename = championData[ability]
+  if (!filename) {
+     // Fallback
+     const abilityKey = ability.toLowerCase()
+     return `https://cdn.communitydragon.org/${patch === 'latest' ? 'latest' : patch}/champion/${championName}/ability-icon/${abilityKey}`
+  }
 
-function getCdnAbilityIconUrl(championName: string, ability: AbilityType, patch: string = 'latest'): string {
-  const abilityKey = ability.toLowerCase()
-  return `https://cdn.communitydragon.org/${patch}/champion/${championName}/ability-icon/${abilityKey}`
+  const type = ability === 'P' ? 'passive' : 'spell'
+  // use a fixed recent version if 'latest' is passed, as DDragon requires specific version
+  // ideally this should come from a context or prop, but for now we default to a known working version
+  const version = patch === 'latest' ? '15.24.1' : patch
+  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/${type}/${filename}`
 }
 
 export default function ChampionAbility({
@@ -51,13 +65,7 @@ export default function ChampionAbility({
 }: ChampionAbilityProps) {
   const pixelSize = typeof size === 'number' ? size : SIZE_MAP[size]
   
-  // Start with local URL
-  const [imgSrc, setImgSrc] = useState(getLocalAbilityIconUrl(championName, ability))
-
-  // Reset when props change
-  useEffect(() => {
-    setImgSrc(getLocalAbilityIconUrl(championName, ability))
-  }, [championName, ability])
+  const imgSrc = getDDragonAbilityIconUrl(championName, ability, patch)
 
   return (
     <div className="relative inline-block">
@@ -76,16 +84,10 @@ export default function ChampionAbility({
           height={pixelSize}
           className="w-full h-full object-cover"
           unoptimized
-          onError={() => {
-            // Fallback to CDN if local fails
-            if (!imgSrc.startsWith('http')) {
-                setImgSrc(getCdnAbilityIconUrl(championName, ability, patch))
-            }
-          }}
         />
       </div>
-      {/* Ability letter badge */}
-      <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-sm bg-abyss-900 border border-gray-600 flex items-center justify-center">
+      {/* ability letter badge */}
+      <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-sm bg-abyss-900 border border-gold-dark flex items-center justify-center">
         <span className="text-[9px] font-bold text-white leading-none">{ability}</span>
       </div>
     </div>

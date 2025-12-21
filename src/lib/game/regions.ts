@@ -1,4 +1,4 @@
-// Region and platform code utilities
+// region and platform code utilities
 export type RegionalCluster = 'europe' | 'americas' | 'asia' | 'sea'
 export type PlatformCode =
   | 'na1'

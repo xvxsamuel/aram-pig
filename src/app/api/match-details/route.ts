@@ -37,13 +37,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
 
-    // check if cached itemPurchases is in new format (has 'action' AND 'itemName' fields)
+    // check if cached itempurchases is in new format (has 'action' and 'itemname' fields)
     const cachedItemPurchases = matchData.match_data?.itemPurchases as Array<{ action?: string; itemName?: string }> | undefined
     const hasNewFormatTimeline = cachedItemPurchases?.length && 
       cachedItemPurchases[0]?.action !== undefined && 
       cachedItemPurchases[0]?.itemName !== undefined
 
-    // if already has build_order, pig_score, completedItems, killDeathTimeline, AND new format item timeline in match_data, return cached data
+    // if already has build_order, pig_score, completeditems, killdeathtimeline, and new format item timeline in match_data, return cached data
     if (
       matchData.match_data?.buildOrder &&
       matchData.match_data?.pigScore !== null &&
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       })
     }
 
-    // get match metadata AND stored timeline_data
+    // get match metadata and stored timeline_data
     const { data: match } = await supabase
       .from('matches')
       .select('patch, game_duration, timeline_data')
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     const patchVersion = match?.patch || '15.1'
     const gameDuration = match?.game_duration || 0
 
-    // use stored timeline first, fall back to Riot API
+    // use stored timeline first, fall back to riot api
     let timeline = match?.timeline_data || null
 
     if (!timeline) {

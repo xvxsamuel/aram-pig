@@ -24,7 +24,7 @@ interface Props {
 export default function ChampionTable({ champions, ddragonVersion, championNames }: Props) {
   const [allChampions, setAllChampions] = useState<ChampionStats[]>(champions)
 
-  // Update when champions prop changes
+  // update when champions prop changes
   useEffect(() => {
     setAllChampions(champions)
   }, [champions])

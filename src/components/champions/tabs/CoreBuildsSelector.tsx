@@ -73,7 +73,7 @@ export function CoreBuildsSelector({
         setSelectorStyle(newStyle)
       }
     } else {
-      // If button not found (e.g. during view switch before selection update), hide selector
+      // if button not found (e.g. during view switch before selection update), hide selector
       setSelectorStyle(null)
     }
   }, [selectedCombo, coreBuildsView, combinations, contentNode])
@@ -91,7 +91,7 @@ export function CoreBuildsSelector({
       setIsScrollable(scrollable)
       
       if (scrollable) {
-        // Use a small tolerance for float/zoom issues
+        // use a small tolerance for float/zoom issues
         const isBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 2
         setIsAtBottom(isBottom)
       } else {

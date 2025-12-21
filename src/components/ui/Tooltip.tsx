@@ -252,7 +252,7 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
   return parts
 }
 
-// format description - memoized per tooltip
+// format description memoized per tooltip
 function formatDescription(desc: string, isRune: boolean = false): React.ReactNode {
   if (!desc) return null
 
@@ -310,7 +310,7 @@ const TooltipContent = memo(
     type: 'item' | 'rune' | 'summoner-spell'
   }) => {
     // get cached ddragon version
-    const [ddragonVersion, setDdragonVersion] = useState<string>('15.23.1')
+    const [ddragonVersion, setDdragonVersion] = useState<string>('15.24.1')
 
     useEffect(() => {
       getLatestVersion().then(setDdragonVersion)

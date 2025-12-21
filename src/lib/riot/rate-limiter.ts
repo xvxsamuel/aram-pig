@@ -1,7 +1,7 @@
-// Redis/memory rate limiter for Riot API calls (server-only)
+// redis/memory rate limiter for riot api calls (server-only)
 import { Redis } from '@upstash/redis'
 
-// redis off by default locally, enabled in production/CI
+// redis off by default locally, enabled in production/ci
 const USE_REDIS = process.env.USE_REDIS_RATE_LIMIT === 'true'
 
 const redis = USE_REDIS
@@ -11,11 +11,11 @@ const redis = USE_REDIS
     })
   : null
 
-// Riot API Rate Limits (per region per application)
-// Source: https://hextechdocs.dev/rate-limiting/
-// Application rate limits apply PER REGION - each region has independent counters
-// Method rate limits also apply PER REGION and PER METHOD
-// A single request counts against BOTH application and method limits simultaneously
+// riot api rate limits (per region per application)
+// source: https://hextechdocs.dev/rate-limiting/
+// application rate limits apply per region - each region has independent counters
+// method rate limits also apply per region and per method
+// a single request counts against both application and method limits simultaneously
 const SHORT_WINDOW = 1 // seconds
 const SHORT_LIMIT = 20 // requests per second (application-wide per region)
 const LONG_WINDOW = 120 // seconds (2 minutes)
@@ -36,9 +36,7 @@ const RESERVED_OVERHEAD_LONG = 10
 
 export type RequestType = 'overhead' | 'batch'
 
-// ============================================================================
-// LOCAL CACHE - reduces Redis calls
-// ============================================================================
+// local cache - reduces redis calls
 
 interface LocalCache {
   shortCount: number
@@ -83,9 +81,7 @@ function resetExpiredWindows(cache: LocalCache): void {
   }
 }
 
-// ============================================================================
-// PUBLIC API
-// ============================================================================
+// public api
 
 export interface RateLimitStatus {
   canProceed: boolean

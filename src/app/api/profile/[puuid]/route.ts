@@ -1,4 +1,4 @@
-// unified profile API - single endpoint for all profile data
+// unified profile api - single endpoint for all profile data
 // replaces: /api/summoner-stats, /api/player-champion-stats, parts of /api/update-status
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -31,12 +31,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // parallel fetch all data
     const currentName = { gameName: summonerInfo.gameName, tagLine: summonerInfo.tagLine }
-    const [championStats, { matches, hasMore: _hasMore }, longestWinStreak, updateStatus] = await Promise.all([
+    
+    // prefer cached longestWinStreak from profile_data
+    const cachedWinStreak = summonerInfo.profileData?.longestWinStreak as number | undefined
+    console.log(`[Profile API] Cached winstreak for ${puuid}:`, cachedWinStreak, 'profile_data:', summonerInfo.profileData)
+    
+    const [championStats, { matches, hasMore: _hasMore }, calculatedWinStreak, updateStatus] = await Promise.all([
       getChampionStats(puuid, summonerInfo.profileData),
       getMatchesAsMatchData(puuid, 20, 0, currentName),
-      getLongestWinStreak(puuid),
+      cachedWinStreak !== undefined ? Promise.resolve(cachedWinStreak) : getLongestWinStreak(puuid),
       getUpdateStatus(puuid),
     ])
+    
+    const longestWinStreak = calculatedWinStreak
+    console.log(`[Profile API] Final winstreak for ${puuid}:`, longestWinStreak)
 
     // get profile icons for teammates in matches
     const teammatePuuids = new Set<string>()

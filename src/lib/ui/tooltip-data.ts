@@ -7,7 +7,7 @@ import summonerSpellsData from '../../data/summoner-spells.json'
 export type ItemType = 'legendary' | 'boots' | 'component' | 'starter' | 'consumable' | 'other'
 
 export interface ItemStats {
-  [key: string]: number // e.g. "Attack Damage": 65, "Armor": 45
+  [key: string]: number // e.g. "attack damage": 65, "armor": 45
 }
 
 export interface TooltipData {

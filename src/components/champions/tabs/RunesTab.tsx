@@ -20,7 +20,7 @@ interface RunesTabProps {
 }
 
 export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
-  // Collect PRIMARY runes from slots 0-3 (keystone + primary tree tiers)
+  // collect primary runes from slots 0-3 (keystone + primary tree tiers)
   const primaryRunesMap = new Map<number, RuneStat>()
   ;[0, 1, 2, 3].forEach(slot => {
     runeStats[slot]?.forEach(rune => {
@@ -30,7 +30,7 @@ export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
     })
   })
 
-  // Collect SECONDARY runes from slots 4-5 (secondary tree tiers only)
+  // collect secondary runes from slots 4-5 (secondary tree tiers only)
   const secondaryRunesMap = new Map<number, RuneStat>()
   ;[4, 5].forEach(slot => {
     runeStats[slot]?.forEach(rune => {
@@ -40,10 +40,10 @@ export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
     })
   })
 
-  // Fixed tree order: Precision, Domination, Sorcery, Resolve, Inspiration
+  // fixed tree order: precision, domination, sorcery, resolve, inspiration
   const treeOrder = ['precision', 'domination', 'sorcery', 'resolve', 'inspiration']
 
-  // Render a single rune icon with stats
+  // render a single rune icon with stats
   const renderRune = (
     runeId: number,
     statsMap: Map<number, RuneStat>,

@@ -1,4 +1,4 @@
-// DB module exports
+// db module exports
 export { supabase, createAdminClient } from './supabase'
 
 export {
@@ -32,8 +32,6 @@ export {
 } from './stats-aggregator'
 
 export { getTrackedPuuids, invalidateTrackedPuuidsCache } from './tracked-players'
-
-export { getStoredTimeline } from './auto-enrich'
 
 export {
   isFinishedItem,

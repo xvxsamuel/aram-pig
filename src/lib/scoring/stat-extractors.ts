@@ -1,20 +1,17 @@
-// Stat extractors - modular helpers for extracting match stats
-// Each function extracts ONE piece of data from a match participant
-// Functions are 5-20 lines, pure, and testable
+// stat extractors - modular helpers for extracting match stats
+// each function extracts one piece of data from a match participant
+// functions are 5-20 lines, pure, and testable
 
 import type { MatchStats, BasicMatchStats } from './types'
+import { createComboKey } from './build-scoring'
 import { TIER2_BOOT_IDS, BOOTS_NORMALIZED, TIER1_BOOT_ID } from './types'
 import itemsData from '@/data/items.json'
 
 const items = itemsData as Record<string, { itemType?: string }>
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
+// helper functions
 
-/**
- * Check if an item is a completed item (legendary, boots, or mythic)
- */
+// check if an item is a completed item (legendary, boots, or mythic)
 export function isCompletedItem(itemId: number): boolean {
   const item = items[String(itemId)]
   if (!item) return false
@@ -23,7 +20,7 @@ export function isCompletedItem(itemId: number): boolean {
 }
 
 /**
- * Check if an item is a legendary item or completed boots
+ * check if an item is a legendary item or completed boots
  */
 export function isLegendaryOrBoots(itemId: number): boolean {
   const item = items[String(itemId)]
@@ -35,10 +32,10 @@ export function isLegendaryOrBoots(itemId: number): boolean {
 }
 
 /**
- * Extract skill max order abbreviation from ability order string
- * e.g., "Q W Q E Q R Q W Q W R W W E E R E E" -> "qwe" (Q>W>E)
+ * extract skill max order abbreviation from ability order string
+ * e.g., "q w q e q r q w q w r w w e e r e e" -> "qwe" (q>w>e)
  */
-export function extractSkillOrderAbbreviation(abilityOrder: string | null): string | null {
+export function extractSkillOrderAbbreviation(abilityOrder: string): string | null {
   if (!abilityOrder || abilityOrder.length === 0) return null
 
   const abilities = abilityOrder.split(' ')
@@ -74,16 +71,12 @@ export function extractSkillOrderAbbreviation(abilityOrder: string | null): stri
 // CORE KEY EXTRACTION
 // ============================================================================
 
-/**
- * Extract core key from build order
- * Core = first 3 completed items (legendary/tier2 boots) from build order
- * Tier 2 boots are normalized to 99999 for grouping (different boots = same core)
- * Returns sorted underscore-separated key (e.g., "3031_6672_99999")
- */
-export function extractCoreKey(buildOrder: string | null, finalItems?: number[]): string | null {
-  if (!buildOrder && (!finalItems || finalItems.length < 3)) return null
+/**core key extraction
 
-  const coreItems: number[] = []
+// extract core key from build order
+// core = first 3 completed items (legendary/tier2 boots) from build order
+// tier 2 boots are normalized to 99999 for grouping (different boots = same core)
+// returns sorted underscore-separated key (e.g., "3031_6672_99999")onst coreItems: number[] = []
 
   if (buildOrder) {
     // parse build order to get purchase sequence
@@ -255,6 +248,24 @@ export function extractEfficiency(
 /**
  * Extract final items from participant
  */
+/**
+ * Extract core build key (first 3 completed items, sorted)
+ */
+export function extractCoreKey(buildOrder: string | null, finalItems: number[]): string | null {
+  // 1. Try to use build order from timeline (most accurate)
+  if (buildOrder) {
+    const buildItems = buildOrder.split(',').map(Number).filter(id => id > 0)
+    // createComboKey handles filtering tier 1 boots and normalizing tier 2 boots
+    const key = createComboKey(buildItems)
+    if (key) return key
+  }
+
+  // 2. Fallback to final items (less accurate, but better than nothing)
+  // We don't know purchase order, so we just take the first 3 valid items
+  // createComboKey sorts them anyway
+  return createComboKey(finalItems)
+}
+
 export function extractFinalItems(participant: ParticipantInput): number[] {
   return [
     participant.item0 || 0,
@@ -341,7 +352,7 @@ export function extractAllMatchStats(
     efficiency: extractEfficiency(participant, gameDuration),
     items: extractBuildMetrics(buildOrder, firstBuy, finalItems),
     abilityOrder,
-    skillOrder: extractSkillOrderAbbreviation(abilityOrder),
+    skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : null,
     runes: extractRunes(participant),
     spells: extractSpells(participant),
     gameDuration,
@@ -453,7 +464,7 @@ export function extractMatchStatsFromJsonb(
       finalItems: matchData.items,
     },
     abilityOrder: matchData.abilityOrder,
-    skillOrder: extractSkillOrderAbbreviation(matchData.abilityOrder),
+    skillOrder: matchData.abilityOrder ? extractSkillOrderAbbreviation(matchData.abilityOrder) : null,
     runes: {
       keystoneId: matchData.runes.primary.perks[0] || 0,
       primaryTreeId: matchData.runes.primary.style,

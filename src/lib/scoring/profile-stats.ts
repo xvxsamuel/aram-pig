@@ -17,10 +17,8 @@ export interface ProfileChampions {
   [championName: string]: ChampionProfileStats
 }
 
-/**
- * Recalculate champion stats for a single player from their summoner_matches
- * and store in profile_data.champions
- */
+// recalculate champion stats for a single player from their summoner_matches
+// and store in profile_data.champions
 export async function recalculateProfileChampionStats(puuid: string): Promise<void> {
   const supabase = createAdminClient()
 
@@ -116,8 +114,33 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
   // count total matches (excluding remakes)
   const matchCount = Object.values(championStats).reduce((sum, s) => sum + s.games, 0)
 
+  // calculate longest win streak from match history (excluding remakes)
+  const { data: matchHistory } = await supabase
+    .from('summoner_matches')
+    .select('win, match_data')
+    .eq('puuid', puuid)
+    .order('game_creation', { ascending: true })
+
+  let longestWinStreak = 0
+  if (matchHistory && matchHistory.length > 0) {
+    let maxStreak = 0
+    let currentStreak = 0
+    for (const match of matchHistory) {
+      // skip remakes - they don't count for winstreak
+      if (match.match_data?.isRemake) continue
+      
+      if (match.win) {
+        currentStreak++
+        maxStreak = Math.max(maxStreak, currentStreak)
+      } else {
+        currentStreak = 0
+      }
+    }
+    longestWinStreak = maxStreak
+  }
+
   // log final stats for debugging
-  console.log(`[UpdateProfile] Stats for ${puuid}: ${Object.keys(champions).length} champions, ${matchCount} games`)
+  console.log(`[UpdateProfile] Stats for ${puuid}: ${Object.keys(champions).length} champions, ${matchCount} games, ${longestWinStreak} winstreak`)
   console.log(
     `[UpdateProfile] Champions: ${Object.entries(champions)
       .map(([c, s]) => `${c}(${s.games})`)
@@ -136,6 +159,7 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
     ...otherProfileData,
     champions,
     matchCount,
+    longestWinStreak,
     lastCalculated: new Date().toISOString(),
   }
 
@@ -154,8 +178,8 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
 }
 
 /**
- * Recalculate champion stats for multiple players
- * Called after storing matches to update all affected tracked players
+ * recalculate champion stats for multiple players
+ * called after storing matches to update all affected tracked players
  */
 export async function recalculateProfileStatsForPlayers(puuids: string[]): Promise<void> {
   if (puuids.length === 0) return
@@ -172,25 +196,3 @@ export async function recalculateProfileStatsForPlayers(puuids: string[]): Promi
   console.log(`[UpdateProfile] Finished caching profile_data for ${puuids.length} players`)
 }
 
-/**
- * Get list of tracked player PUUIDs from a list of match participants
- * Only returns PUUIDs that exist in the summoners table
- */
-export async function getTrackedPlayersFromMatches(participantPuuids: string[]): Promise<string[]> {
-  if (participantPuuids.length === 0) return []
-
-  const supabase = createAdminClient()
-
-  // deduplicate
-  const uniquePuuids = [...new Set(participantPuuids)]
-
-  // query summoners table to find which ones are tracked
-  const { data: trackedSummoners, error } = await supabase.from('summoners').select('puuid').in('puuid', uniquePuuids)
-
-  if (error) {
-    console.error('[ProfileStats] Error fetching tracked summoners:', error)
-    return []
-  }
-
-  return trackedSummoners?.map(s => s.puuid) || []
-}

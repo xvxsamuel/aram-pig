@@ -1,28 +1,22 @@
-/**
- * BUILD SCORING MODULE
- * ====================
- * 
- * Handles scoring for build choices: items, runes, spells, skills, and core builds.
- * Uses Bayesian averaging to balance winrate vs pickrate, preventing low-sample
- * high-winrate options from dominating rankings.
- * 
- * KEY CONCEPTS:
- * - Core Family: All cores with the same 2 non-boot items (boots are game-specific)
- * - Bayesian Score: Weighted average of actual winrate and prior (mean) winrate
- * - Distance-Based Scoring: Score based on gap from best option, not rank position
- * - Confidence Scaling: Low-sample data has reduced penalty impact
- */
+// build scoring module
+// handles scoring for build choices: items, runes, spells, skills, and core builds.
+// uses bayesian averaging to balance winrate vs pickrate, preventing low-sample
+// high-winrate options from dominating rankings.
+//
+// key concepts:
+// - core family: all cores with the same 2 non-boot items (boots are game-specific)
+// - bayesian score: weighted average of actual winrate and prior (mean) winrate
+// - distance-based scoring: score based on gap from best option, not rank position
+// - confidence scaling: low-sample data has reduced penalty impact
 
 import { createAdminClient } from '../db/supabase'
 import itemsData from '@/data/items.json'
 import { calculateDistanceBasedScore } from './performance-scoring'
 
-// Item data for checking completed items
+// item data for checking completed items
 const items = itemsData as Record<string, { itemType?: string }>
 
-/**
- * Check if an item is a completed item (legendary, boots, or mythic)
- */
+// check if an item is a completed item (legendary, boots, or mythic)
 export function isCompletedItem(itemId: number): boolean {
   const item = items[String(itemId)]
   if (!item) return false
@@ -41,15 +35,14 @@ export const BOOT_IDS = new Set([1001, 3006, 3009, 3020, 3047, 3111, 3117, 3158]
 
 /**
  * Normalize boot ID to a generic boot ID (99999) for core matching
- * Only tier 2 boots are normalized - tier 1 boots are excluded from core entirely
  */
 export function normalizeBootId(itemId: number): number {
+  // only tier 2 boots are normalized - tier 1 boots are excluded from core entirely
   return TIER2_BOOT_IDS.has(itemId) ? 99999 : itemId
 }
 
 /**
  * Create a combo key from items (sorted, boots normalized to 99999)
- * Items should already have tier 2 boots normalized and tier 1 boots filtered out
  */
 export function createComboKey(items: number[]): string | null {
   // items should already be normalized (tier 2 boots = 99999, tier 1 boots excluded)
@@ -74,13 +67,10 @@ export function createSpellKey(spell1: number, spell2: number): string {
 /**
  * Calculate Wilson Score Lower Bound (95% confidence)
  * This gives us the lower bound of what the "true" winrate likely is.
- * Low sample sizes get heavily penalized, high samples stay close to actual WR.
- * 
+ * Low sample sizes get heavily penalized, high samples stay close to actual wr.
+ *
  * Formula: (p + z²/2n - z*sqrt(p(1-p)/n + z²/4n²)) / (1 + z²/n)
- * where p = winrate (0-1), n = games, z = 1.96 for 95% confidence
- * 
- * Includes a small pickrate bonus: log10(games) * 0.5
- * This helps break ties in favor of more popular/proven options.
+ * Where p = winrate (0-1), n = games, z = 1.96 for 95% confidence
  */
 export function calculateWilsonScore(winrate: number, games: number): number {
   if (games === 0) return 0

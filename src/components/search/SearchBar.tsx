@@ -46,8 +46,19 @@ function prefetchProfileIconsFromHistory(history: SearchHistoryItem[], version: 
   for (const item of history) {
     if (item.type === 'summoner' && item.profile_icon_id && !prefetchedProfileIcons.has(item.profile_icon_id)) {
       prefetchedProfileIcons.add(item.profile_icon_id)
-      const img = new window.Image()
-      img.src = `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${item.profile_icon_id}.png`
+      const url = `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${item.profile_icon_id}.png`
+      
+      // Use link preload for higher priority and better caching
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'image'
+      link.href = url
+      if (!document.querySelector(`link[href="${url}"]`)) {
+        document.head.appendChild(link)
+      }
+      
+      // Also create Image object as fallback/immediate fetch
+      new window.Image().src = url
     }
   }
 }

@@ -1,9 +1,10 @@
-// PIG Score calculator - unified scoring function
+// pig score calculator - unified scoring function
 import { createAdminClient } from '../db/supabase'
 import type { WelfordState } from '../db/stats-aggregator'
 import { getStdDev, getZScore } from '../db/stats-aggregator'
 import {
   calculateStatScore,
+  calculateDamageScore,
   calculateCCTimeScore,
   calculateAllBuildPenalties,
   calculateKillParticipationScore,
@@ -13,9 +14,7 @@ import {
   type StartingItemsPenaltyDetail,
 } from './penalties'
 
-// ============================================================================
-// TYPES
-// ============================================================================
+// types
 
 export interface ParticipantData {
   championName: string
@@ -29,6 +28,7 @@ export interface ParticipantData {
   kills?: number
   assists?: number
   teamTotalKills?: number
+  teamTotalDamage?: number
   item0: number
   item1: number
   item2: number
@@ -261,9 +261,9 @@ export async function calculatePigScoreWithBreakdown(
 
   // PERFORMANCE COMPONENT
   const perfScores: { score: number; weight: number }[] = []
-  const addPerfMetric = (name: string, player: number, avg: number, welfordState: WelfordState | undefined, weight: number) => {
+  const addPerfMetric = (name: string, player: number, avg: number, welfordState: WelfordState | undefined, weight: number, customScore?: number) => {
     if (avg <= 0 || weight <= 0) return
-    const score = calculateStatScore(player, avg, welfordState, true)
+    const score = customScore !== undefined ? customScore : calculateStatScore(player, avg, welfordState, true, gameDurationMinutes)
     perfScores.push({ score, weight })
     metrics.push({
       name,
@@ -276,12 +276,24 @@ export async function calculatePigScoreWithBreakdown(
     })
   }
 
-  addPerfMetric('Damage to Champions', playerStats.damageToChampionsPerMin, championAvgPerMin.damageToChampionsPerMin, welford?.damageToChampionsPerMin, relevance.damageToChampions)
+  const teamDamageShare = participant.teamTotalDamage && participant.teamTotalDamage > 0
+    ? participant.damage_dealt_to_champions / participant.teamTotalDamage
+    : undefined
+
+  const damageScore = calculateDamageScore(
+    playerStats.damageToChampionsPerMin,
+    championAvgPerMin.damageToChampionsPerMin,
+    welford?.damageToChampionsPerMin,
+    gameDurationMinutes,
+    teamDamageShare
+  )
+
+  addPerfMetric('Damage to Champions', playerStats.damageToChampionsPerMin, championAvgPerMin.damageToChampionsPerMin, welford?.damageToChampionsPerMin, relevance.damageToChampions, damageScore)
   addPerfMetric('Total Damage', playerStats.totalDamagePerMin, championAvgPerMin.totalDamagePerMin, welford?.totalDamagePerMin, relevance.totalDamage)
   addPerfMetric('Healing/Shielding', playerStats.healingShieldingPerMin, championAvgPerMin.healingShieldingPerMin, welford?.healingShieldingPerMin, relevance.healingShielding)
   
   if (relevance.ccTime > 0) {
-    const score = calculateCCTimeScore(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, welford?.ccTimePerMin)
+    const score = calculateCCTimeScore(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, welford?.ccTimePerMin, gameDurationMinutes)
     perfScores.push({ score, weight: relevance.ccTime })
     metrics.push({
       name: 'CC Time',

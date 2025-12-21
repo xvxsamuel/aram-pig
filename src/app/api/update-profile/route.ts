@@ -31,14 +31,14 @@ import {
 } from '@/lib/game'
 
 // ============================================================================
-// CONFIGURATION
+// configuration
 // ============================================================================
 
-const CHUNK_SIZE = 12 // matches per chunk (~24 API calls: 12 match + 12 timeline)
+const CHUNK_SIZE = 12 // matches per chunk (~24 api calls: 12 match + 12 timeline)
 const processingLocks = new Map<string, Promise<Response>>()
 
 // ============================================================================
-// JOB MANAGEMENT
+// job management
 // ============================================================================
 
 async function cleanupStaleJobs(supabase: any) {

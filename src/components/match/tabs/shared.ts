@@ -26,7 +26,7 @@ export interface CompletedItem {
 export interface TakedownEvent {
   t: number
   gold: number
-  tf: boolean
+  wasTrade?: boolean
   wasKill: boolean
   pos: number
   value: number
@@ -37,7 +37,9 @@ export interface TakedownEvent {
 export interface DeathEvent {
   t: number
   gold: number
-  tf: boolean
+  wasTrade?: boolean
+  tradeKills?: number
+  zone?: string
   pos: number
   value: number
   x?: number

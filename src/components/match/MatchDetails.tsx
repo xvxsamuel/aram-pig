@@ -12,12 +12,13 @@ import {
   PigScoreBreakdown,
   ItemTimelineEvent,
 } from './tabs'
+import { getPigScoreColor } from '@/lib/ui'
 import itemsData from '@/data/items.json'
 
-// Helper to check if an item is a completed item (legendary, boots, mythic)
+// helper to check if an item is a completed item (legendary, boots, mythic)
 const itemsLookup = itemsData as Record<string, { name?: string; itemType?: string }>
 
-// Helper to get item type for timeline display
+// helper to get item type for timeline display
 function getItemType(itemId: number): 'legendary' | 'boots' | 'mythic' | 'component' | 'other' {
   const item = itemsLookup[String(itemId)]
   if (!item) return 'other'
@@ -29,14 +30,14 @@ function getItemType(itemId: number): 'legendary' | 'boots' | 'mythic' | 'compon
   return 'other'
 }
 
-// Helper to get item name
+// helper to get item name
 function getItemName(itemId: number): string {
   const item = itemsLookup[String(itemId)]
   return item?.name || `Item ${itemId}`
 }
 
-// Hydrate stored ItemPurchaseEvent[] to full ItemTimelineEvent[]
-// Stored data only has itemId/timestamp/action, we add itemType/itemName client-side
+// hydrate stored itempurchaseevent[] to full itemtimelineevent[]
+// stored data only has itemid/timestamp/action, we add itemtype/itemname client-side
 interface StoredItemEvent {
   itemId: number
   timestamp: number
@@ -72,19 +73,19 @@ export default function MatchDetails({
 }: Props) {
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
 
-  // check if match is within 1 year (timeline data availability from Riot API)
+  // check if match is within 1 year (timeline data availability from riot api)
   const isWithin1Year = Date.now() - match.info.gameCreation < 365 * 24 * 60 * 60 * 1000
 
-  // check if current player already has a PIG score (from previous calculation)
+  // check if current player already has a pig score (from previous calculation)
   const hasExistingPigScore = currentPlayer?.pigScore !== null && currentPlayer?.pigScore !== undefined
 
-  // check if game was a remake (no PIG score for remakes)
+  // check if game was a remake (no pig score for remakes)
   const isRemake = currentPlayer?.gameEndedInEarlySurrender ?? false
 
-  // Check if performance tab should be available (within 1 year OR has existing score)
+  // check if performance tab should be available (within 1 year or has existing score)
   const canShowPerformanceTab = (isWithin1Year && !isRemake) || hasExistingPigScore
 
-  // Determine initial tab - fall back to overview if performance not available
+  // determine initial tab - fall back to overview if performance not available
   const getValidTab = (tab: 'overview' | 'build' | 'performance') => {
     if (tab === 'performance' && !canShowPerformanceTab) return 'overview'
     return tab
@@ -94,7 +95,7 @@ export default function MatchDetails({
     getValidTab(defaultTab)
   )
 
-  // sync tab when parent changes defaultTab (e.g., clicking PIG button when already expanded)
+  // sync tab when parent changes defaulttab (e.g., clicking pig button when already expanded)
   useEffect(() => {
     setSelectedTabState(getValidTab(defaultTab))
   }, [defaultTab, canShowPerformanceTab])
@@ -201,7 +202,7 @@ export default function MatchDetails({
   // Use pig score breakdown from match data (pre-calculated) or fetch if needed
   useEffect(() => {
     if (
-      (selectedTab === 'performance' || selectedTab === 'build') &&
+      canShowPerformanceTab &&
       !pigScoreBreakdown &&
       !loadingBreakdown &&
       !breakdownFetchAttempted
@@ -374,6 +375,18 @@ export default function MatchDetails({
     }
   }, [selectedTab, match.metadata.matchId])
 
+  // Calculate overall build score for the tab label
+  const buildSubScores = pigScoreBreakdown?.buildSubScores
+  
+  const overallBuildScore = (buildSubScores && canShowPerformanceTab) ? Math.round(
+    (buildSubScores.starting ?? 50) * 0.05 +
+    (buildSubScores.skills ?? 50) * 0.05 +
+    (buildSubScores.keystone ?? 50) * 0.10 +
+    (buildSubScores.spells ?? 50) * 0.05 +
+    (buildSubScores.core ?? 50) * 0.45 +
+    (buildSubScores.items ?? 50) * 0.30
+  ) : null
+
   return (
     <div className="bg-abyss-600">
       {/* tab navigation */}
@@ -392,25 +405,52 @@ export default function MatchDetails({
         <button
           onClick={() => setSelectedTab('build')}
           className={clsx(
-            'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px',
+            'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px flex items-center justify-center gap-2',
             selectedTab === 'build'
               ? 'border-accent-light text-white'
               : 'border-transparent text-text-muted hover:text-white'
           )}
         >
           Build
+          {overallBuildScore !== null && (
+            <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full flex">
+              <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
+                <span style={{ color: getPigScoreColor(overallBuildScore) }}>{overallBuildScore}</span>
+                <span className="text-white">PIG</span>
+              </div>
+            </div>
+          )}
         </button>
         {canShowPerformanceTab && (
           <button
             onClick={() => setSelectedTab('performance')}
             className={clsx(
-              'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px',
+              'flex-1 px-6 py-2.5 font-semibold text-sm transition-all border-b-2 -mb-px flex items-center justify-center gap-2',
               selectedTab === 'performance'
                 ? 'border-accent-light text-white'
                 : 'border-transparent text-text-muted hover:text-white'
             )}
           >
             Performance
+            {pigScoreBreakdown?.componentScores?.performance !== undefined ? (
+              <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full flex">
+                <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
+                  <span style={{ color: getPigScoreColor(pigScoreBreakdown.componentScores.performance) }}>
+                    {pigScoreBreakdown.componentScores.performance}
+                  </span>
+                  <span className="text-white">PIG</span>
+                </div>
+              </div>
+            ) : getPigScore(currentPuuid) !== null && (
+              <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full flex">
+                <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
+                  <span style={{ color: getPigScoreColor(getPigScore(currentPuuid)!) }}>
+                    {getPigScore(currentPuuid)}
+                  </span>
+                  <span className="text-white">PIG</span>
+                </div>
+              </div>
+            )}
           </button>
         )}
       </div>

@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const regionLabel = region.toUpperCase()
   const platformCode = LABEL_TO_PLATFORM[regionLabel]
   
-  // Try to get proper capitalization from database
+  // try to get proper capitalization from database
   let properDisplayName = displayName
   if (platformCode && process.env.NEXT_PUBLIC_SUPABASE_URL) {
     const [gameName, tagLine] = displayName.includes('#')

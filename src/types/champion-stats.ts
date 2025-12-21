@@ -1,4 +1,4 @@
-// Shared types for champion statistics and build data
+// shared types for champion statistics and build data
 
 export interface ItemStat {
   item_id: number
@@ -9,8 +9,8 @@ export interface ItemStat {
 }
 
 export interface StarterBuild {
-  starter_build: string // Comma-separated item IDs
-  items: number[] // Array of item IDs
+  starter_build: string // comma-separated item ids
+  items: number[] // array of item ids
   games: number
   wins: number
   winrate: number

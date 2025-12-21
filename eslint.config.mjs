@@ -33,6 +33,6 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-  // Prettier must be last to override other formatting rules
+  // prettier must be last to override other formatting rules
   eslintConfigPrettier,
 ]

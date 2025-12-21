@@ -1,4 +1,4 @@
-// Game module exports
+// game module exports
 export {
   type RegionalCluster,
   type PlatformCode,
@@ -30,15 +30,14 @@ export {
   extractItemPurchases,
   extractCompletedItems,
   extractItemTimeline,
-  getFinalItems,
   type ItemPurchaseEvent,
   type ItemTimelineEvent,
   type CompletedItemEvent,
 } from './item-history'
 
-// Items - modular build order and first buy utilities
+// items - modular build order and first buy utilities
 export {
-  // Build order constants and utilities
+  // build order constants and utilities
   BOOT_IDS,
   TIER1_BOOTS,
   BOOTS_NORMALIZED,
@@ -53,7 +52,7 @@ export {
   extractCompletedBuildOrder,
   formatBuildOrder,
   parseBuildOrder,
-  // First buy utilities
+  // first buy utilities
   ARAM_STARTING_GOLD,
   STARTER_TIME_WINDOW,
   MAX_STARTER_TIME,

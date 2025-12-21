@@ -189,13 +189,15 @@ export function PerformanceTab({
           type: 'takedown' | 'death' | 'tower'
           t: number
           gold?: number
-          tf?: boolean
           wasKill?: boolean
           pos?: number
           value?: number
           x?: number
           y?: number
           team?: 'ally' | 'enemy'
+          wasTrade?: boolean
+          tradeKills?: number
+          zone?: string
         }> = [
           ...timeline.takedowns.map(k => ({ type: 'takedown' as const, ...k })),
           ...timeline.deaths.map(d => ({ type: 'death' as const, ...d })),
@@ -348,7 +350,7 @@ export function PerformanceTab({
                                       className={clsx(
                                         'w-5 h-5 rounded-full border-[1.5px] overflow-hidden',
                                         isTakedown ? 'border-accent-light' : 'border-negative',
-                                        event.tf && 'ring-1 ring-blue-400'
+                                        event.wasTrade && 'ring-1 ring-accent-light'
                                       )}
                                     >
                                       <img
@@ -406,9 +408,14 @@ export function PerformanceTab({
                                     </span>
                                   </div>
                                 )}
-                                {event.tf && (
-                                  <div className="text-blue-400">
-                                    Teamfight {isTakedown ? 'takedown' : 'death'}
+                                {isDeath && event.wasTrade && (
+                                  <div className="text-accent-light">
+                                    Good Trade ({event.tradeKills} kills)
+                                  </div>
+                                )}
+                                {isDeath && !event.wasTrade && event.pos !== undefined && event.pos >= 60 && (
+                                  <div className="text-gold-light">
+                                    Good Death (Aggressive)
                                   </div>
                                 )}
                                 {isDeath && event.gold !== undefined && event.gold > 2000 && (
@@ -436,7 +443,7 @@ export function PerformanceTab({
                           className={clsx(
                             'w-2 h-2 rounded-full cursor-pointer transition-transform hover:scale-150',
                             isTakedown ? 'bg-accent-light' : 'bg-negative',
-                            event.tf && 'ring-1 ring-blue-400/50'
+                            event.wasTrade && 'ring-1 ring-accent-light/50'
                           )}
                         />
                       )}
@@ -517,9 +524,9 @@ export function PerformanceTab({
                         {pos >= 60 ? 'AGG' : pos <= 40 ? 'PAS' : 'NEU'}
                       </span>
                     )}
-                    {!isTower && event.tf && (
-                      <span className="px-1.5 py-0.5 text-[10px] bg-blue-500/20 text-blue-400 rounded">
-                        TF
+                    {!isTower && event.wasTrade && (
+                      <span className="px-1.5 py-0.5 text-[10px] bg-accent-light/20 text-accent-light rounded">
+                        Trade
                       </span>
                     )}
                   </div>

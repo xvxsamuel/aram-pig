@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/db'
 
-// GET /api/search?q=text - search for summoners by name
+// get /api/search?q=text - search for summoners by name
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const query = searchParams.get('q')?.trim().toLowerCase() || ''
   const limit = Math.min(parseInt(searchParams.get('limit') || '5'), 10)
 
-  // If no query, return recently updated summoners
+  // if no query, return recently updated summoners
   if (!query) {
     const { data, error } = await supabase
       .from('summoners')
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ summoners: data || [] })
   }
 
-  // Search by game_name (case-insensitive prefix match)
+  // search by game_name (case-insensitive prefix match)
   const { data, error } = await supabase
     .from('summoners')
     .select('game_name, tag_line, region, profile_icon_id, summoner_level')

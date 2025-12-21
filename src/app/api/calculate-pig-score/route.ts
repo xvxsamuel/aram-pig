@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/db'
-import { calculatePigScore } from '@/lib/scoring'
+import { calculatePigScore, calculatePigScoreWithBreakdown } from '@/lib/scoring'
 
-// extract skill max order from ability order string (e.g., "Q W E Q W R Q W Q W R W W E E R E E" -> "qwe")
+// extract skill max order from ability order string (e.g., "q w e q w r q w q w r w w e e r e e" -> "qwe")
 function extractSkillOrderFromAbilityOrder(abilityOrder: string | null | undefined): string | undefined {
   if (!abilityOrder) return undefined
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
 
-    // Get the participant data
+    // get the participant data
     const { data: participantData, error: participantError } = await supabase
       .from('summoner_matches')
       .select('match_data, patch, champion_name')
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
     }
 
-    // Always return cached pig score if it exists
+    // always return cached pig score if it exists
     if (participantData.match_data?.pigScore !== null && participantData.match_data?.pigScore !== undefined) {
       return NextResponse.json({
         pigScore: participantData.match_data.pigScore,
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       })
     }
 
-    // Get match record for game_duration and game_creation
+    // get match record for game_duration and game_creation
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
       .select('game_duration, game_creation')
@@ -70,8 +70,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Match record not found' }, { status: 404 })
     }
 
-    // Only calculate pig scores for matches within 1 year
-    // Timeline data is available for historical matches
+    // only calculate pig scores for matches within 1 year
+    // timeline data is available for historical matches
     const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
     if (matchRecord.game_creation < oneYearAgo) {
       return NextResponse.json({
@@ -80,8 +80,8 @@ export async function POST(request: Request) {
       })
     }
 
-    // Calculate pig score
-    const pigScore = await calculatePigScore({
+    // calculate pig score
+    const breakdown = await calculatePigScoreWithBreakdown({
       championName: participantData.champion_name,
       damage_dealt_to_champions: participantData.match_data.stats?.damage || 0,
       total_damage_dealt: participantData.match_data.stats?.totalDamageDealt || 0,
@@ -98,6 +98,7 @@ export async function POST(request: Request) {
       item5: participantData.match_data.items?.[5] || 0,
       perk0: participantData.match_data.runes?.primary?.perks?.[0] || 0,
       patch: participantData.patch,
+      teamTotalDamage: participantData.match_data.stats?.teamDamage || 0,
       // new fields
       spell1: participantData.match_data.spells?.[0] || 0,
       spell2: participantData.match_data.spells?.[1] || 0,
@@ -105,11 +106,14 @@ export async function POST(request: Request) {
       buildOrder: participantData.match_data.buildOrder || undefined,
     })
 
+    const pigScore = breakdown?.finalScore ?? null
+
     // Store the calculated pig score
     if (pigScore !== null) {
       const updatedMatchData = {
         ...participantData.match_data,
         pigScore,
+        pigScoreBreakdown: breakdown,
       }
 
       await supabase
@@ -119,7 +123,7 @@ export async function POST(request: Request) {
         .eq('puuid', puuid)
     }
 
-    return NextResponse.json({ pigScore, cached: false })
+    return NextResponse.json({ pigScore, pigScoreBreakdown: breakdown, cached: false })
   } catch (error) {
     console.error('Calculate pig score error:', error)
     return NextResponse.json({ error: 'Failed to calculate pig score' }, { status: 500 })
@@ -163,7 +167,7 @@ export async function PUT(request: Request) {
     const isOlderThan1Year = matchRecord.game_creation < oneYearAgo
 
     const results: Record<string, number | null> = {}
-    const updates: Array<{ puuid: string; pigScore: number }> = []
+    const updates: Array<{ puuid: string; pigScore: number; pigScoreBreakdown: any }> = []
 
     for (const participant of participants) {
       // Always return cached pig score if it exists
@@ -179,7 +183,7 @@ export async function PUT(request: Request) {
       }
 
       // Calculate pig score
-      const pigScore = await calculatePigScore({
+      const breakdown = await calculatePigScoreWithBreakdown({
         championName: participant.champion_name,
         damage_dealt_to_champions: participant.match_data.stats?.damage || 0,
         total_damage_dealt: participant.match_data.stats?.totalDamageDealt || 0,
@@ -196,6 +200,7 @@ export async function PUT(request: Request) {
         item5: participant.match_data.items?.[5] || 0,
         perk0: participant.match_data.runes?.primary?.perks?.[0] || 0,
         patch: participant.patch,
+        teamTotalDamage: participant.match_data.stats?.teamDamage || 0,
         // new fields
         spell1: participant.match_data.spells?.[0] || 0,
         spell2: participant.match_data.spells?.[1] || 0,
@@ -203,10 +208,11 @@ export async function PUT(request: Request) {
         buildOrder: participant.match_data.buildOrder || undefined,
       })
 
+      const pigScore = breakdown?.finalScore ?? null
       results[participant.puuid] = pigScore
 
       if (pigScore !== null) {
-        updates.push({ puuid: participant.puuid, pigScore })
+        updates.push({ puuid: participant.puuid, pigScore, pigScoreBreakdown: breakdown })
       }
     }
 
@@ -217,6 +223,7 @@ export async function PUT(request: Request) {
         const updatedMatchData = {
           ...participant.match_data,
           pigScore: update.pigScore,
+          pigScoreBreakdown: update.pigScoreBreakdown,
         }
 
         await supabase

@@ -120,7 +120,7 @@ export function ItemsTab({ starterItems, bootsItems, itemsBySlot, ddragonVersion
         <ItemRow title="Boots" items={bootsItems} ddragonVersion={ddragonVersion} />
       )}
 
-      {/* item Slots */}
+      {/* item slots */}
       {[0, 1, 2, 3, 4, 5].map(slot => {
         const items = itemsBySlot[slot]
         if (!items || items.length === 0) return null

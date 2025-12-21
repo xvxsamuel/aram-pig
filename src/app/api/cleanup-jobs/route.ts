@@ -3,8 +3,8 @@ import { createAdminClient } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-// DELETE /api/cleanup-jobs - clear stuck jobs
-// requires CRON_SECRET for authorization
+// delete /api/cleanup-jobs - clear stuck jobs
+// requires cron_secret for authorization
 export async function DELETE(request: Request) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
@@ -43,7 +43,7 @@ export async function DELETE(request: Request) {
   }
 }
 
-// GET /api/cleanup-jobs - list stuck jobs (no auth required, just viewing)
+// get /api/cleanup-jobs - list stuck jobs (no auth required, just viewing)
 export async function GET() {
   try {
     const supabase = createAdminClient()

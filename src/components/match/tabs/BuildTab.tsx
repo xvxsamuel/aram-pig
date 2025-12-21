@@ -11,6 +11,7 @@ import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { RuneDisplay } from '@/components/game/RuneDisplay'
 import { SummonerSpellDisplay } from '@/components/game/SummonerSpellDisplay'
 import { AbilityOrderDisplay } from '@/components/game/AbilityOrderDisplay'
+import runesData from '@/data/runes.json'
 import {
   TabProps,
   ItemTimelineEvent,
@@ -79,6 +80,36 @@ function PigLabel({ score }: { score: number | undefined }) {
   )
 }
 
+// Section component with minimal styling
+function BuildSection({ 
+  title, 
+  score, 
+  children, 
+  className,
+  rightContent
+}: { 
+  title: React.ReactNode
+  score?: number 
+  children: React.ReactNode
+  className?: string
+  rightContent?: React.ReactNode
+}) {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-4 py-2 flex items-center justify-between border-b border-abyss-700 shrink-0 bg-abyss-700">
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-bold text-white uppercase tracking-wide">{title}</h3>
+          {rightContent}
+        </div>
+        <PigLabel score={score} />
+      </div>
+      <div className={clsx("flex-1", className)}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function BuildTab({
   currentPlayer,
   ddragonVersion,
@@ -93,183 +124,15 @@ export function BuildTab({
   const hasTimelineData = playerDetails?.item_timeline && playerDetails.item_timeline.length > 0
   const displayPigScores = showPigScores && hasTimelineData
 
-  // Calculate overall build score from sub-scores with new weights:
-  // starter 5%, skills 5%, runes 10%, spells 5%, core 45%, items 30%
-  const buildSubScores = pigScoreBreakdown?.buildSubScores
-  const overallBuildScore = (buildSubScores && displayPigScores) ? Math.round(
-    (buildSubScores.starting ?? 50) * 0.05 +
-    (buildSubScores.skills ?? 50) * 0.05 +
-    (buildSubScores.keystone ?? 50) * 0.10 +
-    (buildSubScores.spells ?? 50) * 0.05 +
-    (buildSubScores.core ?? 50) * 0.45 +
-    (buildSubScores.items ?? 50) * 0.30
-  ) : null
-
   return (
-    <div className="p-4 space-y-5">
-      {/* Overall Build Rating - top right */}
-      {overallBuildScore !== null && (
-        <div className="flex justify-end mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-text-muted">Overall Build</span>
-            <PigLabel score={overallBuildScore} />
-          </div>
-        </div>
-      )}
-      
-      {/* Core Build & Starter Items - 2 columns */}
-      {(() => {
-        const details = participantDetails.get(currentPlayer.puuid)
-        if (!details || details.loading) {
-          return (
-            <div className="flex items-center gap-2 text-xs text-text-muted">
-              <div className="w-4 h-4 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
-              Loading...
-            </div>
-          )
-        }
-
-        const startingDetails = pigScoreBreakdown?.startingItemsDetails
-        const coreKey = pigScoreBreakdown?.coreKey
-        const fallbackInfo = pigScoreBreakdown?.fallbackInfo
-
-        // Get player's final completed items (including boots)
-        const finalItems = [
-          currentPlayer.item0, currentPlayer.item1, currentPlayer.item2,
-          currentPlayer.item3, currentPlayer.item4, currentPlayer.item5
-        ].filter(id => id > 0 && isCompletedItemById(id))
-        
-        // Get core items in PURCHASE ORDER (first 3 completed items, including boots)
-        const coreItemIds: number[] = []
-        const buildOrderStr = currentPlayer.buildOrder
-        if (buildOrderStr) {
-          const buildOrderItems = buildOrderStr.split(',').map((id: string) => parseInt(id, 10)).filter((id: number) => !isNaN(id) && id > 0)
-          const seen = new Set<number>()
-          for (const itemId of buildOrderItems) {
-            if (coreItemIds.length >= 3) break
-            if (isCompletedItemById(itemId) && finalItems.includes(itemId) && !seen.has(itemId)) {
-              coreItemIds.push(itemId)
-              seen.add(itemId)
-            }
-          }
-        }
-        // Fallback to coreKey if no build order (but coreKey has normalized boot ID 99999)
-        if (coreItemIds.length < 3 && coreKey) {
-          // coreKey uses 99999 for boots, so we need to find actual boot from final items
-          const coreKeyItems = coreKey.split('_').map(id => parseInt(id, 10)).filter(id => !isNaN(id))
-          for (const itemId of coreKeyItems) {
-            if (itemId === 99999) {
-              // find actual boot from final items
-              const actualBoot = finalItems.find(id => BOOT_IDS.has(id))
-              if (actualBoot) coreItemIds.push(actualBoot)
-            } else {
-              coreItemIds.push(itemId)
-            }
-          }
-        }
-
-        // Get starter items from timeline (items bought before 1 minute)
-        const playerDetails = participantDetails.get(currentPlayer.puuid)
-        const rawTimeline = (playerDetails?.item_timeline || []) as ItemTimelineEvent[]
-        const starterItems = rawTimeline.filter(e => e.timestamp < 60000 && e.action === 'buy')
-
-        return (
-          <div className="grid grid-cols-2 gap-4">
-            {/* Starter Build */}
-            {displayPigScores && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-xs font-medium text-text-muted">
-                    Starter Items
-                    {fallbackInfo?.starting && <FallbackWarning />}
-                  </h3>
-                  <PigLabel score={pigScoreBreakdown?.buildSubScores?.starting} />
-                </div>
-                {starterItems.length > 0 ? (
-                  <div className="flex flex-col gap-1">
-                    <div className="flex gap-1 items-center">
-                      {starterItems.map((item, idx) => (
-                        <ItemTooltip key={idx} itemId={item.itemId}>
-                          <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
-                            <Image
-                              src={getItemImageUrl(item.itemId, ddragonVersion)}
-                              alt={item.itemName || `Item ${item.itemId}`}
-                              width={32}
-                              height={32}
-                              className="w-full h-full object-cover"
-                              unoptimized
-                            />
-                          </div>
-                        </ItemTooltip>
-                      ))}
-                    </div>
-                    {startingDetails?.playerWinrate !== undefined && (
-                      <div className="text-[10px] text-text-muted">
-                        {startingDetails.playerWinrate.toFixed(1)}% WR
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-xs text-text-muted">No starter data</div>
-                )}
-              </div>
-            )}
-
-            {/* Core Build */}
-            {displayPigScores && (
-              <div>
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-xs font-medium text-text-muted">Core Build</h3>
-                {displayPigScores && <PigLabel score={pigScoreBreakdown?.buildSubScores?.core} />}
-              </div>
-              {coreItemIds.length > 0 ? (
-                <div className="flex flex-col gap-1">
-                  <div className="flex gap-1.5 items-center">
-                    {coreItemIds.map((itemId, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5">
-                        {idx > 0 && <span className="text-gold-light/50 text-xs">→</span>}
-                        <ItemTooltip itemId={itemId}>
-                          <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
-                            <Image
-                              src={getItemImageUrl(itemId, ddragonVersion)}
-                              alt={`Item ${itemId}`}
-                              width={32}
-                              height={32}
-                              className="w-full h-full object-cover"
-                              unoptimized
-                            />
-                          </div>
-                        </ItemTooltip>
-                      </div>
-                    ))}
-                  </div>
-                  {displayPigScores && pigScoreBreakdown?.coreBuildDetails?.playerWinrate !== undefined && (
-                    <div className="text-[10px] text-text-muted">
-                      {pigScoreBreakdown.coreBuildDetails.playerWinrate.toFixed(1)}% WR
-                      {pigScoreBreakdown.coreBuildDetails.games && (
-                        <span className="text-text-muted/70"> · {pigScoreBreakdown.coreBuildDetails.games} games</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-xs text-text-muted">No core data</div>
-              )}
-              </div>
-            )}
-          </div>
-        )
-      })()}
-
-      {/* Items Timeline */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <h3 className="text-xs font-medium text-text-muted">
-            Items
-            {displayPigScores && pigScoreBreakdown?.fallbackInfo?.items && <FallbackWarning />}
-          </h3>
-          {displayPigScores && <PigLabel score={pigScoreBreakdown?.buildSubScores?.items} />}
-        </div>
+    <div className="flex flex-col">
+      {/* 1. Item Build (Timeline) */}
+      <BuildSection 
+        title="Item Build" 
+        score={displayPigScores ? pigScoreBreakdown?.buildSubScores?.items : undefined}
+        rightContent={displayPigScores && pigScoreBreakdown?.fallbackInfo?.items && <FallbackWarning />}
+        className="p-4"
+      >
         {(() => {
           const details = participantDetails.get(currentPlayer.puuid)
           // Show loading if details not fetched yet or still loading
@@ -342,13 +205,13 @@ export function BuildTab({
                     >
                       {isFinished ? (
                         <ScoredItemGlow score={itemScore}>
-                          <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 relative">
+                          <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 relative">
                             <ItemTooltip itemId={itemId}>
                               <Image
                                 src={getItemImageUrl(itemId, ddragonVersion)}
                                 alt={`Item ${itemId}`}
-                                width={28}
-                                height={28}
+                                width={32}
+                                height={32}
                                 className="w-full h-full object-cover"
                                 unoptimized
                               />
@@ -356,13 +219,13 @@ export function BuildTab({
                           </div>
                         </ScoredItemGlow>
                       ) : (
-                        <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 relative border border-gold-dark/50">
+                        <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 relative border border-gold-dark/50">
                           <ItemTooltip itemId={itemId}>
                             <Image
                               src={getItemImageUrl(itemId, ddragonVersion)}
                               alt={`Item ${itemId}`}
-                              width={28}
-                              height={28}
+                              width={32}
+                              height={32}
                               className="w-full h-full object-cover"
                               unoptimized
                             />
@@ -453,7 +316,7 @@ export function BuildTab({
                         const shouldGlow = (isFinished && !isSell) || isStarterItem
 
                         return (
-                          <div key={idx} className="flex flex-col items-center gap-0.5">
+                          <div key={idx} className="flex flex-col items-center gap-1">
                             <SimpleTooltip
                               content={
                                 <div className="text-xs">
@@ -496,12 +359,12 @@ export function BuildTab({
                             >
                               {shouldGlow ? (
                                 <ScoredItemGlow score={displayScore}>
-                                  <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 relative">
+                                  <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 relative">
                                     <Image
                                       src={getItemImageUrl(event.itemId, ddragonVersion)}
                                       alt={event.itemName || `Item ${event.itemId}`}
-                                      width={28}
-                                      height={28}
+                                      width={32}
+                                      height={32}
                                       className="w-full h-full object-cover"
                                       unoptimized
                                     />
@@ -510,15 +373,15 @@ export function BuildTab({
                               ) : (
                                 <div
                                   className={clsx(
-                                    'w-7 h-7 rounded overflow-hidden bg-abyss-800 relative border border-gold-dark/50',
+                                    'w-8 h-8 rounded overflow-hidden bg-abyss-800 relative border border-gold-dark/50',
                                     isSell && 'opacity-50'
                                   )}
                                 >
                                   <Image
                                     src={getItemImageUrl(event.itemId, ddragonVersion)}
                                     alt={event.itemName || `Item ${event.itemId}`}
-                                    width={28}
-                                    height={28}
+                                    width={32}
+                                    height={32}
                                     className="w-full h-full object-cover"
                                     unoptimized
                                   />
@@ -563,79 +426,219 @@ export function BuildTab({
             </div>
           )
         })()}
-      </div>
-
-      {/* Skill Order - only show if we have ability order data */}
+      </BuildSection>
+      
+      {/* 2. Core Build & Starter Items - 2 columns */}
       {(() => {
         const details = participantDetails.get(currentPlayer.puuid)
-        const abilityOrder = details?.ability_order
-        if (!abilityOrder || details?.loading) return null
+        if (!details || details.loading) return null
 
-        // Convert space-separated to dot-separated for AbilityOrderDisplay
-        const formattedOrder = abilityOrder.split(' ').join('.')
+        const startingDetails = pigScoreBreakdown?.startingItemsDetails
+        const coreKey = pigScoreBreakdown?.coreKey
+        const fallbackInfo = pigScoreBreakdown?.fallbackInfo
+
+        // Get player's final completed items (including boots)
+        const finalItems = [
+          currentPlayer.item0, currentPlayer.item1, currentPlayer.item2,
+          currentPlayer.item3, currentPlayer.item4, currentPlayer.item5
+        ].filter(id => id > 0 && isCompletedItemById(id))
+        
+        // Get core items in PURCHASE ORDER (first 3 completed items, including boots)
+        const coreItemIds: number[] = []
+        const buildOrderStr = currentPlayer.buildOrder
+        if (buildOrderStr) {
+          const buildOrderItems = buildOrderStr.split(',').map((id: string) => parseInt(id, 10)).filter((id: number) => !isNaN(id) && id > 0)
+          const seen = new Set<number>()
+          for (const itemId of buildOrderItems) {
+            if (coreItemIds.length >= 3) break
+            if (isCompletedItemById(itemId) && finalItems.includes(itemId) && !seen.has(itemId)) {
+              coreItemIds.push(itemId)
+              seen.add(itemId)
+            }
+          }
+        }
+        // Fallback to coreKey if no build order (but coreKey has normalized boot ID 99999)
+        if (coreItemIds.length < 3 && coreKey) {
+          // coreKey uses 99999 for boots, so we need to find actual boot from final items
+          const coreKeyItems = coreKey.split('_').map(id => parseInt(id, 10)).filter(id => !isNaN(id))
+          for (const itemId of coreKeyItems) {
+            if (itemId === 99999) {
+              // find actual boot from final items
+              const actualBoot = finalItems.find(id => BOOT_IDS.has(id))
+              if (actualBoot) coreItemIds.push(actualBoot)
+            } else {
+              coreItemIds.push(itemId)
+            }
+          }
+        }
+
+        // Get starter items from timeline (items bought before 1 minute)
+        const playerDetails = participantDetails.get(currentPlayer.puuid)
+        const rawTimeline = (playerDetails?.item_timeline || []) as ItemTimelineEvent[]
+        const starterItems = rawTimeline.filter(e => e.timestamp < 60000 && e.action === 'buy')
 
         return (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-xs font-medium text-text-muted">Skill Order</h3>
-              {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.skills} />}
-            </div>
-            <AbilityOrderDisplay abilityOrder={formattedOrder} showFullSequence championName={currentPlayer.championName} />
+          <div className="grid grid-cols-2 divide-x divide-abyss-700 border-t border-abyss-700">
+            {/* Core Build */}
+            <BuildSection 
+              title="Core Build" 
+              score={displayPigScores ? pigScoreBreakdown?.buildSubScores?.core : undefined}
+              className="p-4"
+            >
+              {coreItemIds.length > 0 ? (
+                <div className="flex flex-col gap-2 h-full">
+                  <div className="flex gap-2 items-center">
+                    {coreItemIds.map((itemId, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        {idx > 0 && <span className="text-gold-light/50 text-sm">→</span>}
+                        <ItemTooltip itemId={itemId}>
+                          <div className="w-9 h-9 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
+                            <Image
+                              src={getItemImageUrl(itemId, ddragonVersion)}
+                              alt={`Item ${itemId}`}
+                              width={36}
+                              height={36}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        </ItemTooltip>
+                      </div>
+                    ))}
+                  </div>
+                  {displayPigScores && pigScoreBreakdown?.coreBuildDetails?.playerWinrate !== undefined && (
+                    <div className="text-xs text-text-muted">
+                      {pigScoreBreakdown.coreBuildDetails.playerWinrate.toFixed(1)}% WR
+                      {pigScoreBreakdown.coreBuildDetails.games && (
+                        <span className="text-text-muted/70"> · {pigScoreBreakdown.coreBuildDetails.games} games</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-text-muted text-center">No core data</div>
+              )}
+            </BuildSection>
+
+            {/* Starter Build */}
+            <BuildSection 
+              title="Starter Items" 
+              score={displayPigScores ? pigScoreBreakdown?.buildSubScores?.starting : undefined}
+              rightContent={displayPigScores && fallbackInfo?.starting && <FallbackWarning />}
+              className="p-4"
+            >
+              {starterItems.length > 0 ? (
+                <div className="flex flex-col gap-2 h-full">
+                  <div className="flex gap-1.5 items-center">
+                    {starterItems.map((item, idx) => (
+                      <ItemTooltip key={idx} itemId={item.itemId}>
+                        <div className="w-9 h-9 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
+                          <Image
+                            src={getItemImageUrl(item.itemId, ddragonVersion)}
+                            alt={item.itemName || `Item ${item.itemId}`}
+                            width={36}
+                            height={36}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      </ItemTooltip>
+                    ))}
+                  </div>
+                  {startingDetails?.playerWinrate !== undefined && (
+                    <div className="text-xs text-text-muted">
+                      {startingDetails.playerWinrate.toFixed(1)}% WR
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-text-muted text-center">No starter data</div>
+              )}
+            </BuildSection>
           </div>
         )
       })()}
 
-      {/* Runes */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <h3 className="text-xs font-medium text-text-muted">
-            Runes
-            {displayPigScores && pigScoreBreakdown?.fallbackInfo?.keystone && <FallbackWarning />}
-          </h3>
-          {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.keystone} />}
-        </div>
+      {/* 3. Skill Order & Summoner Spells - 2 columns */}
+      <div className="grid grid-cols-2 divide-x divide-abyss-700 border-t border-abyss-700">
+        {/* Skill Order */}
+        <BuildSection 
+          title="Skill Order" 
+          score={hasTimelineData ? pigScoreBreakdown?.buildSubScores?.skills : undefined}
+          className="p-4"
+        >
+          {(() => {
+            const details = participantDetails.get(currentPlayer.puuid)
+            const abilityOrder = details?.ability_order
+            if (!abilityOrder || details?.loading) return <div className="text-xs text-text-muted text-center">Loading...</div>
 
-        {(() => {
-          // Get player's selected runes
-          const primaryTreeId = currentPlayer.perks?.styles[0]?.style
-          const secondaryTreeId = currentPlayer.perks?.styles[1]?.style
-          const selectedRuneIds = new Set<number>()
+            // Convert space-separated to dot-separated for AbilityOrderDisplay
+            const formattedOrder = abilityOrder.split(' ').join('.')
 
-          // Collect all selected rune IDs
-          currentPlayer.perks?.styles[0]?.selections?.forEach(s => selectedRuneIds.add(s.perk))
-          currentPlayer.perks?.styles[1]?.selections?.forEach(s => selectedRuneIds.add(s.perk))
+            return (
+              <div className="">
+                <AbilityOrderDisplay abilityOrder={formattedOrder} showFullSequence championName={currentPlayer.championName} />
+              </div>
+            )
+          })()}
+        </BuildSection>
 
-          if (!primaryTreeId || !secondaryTreeId) {
-            return <div className="text-xs text-text-muted">No rune data available</div>
-          }
-
-          return (
-            <RuneDisplay
-              primaryTreeId={primaryTreeId}
-              secondaryTreeId={secondaryTreeId}
-              selectedRuneIds={selectedRuneIds}
-              statPerks={{
-                offense: currentPlayer.perks?.statPerks?.offense,
-                flex: currentPlayer.perks?.statPerks?.flex,
-                defense: currentPlayer.perks?.statPerks?.defense,
-              }}
+        {/* Summoner Spells */}
+        <BuildSection 
+          title="Summoner Spells" 
+          score={hasTimelineData ? pigScoreBreakdown?.buildSubScores?.spells : undefined}
+          className="p-4"
+        >
+          <div className="h-full">
+            <SummonerSpellDisplay
+              spell1Id={currentPlayer.summoner1Id}
+              spell2Id={currentPlayer.summoner2Id}
+              ddragonVersion={ddragonVersion}
+              size="item"
             />
-          )
-        })()}
+          </div>
+        </BuildSection>
       </div>
 
-      {/* Summoner Spells */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <h3 className="text-xs font-medium text-text-muted">Summoner Spells</h3>
-          {hasTimelineData && <PigLabel score={pigScoreBreakdown?.buildSubScores?.spells} />}
-        </div>
-        <SummonerSpellDisplay
-          spell1Id={currentPlayer.summoner1Id}
-          spell2Id={currentPlayer.summoner2Id}
-          ddragonVersion={ddragonVersion}
-          useSimpleTooltip
-        />
+      {/* 4. Runes */}
+      <div className="border-t border-abyss-700">
+        <BuildSection 
+          title="Runes" 
+          score={hasTimelineData ? pigScoreBreakdown?.buildSubScores?.keystone : undefined}
+          rightContent={displayPigScores && pigScoreBreakdown?.fallbackInfo?.keystone && <FallbackWarning />}
+          className="p-4"
+        >
+          {(() => {
+            // Get player's selected runes
+            const primaryTreeId = currentPlayer.perks?.styles[0]?.style
+            const secondaryTreeId = currentPlayer.perks?.styles[1]?.style
+            const selectedRuneIds = new Set<number>()
+
+            // Collect all selected rune IDs
+            currentPlayer.perks?.styles[0]?.selections?.forEach(s => selectedRuneIds.add(s.perk))
+            currentPlayer.perks?.styles[1]?.selections?.forEach(s => selectedRuneIds.add(s.perk))
+
+            if (!primaryTreeId || !secondaryTreeId) {
+              return <div className="text-xs text-text-muted text-center">No rune data available</div>
+            }
+
+            return (
+              <div className="flex justify-center w-full">
+                <RuneDisplay
+                  primaryTreeId={primaryTreeId}
+                  secondaryTreeId={secondaryTreeId}
+                  selectedRuneIds={selectedRuneIds}
+                  statPerks={{
+                    offense: currentPlayer.perks?.statPerks?.offense,
+                    flex: currentPlayer.perks?.statPerks?.flex,
+                    defense: currentPlayer.perks?.statPerks?.defense,
+                  }}
+                  variant="minimal"
+                />
+              </div>
+            )
+          })()}
+        </BuildSection>
       </div>
     </div>
   )

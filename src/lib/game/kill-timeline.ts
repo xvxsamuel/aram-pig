@@ -1,24 +1,20 @@
-// Kill/death timeline extraction for PIG score analysis
-// Scoring system:
-// - Death quality based on POSITION (zone-based) and TRADES
-// - Gold at death = gold spent on items after death (ARAM only allows buying on death)
-// - Takedown quality (kills + assists treated the same) = inverse of enemy death quality
+// kill/death timeline extraction for pig score analysis
+// scoring system:
+// - death quality based on position (zone-based) and trades
+// - gold at death = gold spent on items after death (aram only allows buying on death)
+// - takedown quality (kills + assists treated the same) = inverse of enemy death quality
 import type { MatchTimeline, ParticipantFrame } from '@/types/match'
 import itemsData from '@/data/items.json'
 
 const items = itemsData as Record<string, { totalCost?: number }>
 
-/**
- * Get the gold cost of an item
- */
+// get the gold cost of an item
 function getItemCost(itemId: number): number {
   const item = items[String(itemId)]
   return item?.totalCost || 0
 }
 
-/**
- * Extract all item purchase events for a participant with their timestamps
- */
+// extract all item purchase events for a participant with their timestamps
 function extractItemPurchaseTimestamps(
   timeline: MatchTimeline,
   participantId: number
@@ -44,9 +40,8 @@ function extractItemPurchaseTimestamps(
 
 /**
  * Calculate gold spent after a death (until next death or end of game)
- * In ARAM, you can only buy when dead, so purchases after death = gold held at death
  */
-function calculateGoldSpentAfterDeath(
+export function calculateGoldSpentAfterDeath(
   deathTimestamp: number,
   nextDeathTimestamp: number | null,
   purchases: Array<{ timestamp: number; gold: number }>
@@ -505,19 +500,18 @@ export function getPlayerKillDeathTimeline(
       if (death.zone === 'aggressive') {
         // Aggressive deaths are always good - you were making plays
         deathValue = 100
-      } else if (death.wasTrade || death.wasTeamfight) {
+      } else if (death.wasTrade) {
         // Trade deaths (team got kills) are good regardless of position
         deathValue = 100
       } else {
-        // Passive/Neutral solo deaths - value depends on gold (reset value)
-        // High gold = needed reset = good
-        // Low gold = died for nothing = bad
-        const gold = death.gold
-        if (gold >= 800) {
-          // Had gold to spend - valid reset
-          deathValue = 75
+        // Isolated deaths (no trade, no teamfight)
+        // Position is the main factor now. Gold is ignored.
+        
+        if (death.zone === 'neutral') {
+          // Neutral zone (middle of map) - Good death (pressuring/contesting)
+          deathValue = 100
         } else {
-          // Low gold - died for nothing
+          // Passive zone (behind own tower) - Bad death (caught out/dove)
           deathValue = 0
         }
       }
@@ -627,12 +621,17 @@ export function getKillDeathSummary(
       y: t.position.y,
     })),
     deaths: analysis.deaths.map(d => {
-      // Calculate final death value with trade bonus
+      // Calculate final death value
       let value = d.zoneScore
+      
+      // Neutral deaths are now considered good (pressuring)
+      if (d.zone === 'neutral') {
+        value = 100
+      }
+
+      // Trades are always good
       if (d.wasTrade) {
-        value = Math.min(95, value + d.tradeKills * 25)
-      } else if (d.wasTeamfight) {
-        value = Math.min(95, value + 15)
+        value = 100
       }
 
       return {

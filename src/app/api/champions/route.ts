@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
     let champions: any[] = []
     let totalCount = 0
 
-    // patch-based filtering w JSONB structure
+    // patch-based filtering w jsonb structure
     if (filter === 'patch' && patch) {
-      // Get actual match count for this patch
+      // get actual match count for this patch
       const { count: matchCount } = await supabase
         .from('matches')
         .select('*', { count: 'exact', head: true })

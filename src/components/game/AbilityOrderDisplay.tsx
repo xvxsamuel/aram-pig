@@ -5,7 +5,7 @@ import { getAbilityMaxOrder } from '@/components/champions/tabs/utils'
 import { getWinrateColor } from '@/lib/ui'
 import ChampionAbility from '@/components/ui/ChampionAbility'
 
-// Map abilities to KDA colors - lowest to highest (3=green, 4=blue, 5=pink)
+// map abilities to kda colors - lowest to highest (3=green, 4=blue, 5=pink)
 const getAbilityColor = (ability: string, position: number): string => {
   if (ability === 'R') return 'text-gold-light'
   const colorMap = ['text-kda-3', 'text-kda-4', 'text-kda-5']
@@ -30,7 +30,7 @@ export function AbilityOrderDisplay({
 
   return (
     <div className="space-y-3">
-      {/* Max order display */}
+      {/* max order display */}
       <div className="flex items-center gap-2">
         {championName ? (
           maxOrder.map((ability, idx) => (
@@ -61,11 +61,11 @@ export function AbilityOrderDisplay({
         )}
       </div>
 
-      {/* Full sequence */}
+      {/* full sequence */}
       {showFullSequence && (
         <div className="flex flex-wrap gap-1">
           {abilities.map((ability, idx) => {
-            // For full sequence, find ability position in maxOrder for consistent coloring
+            // for full sequence, find ability position in maxorder for consistent coloring
             const maxOrderPosition = maxOrder.indexOf(ability)
             return (
               <div

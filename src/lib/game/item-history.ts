@@ -1,4 +1,4 @@
-// Item purchase history from match timeline
+// item purchase history from match timeline
 import type { MatchTimeline } from '@/types/match'
 import itemsData from '@/data/items.json'
 
@@ -57,19 +57,15 @@ function isCompletedItem(itemId: number): boolean {
   return type === 'legendary' || type === 'boots' || type === 'mythic'
 }
 
-/**
- * Extract item purchase history from timeline, accounting for undos and sells
- * Uses cassiopeia-style undo handling: pop events until finding the target item
- */
+// extract item purchase history from timeline, accounting for undos and sells
+// uses cassiopeia-style undo handling: pop events until finding the target item
 export function extractItemPurchases(timeline: MatchTimeline, participantId: number): ItemPurchaseEvent[] {
   if (!timeline?.info?.frames) return []
 
-  // Inventory state tracking
+  // inventory state tracking
   const inventory: number[] = []
+  const eventStack: { type: string; itemId: number; timestamp: number }[] = []
   
-  // Event stack for undo handling
-  const eventStack: Array<{ type: string; itemId: number; timestamp: number }> = []
-
   const addItem = (itemId: number) => inventory.push(itemId)
   const removeItem = (itemId: number) => {
     const idx = inventory.lastIndexOf(itemId)
@@ -89,15 +85,15 @@ export function extractItemPurchases(timeline: MatchTimeline, participantId: num
         removeItem(evt.itemId)
         eventStack.push({ type: evt.type, itemId: evt.itemId, timestamp: evt.timestamp })
       } else if (evt.type === 'ITEM_DESTROYED' && evt.itemId) {
-        // Item destroyed (consumed or upgraded into another item)
+        // item destroyed (consumed or upgraded into another item)
         removeItem(evt.itemId)
         eventStack.push({ type: evt.type, itemId: evt.itemId, timestamp: evt.timestamp })
       } else if (evt.type === 'ITEM_UNDO') {
-        // Cassiopeia-style undo: pop events until we find the target item
+        // cassiopeia-style undo: pop events until we find the target item
         const targetItemId = evt.beforeId || evt.afterId
         if (!targetItemId || targetItemId === 0) continue
 
-        // Pop events and reverse their effects until we find the matching item
+        // pop events and reverse their effects until we find the matching item
         while (eventStack.length > 0) {
           const prev = eventStack.pop()!
           
@@ -170,13 +166,6 @@ export function extractCompletedItems(timeline: MatchTimeline, participantId: nu
   }
 
   return completedItems
-}
-
-/**
- * Get list of items from purchases
- */
-export function getFinalItems(purchases: ItemPurchaseEvent[]): number[] {
-  return purchases.map(p => p.itemId)
 }
 
 /**

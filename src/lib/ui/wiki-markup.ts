@@ -3,10 +3,10 @@
 export function cleanWikiMarkup(text: string): string {
   let cleaned = text
 
-  // '''text''' - bold (three single quotes) - process FIRST before templates
+  // '''text''' - bold (three single quotes) - process first before templates
   cleaned = cleaned.replace(/'''(.+?)'''/g, '<bold>$1</bold>')
 
-  // ''text'' - italic (two single quotes) - process FIRST before templates
+  // ''text'' - italic (two single quotes) - process first before templates
   cleaned = cleaned.replace(/''(.+?)''/g, '<italic>$1</italic>')
 
   // keep replacing nested templates until none left
@@ -16,10 +16,10 @@ export function cleanWikiMarkup(text: string): string {
     prevCleaned = cleaned
     iterations++
 
-    // {{#vardefineecho:varname|value}} - MediaWiki variable definition, extract the value
+    // {{#vardefineecho:varname|value}} - mediawiki variable definition, extract the value
     cleaned = cleaned.replace(/\{\{#vardefineecho:[^|]+\|([^}]+)\}\}/g, '$1')
     
-    // {{#var:varname}} - MediaWiki variable reference, just remove it (we don't track variables)
+    // {{#var:varname}} - mediawiki variable reference, just remove it (we don't track variables)
     cleaned = cleaned.replace(/\{\{#var:[^}]+\}\}/g, '')
 
     // ability power, evaluate math expressions if needed
