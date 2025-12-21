@@ -32,8 +32,23 @@ interface ChampionAbilityProps {
 }
 
 function getDDragonAbilityIconUrl(championName: string, ability: AbilityType, patch: string): string {
-  // Handle Wukong edge case if necessary, but usually we use IDs
-  const championData = (abilityIcons as Record<string, Record<string, string>>)[championName]
+  const icons = abilityIcons as Record<string, Record<string, string>>
+  
+  // 1. Try direct lookup
+  let championData = icons[championName]
+  
+  // 2. Try case-insensitive lookup
+  if (!championData) {
+    const key = Object.keys(icons).find(k => k.toLowerCase() === championName.toLowerCase())
+    if (key) {
+      championData = icons[key]
+    }
+  }
+  
+  // 3. Try aliases
+  if (!championData) {
+    if (championName.toLowerCase() === 'wukong') championData = icons['MonkeyKing']
+  }
   
   if (!championData) {
     // Fallback to community dragon if map lookup fails
@@ -87,7 +102,7 @@ export default function ChampionAbility({
         />
       </div>
       {/* ability letter badge */}
-      <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-sm bg-abyss-900 border border-gold-dark flex items-center justify-center">
+      <div className="absolute bottom-0 right-0 w-4 h-4 rounded-sm bg-abyss-900 border border-gold-dark flex items-center justify-center">
         <span className="text-[9px] font-bold text-white leading-none">{ability}</span>
       </div>
     </div>

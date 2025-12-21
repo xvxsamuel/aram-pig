@@ -537,8 +537,8 @@ export function OverviewTab({
                         <div key={idx} className="relative">
                           <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="lg" />
                           {count > 1 && (
-                            <div className="absolute bottom-2 right-0.5 w-4 h-4 rounded-full bg-abyss-900 border border-gray-600 flex items-center justify-center">
-                              <span className="text-[9px] font-bold text-white leading-none">{count}</span>
+                            <div className="absolute bottom-2 right-0 w-4 h-4 rounded-sm bg-abyss-900 border border-gold-dark flex items-center justify-center">
+                              <span className="text-[9px] font-regular text-white leading-none">{count}</span>
                             </div>
                           )}
                         </div>

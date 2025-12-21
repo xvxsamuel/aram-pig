@@ -7,9 +7,8 @@ interface PatchFilterProps {
   availablePatches: string[]
 }
 
-// temporarily hide patches we didn't scrape data for
-// remove this when new patches come out and push these off the list
-const HIDDEN_PATCHES = ['25.22']
+// temp hide patches with no data
+const HIDDEN_PATCHES = ["25.22","25.23"]
 const DEFAULT_PATCH = '25.24'
 
 export default function PatchFilter({ availablePatches }: PatchFilterProps) {
@@ -17,7 +16,6 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
-  // filter out hidden patches
   const visiblePatches = availablePatches.filter(p => !HIDDEN_PATCHES.includes(p))
 
   // load from localstorage or url params

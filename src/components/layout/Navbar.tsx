@@ -4,17 +4,60 @@ import SearchBar from '@/components/search/SearchBar'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { UserGroupIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+
+interface NavItemProps {
+  href: string
+  icon: React.ElementType
+  label: string
+  isActive: boolean
+  sidebarHovered: boolean
+  onClick: () => void
+}
+
+function NavItem({ href, icon: Icon, label, isActive, sidebarHovered, onClick }: NavItemProps) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-4 py-3 rounded-lg transition-colors duration-100 group relative h-[40px] ${
+        isActive
+          ? 'bg-gradient-to-t from-action-100 to-action-200 text-white hover:brightness-130'
+          : 'text-text-muted hover:bg-gold-light/20 hover:text-gold-light'
+      }`}
+    >
+      <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[12px] top-[8px]">
+        <Icon className="w-6 h-6 transition-colors text-inherit" />
+      </div>
+      <span
+        className="font-semibold whitespace-nowrap transition-all duration-300 text-inherit"
+        style={{
+          opacity: sidebarHovered ? 1 : 0,
+          marginLeft: '50px',
+          paddingTop: '2px',
+        }}
+      >
+        {label}
+      </span>
+    </Link>
+  )
+}
 
 export default function Navbar() {
   const pathname = usePathname()
+  const [optimisticPath, setOptimisticPath] = useState(pathname)
   const isLandingPage = pathname === '/'
   const [sidebarHovered, setSidebarHovered] = useState(false)
 
-  // check if current page is active
-  const isChampionsActive = pathname === '/champions'
-  const isAboutActive = pathname?.startsWith('/about')
+  // sync optimistic path with actual path when navigation completes
+  useEffect(() => {
+    setOptimisticPath(pathname)
+  }, [pathname])
+
+  // check if current page is active using optimistic path for instant feedback
+  const isChampionsActive = optimisticPath === '/champions'
+  const isAboutActive = optimisticPath?.startsWith('/about')
 
   return (
     <>
@@ -48,64 +91,23 @@ export default function Navbar() {
           </div>
 
           {/* nav links */}
-          <nav className="flex flex-col gap-2 p-4">
-            <Link
+          <nav className="flex flex-col gap-2 px-2 py-4">
+            <NavItem
               href="/champions"
-              className={`flex items-center gap-4 py-3 rounded-lg transition-all group relative h-[40px] ${
-                isChampionsActive ? 'bg-accent-light/30' : 'hover:bg-accent-light/20'
-              }`}
-            >
-              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[4px] top-[8px]">
-                <UserGroupIcon
-                  className={`w-6 h-6 transition-colors ${
-                    isChampionsActive ? 'text-accent-light' : 'text-gold-light group-hover:text-accent-light'
-                  }`}
-                />
-              </div>
-              <span
-                className={`font-semibold whitespace-nowrap transition-all duration-300 bg-clip-text text-transparent ${
-                  isChampionsActive
-                    ? 'bg-gradient-to-b from-accent-light to-accent-light'
-                    : 'bg-gradient-to-b from-gold-light to-gold-dark group-hover:from-accent-light group-hover:to-accent-light'
-                }`}
-                style={{
-                  opacity: sidebarHovered ? 1 : 0,
-                  marginLeft: '42px',
-                  paddingTop: '2px',
-                }}
-              >
-                Champions
-              </span>
-            </Link>
-
-            <Link
+              icon={UserGroupIcon}
+              label="Champions"
+              isActive={isChampionsActive}
+              sidebarHovered={sidebarHovered}
+              onClick={() => setOptimisticPath('/champions')}
+            />
+            <NavItem
               href="/about"
-              className={`flex items-center gap-4 py-3 rounded-lg transition-all group relative h-[40px] ${
-                isAboutActive ? 'bg-accent-light/30' : 'hover:bg-accent-light/20'
-              }`}
-            >
-              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-[4px] top-[8px]">
-                <InformationCircleIcon
-                  className={`w-6 h-6 transition-colors ${
-                    isAboutActive ? 'text-accent-light' : 'text-gold-light group-hover:text-accent-light'
-                  }`}
-                />
-              </div>
-              <span
-                className={`font-semibold whitespace-nowrap transition-all duration-300 bg-clip-text text-transparent ${
-                  isAboutActive
-                    ? 'bg-gradient-to-b from-accent-light to-accent-light'
-                    : 'bg-gradient-to-b from-gold-light to-gold-dark group-hover:from-accent-light group-hover:to-accent-light'
-                }`}
-                style={{
-                  opacity: sidebarHovered ? 1 : 0,
-                  marginLeft: '42px',
-                  paddingTop: '2px',
-                }}
-              >
-                About
-              </span>
-            </Link>
+              icon={InformationCircleIcon}
+              label="About"
+              isActive={isAboutActive || false}
+              sidebarHovered={sidebarHovered}
+              onClick={() => setOptimisticPath('/about')}
+            />
           </nav>
         </div>
       </aside>
