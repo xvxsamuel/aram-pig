@@ -601,6 +601,12 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       }
     }
 
+    // Add stats to aggregator but DO NOT flush yet
+    // The scraper or a scheduled job will handle flushing to prevent write contention
+    // statsAggregator is in-memory and per-instance, so this data might be lost if the Vercel function dies
+    // However, for global stats, losing a few user updates is acceptable vs crashing the DB
+    // Ideally, we'd write to a 'pending_stats' table, but for now we just skip the flush
+    
     await updateJobProgress(supabase, job.id, job.fetched_matches + fetchedInChunk, remainingMatchIds)
 
     return NextResponse.json({
@@ -623,14 +629,17 @@ async function finalizeJob(supabase: any, jobId: string, puuid: string) {
   const [, , statsResult] = await Promise.allSettled([
     supabase.from('summoners').update({ last_updated: new Date().toISOString() }).eq('puuid', puuid),
     calculateMissingPigScores(supabase, puuid),
-    Promise.all([
-      recalculateProfileStatsForPlayers([puuid]),
-      flushAggregatedStats(),
-    ]),
+    // Don't flush global stats on every user update - let the scraper handle it
+    // or use a separate background job. This prevents massive write contention.
+    // Promise.all([
+    //   recalculateProfileStatsForPlayers([puuid]),
+    //   flushAggregatedStats(),
+    // ]),
+    recalculateProfileStatsForPlayers([puuid]),
   ])
   
-  if (statsResult.status === 'rejected' || (statsResult.value[1] && !statsResult.value[1].success)) {
-    console.error('[UpdateProfile] Failed to flush stats:', statsResult.status === 'rejected' ? statsResult.reason : statsResult.value[1].error)
+  if (statsResult.status === 'rejected') {
+    console.error('[UpdateProfile] Failed to finalize stats:', statsResult.reason)
   }
   
   await completeJob(supabase, jobId)

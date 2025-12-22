@@ -55,6 +55,9 @@ export interface PreCalculatedCombo {
   games: number
   wins: number
   winrate?: number
+  pickrate?: number
+  stdDev?: number
+  variance?: number
   championWinrate?: number
   itemStats: Record<
     number,

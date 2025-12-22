@@ -27,6 +27,7 @@ interface ChampionStatsResponse {
     games: number
     wins: number
     winrate: number
+    pickrate?: number
   }
   averages: {
     damageToChampions: number
@@ -362,15 +363,13 @@ export default function ChampionPageClient({
     }
   })
 
-  // core builds (from raw data for full item position info)
-  // Sort by Lower Bound Wilson Score - balances winrate with statistical confidence
-  // This naturally penalizes low-sample builds AND low-winrate builds
-  const MIN_CORE_GAMES = 50 // Fixed minimum games to show a core
+  // core builds - sort by lower bound wilson score
+  const MIN_CORE_GAMES = 50 // fixed minimum games to show a core build
   const allBuildData = data.raw?.core
     ? (() => {
         const coreEntries = Object.entries(data.raw.core as Record<string, any>)
         
-        // Calculate champion's overall winrate as baseline
+        // calculate champion's overall winrate as baseline
         const totalCoreGames = coreEntries.reduce((sum, [, d]: [string, any]) => sum + (d.games || 0), 0)
         const totalCoreWins = coreEntries.reduce((sum, [, d]: [string, any]) => sum + (d.wins || 0), 0)
         const championWinrate = totalCoreGames > 0 ? (totalCoreWins / totalCoreGames) * 100 : 50
@@ -382,10 +381,10 @@ export default function ChampionPageClient({
             const wins = comboData.wins || 0
             const winrate = games > 0 ? (wins / games) * 100 : 0
             
-            // Wilson Score Lower Bound (95% confidence)
-            // This gives us the lower bound of what the "true" winrate likely is
-            // Low sample sizes get pulled down heavily, high samples stay close to actual WR
-            // Formula: (p + z²/2n - z*sqrt(p(1-p)/n + z²/4n²)) / (1 + z²/n)
+            // wilson score lower bound (95% confidence)
+            // this gives us the lower bound of what the "true" winrate likely is
+            // low sample sizes get pulled down heavily, high samples stay close to actual WR
+            // formula: (p + z²/2n - z*sqrt(p(1-p)/n + z²/4n²)) / (1 + z²/n)
             // where p = winrate (0-1), n = games, z = 1.96 for 95% confidence
             const p = winrate / 100
             const n = games
@@ -402,7 +401,7 @@ export default function ChampionPageClient({
               wilsonLowerBound = (centerAdjusted - spread) / denominator
             }
             
-            // Convert back to percentage
+            // convert back to percentage
             const wilsonScore = wilsonLowerBound * 100
 
             const actualBoots: number[] = []
@@ -416,20 +415,34 @@ export default function ChampionPageClient({
             const comboItemStats: Record<number, { positions: Record<number, { games: number; wins: number }> }> = {}
 
             if (comboData.items && typeof comboData.items === 'object') {
-              Object.entries(comboData.items).forEach(([itemId, stats]: [string, any]) => {
+              Object.entries(comboData.items).forEach(([itemIdStr, stats]: [string, any]) => {
+                const itemId = parseInt(itemIdStr)
+                if (isNaN(itemId)) return
+
                 const positions: Record<number, { games: number; wins: number }> = {}
-                Object.entries(stats).forEach(([key, slotStats]: [string, any]) => {
-                  const slotNum = parseInt(key)
-                  if (!isNaN(slotNum) && slotNum >= 1 && slotNum <= 6 && typeof slotStats === 'object') {
-                    positions[slotNum] = {
-                      games: slotStats.games || 0,
-                      wins: slotStats.wins || 0,
+                if (stats && typeof stats === 'object') {
+                  Object.entries(stats).forEach(([posStr, slotStats]: [string, any]) => {
+                    const slotNum = parseInt(posStr)
+                    if (!isNaN(slotNum) && slotNum >= 1 && slotNum <= 6) {
+                      positions[slotNum] = {
+                        games: slotStats.games || 0,
+                        wins: slotStats.wins || 0,
+                      }
                     }
-                  }
-                })
-                comboItemStats[parseInt(itemId)] = { positions }
+                  })
+                }
+                
+                if (Object.keys(positions).length > 0) {
+                  comboItemStats[itemId] = { positions }
+                }
               })
             }
+
+            const welford = comboData.welford
+            const damageStats = welford?.damageToChampionsPerMin && welford.damageToChampionsPerMin.n > 1 ? {
+                stdDev: Math.sqrt(welford.damageToChampionsPerMin.m2 / welford.damageToChampionsPerMin.n),
+                variance: welford.damageToChampionsPerMin.m2 / welford.damageToChampionsPerMin.n
+            } : undefined
 
             return {
               normalizedItems,
@@ -438,6 +451,9 @@ export default function ChampionPageClient({
               wins,
               winrate,
               wilsonScore,
+              pickrate: totalGames > 0 ? (games / totalGames) * 100 : 0,
+              stdDev: damageStats?.stdDev,
+              variance: damageStats?.variance,
               championWinrate,
               itemStats: comboItemStats,
               runes: comboData.runes || undefined,
@@ -446,16 +462,16 @@ export default function ChampionPageClient({
               skills: comboData.skills || undefined,
             }
           })
-          // Filter: must have exactly 3 core items, minimum 100 games, AND winrate at least (champion average - 5%)
+          // filter: must have exactly 3 core items, minimum games
           // normalizedItems uses 99999 for boots, so we count actual items
-          .filter(c => c.normalizedItems.length === 3 && c.games >= MIN_CORE_GAMES && c.winrate >= (c.championWinrate - 5))
+          .filter(c => c.normalizedItems.length === 3 && c.games >= MIN_CORE_GAMES)
           .sort((a, b) => b.wilsonScore - a.wilsonScore)
       })()
     : []
 
   return (
     <>
-      {/* Champion Header */}
+      {/* champion header */}
       <section className="relative overflow-hidden bg-abyss-700">
         {championImageUrl && (
           <>
@@ -479,7 +495,7 @@ export default function ChampionPageClient({
           </>
         )}
         <div className="max-w-6xl mx-auto px-8 py-6 pb-8 relative z-10">
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-6">
             {/* champion icon*/}
             <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark flex-shrink-0">
               <div className="relative w-24 h-24 rounded-[inherit] bg-abyss-800 overflow-hidden">
@@ -496,20 +512,41 @@ export default function ChampionPageClient({
             </div>
             
             <div className="flex-1 flex flex-col justify-between h-28">
-              <div>
-                <h1 className="text-3xl font-semibold text-white">{displayName}</h1>
-                <div className="flex gap-6 text-base mt-1">
-                  <div>
-                    <span className="text-text-muted">Winrate: </span>
-                    <span className="font-bold" style={{ color: getWinrateColor(data.overview.winrate) }}>
-                      {data.overview.winrate.toFixed(2)}%
+              <h1 className="text-3xl font-semibold text-white">{displayName}</h1>
+              <div className="flex items-end gap-12">
+                <div className="flex flex-col">
+                  <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Winrate</span>
+                  <span className="text-2xl font-semibold" style={{ color: getWinrateColor(data.overview.winrate) }}>
+                    {data.overview.winrate.toFixed(2)}%
+                  </span>
+                </div>
+                
+                {data.overview.pickrate !== undefined && (
+                  <div className="flex flex-col">
+                    <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Pickrate</span>
+                    <span className="text-2xl font-semibold text-white">
+                      {data.overview.pickrate.toFixed(1)}%
                     </span>
                   </div>
-                  <div>
-                    <span className="text-text-muted">Games: </span>
-                    <span className="font-bold text-white">{data.overview.games.toLocaleString()}</span>
-                  </div>
+                )}
+
+                <div className="flex flex-col">
+                  <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Games</span>
+                  <span className="text-2xl font-semibold text-white">{data.overview.games.toLocaleString()}</span>
                 </div>
+
+                {data.perMinuteStats.damageToChampionsPerMin && (
+                  <>
+                    <div className="flex flex-col">
+                      <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Mean DPM</span>
+                      <span className="text-2xl font-semibold text-white">{Math.round(data.perMinuteStats.damageToChampionsPerMin.mean).toLocaleString()}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Std Dev</span>
+                      <span className="text-2xl font-semibold text-white">±{Math.round(data.perMinuteStats.damageToChampionsPerMin.stdDev).toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             

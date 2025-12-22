@@ -1,5 +1,6 @@
 // pig score calculator - unified scoring function
 import { createAdminClient } from '../db/supabase'
+import itemsData from '@/data/items.json'
 import type { WelfordState } from '../db/stats-aggregator'
 import { getStdDev, getZScore } from '../db/stats-aggregator'
 import {
@@ -13,6 +14,7 @@ import {
   type ItemPenaltyDetail,
   type StartingItemsPenaltyDetail,
 } from './penalties'
+import { TIER1_BOOTS, TIER2_BOOT_IDS } from './build-scoring'
 
 // types
 
@@ -105,6 +107,8 @@ export interface PigScoreBreakdown {
   patch: string
   matchPatch?: string
   usedFallbackPatch: boolean
+  usedCoreStats?: boolean
+  usedFallbackCore?: boolean
 }
 
 // pre-fetched champion stats cache
@@ -243,14 +247,47 @@ export async function calculatePigScoreWithBreakdown(
     deathsPerMin: participant.deaths / gameDurationMinutes,
   }
 
-  const championAvgPerMin = {
+  let championAvgPerMin = {
     damageToChampionsPerMin: championAvg.sumDamageToChampions / totalGames / avgGameDurationMinutes,
     totalDamagePerMin: championAvg.sumTotalDamage / totalGames / avgGameDurationMinutes,
     healingShieldingPerMin: (championAvg.sumHealing + championAvg.sumShielding) / totalGames / avgGameDurationMinutes,
     ccTimePerMin: championAvg.sumCCTime / totalGames / avgGameDurationMinutes,
   }
 
-  const welford = championAvg.welford || null
+  let welford = championAvg.welford || null
+
+  // Check for core-specific stats
+  const coreKey = getCoreKey(participant.buildOrder)
+  let usedCoreStats = false
+  let usedFallbackCore = false
+  
+  if (coreKey && data.core) {
+    let targetCoreData = data.core[coreKey]
+    
+    // 1. Try exact match with sufficient games
+    if (targetCoreData && targetCoreData.games >= 500 && targetCoreData.welford) {
+      usedCoreStats = true
+    } else {
+      // 2. Try finding most similar core with sufficient games
+      const bestMatch = findBestMatchingCore(coreKey, data.core)
+      if (bestMatch) {
+        targetCoreData = bestMatch
+        usedCoreStats = true
+        usedFallbackCore = true
+      }
+    }
+
+    if (usedCoreStats) {
+      const coreWelford = targetCoreData.welford
+      championAvgPerMin = {
+        damageToChampionsPerMin: coreWelford.damageToChampionsPerMin.mean,
+        totalDamagePerMin: coreWelford.totalDamagePerMin.mean,
+        healingShieldingPerMin: coreWelford.healingShieldingPerMin.mean,
+        ccTimePerMin: coreWelford.ccTimePerMin.mean,
+      }
+      welford = coreWelford
+    }
+  }
   const relevance = calculateStatRelevance(championAvgPerMin, welford)
 
   const metrics: PigScoreBreakdown['metrics'] = []
@@ -393,6 +430,8 @@ export async function calculatePigScoreWithBreakdown(
     patch: selectedStats.patch,
     matchPatch: usedFallbackPatch ? (participant.patch ?? undefined) : undefined,
     usedFallbackPatch,
+    usedCoreStats,
+    usedFallbackCore,
   }
 }
 
@@ -401,4 +440,67 @@ export const calculatePigScoreWithBreakdownCached = calculatePigScoreWithBreakdo
 export async function calculatePigScore(participant: ParticipantData): Promise<number | null> {
   const result = await calculatePigScoreWithBreakdown(participant)
   return result?.finalScore ?? null
+}
+
+const NORMALIZED_BOOT_ID = 99999
+
+function getCoreKey(buildOrder: string | undefined): string | null {
+  if (!buildOrder) return null
+  const items = buildOrder.split(',').map(Number)
+  const coreItems: number[] = []
+  
+  for (const itemId of items) {
+    if (coreItems.length >= 3) break
+    if (itemId <= 0) continue
+    
+    // Check if completed item for core (logic from stats-aggregator.ts)
+    let isCompleted = false
+    if (itemId !== TIER1_BOOTS) {
+      const item = (itemsData as any)[String(itemId)]
+      if (item && (item.depth >= 2 || item.gold?.total >= 1600 || TIER2_BOOT_IDS.has(itemId))) {
+        isCompleted = true
+      }
+    }
+    
+    if (!isCompleted) continue
+
+    // normalize boots
+    const normalizedId = TIER2_BOOT_IDS.has(itemId) ? NORMALIZED_BOOT_ID : itemId
+    if (!coreItems.includes(normalizedId)) {
+      coreItems.push(normalizedId)
+    }
+  }
+
+  if (coreItems.length !== 3) return null
+  const uniqueSorted = [...new Set(coreItems)].sort((a, b) => a - b)
+  if (uniqueSorted.length !== 3) return null
+  return uniqueSorted.join('_')
+}
+
+function findBestMatchingCore(targetKey: string, allCores: Record<string, any>): any | null {
+  const targetItems = targetKey.split('_').map(Number)
+  let bestMatch = null
+  let maxShared = 0
+  let maxGames = 0
+
+  for (const [key, data] of Object.entries(allCores)) {
+    if (data.games < 500 || !data.welford) continue
+    
+    const currentItems = key.split('_').map(Number)
+    const shared = currentItems.filter(id => targetItems.includes(id)).length
+    
+    // Must share at least 2 items to be considered "similar"
+    if (shared < 2) continue
+
+    if (shared > maxShared) {
+      maxShared = shared
+      maxGames = data.games
+      bestMatch = data
+    } else if (shared === maxShared && data.games > maxGames) {
+      maxGames = data.games
+      bestMatch = data
+    }
+  }
+  
+  return bestMatch
 }

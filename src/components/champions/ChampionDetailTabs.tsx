@@ -54,7 +54,7 @@ export default function ChampionDetailTabs({
 }: Props) {
   // process build combinations for overview tab
   const { bestCombinations, worstCombinations, processedComboData } = useMemo(() => {
-    const MIN_CORE_GAMES = 50
+    const MIN_CORE_GAMES = 1
     
     const combinations: ComboDisplay[] = allBuildData
       .map((combo, idx) => {
@@ -68,6 +68,9 @@ export default function ChampionDetailTabs({
           games: combo.games,
           winrate,
           wilsonScore,
+          pickrate: combo.pickrate,
+          stdDev: combo.stdDev,
+          variance: combo.variance,
         }
       })
       .filter(c => c.games >= MIN_CORE_GAMES)

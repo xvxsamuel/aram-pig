@@ -146,10 +146,10 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
         ) : champions.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[40vh] bg-abyss-600 rounded-lg border border-gold-dark/40">
             <p className="text-2xl text-subtitle mb-2">No champion data available yet</p>
-            <p className="text-sm text-center px-4">
+            <p className="text-sm text-center text-text-muted px-4">
               {filter === 'patch' && patch
-                ? `No matches found for patch ${patch}. Data will appear once the scraper processes games.`
-                : 'Data will appear once the scraper processes games.'}
+                ? `No matches found for patch ${patch}. Please try again later.`
+                : 'Please try again later.'}
             </p>
           </div>
         ) : (

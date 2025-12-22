@@ -62,6 +62,13 @@ interface ChampionStatsData {
       spells?: Record<string, GameStats>
       starting?: Record<string, GameStats>
       skills?: Record<string, GameStats>
+      welford?: {
+        damageToChampionsPerMin?: WelfordState
+        totalDamagePerMin?: WelfordState
+        healingShieldingPerMin?: WelfordState
+        ccTimePerMin?: WelfordState
+        deathsPerMin?: WelfordState
+      }
     }
   >
 }
@@ -131,16 +138,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   // fetch champion stats data
-  const { data, error } = await supabase
-    .from('champion_stats')
-    .select('*')
-    .eq('champion_name', apiName)
-    .eq('patch', targetPatch)
-    .maybeSingle()
+  const [championResponse, patchResponse] = await Promise.all([
+    supabase
+      .from('champion_stats')
+      .select('*')
+      .eq('champion_name', apiName)
+      .eq('patch', targetPatch)
+      .maybeSingle(),
+    supabase
+      .from('champion_stats')
+      .select('games')
+      .eq('patch', targetPatch)
+  ])
+
+  const { data, error } = championResponse
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // calculate total matches for pickrate
+  const totalParticipants = patchResponse.data?.reduce((sum, row) => sum + (row.games || 0), 0) || 0
+  const totalMatches = Math.max(1, totalParticipants / 10)
 
   if (!data) {
     // list available patches for this champion
@@ -208,6 +227,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       games: rawData.games,
       wins: rawData.wins,
       winrate: rawData.games > 0 ? (rawData.wins / rawData.games) * 100 : 0,
+      pickrate: (rawData.games / totalMatches) * 100,
     },
 
     // computed averages per game
@@ -252,13 +272,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // top core item combinations (first 3 items)
     topCoreBuilds: Object.entries(rawData.core || {})
-      .map(([key, val]) => ({
-        itemCombo: key,
-        items: key.split('_').map(id => parseInt(id)),
-        games: val.games,
-        wins: val.wins,
-        winrate: val.games > 0 ? (val.wins / val.games) * 100 : 0,
-      }))
+      .map(([key, val]) => {
+        const damageStats = computeWelfordStats(val.welford?.damageToChampionsPerMin)
+        return {
+          itemCombo: key,
+          items: key.split('_').map(id => parseInt(id)),
+          games: val.games,
+          wins: val.wins,
+          winrate: val.games > 0 ? (val.wins / val.games) * 100 : 0,
+          pickrate: totalGames > 0 ? (val.games / totalGames) * 100 : 0,
+          stdDev: damageStats.stdDev,
+          variance: damageStats.variance,
+        }
+      })
       .sort((a, b) => b.games - a.games)
       .slice(0, 10),
 

@@ -85,6 +85,146 @@ export function getZScore(value: number, state: WelfordState): number {
   return (value - state.mean) / stdDev
 }
 
+// Merge two Welford states
+export function mergeWelford(a: WelfordState, b: WelfordState): WelfordState {
+  if (a.n === 0) return { ...b }
+  if (b.n === 0) return { ...a }
+
+  const newN = a.n + b.n
+  const delta = b.mean - a.mean
+  const newMean = (a.n * a.mean + b.n * b.mean) / newN
+  const newM2 = a.m2 + b.m2 + (delta * delta * a.n * b.n) / newN
+
+  return {
+    n: newN,
+    mean: newMean,
+    m2: newM2,
+  }
+}
+
+// Merge two GameStats objects (sum games and wins)
+function mergeGameStats(a: GameStats | undefined, b: GameStats | undefined): GameStats {
+  if (!a && !b) return { games: 0, wins: 0 }
+  if (!a) return { ...b! }
+  if (!b) return { ...a }
+  return {
+    games: a.games + b.games,
+    wins: a.wins + b.wins,
+  }
+}
+
+// Merge two maps of GameStats
+function mergeStatsMap<T extends Record<string, GameStats>>(a: T, b: T): T {
+  const result: any = { ...a }
+  for (const key in b) {
+    result[key] = mergeGameStats(result[key], b[key])
+  }
+  return result
+}
+
+// Deep merge ChampionStatsData
+export function mergeChampionStats(existing: ChampionStatsData, incoming: ChampionStatsData): ChampionStatsData {
+  // Merge top-level stats
+  const result: ChampionStatsData = {
+    games: (existing.games || 0) + (incoming.games || 0),
+    wins: (existing.wins || 0) + (incoming.wins || 0),
+    championStats: {
+      sumDamageToChampions: (existing.championStats?.sumDamageToChampions || 0) + (incoming.championStats?.sumDamageToChampions || 0),
+      sumTotalDamage: (existing.championStats?.sumTotalDamage || 0) + (incoming.championStats?.sumTotalDamage || 0),
+      sumHealing: (existing.championStats?.sumHealing || 0) + (incoming.championStats?.sumHealing || 0),
+      sumShielding: (existing.championStats?.sumShielding || 0) + (incoming.championStats?.sumShielding || 0),
+      sumCCTime: (existing.championStats?.sumCCTime || 0) + (incoming.championStats?.sumCCTime || 0),
+      sumGameDuration: (existing.championStats?.sumGameDuration || 0) + (incoming.championStats?.sumGameDuration || 0),
+      sumDeaths: (existing.championStats?.sumDeaths || 0) + (incoming.championStats?.sumDeaths || 0),
+      welford: {
+        damageToChampionsPerMin: mergeWelford(existing.championStats?.welford?.damageToChampionsPerMin || { n: 0, mean: 0, m2: 0 }, incoming.championStats?.welford?.damageToChampionsPerMin || { n: 0, mean: 0, m2: 0 }),
+        totalDamagePerMin: mergeWelford(existing.championStats?.welford?.totalDamagePerMin || { n: 0, mean: 0, m2: 0 }, incoming.championStats?.welford?.totalDamagePerMin || { n: 0, mean: 0, m2: 0 }),
+        healingShieldingPerMin: mergeWelford(existing.championStats?.welford?.healingShieldingPerMin || { n: 0, mean: 0, m2: 0 }, incoming.championStats?.welford?.healingShieldingPerMin || { n: 0, mean: 0, m2: 0 }),
+        ccTimePerMin: mergeWelford(existing.championStats?.welford?.ccTimePerMin || { n: 0, mean: 0, m2: 0 }, incoming.championStats?.welford?.ccTimePerMin || { n: 0, mean: 0, m2: 0 }),
+        deathsPerMin: mergeWelford(existing.championStats?.welford?.deathsPerMin || { n: 0, mean: 0, m2: 0 }, incoming.championStats?.welford?.deathsPerMin || { n: 0, mean: 0, m2: 0 }),
+      }
+    },
+    items: {
+      '1': mergeStatsMap(existing.items?.['1'] || {}, incoming.items?.['1'] || {}),
+      '2': mergeStatsMap(existing.items?.['2'] || {}, incoming.items?.['2'] || {}),
+      '3': mergeStatsMap(existing.items?.['3'] || {}, incoming.items?.['3'] || {}),
+      '4': mergeStatsMap(existing.items?.['4'] || {}, incoming.items?.['4'] || {}),
+      '5': mergeStatsMap(existing.items?.['5'] || {}, incoming.items?.['5'] || {}),
+      '6': mergeStatsMap(existing.items?.['6'] || {}, incoming.items?.['6'] || {}),
+    },
+    runes: {
+      primary: mergeStatsMap(existing.runes?.primary || {}, incoming.runes?.primary || {}),
+      secondary: mergeStatsMap(existing.runes?.secondary || {}, incoming.runes?.secondary || {}),
+      tertiary: {
+        offense: mergeStatsMap(existing.runes?.tertiary?.offense || {}, incoming.runes?.tertiary?.offense || {}),
+        flex: mergeStatsMap(existing.runes?.tertiary?.flex || {}, incoming.runes?.tertiary?.flex || {}),
+        defense: mergeStatsMap(existing.runes?.tertiary?.defense || {}, incoming.runes?.tertiary?.defense || {}),
+      },
+      tree: {
+        primary: mergeStatsMap(existing.runes?.tree?.primary || {}, incoming.runes?.tree?.primary || {}),
+        secondary: mergeStatsMap(existing.runes?.tree?.secondary || {}, incoming.runes?.tree?.secondary || {}),
+      }
+    },
+    spells: mergeStatsMap(existing.spells || {}, incoming.spells || {}),
+    starting: mergeStatsMap(existing.starting || {}, incoming.starting || {}),
+    skills: mergeStatsMap(existing.skills || {}, incoming.skills || {}),
+    core: {}, // Core builds need special handling (deep merge of inner stats)
+  }
+
+  // Merge core builds
+  const allCoreKeys = new Set([...Object.keys(existing.core || {}), ...Object.keys(incoming.core || {})])
+  for (const key of allCoreKeys) {
+    const existingCore = existing.core?.[key]
+    const incomingCore = incoming.core?.[key]
+
+    if (!existingCore) {
+      result.core[key] = incomingCore!
+      continue
+    }
+    if (!incomingCore) {
+      result.core[key] = existingCore
+      continue
+    }
+
+    // Deep merge the core object
+    result.core[key] = {
+      games: existingCore.games + incomingCore.games,
+      wins: existingCore.wins + incomingCore.wins,
+      items: {}, // Will be populated below
+      runes: {
+        primary: mergeStatsMap(existingCore.runes?.primary || {}, incomingCore.runes?.primary || {}),
+        secondary: mergeStatsMap(existingCore.runes?.secondary || {}, incomingCore.runes?.secondary || {}),
+        tertiary: {
+          offense: mergeStatsMap(existingCore.runes?.tertiary?.offense || {}, incomingCore.runes?.tertiary?.offense || {}),
+          flex: mergeStatsMap(existingCore.runes?.tertiary?.flex || {}, incomingCore.runes?.tertiary?.flex || {}),
+          defense: mergeStatsMap(existingCore.runes?.tertiary?.defense || {}, incomingCore.runes?.tertiary?.defense || {}),
+        },
+      },
+      spells: mergeStatsMap(existingCore.spells || {}, incomingCore.spells || {}),
+      starting: mergeStatsMap(existingCore.starting || {}, incomingCore.starting || {}),
+      skills: mergeStatsMap(existingCore.skills || {}, incomingCore.skills || {}),
+      welford: {
+        damageToChampionsPerMin: mergeWelford(existingCore.welford?.damageToChampionsPerMin || { n: 0, mean: 0, m2: 0 }, incomingCore.welford?.damageToChampionsPerMin || { n: 0, mean: 0, m2: 0 }),
+        totalDamagePerMin: mergeWelford(existingCore.welford?.totalDamagePerMin || { n: 0, mean: 0, m2: 0 }, incomingCore.welford?.totalDamagePerMin || { n: 0, mean: 0, m2: 0 }),
+        healingShieldingPerMin: mergeWelford(existingCore.welford?.healingShieldingPerMin || { n: 0, mean: 0, m2: 0 }, incomingCore.welford?.healingShieldingPerMin || { n: 0, mean: 0, m2: 0 }),
+        ccTimePerMin: mergeWelford(existingCore.welford?.ccTimePerMin || { n: 0, mean: 0, m2: 0 }, incomingCore.welford?.ccTimePerMin || { n: 0, mean: 0, m2: 0 }),
+        deathsPerMin: mergeWelford(existingCore.welford?.deathsPerMin || { n: 0, mean: 0, m2: 0 }, incomingCore.welford?.deathsPerMin || { n: 0, mean: 0, m2: 0 }),
+      }
+    }
+
+    // Merge core items (Record<ItemId, Record<Position, Stats>>)
+    const allItemKeys = new Set([...Object.keys(existingCore.items || {}), ...Object.keys(incomingCore.items || {})])
+    for (const itemKey of allItemKeys) {
+      result.core[key].items[itemKey] = mergeStatsMap(
+        existingCore.items?.[itemKey] || {}, 
+        incomingCore.items?.[itemKey] || {}
+      )
+    }
+  }
+
+  return result
+}
+
 export interface ChampionStatsData {
   games: number
   wins: number
@@ -143,6 +283,14 @@ export interface ChampionStatsData {
       spells: Record<string, GameStats> // Keep spells since they vary by core
       starting: Record<string, GameStats> // Keep starting since they vary by core
       skills: Record<string, GameStats> // Keep skills since they vary by core
+      // Per-core performance stats (welford)
+      welford?: {
+        damageToChampionsPerMin: WelfordState
+        totalDamagePerMin: WelfordState
+        healingShieldingPerMin: WelfordState
+        ccTimePerMin: WelfordState
+        deathsPerMin: WelfordState
+      }
     }
   >
 }
@@ -344,11 +492,46 @@ export class StatsAggregator {
           spells: {},
           starting: {},
           skills: {},
+          welford: {
+            damageToChampionsPerMin: this.createEmptyWelford(),
+            totalDamagePerMin: this.createEmptyWelford(),
+            healingShieldingPerMin: this.createEmptyWelford(),
+            ccTimePerMin: this.createEmptyWelford(),
+            deathsPerMin: this.createEmptyWelford(),
+          }
         }
       }
       const combo = stats.core[comboKey]
       combo.games += 1
       combo.wins += win
+
+      // Update per-core welford stats
+      if (gameDurationMinutes > 0) {
+        // Initialize welford if missing (for existing data)
+        if (!combo.welford) {
+          combo.welford = {
+            damageToChampionsPerMin: this.createEmptyWelford(),
+            totalDamagePerMin: this.createEmptyWelford(),
+            healingShieldingPerMin: this.createEmptyWelford(),
+            ccTimePerMin: this.createEmptyWelford(),
+            deathsPerMin: this.createEmptyWelford(),
+          }
+        }
+        
+        const perMinStats = {
+          damageToChampionsPerMin: input.damage_to_champions / gameDurationMinutes,
+          totalDamagePerMin: input.total_damage / gameDurationMinutes,
+          healingShieldingPerMin: (input.healing + input.shielding) / gameDurationMinutes,
+          ccTimePerMin: input.cc_time / gameDurationMinutes,
+          deathsPerMin: input.deaths / gameDurationMinutes,
+        }
+
+        this.updateWelford(combo.welford.damageToChampionsPerMin, perMinStats.damageToChampionsPerMin)
+        this.updateWelford(combo.welford.totalDamagePerMin, perMinStats.totalDamagePerMin)
+        this.updateWelford(combo.welford.healingShieldingPerMin, perMinStats.healingShieldingPerMin)
+        this.updateWelford(combo.welford.ccTimePerMin, perMinStats.ccTimePerMin)
+        this.updateWelford(combo.welford.deathsPerMin, perMinStats.deathsPerMin)
+      }
 
       // Track items per position within this core
       for (let i = 0; i < 6; i++) {

@@ -2,10 +2,10 @@
 import { writeFileSync, readFileSync, existsSync } from 'fs'
 import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
-import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId } from '../src/lib/riot/api'
-import { waitForRateLimit, flushRateLimits } from '../src/lib/riot/rate-limiter'
-import { type RegionalCluster, type PlatformCode, extractPatch } from '../src/lib/game'
-import { storeMatchData, flushStatsBatch, getStatsBufferCount } from '../src/lib/db'
+import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId } from '../../src/lib/riot/api'
+import { waitForRateLimit, flushRateLimits } from '../../src/lib/riot/rate-limiter'
+import { type RegionalCluster, type PlatformCode, extractPatch } from '../../src/lib/game'
+import { storeMatchData, storeMatchDataBatch, flushStatsBatch, getStatsBufferCount } from '../../src/lib/db'
 import * as readline from 'readline'
 
 console.log('[CRAWLER] All modules loaded successfully\n')
@@ -27,7 +27,7 @@ async function getCurrentPatch(): Promise<string[]> {
 }
 
 // stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-const STATS_BUFFER_FLUSH_SIZE = 1000 // flush every 1000 participants (100 matches) - massive i/o reduction
+const STATS_BUFFER_FLUSH_SIZE = 5000 // flush every 5000 participants (500 matches) - massive i/o reduction
 let lastStatsFlush = Date.now()
 const STATS_FLUSH_INTERVAL = 600000 // or every 10 minutes - even less frequent writes
 
@@ -40,6 +40,28 @@ async function maybeFlushStats(): Promise<void> {
     lastStatsFlush = Date.now()
     // give database more time to process the batch and reduce i/o spikes
     await sleep(2000)
+  }
+}
+
+// cleanup config
+let lastCleanup = Date.now()
+const CLEANUP_INTERVAL = 4 * 60 * 60 * 1000 // 4 hours
+
+async function maybeRunCleanup(): Promise<void> {
+  const now = Date.now()
+  if (now - lastCleanup > CLEANUP_INTERVAL) {
+    console.log('[CRAWLER] Running scheduled database cleanup...')
+    try {
+      const { data, error } = await supabase.rpc('cleanup_champion_stats_noise')
+      if (error) {
+        console.error('[CRAWLER] Cleanup failed:', error)
+      } else {
+        console.log('[CRAWLER] Cleanup complete:', data)
+      }
+    } catch (err) {
+      console.error('[CRAWLER] Cleanup error:', err)
+    }
+    lastCleanup = Date.now()
   }
 }
 
@@ -299,6 +321,8 @@ async function crawlSummoner(
         })
       )
 
+      const validMatches: any[] = []
+
       for (const { matchId, matchData, error } of results) {
         if (error) {
           if (error?.status === 429) {
@@ -346,16 +370,20 @@ async function crawlSummoner(
             toDelete.forEach(p => seedPool.delete(p))
           }
 
-          // Store match (stats buffered in memory with Welford's algorithm)
-          const result = await storeMatchData(matchData, region, false)
-          if (result.success) {
-            stored++
-            // Add to cache after successful storage
-            knownMatchIds.add(matchId)
-          }
-          // Increased delay to reduce database I/O pressure
-          await sleep(250)
+          validMatches.push(matchData)
         }
+      }
+
+      if (validMatches.length > 0) {
+        // Store matches in batch (stats buffered in memory with Welford's algorithm)
+        const { success, storedCount } = await storeMatchDataBatch(validMatches, region, false)
+        if (success) {
+          stored += storedCount
+          // Add to cache after successful storage
+          validMatches.forEach(m => knownMatchIds.add(m.metadata.matchId))
+        }
+        // Increased delay to reduce database I/O pressure
+        await sleep(250)
       }
 
       // Check if we should flush stats buffer
@@ -551,7 +579,7 @@ async function main() {
     const clusterPlatforms: Array<{ cluster: RegionalCluster; platform: PlatformCode; default?: string }> = [
       { cluster: 'europe', platform: 'euw1', default: 'TwTv Yikesu0#Yikes' },
       { cluster: 'americas', platform: 'na1', default: 'Usni#Boba' },
-      { cluster: 'asia', platform: 'kr', default: 'Eren#미카사' },
+      { cluster: 'asia', platform: 'kr', default: 'DK Sharvel#KR1' },
       { cluster: 'sea', platform: 'sg2', default: 'Miss Lys#Lys' },
     ]
 
@@ -1034,6 +1062,9 @@ async function main() {
 
       // Flush stats buffer if needed
       await maybeFlushStats()
+
+      // Run cleanup if needed
+      await maybeRunCleanup()
 
       // Save state and match cache every summary
       saveState()

@@ -14,6 +14,7 @@ export {
 
 export {
   storeMatchData,
+  storeMatchDataBatch,
   flushAggregatedStats,
   flushStatsBatch,
   getStatsBufferCount,

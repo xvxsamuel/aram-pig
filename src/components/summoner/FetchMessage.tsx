@@ -30,7 +30,17 @@ export default function FetchMessage({ job, region: _region, notifyEnabled, onNo
       const elapsedSeconds = elapsedMs / 1000
 
       // Calculate actual rate (matches per second)
-      const rate = job.fetchedMatches / elapsedSeconds
+      let rate = job.fetchedMatches / elapsedSeconds
+
+      // CAP THE RATE:
+      // We know the Riot API limit is ~100 requests / 2 minutes (0.83 req/s).
+      // With the scraper running, we effectively get much less (maybe 20-30%).
+      // So we should never project a speed faster than ~0.25 matches/sec (4s/match) for large jobs
+      // to avoid "1 min remaining" -> "10 mins remaining" jumps.
+      if (job.totalMatches > 20) {
+        const MAX_SUSTAINABLE_RATE = 0.25 
+        rate = Math.min(rate, MAX_SUSTAINABLE_RATE)
+      }
 
       // Estimate remaining time
       if (rate > 0) {
@@ -38,12 +48,13 @@ export default function FetchMessage({ job, region: _region, notifyEnabled, onNo
       }
     }
 
-    // Fallback: estimate based on ~2 seconds per match (realistic ARAM match fetch time)
-    return Math.ceil(remaining * 2)
+    // Fallback: estimate based on ~4 seconds per match (conservative)
+    return Math.ceil(remaining * 4)
   }, [hasStartedFetching, job.startedAt, job.fetchedMatches, job.totalMatches])
 
-  // Only show notify option if ETA > 2 minutes (120 seconds)
-  const showNotifyOption = eta !== null && eta > 120
+  // Only show notify option if the total job size is large enough (> 50 matches)
+  // We use totalMatches instead of ETA so the button doesn't disappear as the job nears completion
+  const showNotifyOption = job.totalMatches > 50
 
   const formatEta = (seconds: number) => {
     if (seconds < 60) return `~${seconds}s`

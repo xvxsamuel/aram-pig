@@ -185,7 +185,7 @@ export function CoreBuildsSelector({
                 key={`${coreBuildsView}-empty`}
                 initial={{ x: isWorst ? 200 : -200, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                exit={{ x: isWorst ? -200 : 200, opacity: 0 }}
+                exit={{ x: isWorst ? 200 : -200, opacity: 0 }}
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="text-sm text-text-muted text-center py-4 px-6"
               >
@@ -196,7 +196,7 @@ export function CoreBuildsSelector({
                 key={coreBuildsView}
                 initial={{ x: isWorst ? 200 : -200, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                exit={{ x: isWorst ? -200 : 200, opacity: 0 }}
+                exit={{ x: isWorst ? 200 : -200, opacity: 0 }}
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <div 
@@ -244,23 +244,33 @@ export function CoreBuildsSelector({
                       <div className="flex items-center justify-between">
                         {combo.itemIds.map((itemId, position) => (
                           <Fragment key={`${combo.originalIndex}-item-${position}`}>
-                            {position > 0 && <span className="text-gray-600 text-xs">+</span>}
+                            {position > 0 && <span className="text-gold-dark text-xs">+</span>}
                             <ItemIcon itemId={itemId} ddragonVersion={ddragonVersion} size="sm" className="flex-shrink-0" />
                           </Fragment>
                         ))}
                         {combo.hasBoots && (
                           <>
-                            <span className="text-gray-600 text-xs">+</span>
+                            <span className="text-gold-dark text-xs">+</span>
                             <div className="w-7 h-7 rounded bg-abyss-900 border border-gold-dark flex items-center justify-center flex-shrink-0">
-                              <span className="text-[9px] text-gray-400 text-center leading-tight px-0.5">Any<br />Boots</span>
+                              <span className="text-[9px] text-center leading-tight px-0.5">Any<br />Boots</span>
                             </div>
                           </>
                         )}
                       </div>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="font-bold" style={{ color: getWinrateColor(combo.winrate) }}>{combo.winrate.toFixed(1)}%</span>
-                      <span className="text-subtitle">{Math.round(combo.games).toLocaleString()}</span>
+                    <div className="flex justify-between text-xs items-end">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold" style={{ color: getWinrateColor(combo.winrate) }}>{combo.winrate.toFixed(1)}% WR</span>
+                        {combo.pickrate !== undefined && (
+                          <span className="text-[10px]">{combo.pickrate.toFixed(1)}% Pick</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-0.5 items-end">
+                        <div className="flex flex-col items-end leading-tight">
+                          <span className="text-text-muted">{Math.round(combo.games).toLocaleString()}</span>
+                          <span className="text-[10px] text-text-muted">Games</span>
+                        </div>
+                      </div>
                     </div>
                   </button>
                 ))}

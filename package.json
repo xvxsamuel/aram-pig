@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "scraper": "tsx --import ./scripts/load-env.ts scripts/continuous-scraper.ts",
+    "scraper": "tsx --import ./scripts/load-env.ts scripts/scraper/continuous-scraper.ts",
     "update-badges": "tsx --import ./scripts/load-env.ts scripts/generate-badge-data.ts"
   },
   "dependencies": {

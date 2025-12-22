@@ -117,6 +117,8 @@ export interface PigScoreBreakdown {
   patch: string
   matchPatch?: string
   usedFallbackPatch?: boolean
+  usedCoreStats?: boolean
+  usedFallbackCore?: boolean
   totalGames: number
   itemDetails?: ItemPenaltyDetail[]
   startingItemsDetails?: StartingItemsDetails
@@ -133,6 +135,7 @@ export interface PigScoreBreakdown {
     healingShieldingPerMin: number
     ccTimePerMin: number
     deathsPerMin: number
+    killParticipation?: number
   }
   championAvgStats: {
     damageToChampionsPerMin: number
