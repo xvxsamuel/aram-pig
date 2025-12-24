@@ -11,6 +11,7 @@ import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { RuneDisplay } from '@/components/game/RuneDisplay'
 import { SummonerSpellDisplay } from '@/components/game/SummonerSpellDisplay'
 import { AbilityOrderDisplay } from '@/components/game/AbilityOrderDisplay'
+import DataWarning from '@/components/ui/DataWarning'
 import runesData from '@/data/runes.json'
 import {
   TabProps,
@@ -49,21 +50,6 @@ function ScoredItemGlow({
       />
       <div className="relative">{children}</div>
     </motion.div>
-  )
-}
-
-// fallback warning indicator
-function FallbackWarning() {
-  return (
-    <SimpleTooltip
-      content={
-        <div className="text-xs max-w-[200px]">
-          Using data from a different patch or build because not enough games with this exact build were found.
-        </div>
-      }
-    >
-      <span className="text-gold-light ml-1 cursor-help">⚠</span>
-    </SimpleTooltip>
   )
 }
 
@@ -130,7 +116,9 @@ export function BuildTab({
       <BuildSection 
         title="Item Build" 
         score={displayPigScores ? pigScoreBreakdown?.buildSubScores?.items : undefined}
-        rightContent={displayPigScores && pigScoreBreakdown?.fallbackInfo?.items && <FallbackWarning />}
+        rightContent={displayPigScores && pigScoreBreakdown?.fallbackInfo?.items && (
+          <DataWarning warnings={['Using data from a different patch or build because not enough games with this exact build were found.']} />
+        )}
         className="p-4"
       >
         {(() => {
@@ -524,7 +512,9 @@ export function BuildTab({
             <BuildSection 
               title="Starter Items" 
               score={displayPigScores ? pigScoreBreakdown?.buildSubScores?.starting : undefined}
-              rightContent={displayPigScores && fallbackInfo?.starting && <FallbackWarning />}
+              rightContent={displayPigScores && fallbackInfo?.starting && (
+                <DataWarning warnings={['Using data from a different patch or build because not enough games with this exact build were found.']} />
+              )}
               className="p-4"
             >
               {starterItems.length > 0 ? (
@@ -605,7 +595,9 @@ export function BuildTab({
         <BuildSection 
           title="Runes" 
           score={hasTimelineData ? pigScoreBreakdown?.buildSubScores?.keystone : undefined}
-          rightContent={displayPigScores && pigScoreBreakdown?.fallbackInfo?.keystone && <FallbackWarning />}
+          rightContent={displayPigScores && pigScoreBreakdown?.fallbackInfo?.keystone && (
+            <DataWarning warnings={['Using data from a different patch or build because not enough games with this exact build were found.']} />
+          )}
           className="p-4"
         >
           {(() => {

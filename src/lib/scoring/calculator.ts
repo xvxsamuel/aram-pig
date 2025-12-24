@@ -134,30 +134,46 @@ interface WelfordStats {
 
 function calculateStatRelevance(
   avgPerMin: { damageToChampionsPerMin: number; totalDamagePerMin: number; healingShieldingPerMin: number; ccTimePerMin: number },
-  welford: WelfordStats | null
+  welford: WelfordStats | null,
+  playerStats: { damageToChampionsPerMin: number; healingShieldingPerMin: number; ccTimePerMin: number }
 ): StatRelevance {
   const relevance: StatRelevance = { damageToChampions: 1.0, totalDamage: 1.0, healingShielding: 0, ccTime: 0 }
 
-  if (avgPerMin.healingShieldingPerMin >= 300) {
-    relevance.healingShielding = Math.min(1.0, 0.5 + (avgPerMin.healingShieldingPerMin - 300) / 2400)
+  // Healing relevance: only if > 500/min
+  if (playerStats.healingShieldingPerMin >= 500) {
+    // Calculate ratio of damage vs healing to determine focus
+    const totalOutput = playerStats.damageToChampionsPerMin + playerStats.healingShieldingPerMin
+    if (totalOutput > 0) {
+      const healRatio = playerStats.healingShieldingPerMin / totalOutput
+      const dmgRatio = playerStats.damageToChampionsPerMin / totalOutput
+      
+      // Shift weights based on focus (0.5 base + ratio)
+      // e.g. 80% healing -> 1.3 weight for healing, 0.7 for damage
+      relevance.healingShielding = 0.5 + healRatio
+      relevance.damageToChampions = 0.5 + dmgRatio
+    } else {
+      relevance.healingShielding = 1.0
+    }
   }
-  if (avgPerMin.ccTimePerMin >= 1) {
-    relevance.ccTime = Math.min(1.0, 0.5 + (avgPerMin.ccTimePerMin - 2) / 12)
+
+  // CC relevance: hard cutoff at 1s/min
+  if (playerStats.ccTimePerMin >= 1) {
+    relevance.ccTime = Math.min(1.0, 0.5 + (avgPerMin.ccTimePerMin - 1) / 12)
   }
 
   // boost for high variance
   if (welford) {
     if (welford.damageToChampionsPerMin && welford.damageToChampionsPerMin.n >= 30) {
       const cv = getStdDev(welford.damageToChampionsPerMin) / welford.damageToChampionsPerMin.mean
-      if (cv > 0.3) relevance.damageToChampions = Math.min(1.0, relevance.damageToChampions * (1 + cv * 0.5))
+      if (cv > 0.3) relevance.damageToChampions = Math.min(1.5, relevance.damageToChampions * (1 + cv * 0.5))
     }
     if (welford.healingShieldingPerMin && welford.healingShieldingPerMin.n >= 30 && relevance.healingShielding > 0) {
       const cv = getStdDev(welford.healingShieldingPerMin) / welford.healingShieldingPerMin.mean
-      if (cv > 0.4) relevance.healingShielding = Math.min(1.0, relevance.healingShielding * (1 + cv * 0.3))
+      if (cv > 0.4) relevance.healingShielding = Math.min(1.5, relevance.healingShielding * (1 + cv * 0.3))
     }
     if (welford.ccTimePerMin && welford.ccTimePerMin.n >= 30 && relevance.ccTime > 0) {
       const cv = getStdDev(welford.ccTimePerMin) / welford.ccTimePerMin.mean
-      if (cv > 0.4) relevance.ccTime = Math.min(1.0, relevance.ccTime * (1 + cv * 0.3))
+      if (cv > 0.4) relevance.ccTime = Math.min(1.5, relevance.ccTime * (1 + cv * 0.3))
     }
   }
 
@@ -288,7 +304,7 @@ export async function calculatePigScoreWithBreakdown(
       welford = coreWelford
     }
   }
-  const relevance = calculateStatRelevance(championAvgPerMin, welford)
+  const relevance = calculateStatRelevance(championAvgPerMin, welford, playerStats)
 
   const metrics: PigScoreBreakdown['metrics'] = []
   const getZScoreSafe = (val: number, w?: WelfordState): number | undefined => {

@@ -11,7 +11,7 @@ export interface MatchLabel {
 
 export const LABELS: Record<string, MatchLabel> = {
   KING_PIG: { id: 'KING_PIG', label: 'King Pig', description: 'Achieved a PIG Score of 90 or higher', type: 'good', priority: 100 },
-  MALIGNANT_GROWTH: { id: 'MALIGNANT_GROWTH', label: 'Malignant Growth', description: 'Built Malignance on a loss or on a champion with poor synergy', type: 'bad', priority: 30 },
+  MALIGNANT_GROWTH: { id: 'MALIGNANT_GROWTH', label: 'Malignant Growth', description: 'Built Malignance on a champion with poor synergy', type: 'bad', priority: 30 },
   HEARTSTUCK: { id: 'HEARTSTUCK', label: 'Heartstuck', description: 'Built Heartsteel on a bad champion', type: 'bad', priority: 20 },
   QUICKSHOT: { id: 'QUICKSHOT', label: 'Quickshot', description: 'Game finished in under 12 minutes', type: 'good', priority: 60 },
   STUNNING: { id: 'STUNNING', label: 'Stunning', description: 'High Crowd Control Score (>40s)', type: 'good', priority: 80 },
@@ -47,7 +47,7 @@ export function calculateMatchLabels(
       isBadUser = !synergies[participant.championName].malignance
     }
 
-    if (isBadUser || !participant.win) {
+    if (isBadUser) {
       labels.push(LABELS.MALIGNANT_GROWTH)
     }
   }

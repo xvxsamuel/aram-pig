@@ -5,13 +5,14 @@ import { getChampionImageUrl } from '@/lib/ddragon'
 import { getPigScoreColor } from '@/lib/ui'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { SpiderChart } from './SpiderChart'
+import DataWarning from '@/components/ui/DataWarning'
 import {
   TabProps,
   coordToPercent,
   formatTimeSec,
 } from './shared'
 
-// Section component with minimal styling (matching BuildTab)
+// section component with minimal styling (matching BuildTab)
 function PerformanceSection({ 
   title, 
   children, 
@@ -84,32 +85,31 @@ export function PerformanceTab({
       )
     },
     {
+      label: 'Total Dmg',
+      ...getChartData(
+        pigScoreBreakdown.playerStats.totalDamagePerMin,
+        pigScoreBreakdown.championAvgStats.totalDamagePerMin
+      )
+    },
+    ...(pigScoreBreakdown.playerStats.healingShieldingPerMin > 500 ? [{
       label: 'Healing',
       ...getChartData(
         pigScoreBreakdown.playerStats.healingShieldingPerMin,
         pigScoreBreakdown.championAvgStats.healingShieldingPerMin
       )
-    },
-    {
+    }] : []),
+    ...(pigScoreBreakdown.playerStats.ccTimePerMin >= 1 ? [{
       label: 'CC',
       ...getChartData(
         pigScoreBreakdown.playerStats.ccTimePerMin,
         pigScoreBreakdown.championAvgStats.ccTimePerMin
       )
-    },
+    }] : []),
     {
       label: 'KP',
       ...getChartData(
         pigScoreBreakdown.playerStats.killParticipation || 0,
         0.5 // Assume 50% avg KP for ARAM
-      )
-    },
-    {
-      label: 'Survival',
-      ...getChartData(
-        pigScoreBreakdown.playerStats.deathsPerMin,
-        0.75, // Assume 0.75 avg deaths/min for ARAM
-        true
       )
     },
   ]
@@ -123,140 +123,150 @@ export function PerformanceTab({
         rightContent={
           <div className="flex items-center gap-2 text-xs text-text-muted font-normal normal-case tracking-normal">
             <span>Based on {pigScoreBreakdown.totalGames.toLocaleString()} games</span>
-            
-            {(() => {
-              const warnings: string[] = []
-              if (pigScoreBreakdown.usedFallbackPatch) {
-                warnings.push("Using data from older patches due to low sample size")
-              }
-              if (!pigScoreBreakdown.usedCoreStats) {
-                warnings.push("Using champion-wide data due to low sample size for this build")
-              } else if (pigScoreBreakdown.usedFallbackCore) {
-                warnings.push("Using data from a similar core build due to low sample size")
-              }
-
-              if (warnings.length === 0) return null
-
-              const isGoldWarning = pigScoreBreakdown.usedFallbackPatch || !pigScoreBreakdown.usedCoreStats
-
-              return (
-                <SimpleTooltip content={
-                  <div className="flex flex-col gap-1">
-                    {warnings.map((w, i) => (
-                      <span key={i} className="text-xs text-white">{w}</span>
-                    ))}
-                  </div>
-                }>
-                  <div className={clsx("cursor-help", isGoldWarning ? "text-gold-light" : "text-blue-400")}>
-                    {isGoldWarning ? (
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </div>
-                </SimpleTooltip>
-              )
-            })()}
+            <DataWarning 
+              usedFallbackPatch={pigScoreBreakdown.usedFallbackPatch}
+              usedCoreStats={pigScoreBreakdown.usedCoreStats}
+              usedFallbackCore={pigScoreBreakdown.usedFallbackCore}
+            />
           </div>
         }
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left: Spider Chart & Scores */}
-          <div>
+        <div className="flex flex-col gap-6">
+          {/* Row 1: Spider Chart & Stats List */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Left: Spider Chart */}
             <div className="flex justify-center py-2">
               <SpiderChart data={spiderMetrics} size={220} />
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mt-6">
-              <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
-                <div className="text-[10px] text-text-muted uppercase">Performance</div>
-                <div className={clsx(
-                  'text-lg font-bold',
-                  pigScoreBreakdown.componentScores.performance >= 70 ? 'text-accent-light' : 'text-text-primary'
-                )}>
-                  {pigScoreBreakdown.componentScores.performance}
-                </div>
-              </div>
-              <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
-                <div className="text-[10px] text-text-muted uppercase">Timeline</div>
-                <div className={clsx(
-                  'text-lg font-bold',
-                  pigScoreBreakdown.componentScores.timeline >= 70 ? 'text-accent-light' : 'text-text-primary'
-                )}>
-                  {pigScoreBreakdown.componentScores.timeline}
-                </div>
-              </div>
-              <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
-                <div className="text-[10px] text-text-muted uppercase">KDA</div>
-                <div className={clsx(
-                  'text-lg font-bold',
-                  pigScoreBreakdown.componentScores.kda >= 70 ? 'text-accent-light' : 'text-text-primary'
-                )}>
-                  {pigScoreBreakdown.componentScores.kda}
-                </div>
+            {/* Right: Stats List */}
+            <div className="flex flex-col justify-center h-full">
+              <div className="space-y-3">
+                {[
+                  {
+                    label: 'Damage/min',
+                    value: pigScoreBreakdown.playerStats.damageToChampionsPerMin,
+                    avg: pigScoreBreakdown.championAvgStats.damageToChampionsPerMin,
+                    metric: 'Damage to Champions'
+                  },
+                  {
+                    label: 'Total Dmg/min',
+                    value: pigScoreBreakdown.playerStats.totalDamagePerMin,
+                    avg: pigScoreBreakdown.championAvgStats.totalDamagePerMin,
+                    metric: 'Total Damage'
+                  },
+                  ...(pigScoreBreakdown.playerStats.healingShieldingPerMin > 500 ? [{
+                    label: 'Healing/min',
+                    value: pigScoreBreakdown.playerStats.healingShieldingPerMin,
+                    avg: pigScoreBreakdown.championAvgStats.healingShieldingPerMin,
+                    metric: 'Healing/Shielding'
+                  }] : []),
+                  ...(pigScoreBreakdown.playerStats.ccTimePerMin >= 1 ? [{
+                    label: 'CC Time/min',
+                    value: pigScoreBreakdown.playerStats.ccTimePerMin,
+                    avg: pigScoreBreakdown.championAvgStats.ccTimePerMin,
+                    metric: 'CC Time',
+                    suffix: 's'
+                  }] : []),
+                  {
+                    label: 'Deaths/min',
+                    value: pigScoreBreakdown.playerStats.deathsPerMin,
+                    avg: 0.6, // optimal
+                    metric: 'Deaths',
+                    inverse: true
+                  }
+                ].map((stat, idx) => {
+                  const m = pigScoreBreakdown.metrics.find(m => m.name === stat.metric)
+                  const score = m?.score || 0
+                  const isGood = score >= 85
+                  const isBad = score < 50
+                  
+                  let statusText = isGood ? 'Excellent' : isBad ? 'Below Avg' : 'Average'
+                  
+                  if (stat.metric === 'Deaths') {
+                    if (stat.value < 0.5) statusText = 'Resets too little'
+                    else if (stat.value > 0.7) statusText = 'Too many deaths'
+                    else statusText = 'Optimal'
+                  }
+
+                  return (
+                    <div key={idx} className="flex items-center justify-between text-sm">
+                      <span className="text-text-muted">{stat.label}</span>
+                      <div className="text-right">
+                        <div className="font-medium tabular-nums text-white">
+                          {stat.value.toFixed(1)}{stat.suffix}
+                          <span className="text-xs text-text-muted mx-1">vs</span>
+                          {stat.avg.toFixed(1)}{stat.suffix}
+                        </div>
+                        <div className={clsx(
+                          'text-xs',
+                          isGood ? 'text-accent-light' : isBad ? 'text-negative' : 'text-gold-light'
+                        )}>
+                          {statusText}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
 
-          {/* Right: Stats List */}
-          <div className="flex flex-col justify-center">
-            <div className="space-y-3">
-              {[
-                {
-                  label: 'Damage/min',
-                  value: pigScoreBreakdown.playerStats.damageToChampionsPerMin,
-                  avg: pigScoreBreakdown.championAvgStats.damageToChampionsPerMin,
-                  metric: 'Damage to Champions'
-                },
-                {
-                  label: 'Healing/min',
-                  value: pigScoreBreakdown.playerStats.healingShieldingPerMin,
-                  avg: pigScoreBreakdown.championAvgStats.healingShieldingPerMin,
-                  metric: 'Healing/Shielding'
-                },
-                {
-                  label: 'CC Time/min',
-                  value: pigScoreBreakdown.playerStats.ccTimePerMin,
-                  avg: pigScoreBreakdown.championAvgStats.ccTimePerMin,
-                  metric: 'CC Time',
-                  suffix: 's'
-                },
-                {
-                  label: 'Deaths/min',
-                  value: pigScoreBreakdown.playerStats.deathsPerMin,
-                  avg: 0.6, // optimal
-                  metric: 'Deaths',
-                  inverse: true
-                }
-              ].map((stat, idx) => {
-                const m = pigScoreBreakdown.metrics.find(m => m.name === stat.metric)
-                const score = m?.score || 0
-                const isGood = score >= 85
-                const isBad = score < 50
-                
-                return (
-                  <div key={idx} className="flex items-center justify-between text-sm">
-                    <span className="text-text-muted">{stat.label}</span>
-                    <div className="text-right">
-                      <div className="font-medium tabular-nums text-white">
-                        {stat.value.toFixed(1)}{stat.suffix}
-                        <span className="text-xs text-text-muted mx-1">vs</span>
-                        {stat.avg.toFixed(1)}{stat.suffix}
-                      </div>
-                      <div className={clsx(
-                        'text-xs',
-                        isGood ? 'text-accent-light' : isBad ? 'text-negative' : 'text-gold-light'
-                      )}>
-                        {isGood ? 'Excellent' : isBad ? 'Below Avg' : 'Average'}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+          {/* Row 2: Death Bar */}
+          <div className="px-4">
+            <div className="flex justify-between text-[10px] text-text-muted uppercase mb-1">
+              <span>Deaths/Min</span>
+              <span>{pigScoreBreakdown.playerStats.deathsPerMin.toFixed(2)}</span>
+            </div>
+            <div className="relative h-2 bg-abyss-800 rounded-full overflow-hidden">
+              {/* Optimal Area (0.5 - 0.7) */}
+              <div 
+                className="absolute top-0 bottom-0 bg-accent-light/20" 
+                style={{ 
+                  left: `${(0.5 / 1.5) * 100}%`,
+                  width: `${((0.7 - 0.5) / 1.5) * 100}%` 
+                }} 
+              />
+              {/* Player Marker */}
+              <div 
+                className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_4px_rgba(255,255,255,0.8)]"
+                style={{ left: `${Math.min(100, (pigScoreBreakdown.playerStats.deathsPerMin / 1.5) * 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-text-muted mt-1">
+              <span>0</span>
+              <span>1.5+</span>
+            </div>
+          </div>
+
+          {/* Row 3: Scores */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
+              <div className="text-[10px] text-text-muted uppercase">Performance</div>
+              <div className={clsx(
+                'text-lg font-bold',
+                pigScoreBreakdown.componentScores.performance >= 70 ? 'text-accent-light' : 'text-text-primary'
+              )}>
+                {pigScoreBreakdown.componentScores.performance}
+              </div>
+            </div>
+            <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
+              <div className="text-[10px] text-text-muted uppercase">Timeline</div>
+              <div className={clsx(
+                'text-lg font-bold',
+                pigScoreBreakdown.componentScores.timeline >= 70 ? 'text-accent-light' : 'text-text-primary'
+              )}>
+                {pigScoreBreakdown.componentScores.timeline}
+              </div>
+            </div>
+            <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
+              <div className="text-[10px] text-text-muted uppercase">KDA</div>
+              <div className={clsx(
+                'text-lg font-bold',
+                pigScoreBreakdown.componentScores.kda >= 70 ? 'text-accent-light' : 'text-text-primary'
+              )}>
+                {pigScoreBreakdown.componentScores.kda}
+              </div>
             </div>
           </div>
         </div>

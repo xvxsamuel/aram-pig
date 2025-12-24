@@ -19,7 +19,6 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
   const visiblePatches = availablePatches.filter(p => !HIDDEN_PATCHES.includes(p))
 
   // load from localstorage or url params
-  const [, setCurrentFilter] = useState<string>('')
   const [currentPatch, setCurrentPatch] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -28,26 +27,28 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
   useEffect(() => {
     const savedPatch = localStorage.getItem('championPatch')
 
-    const urlFilter = searchParams.get('filter')
     const urlPatch = searchParams.get('patch')
-    const filter = 'patch'
     const patch = urlPatch || savedPatch || DEFAULT_PATCH
 
-    setCurrentFilter(filter)
     setCurrentPatch(patch)
 
     // save to localstorage
-    localStorage.setItem('championFilter', 'patch')
     if (patch) localStorage.setItem('championPatch', patch)
 
-    // if url params are missing, update url with defaults
-    if (!urlFilter || !urlPatch) {
+    // if url params are missing or filter is present, update url
+    const hasFilter = searchParams.has('filter')
+    if (!urlPatch || hasFilter) {
       const params = new URLSearchParams(searchParams.toString())
-      params.set('filter', 'patch')
-      if (patch) {
+      if (hasFilter) params.delete('filter')
+      
+      if (!urlPatch && patch) {
         params.set('patch', patch)
       }
-      router.replace(`${pathname}?${params.toString()}`)
+      
+      // Only replace if something changed
+      if (params.toString() !== searchParams.toString()) {
+        router.replace(`${pathname}?${params.toString()}`)
+      }
     }
   }, [searchParams, visiblePatches, pathname, router])
 
@@ -65,11 +66,9 @@ export default function PatchFilter({ availablePatches }: PatchFilterProps) {
   const handleFilterChange = (patch: string) => {
     const params = new URLSearchParams(searchParams.toString())
 
-    params.set('filter', 'patch')
+    params.delete('filter') // ensure filter param is removed
     params.set('patch', patch)
-    localStorage.setItem('championFilter', 'patch')
     localStorage.setItem('championPatch', patch)
-    setCurrentFilter('patch')
     setCurrentPatch(patch)
 
     // stay on current page (champions list or detail)

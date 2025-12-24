@@ -63,8 +63,9 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
               })
               .join(' ')}
             fill="none"
-            stroke="var(--color-abyss-600)"
+            stroke="var(--color-text-muted)"
             strokeWidth="1"
+            strokeOpacity="0.3"
           />
         ))}
 
@@ -78,8 +79,9 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
               y1={center}
               x2={x}
               y2={y}
-              stroke="var(--color-abyss-600)"
+              stroke="var(--color-text-muted)"
               strokeWidth="1"
+              strokeOpacity="0.3"
             />
           )
         })}

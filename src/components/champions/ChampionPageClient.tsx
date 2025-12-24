@@ -97,6 +97,27 @@ export default function ChampionPageClient({
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
   const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
 
+  // handle hash navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1)
+      if (hash === 'items') setSelectedTab('items')
+      else if (hash === 'runes') setSelectedTab('runes')
+      else if (hash === 'leveling') setSelectedTab('leveling')
+      else if (hash === 'overview' || hash === '' || hash.startsWith('overview-')) setSelectedTab('overview')
+      else if (hash === 'best' || hash === 'worst') setSelectedTab('overview')
+    }
+
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  const handleTabChange = (tab: 'overview' | 'items' | 'runes' | 'leveling') => {
+    setSelectedTab(tab)
+    window.location.hash = tab === 'overview' ? 'best' : tab
+  }
+
   useEffect(() => {
     if (apiName) {
       const url = `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${apiName}_0.jpg`
@@ -122,11 +143,11 @@ export default function ChampionPageClient({
   if (isLoading && !data) {
     return (
       <>
-        <div className="max-w-6xl mx-auto px-8 py-8">
-          <div className="bg-abyss-600 rounded-lg p-6 mb-6">
-            <div className="flex items-center gap-6">
-              <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-                <div className="relative w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+        <section className="relative overflow-hidden bg-abyss-700">
+          <div className="max-w-6xl mx-auto px-8 py-6 pb-8 relative z-10">
+            <div className="flex items-start gap-6">
+              <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark flex-shrink-0">
+                <div className="relative w-24 h-24 rounded-[inherit] bg-abyss-800 overflow-hidden">
                   <Image
                     src={getChampionImageUrl(apiName, ddragonVersion)}
                     alt={displayName}
@@ -135,24 +156,42 @@ export default function ChampionPageClient({
                     className="w-full h-full object-cover scale-110"
                     unoptimized
                   />
+                  <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
                 </div>
               </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-4xl font-bold mb-2">{displayName}</h1>
-                    <div className="text-subtitle">Loading champion data...</div>
-                  </div>
-                  <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4">
-                    <PatchFilter availablePatches={availablePatches} />
-                  </div>
+              
+              <div className="flex-1 flex flex-col justify-between h-28">
+                <h1 className="text-3xl font-semibold text-white">{displayName}</h1>
+                <div className="flex items-end gap-12">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex flex-col gap-1">
+                      <div className="h-3 w-16 bg-abyss-500 rounded animate-pulse" />
+                      <div className="h-8 w-24 bg-abyss-500 rounded animate-pulse" />
+                    </div>
+                  ))}
                 </div>
+              </div>
+              
+              <div className="flex-shrink-0">
+                <PatchFilter availablePatches={availablePatches} />
               </div>
             </div>
+
+            <div className="flex gap-6 mt-4">
+              {['Overview', 'Items', 'Runes', 'More Stats'].map((tab) => (
+                <div
+                  key={tab}
+                  className="px-6 py-2 font-semibold tracking-wide border-b-2 border-transparent text-text-muted opacity-50 cursor-default"
+                >
+                  {tab}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="bg-abyss-600 rounded-lg p-12 flex justify-center items-center">
-            <LoadingSpinner size="lg" />
-          </div>
+        </section>
+
+        <div className="max-w-6xl mx-auto px-8 py-12 flex justify-center">
+          <LoadingSpinner size="lg" />
         </div>
       </>
     )
@@ -176,11 +215,11 @@ export default function ChampionPageClient({
   if (!data) {
     return (
       <>
-        <div className="max-w-6xl mx-auto px-8 py-8">
-          <div className="bg-abyss-600 rounded-lg p-6 mb-6">
-            <div className="flex items-center gap-6">
-              <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark">
-                <div className="relative w-24 h-24 rounded-[inherit] bg-accent-dark overflow-hidden">
+        <section className="relative overflow-hidden bg-abyss-700">
+          <div className="max-w-6xl mx-auto px-8 py-6 pb-8 relative z-10">
+            <div className="flex items-start gap-6">
+              <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark flex-shrink-0">
+                <div className="relative w-24 h-24 rounded-[inherit] bg-abyss-800 overflow-hidden">
                   <Image
                     src={getChampionImageUrl(apiName, ddragonVersion)}
                     alt={displayName}
@@ -189,27 +228,51 @@ export default function ChampionPageClient({
                     className="w-full h-full object-cover scale-110"
                     unoptimized
                   />
+                  <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
                 </div>
               </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-4xl font-bold mb-2">{displayName}</h1>
-                    <div className="text-subtitle">No data available</div>
+              
+              <div className="flex-1 flex flex-col justify-between h-28">
+                <h1 className="text-3xl font-semibold text-white">{displayName}</h1>
+                <div className="flex items-end gap-12">
+                  <div className="flex flex-col">
+                    <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Winrate</span>
+                    <span className="text-2xl font-semibold text-text-muted">-</span>
                   </div>
-                  <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4">
-                    <PatchFilter availablePatches={availablePatches} />
+                  <div className="flex flex-col">
+                    <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Pickrate</span>
+                    <span className="text-2xl font-semibold text-text-muted">-</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Games</span>
+                    <span className="text-2xl font-semibold text-text-muted">0</span>
                   </div>
                 </div>
+              </div>
+              
+              <div className="flex-shrink-0">
+                <PatchFilter availablePatches={availablePatches} />
               </div>
             </div>
+
+            <div className="flex gap-6 mt-4">
+              {['Overview', 'Items', 'Runes', 'More Stats'].map((tab) => (
+                <div
+                  key={tab}
+                  className="px-6 py-2 font-semibold tracking-wide border-b-2 border-transparent text-text-muted opacity-50 cursor-default"
+                >
+                  {tab}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="bg-abyss-600 rounded-lg p-12 text-center">
-            <p className="text-2xl text-subtitle mb-2">No statistics available yet</p>
-            <p className="text-sm text-text-muted">
-              No matches found for {displayName} on patch {currentPatch}. Try selecting a different patch.
-            </p>
-          </div>
+        </section>
+
+        <div className="max-w-6xl mx-auto px-8 py-12 text-center">
+          <p className="text-2xl text-subtitle mb-2">No statistics available yet</p>
+          <p className="text-sm text-text-muted">
+            No matches found for {displayName} on patch {currentPatch}. Try selecting a different patch.
+          </p>
         </div>
       </>
     )
@@ -559,7 +622,7 @@ export default function ChampionPageClient({
           {/* tab navigation */}
           <div className="flex gap-6 mt-4">
             <button
-              onClick={() => setSelectedTab('overview')}
+              onClick={() => handleTabChange('overview')}
               className={clsx(
                 'cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2',
                 selectedTab === 'overview'
@@ -570,7 +633,7 @@ export default function ChampionPageClient({
               Overview
             </button>
             <button
-              onClick={() => setSelectedTab('items')}
+              onClick={() => handleTabChange('items')}
               className={clsx(
                 'cursor-pointer px-4 py-2 font-semibold tracking-wide transition-all border-b-2',
                 selectedTab === 'items'
@@ -581,7 +644,7 @@ export default function ChampionPageClient({
               Items
             </button>
             <button
-              onClick={() => setSelectedTab('runes')}
+              onClick={() => handleTabChange('runes')}
               className={clsx(
                 'cursor-pointer px-4 py-2 font-semibold tracking-wide transition-all border-b-2',
                 selectedTab === 'runes'
@@ -592,7 +655,7 @@ export default function ChampionPageClient({
               Runes
             </button>
             <button
-              onClick={() => setSelectedTab('leveling')}
+              onClick={() => handleTabChange('leveling')}
               className={clsx(
                 'cursor-pointer px-6 py-2 font-semibold tracking-wide transition-all border-b-2',
                 selectedTab === 'leveling'

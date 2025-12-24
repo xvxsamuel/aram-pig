@@ -27,9 +27,9 @@ async function getCurrentPatch(): Promise<string[]> {
 }
 
 // stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-const STATS_BUFFER_FLUSH_SIZE = 5000 // flush every 5000 participants (500 matches) - massive i/o reduction
+const STATS_BUFFER_FLUSH_SIZE = 5000 // flush every 5000 participants (500 matches)
 let lastStatsFlush = Date.now()
-const STATS_FLUSH_INTERVAL = 600000 // or every 10 minutes - even less frequent writes
+const STATS_FLUSH_INTERVAL = 600000 // or every 10 minutes
 
 // check if stats buffer should be flushed (using match-storage's buffer)
 async function maybeFlushStats(): Promise<void> {

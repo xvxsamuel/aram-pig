@@ -21,12 +21,12 @@ interface Props {
 
 export default function ChampionsPageClient({ availablePatches, ddragonVersion, championNames }: Props) {
   const searchParams = useSearchParams()
-  const filter = searchParams.get('filter')
   const patch = searchParams.get('patch')
+  const filter = 'patch'
 
   // swr with stale-while-revalidate
   const { data, isLoading } = useSWR(
-    filter && patch ? `/api/champions?offset=0&limit=200&filter=${filter}&patch=${patch}` : null,
+    patch ? `/api/champions?offset=0&limit=200&filter=${filter}&patch=${patch}` : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -83,7 +83,7 @@ export default function ChampionsPageClient({ availablePatches, ddragonVersion, 
         </div>
 
         {/* champion table or skeleton */}
-        {loading || !filter || !patch ? (
+        {loading || !patch ? (
           <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
             {/* table header - matches championtable */}
             <div className="flex items-stretch gap-3 px-3 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">

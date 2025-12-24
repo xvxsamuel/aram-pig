@@ -38,6 +38,18 @@ export function CoreBuildsSelector({
   const combinations = coreBuildsView === 'best' ? bestCombinations : worstCombinations
   const isWorst = coreBuildsView === 'worst'
 
+  // Sync with hash
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1)
+      if (hash === 'best') setCoreBuildsView('best')
+      else if (hash === 'worst') setCoreBuildsView('worst')
+    }
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
   // Initialize selection if null
   useEffect(() => {
     if (selectedCombo === null && bestCombinations.length > 0) {
@@ -137,6 +149,7 @@ export function CoreBuildsSelector({
     
     // Update view state
     setCoreBuildsView(newView)
+    window.location.hash = newView === 'best' ? 'best' : 'worst'
     
     // Immediately select the first item of the new view
     if (newCombinations.length > 0) {
