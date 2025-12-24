@@ -76,13 +76,10 @@ export async function GET(request: NextRequest) {
       response.headers.set('Cache-Control', CACHE_CONTROL)
       return response
     } else {
-      return NextResponse.json({
-        champions: [],
-        total: 0,
-        totalMatches: 0,
-        hasMore: false,
-        error: 'Only patch-based filtering is supported',
-      })
+      return NextResponse.json(
+        { error: 'Only patch-based filtering is supported' },
+        { status: 400 }
+      )
     }
   } catch (error) {
     console.error('Error fetching champions:', error)

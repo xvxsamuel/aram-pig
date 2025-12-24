@@ -1,5 +1,6 @@
 'use client'
 
+import { useId } from 'react'
 import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from '@/lib/ui'
 import Card from '@/components/ui/Card'
 
@@ -22,6 +23,7 @@ interface Props {
 
 // arc progress component for PIG score with bottom cutout
 function PigScoreArc({ score, loading }: { score: number | null | undefined; loading: boolean }) {
+  const gradientId = useId()
   const size = 72
   const strokeWidth = 4
   const radius = (size - strokeWidth) / 2
@@ -63,7 +65,7 @@ function PigScoreArc({ score, loading }: { score: number | null | undefined; loa
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size}>
         <defs>
-          <linearGradient id="pigScoreGradientDynamic" x1="0%" y1="100%" x2="0%" y2="0%">
+          <linearGradient id={gradientId} x1="0%" y1="100%" x2="0%" y2="0%">
             <stop offset="0%" stopColor={gradientColors.dark} />
             <stop offset="100%" stopColor={gradientColors.light} />
           </linearGradient>
@@ -75,7 +77,7 @@ function PigScoreArc({ score, loading }: { score: number | null | undefined; loa
           <path
             d={arcPath}
             fill="none"
-            stroke="url(#pigScoreGradientDynamic)"
+            stroke={`url(#${gradientId})`}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeDasharray={arcLength}

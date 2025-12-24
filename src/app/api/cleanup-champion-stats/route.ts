@@ -57,9 +57,8 @@ export async function GET(request: Request) {
     // delete old patches
     const { error: deleteError, count } = await supabase
       .from('champion_stats')
-      .delete()
+      .delete({ count: 'exact' })
       .in('patch', patchesToDelete)
-      .select('count')
 
     if (deleteError) {
       console.error('Error deleting old patches:', deleteError)

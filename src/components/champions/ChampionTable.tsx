@@ -48,22 +48,23 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
 
       switch (sortKey) {
         case 'rank':
-          // rank is based on winrate desc by default
           comparison = b.overall_winrate - a.overall_winrate
           break
-        case 'champion':
+        case 'champion': {
           const displayA = getChampionDisplayName(a.champion_name, championNames)
           const displayB = getChampionDisplayName(b.champion_name, championNames)
           comparison = displayB.localeCompare(displayA)
           break
+        }
         case 'winrate':
           comparison = a.overall_winrate - b.overall_winrate
           break
-        case 'pickrate':
+        case 'pickrate': {
           const prA = (a.games_analyzed / totalGames) * 100
           const prB = (b.games_analyzed / totalGames) * 100
           comparison = prA - prB
           break
+        }
         case 'matches':
           comparison = a.games_analyzed - b.games_analyzed
           break

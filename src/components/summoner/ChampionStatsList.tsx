@@ -109,26 +109,30 @@ export default function ChampionStatsList({
         case 'games':
           comparison = a.games - b.games
           break
-        case 'winrate':
+        case 'winrate': {
           const wrA = a.wins / a.games
           const wrB = b.wins / b.games
           comparison = wrA - wrB
           break
-        case 'kda':
+        }
+        case 'kda': {
           const kdaA = a.deaths > 0 ? (a.kills + a.assists) / a.deaths : a.kills + a.assists
           const kdaB = b.deaths > 0 ? (b.kills + b.assists) / b.deaths : b.kills + b.assists
           comparison = kdaA - kdaB
           break
-        case 'damage':
+        }
+        case 'damage': {
           const avgDmgA = a.totalDamage / a.games
           const avgDmgB = b.totalDamage / b.games
           comparison = avgDmgA - avgDmgB
           break
-        case 'pigScore':
+        }
+        case 'pigScore': {
           const pigA = a.averagePigScore ?? -1
           const pigB = b.averagePigScore ?? -1
           comparison = pigA - pigB
           break
+        }
       }
 
       return sortDirection === 'asc' ? comparison : -comparison

@@ -15,8 +15,6 @@ export default function FetchMessage({ job, region: _region, notifyEnabled, onNo
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const hasStartedFetching = job.totalMatches > 0
 
-  console.log('FetchMessage rendering with:', { hasStartedFetching, job })
-
   // Calculate ETA based on actual progress speed
   const eta = useMemo(() => {
     if (!hasStartedFetching || !job.startedAt) return null

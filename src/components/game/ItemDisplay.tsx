@@ -83,8 +83,8 @@ export function ItemGrid({ items, ddragonVersion, columns = 4, maxItems = 8 }: I
 
   return (
     <div className={`grid ${gridCols[columns]} gap-3`}>
-      {items.slice(0, maxItems).map(item => (
-        <ItemWithStats key={item.item_id} item={item} ddragonVersion={ddragonVersion} />
+      {items.slice(0, maxItems).map((item, idx) => (
+        <ItemWithStats key={`${item.item_id}-${idx}`} item={item} ddragonVersion={ddragonVersion} />
       ))}
     </div>
   )

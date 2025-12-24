@@ -15,7 +15,10 @@ interface Params {
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { region, name } = await params
   const decodedName = decodeURIComponent(name)
-  const displayName = decodedName.replace('-', '#')
+  const lastHyphen = decodedName.lastIndexOf('-')
+  const displayName = lastHyphen !== -1 
+    ? decodedName.slice(0, lastHyphen) + '#' + decodedName.slice(lastHyphen + 1)
+    : decodedName
   
   const regionLabel = region.toUpperCase()
   const platformCode = LABEL_TO_PLATFORM[regionLabel]
@@ -82,7 +85,10 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   }
 
   const decodedName = decodeURIComponent(name)
-  const summonerName = decodedName.replace('-', '#')
+  const lastHyphen = decodedName.lastIndexOf('-')
+  const summonerName = lastHyphen !== -1 
+    ? decodedName.slice(0, lastHyphen) + '#' + decodedName.slice(lastHyphen + 1)
+    : decodedName
 
   const [gameName, tagLine] = summonerName.includes('#')
     ? summonerName.split('#')

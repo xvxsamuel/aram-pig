@@ -5,7 +5,10 @@ import useSWR from 'swr'
 import PatchFilter from '@/components/filters/PatchFilter'
 import ChampionTable from '@/components/champions/ChampionTable'
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+})
 
 interface ChampionStats {
   champion_name: string

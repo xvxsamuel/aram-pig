@@ -276,6 +276,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
     async function fetchChampions() {
       try {
         const res = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/data/en_US/champion.json`)
+        if (!res.ok) return
         const data = await res.json()
         const names: Record<string, string> = {}
         const championIds: string[] = []
@@ -327,6 +328,10 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
     const timeout = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=5`)
+        if (!res.ok) {
+          setRecentSummoners([])
+          return
+        }
         const data = await res.json()
         const summoners = data.summoners || []
         // Cache the result

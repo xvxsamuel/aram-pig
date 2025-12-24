@@ -63,7 +63,7 @@ npm run fetch-items
 
 Required environment variables in `.env.local`:
 
-```
+```bash
 RIOT_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=

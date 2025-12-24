@@ -97,9 +97,10 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
 
         {/* Player Polygon */}
         <motion.polygon
-          initial={{ opacity: 0, scale: 0.8, originX: "50%", originY: "50%" }}
+          initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
+          style={{ originX: 0.5, originY: 0.5 }}
           points={playerPoints}
           fill="var(--color-accent-light)"
           fillOpacity="0.2"
