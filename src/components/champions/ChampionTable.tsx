@@ -40,7 +40,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
         case 'champion': {
           const displayA = getChampionDisplayName(a.champion_name, championNames)
           const displayB = getChampionDisplayName(b.champion_name, championNames)
-          comparison = displayB.localeCompare(displayA)
+          comparison = displayA.localeCompare(displayB)
           break
         }
         case 'winrate':

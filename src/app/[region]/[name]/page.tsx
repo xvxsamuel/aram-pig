@@ -26,20 +26,26 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   // try to get proper capitalization from database
   let properDisplayName = displayName
   if (platformCode && process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    const [gameName, tagLine] = displayName.includes('#')
-      ? displayName.split('#')
-      : [displayName, getDefaultTag(regionLabel)]
-    
-    const { data: cachedSummoner } = await supabase
-      .from('summoners')
-      .select('game_name, tag_line')
-      .ilike('game_name', gameName)
-      .ilike('tag_line', tagLine)
-      .eq('region', platformCode)
-      .single()
-    
-    if (cachedSummoner?.game_name && cachedSummoner?.tag_line) {
-      properDisplayName = `${cachedSummoner.game_name}#${cachedSummoner.tag_line}`
+    try {
+      const [gameName, tagLine] = displayName.includes('#')
+        ? displayName.split('#')
+        : [displayName, getDefaultTag(regionLabel)]
+      
+      const { data: cachedSummoner, error } = await supabase
+        .from('summoners')
+        .select('game_name, tag_line')
+        .ilike('game_name', gameName)
+        .ilike('tag_line', tagLine)
+        .eq('region', platformCode)
+        .single()
+      
+      if (error) {
+        console.error('[Metadata] Failed to fetch summoner:', error)
+      } else if (cachedSummoner?.game_name && cachedSummoner?.tag_line) {
+        properDisplayName = `${cachedSummoner.game_name}#${cachedSummoner.tag_line}`
+      }
+    } catch (err) {
+      console.error('[Metadata] Error querying summoner:', err)
     }
   }
 
@@ -96,6 +102,29 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
 
   let summonerData = null
   let error = null
+
+  // wrap all async operations in try-catch
+  let ddragonVersion = ''
+  let championNames: Record<string, string> = {}
+  
+  try {
+    ;[ddragonVersion, championNames] = await Promise.all([
+      getLatestVersion().catch(err => {
+        console.error('[SummonerPage] Failed to fetch ddragon version:', err)
+        return '15.11.1' // fallback
+      }),
+      getLatestVersion()
+        .then(v => fetchChampionNames(v))
+        .catch(err => {
+          console.error('[SummonerPage] Failed to fetch champion names:', err)
+          return {} // fallback
+        }),
+    ])
+  } catch (err) {
+    console.error('[SummonerPage] Failed to fetch ddragon data:', err)
+    ddragonVersion = '15.11.1'
+    championNames = {}
+  }
 
   try {
     // try to load from database first to avoid riot api calls
@@ -206,9 +235,11 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     }
   }
 
-  const ddragonVersion = await getLatestVersion()
-  const championNames = await fetchChampionNames(ddragonVersion)
-  const profileIconUrl = summonerData ? await getProfileIconUrl(summonerData.summoner.profileIconId) : ''
+  // fetch profile icon if summoner data exists
+  const profileIconUrl = summonerData ? await getProfileIconUrl(summonerData.summoner.profileIconId).catch(err => {
+    console.error('[SummonerPage] Failed to fetch profile icon:', err)
+    return ''
+  }) : ''
 
   // fetch last_updated and check if has matches for new profile detection
   let lastUpdated: string | null = null

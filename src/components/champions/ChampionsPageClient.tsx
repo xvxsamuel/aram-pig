@@ -58,7 +58,7 @@ export default function ChampionsPageClient({
   const canUsePrefetchedData = initialData?.patch === currentPatch
 
   // swr with fallback data for instant load
-  const { data, isLoading } = useSWR<ChampionData>(
+  const { data, isLoading, error } = useSWR<ChampionData>(
     currentPatch ? `/api/champions?patch=${currentPatch}` : null,
     fetcher,
     {
@@ -111,6 +111,14 @@ export default function ChampionsPageClient({
         <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4 mb-6">
           <PatchFilter availablePatches={availablePatches} />
         </div>
+
+        {/* error message */}
+        {error && (
+          <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-6 text-red-300">
+            <p className="font-semibold mb-1">Failed to load champion data</p>
+            <p className="text-sm">Please try again or select a different patch.</p>
+          </div>
+        )}
 
         {/* champion table or skeleton */}
         {showSkeleton ? (

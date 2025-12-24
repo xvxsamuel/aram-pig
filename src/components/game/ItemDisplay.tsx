@@ -4,6 +4,24 @@ import ItemIcon from '@/components/ui/ItemIcon'
 import { getWinrateColor } from '@/lib/ui'
 import type { ItemStat, StarterBuild } from '@/types/champion-stats'
 
+// reusable stats display component
+function StatsDisplay({ pickrate, winrate }: { pickrate: number; winrate: number }) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex justify-between text-xs mb-1">
+        <span className="text-subtitle">Pick</span>
+        <span className="font-bold">{pickrate.toFixed(1)}%</span>
+      </div>
+      <div className="flex justify-between text-xs">
+        <span className="text-subtitle">Win</span>
+        <span className="font-bold" style={{ color: getWinrateColor(winrate) }}>
+          {winrate.toFixed(1)}%
+        </span>
+      </div>
+    </div>
+  )
+}
+
 interface ItemWithStatsProps {
   item: ItemStat
   ddragonVersion: string
@@ -20,20 +38,7 @@ export function ItemWithStats({ item, ddragonVersion, size = 'xl', showStats = t
           <div className="w-12 h-12 rounded bg-abyss-800 border border-gray-700 flex items-center justify-center flex-shrink-0">
             <span className="text-2xl text-gray-500">∅</span>
           </div>
-          {showStats && (
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-subtitle">Pick</span>
-                <span className="font-bold">{item.pickrate.toFixed(1)}%</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-subtitle">Win</span>
-                <span className="font-bold" style={{ color: getWinrateColor(item.winrate) }}>
-                  {item.winrate.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-          )}
+          {showStats && <StatsDisplay pickrate={item.pickrate} winrate={item.winrate} />}
         </div>
       </div>
     )
@@ -48,20 +53,7 @@ export function ItemWithStats({ item, ddragonVersion, size = 'xl', showStats = t
           size={size}
           className="bg-abyss-800 border-gray-700 flex-shrink-0"
         />
-        {showStats && (
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-subtitle">Pick</span>
-              <span className="font-bold">{item.pickrate.toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-subtitle">Win</span>
-              <span className="font-bold" style={{ color: getWinrateColor(item.winrate) }}>
-                {item.winrate.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-        )}
+        {showStats && <StatsDisplay pickrate={item.pickrate} winrate={item.winrate} />}
       </div>
     </div>
   )
@@ -79,7 +71,7 @@ export function ItemGrid({ items, ddragonVersion, columns = 4, maxItems = 8 }: I
     2: 'grid-cols-2',
     3: 'grid-cols-2 md:grid-cols-3',
     4: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
-  }
+  } as const
 
   return (
     <div className={`grid ${gridCols[columns]} gap-3`}>
@@ -122,18 +114,7 @@ export function StarterBuildDisplay({ build, ddragonVersion }: StarterBuildDispl
             </div>
           ))}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-subtitle">Pick</span>
-            <span className="font-bold">{build.pickrate.toFixed(1)}%</span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="text-subtitle">Win</span>
-            <span className="font-bold" style={{ color: getWinrateColor(build.winrate) }}>
-              {build.winrate.toFixed(1)}%
-            </span>
-          </div>
-        </div>
+        <StatsDisplay pickrate={build.pickrate} winrate={build.winrate} />
       </div>
     </div>
   )

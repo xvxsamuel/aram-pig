@@ -16,13 +16,14 @@ export async function GET(request: NextRequest) {
 
   try {
     // parallel fetch: champion stats and match count
+    // order by computed winrate at db level for correct sorting
     const [statsResult, matchCountResult] = await Promise.all([
       supabase
         .from('champion_stats')
-        .select('champion_name, games, wins, last_updated')
+        .select('champion_name, games, wins, last_updated, winrate')
         .eq('patch', patch)
         .gte('games', 1)
-        .order('wins', { ascending: false })
+        .order('winrate', { ascending: false })
         .order('games', { ascending: false })
         .limit(200),
       supabase
@@ -38,13 +39,12 @@ export async function GET(request: NextRequest) {
 
     const champions = (statsResult.data || []).map(row => ({
       champion_name: row.champion_name,
-      overall_winrate: row.games > 0 ? Number(((row.wins / row.games) * 100).toFixed(2)) : 0,
+      overall_winrate: Number(row.winrate) || 0,
       games_analyzed: row.games || 0,
       last_updated: row.last_updated,
     }))
 
-    // sort by winrate descending
-    champions.sort((a, b) => b.overall_winrate - a.overall_winrate)
+    // already sorted by db, no need to sort again
 
     const response = NextResponse.json({
       champions,
