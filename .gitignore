@@ -30,6 +30,6 @@ dist
 supabase
 docs
 
-# scraper state files (not the scripts themselves)
-scripts/scraper-state.json
-scripts/match-cache.json
+# scraper state files
+scripts/scraper/scraper-state.json
+scripts/scraper/match-cache.json
