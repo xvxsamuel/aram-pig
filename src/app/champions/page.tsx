@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { getLatestVersion, fetchChampionNames } from '@/lib/ddragon'
 import { getLatestPatches } from '@/lib/game'
 import { createAdminClient } from '@/lib/db'
@@ -76,12 +77,14 @@ export default async function ChampionsPage() {
   const initialData = defaultPatch ? await prefetchChampionStats(defaultPatch) : null
 
   return (
-    <ChampionsPageClient
-      availablePatches={availablePatches}
-      ddragonVersion={ddragonVersion}
-      championNames={championNames}
-      initialData={initialData}
-      defaultPatch={defaultPatch}
-    />
+    <Suspense fallback={<div className="min-h-screen bg-accent-darker" />}>
+      <ChampionsPageClient
+        availablePatches={availablePatches}
+        ddragonVersion={ddragonVersion}
+        championNames={championNames}
+        initialData={initialData}
+        defaultPatch={defaultPatch}
+      />
+    </Suspense>
   )
 }
