@@ -1,0 +1,14 @@
+version: "0.1"
+reviews:
+  path_filters:
+    - "!**/package-lock.json"
+    - "!**/yarn.lock"
+    - "!**/pnpm-lock.yaml"
+    - "!public/**"
+    - "!scripts/scraper/**"
+    - "!**/*.d.ts"
+    - "!**/*.map"
+    - "!**/*.svg"
+    - "!**/*.png"
+    - "!**/*.ico"
+    - "!**/*.json"
