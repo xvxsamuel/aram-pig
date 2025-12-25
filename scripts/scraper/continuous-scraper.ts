@@ -27,9 +27,9 @@ async function getCurrentPatch(): Promise<string[]> {
 }
 
 // stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-const STATS_BUFFER_FLUSH_SIZE = 5000 // flush every 5000 participants (500 matches)
+const STATS_BUFFER_FLUSH_SIZE = 10000 // flush every 10000 participants (1000 matches)
 let lastStatsFlush = Date.now()
-const STATS_FLUSH_INTERVAL = 600000 // or every 10 minutes
+const STATS_FLUSH_INTERVAL = 1200000 // or every 20 minutes
 
 // check if stats buffer should be flushed (using match-storage's buffer)
 async function maybeFlushStats(): Promise<void> {
@@ -265,8 +265,8 @@ async function crawlSummoner(
     } else {
       console.log(`  ${potentiallyNewMatchIds.length} potentially new, checking DB...`)
 
-      // check db in batches of 100 to reduce query overhead even more
-      const DB_CHECK_BATCH_SIZE = 100
+      // check db in batches of 200 to reduce query overhead
+      const DB_CHECK_BATCH_SIZE = 200
       const existingIds = new Set<string>()
       
       for (let i = 0; i < potentiallyNewMatchIds.length; i += DB_CHECK_BATCH_SIZE) {
@@ -277,10 +277,6 @@ async function crawlSummoner(
           .in('match_id', batch)
         
         existingMatches?.forEach(m => existingIds.add(m.match_id))
-        // small delay between db checks to avoid overwhelming i/o
-        if (i + DB_CHECK_BATCH_SIZE < potentiallyNewMatchIds.length) {
-          await sleep(200)
-        }
       }
       
       // add all checked matches to cache (existing and new)
@@ -1026,7 +1022,7 @@ async function main() {
   // Periodic summary logger and state saver
   const statsLogger = async () => {
     while (true) {
-      await sleep(30000) // Report every 30 seconds to reduce I/O
+      await sleep(300000) // Report every 5 minutes to reduce I/O
       const runtime = Date.now() - startTime
       const avgRate = totalMatchesScraped / (runtime / 1000 / 60)
       const acceptedPatches = await getCurrentPatch()
@@ -1066,9 +1062,8 @@ async function main() {
       // Run cleanup if needed
       await maybeRunCleanup()
 
-      // Save state and match cache every summary
+      // Save state periodically (match cache only saved on shutdown)
       saveState()
-      saveMatchCache()
     }
   }
 
