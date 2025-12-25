@@ -109,7 +109,7 @@ export default function ChampionsPageClient({
 
         {/* filters */}
         <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4 mb-6">
-          <PatchFilter availablePatches={availablePatches} />
+          <PatchFilter availablePatches={availablePatches} currentPatch={currentPatch} />
         </div>
 
         {/* error message */}

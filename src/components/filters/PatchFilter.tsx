@@ -5,20 +5,19 @@ import { useState, useRef, useEffect } from 'react'
 
 interface PatchFilterProps {
   availablePatches: string[]
+  currentPatch: string
 }
 
 // patches with insufficient data
 const HIDDEN_PATCHES = ['25.22', '25.23']
 
-export default function PatchFilter({ availablePatches }: PatchFilterProps) {
+export default function PatchFilter({ availablePatches, currentPatch }: PatchFilterProps) {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const pathname = usePathname()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
 
   const visiblePatches = availablePatches.filter(p => !HIDDEN_PATCHES.includes(p))
-  const currentPatch = searchParams.get('patch')
 
   // close dropdown when clicking outside
   useEffect(() => {

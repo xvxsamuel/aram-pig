@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import useSWR from 'swr'
 import Image from 'next/image'
 import clsx from 'clsx'
@@ -93,9 +94,18 @@ export default function ChampionPageClient({
   availablePatches,
   selectedPatch,
 }: Props) {
+  const router = useRouter()
+  const pathname = usePathname()
   const currentPatch = selectedPatch || availablePatches[0]
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
   const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
+
+  // redirect to default patch if none specified
+  useEffect(() => {
+    if (!selectedPatch && availablePatches[0]) {
+      router.replace(`${pathname}?patch=${availablePatches[0]}`)
+    }
+  }, [selectedPatch, availablePatches, router, pathname])
 
   // handle hash navigation
   useEffect(() => {
@@ -109,6 +119,12 @@ export default function ChampionPageClient({
     }
 
     handleHashChange()
+    
+    // set default hash if none present
+    if (!window.location.hash) {
+      window.location.hash = 'best'
+    }
+    
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
@@ -173,7 +189,7 @@ export default function ChampionPageClient({
               </div>
               
               <div className="flex-shrink-0">
-                <PatchFilter availablePatches={availablePatches} />
+                <PatchFilter availablePatches={availablePatches} currentPatch={currentPatch} />
               </div>
             </div>
 
@@ -251,7 +267,7 @@ export default function ChampionPageClient({
               </div>
               
               <div className="flex-shrink-0">
-                <PatchFilter availablePatches={availablePatches} />
+                <PatchFilter availablePatches={availablePatches} currentPatch={currentPatch} />
               </div>
             </div>
 
@@ -615,7 +631,7 @@ export default function ChampionPageClient({
             
             {/* patch filter */}
             <div className="flex-shrink-0">
-              <PatchFilter availablePatches={availablePatches} />
+              <PatchFilter availablePatches={availablePatches} currentPatch={currentPatch} />
             </div>
           </div>
 
