@@ -4,6 +4,7 @@ import { getLatestVersion, fetchChampionNames } from '@/lib/ddragon'
 import { getLatestPatches } from '@/lib/game'
 import { createAdminClient } from '@/lib/db'
 import ChampionsPageClient from '@/components/champions/ChampionsPageClient'
+import type { ChampionTier } from '@/lib/ui'
 
 export const metadata: Metadata = {
   title: 'Champions | ARAM PIG',
@@ -51,7 +52,7 @@ async function prefetchChampionStats(patch: string) {
       overall_winrate: row.games > 0 ? Number(((row.wins / row.games) * 100).toFixed(2)) : 0,
       games_analyzed: row.games || 0,
       last_updated: row.last_updated,
-      tier: row.tier || 'COAL',
+      tier: (row.tier || 'COAL') as ChampionTier,
     }))
 
     // sort by winrate descending

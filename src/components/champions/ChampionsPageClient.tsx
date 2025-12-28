@@ -6,6 +6,7 @@ import useSWR from 'swr'
 import PatchFilter from '@/components/filters/PatchFilter'
 import ChampionTable from '@/components/champions/ChampionTable'
 import ErrorMessage from '@/components/ui/ErrorMessage'
+import type { ChampionTier } from '@/lib/ui'
 
 const fetcher = (url: string) =>
   fetch(url).then(res => {
@@ -18,7 +19,7 @@ interface ChampionStats {
   overall_winrate: number
   games_analyzed: number
   last_updated?: string
-  tier: string
+  tier: ChampionTier | null
 }
 
 interface ChampionData {

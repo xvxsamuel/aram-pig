@@ -4,9 +4,8 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getChampionImageUrl, getChampionDisplayName, getChampionUrlName } from '@/lib/ddragon'
-import { getWinrateColor, getTierSortValue, getTierBorderGradient } from '@/lib/ui'
+import { getWinrateColor, getTierSortValue, getTierBorderGradient, type ChampionTier } from '@/lib/ui'
 import AnimatedBorder from '@/components/ui/AnimatedBorder'
-import TierBadge from '@/components/ui/TierBadge'
 
 type SortKey = 'rank' | 'champion' | 'winrate' | 'pickrate' | 'matches' | 'tier'
 type SortDirection = 'asc' | 'desc'
@@ -15,7 +14,7 @@ interface ChampionStats {
   champion_name: string
   overall_winrate: number
   games_analyzed: number
-  tier: string
+  tier: ChampionTier | null
 }
 
 interface Props {
@@ -113,19 +112,23 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
               </div>
 
               <div className="w-44 flex items-center gap-3">
-                <div className="p-px rounded-lg overflow-hidden bg-gradient-to-b from-gold-light to-gold-dark">
-                  <div className="relative w-10 h-10 rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark">
-                    <Image
-                      src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
-                      alt={champion.champion_name}
-                      width={40}
-                      height={40}
-                      className="w-full h-full object-cover scale-110"
-                      unoptimized
-                    />
-                    <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
-                  </div>
-                </div>
+                <AnimatedBorder
+                  specialBorder={tierBorder}
+                  showGlint={shouldShowGlint}
+                  glintTrigger="auto"
+                  borderRadius="lg"
+                  innerClassName="relative w-10 h-10 rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark"
+                >
+                  <Image
+                    src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
+                    alt={champion.champion_name}
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover scale-110"
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                </AnimatedBorder>
                 <span className="font-medium text-sm truncate">
                   {getChampionDisplayName(champion.champion_name, championNames)}
                 </span>
@@ -137,7 +140,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
                 <div
                   className="p-px rounded-full overflow-hidden"
                   style={{ 
-                    background: tierBorder || 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
+                    background: tierBorder ? `linear-gradient(to bottom, ${tierBorder.from}, ${tierBorder.to})` : 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
                     boxShadow: tier === 'S+' ? '0 0 15px rgba(74, 158, 255, 0.9), 0 0 25px rgba(58, 131, 230, 0.7), 0 0 35px rgba(74, 158, 255, 0.5)' : 'none'
                   }}
                 >

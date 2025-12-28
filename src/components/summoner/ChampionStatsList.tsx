@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { getChampionImageUrl, getChampionDisplayName, getSortedChampionNames, getChampionUrlName } from '@/lib/ddragon'
 import { getWinrateColor, getKdaColor, getPigScoreColor, getChampionTier, getTierSortValue, getTierBorderGradient, type ChampionTierStats } from '@/lib/ui'
 import TierBadge from '@/components/ui/TierBadge'
-import ChampionPortrait from '@/components/ui/ChampionPortrait'
 import AnimatedBorder from '@/components/ui/AnimatedBorder'
 
 type SortKey = 'games' | 'winrate' | 'kda' | 'damage' | 'pigScore' | 'tier'

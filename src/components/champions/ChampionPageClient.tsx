@@ -8,7 +8,7 @@ import clsx from 'clsx'
 import { motion } from 'motion/react'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { getChampionImageUrl } from '@/lib/ddragon'
-import { getWinrateColor, getTierBorderGradient, shouldShowGlint } from '@/lib/ui'
+import { getWinrateColor, getTierBorderGradient } from '@/lib/ui'
 import ChampionDetailTabs from './ChampionDetailTabs'
 import PatchFilter from '@/components/filters/PatchFilter'
 import itemsData from '@/data/items.json'
@@ -683,7 +683,10 @@ export default function ChampionPageClient({
               <div
                 className="rounded-xl p-px relative overflow-hidden"
                 style={{ 
-                  background: getTierBorderGradient(data?.tier || null) || 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
+                  background: (() => {
+                    const gradient = getTierBorderGradient(data?.tier || null)
+                    return gradient ? `linear-gradient(to bottom, ${gradient.from}, ${gradient.to})` : 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))'
+                  })(),
                   boxShadow: 'none'
                 }}
               >
@@ -692,7 +695,10 @@ export default function ChampionPageClient({
                   <div
                     className="absolute inset-0 rounded-xl transition-transform duration-500 ease-out"
                     style={{
-                      background: getTierBorderGradient(data.tier) || '',
+                      background: (() => {
+                        const gradient = getTierBorderGradient(data.tier)
+                        return gradient ? `linear-gradient(to bottom, ${gradient.from}, ${gradient.to})` : ''
+                      })(),
                       transform: animateBorder ? 'translateY(0)' : 'translateY(100%)',
                     }}
                   />
@@ -738,7 +744,10 @@ export default function ChampionPageClient({
                   <div
                     className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-full p-px overflow-hidden"
                     style={{
-                      background: getTierBorderGradient(data.tier) || 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
+                      background: (() => {
+                        const gradient = getTierBorderGradient(data.tier)
+                        return gradient ? `linear-gradient(to bottom, ${gradient.from}, ${gradient.to})` : 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))'
+                      })(),
                     }}
                   >
                     {/* animated tier color overlay for badge */}
@@ -746,7 +755,10 @@ export default function ChampionPageClient({
                       <div
                         className="absolute inset-0 rounded-full transition-transform duration-150"
                         style={{
-                          background: getTierBorderGradient(data.tier) || '',
+                          background: (() => {
+                            const gradient = getTierBorderGradient(data.tier)
+                            return gradient ? `linear-gradient(to bottom, ${gradient.from}, ${gradient.to})` : ''
+                          })(),
                           transform: animateBorder ? 'translateY(0)' : 'translateY(100%)',
                         }}
                       />

@@ -180,12 +180,12 @@ export function getTierConfig(tier: ChampionTier | null): TierConfig | null {
 
 /**
  * Get tier border gradient for champion icons
- * Returns gradient for all tiers
+ * Returns gradient colors object for all tiers
  */
-export function getTierBorderGradient(tier: ChampionTier | null): string | null {
+export function getTierBorderGradient(tier: ChampionTier | null): { from: string; to: string } | null {
   if (!tier) return null
   const config = TIER_CONFIGS[tier]
-  return `linear-gradient(to bottom, ${config.borderColors.from}, ${config.borderColors.to})`
+  return config.borderColors
 }
 
 /**
