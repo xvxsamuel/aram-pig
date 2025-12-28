@@ -28,11 +28,16 @@ interface ChampionData {
   patch: string
 }
 
+interface ChampionError {
+  title: string
+  message: string
+}
+
 interface Props {
   availablePatches: string[]
   ddragonVersion: string
   championNames: Record<string, string>
-  initialData: ChampionData | null
+  initialData: ChampionData | { error: ChampionError } | null
   defaultPatch: string
 }
 
@@ -48,6 +53,9 @@ export default function ChampionsPageClient({
   const pathname = usePathname()
   const urlPatch = searchParams.get('patch')
 
+  // check if initialData has error
+  const initialError = initialData && 'error' in initialData ? initialData.error : null
+
   // redirect to default patch if none specified
   useEffect(() => {
     if (!urlPatch && defaultPatch) {
@@ -57,8 +65,8 @@ export default function ChampionsPageClient({
 
   const currentPatch = urlPatch || defaultPatch
 
-  // determine if we can use prefetched data (same patch)
-  const canUsePrefetchedData = initialData?.patch === currentPatch
+  // determine if we can use prefetched data (same patch and no error)
+  const canUsePrefetchedData = !initialError && initialData && 'patch' in initialData && initialData.patch === currentPatch
 
   // swr with fallback data for instant load
   const { data, isLoading, error } = useSWR<ChampionData>(
@@ -116,11 +124,11 @@ export default function ChampionsPageClient({
         </div>
 
         {/* error message */}
-        {error && (
+        {(error || initialError) && (
           <div className="mb-6">
             <ErrorMessage
-              title="Failed to load champion data"
-              message="Please try again or select a different patch."
+              title={initialError?.title || 'Failed to load champion data'}
+              message={initialError?.message || 'Please try again or select a different patch.'}
               onClose={() => window.location.reload()}
             />
           </div>

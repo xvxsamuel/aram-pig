@@ -56,9 +56,16 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
         case 'matches':
           comparison = a.games_analyzed - b.games_analyzed
           break
-        case 'tier':
-          comparison = getTierSortValue(a.tier) - getTierSortValue(b.tier)
+        case 'tier': {
+          const tierComparison = getTierSortValue(a.tier) - getTierSortValue(b.tier)
+          // If same tier, sort by winrate (primary component of tier score)
+          if (tierComparison === 0) {
+            comparison = a.overall_winrate - b.overall_winrate
+          } else {
+            comparison = tierComparison
+          }
           break
+        }
       }
 
       return sortDirection === 'asc' ? comparison : -comparison

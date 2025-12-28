@@ -35,8 +35,9 @@ interface Props {
   searchParams: Promise<{ patch?: string }>
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { championName } = await params
+  const { patch } = await searchParams
   const ddragonVersion = await getLatestVersion()
   const championNames = await fetchChampionNames(ddragonVersion)
   const apiName = getApiNameFromUrl(championName, championNames)
@@ -54,9 +55,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
 
+  // get available patches to determine default
+  const availablePatches = await getLatestPatches()
+  const HIDDEN_PATCHES = ['25.22', '25.23']
+  const defaultPatch = availablePatches.find(p => !HIDDEN_PATCHES.includes(p)) || availablePatches[0]
+  const currentPatch = patch || defaultPatch
+
   return {
-    title: `${capitalizedName} Stats | ARAM PIG`,
-    description: `Detailed ARAM statistics for ${capitalizedName}`,
+    title: `${capitalizedName} ARAM Build - Highest Win Rate Builds, Runes, and Items | Patch ${currentPatch}`,
+    description: `${capitalizedName} ARAM build with the highest win rate. Best runes, items, and skill order for ${capitalizedName} in ARAM. Patch ${currentPatch}. ARAM PIG analyzes thousands of ARAM matches to give you the best ${capitalizedName} build and performance stats.`,
+    openGraph: {
+      title: `${capitalizedName} ARAM Build - Highest Win Rate Builds, Runes, and Items`,
+      description: `Best ${capitalizedName} ARAM build with highest win rate runes, items, and skill order. Detailed performance statistics and guides for patch ${currentPatch}.`,
+      siteName: 'ARAM PIG',
+    },
   }
 }
 

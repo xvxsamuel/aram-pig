@@ -104,15 +104,10 @@ export default function ChampionPageClient({
   const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
   const [animateBorder, setAnimateBorder] = useState(false)
 
-  // scroll to top on mount
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
-
   // redirect to default patch if none specified
   useEffect(() => {
     if (!selectedPatch && availablePatches[0]) {
-      router.replace(`${pathname}?patch=${availablePatches[0]}#best`)
+      router.replace(`${pathname}?patch=${availablePatches[0]}#best`, { scroll: false })
     }
   }, [selectedPatch, availablePatches, router, pathname])
 

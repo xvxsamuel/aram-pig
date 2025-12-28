@@ -1,5 +1,5 @@
 // Champion tier system based on winrate, games played, damage, and consistency
-// S+ (90+), S (80-89), A (65-79), B (50-64), C (35-49), D (20-34), COAL (0-19)
+// S+ (90+), S (80-89), A (65-79), B (50-64), C (35-49), D (15-34), COAL (0-14)
 
 export type ChampionTier = 'S+' | 'S' | 'A' | 'B' | 'C' | 'D' | 'COAL'
 
@@ -71,7 +71,7 @@ export const TIER_CONFIGS: Record<ChampionTier, TierConfig> = {
   },
   D: {
     tier: 'D',
-    minScore: 20,
+    minScore: 15,
     maxScore: 34.99,
     // Darker brown
     borderColors: { from: 'var(--color-tier-d)', to: 'var(--color-tier-d-dark)' },
@@ -81,7 +81,7 @@ export const TIER_CONFIGS: Record<ChampionTier, TierConfig> = {
   COAL: {
     tier: 'COAL',
     minScore: 0,
-    maxScore: 19.99,
+    maxScore: 14.99,
     // Darker black
     borderColors: { from: 'var(--color-tier-coal)', to: 'var(--color-tier-coal-dark)' },
     textColor: 'white',

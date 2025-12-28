@@ -37,14 +37,19 @@ async function prefetchChampionStats(patch: string) {
     ])
 
     if (statsResult.error) {
-      console.error('[ChampionsPage] Failed to prefetch stats:', {
-        error: statsResult.error,
-        message: statsResult.error?.message,
+      const errorDetails = {
+        message: statsResult.error?.message || 'Unknown database error',
         details: statsResult.error?.details,
         hint: statsResult.error?.hint,
         code: statsResult.error?.code,
-      })
-      return null
+      }
+      console.error('[ChampionsPage] Failed to prefetch stats:', errorDetails)
+      return {
+        error: {
+          title: 'Database Error',
+          message: `${errorDetails.message}${errorDetails.hint ? ` (${errorDetails.hint})` : ''}`,
+        },
+      }
     }
 
     const champions = (statsResult.data || []).map(row => ({
@@ -65,7 +70,12 @@ async function prefetchChampionStats(patch: string) {
     }
   } catch (error) {
     console.error('[ChampionsPage] Prefetch error:', error)
-    return null
+    return {
+      error: {
+        title: 'Failed to Load Champions',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      },
+    }
   }
 }
 
