@@ -43,12 +43,12 @@
   --color-kda-5-dark: oklch(30.07% 0.11341 27.517);
 
   /* Tier border colors */
-  --color-tier-splus: #FFD700;
-  --color-tier-splus-dark: #FFA500;
-  --color-tier-d: #6B4423;
-  --color-tier-d-dark: #3E2723;
-  --color-tier-coal: #2d2d2d;
-  --color-tier-coal-dark: #0a0a0a;
+  --color-tier-splus: oklch(92.025% 0.15984 99.274);
+  --color-tier-splus-dark: oklch(82.663% 0.15997 77.552);
+  --color-tier-d: oklch(60.68% 0.0687 57.417);
+  --color-tier-d-dark: oklch(37.143% 0.04838 60.522);
+  --color-tier-coal: oklch(56.926% 0.00006 271.152);
+  --color-tier-coal-dark: oklch(30.919% 0.00004 271.152);
 
   --font-family-light: var(--font-league-spartan);
   --font-family-title: var(--font-league-spartan);
