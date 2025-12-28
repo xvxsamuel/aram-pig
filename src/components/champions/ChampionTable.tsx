@@ -4,15 +4,18 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getChampionImageUrl, getChampionDisplayName, getChampionUrlName } from '@/lib/ddragon'
-import { getWinrateColor } from '@/lib/ui'
+import { getWinrateColor, getTierSortValue, getTierBorderGradient } from '@/lib/ui'
+import AnimatedBorder from '@/components/ui/AnimatedBorder'
+import TierBadge from '@/components/ui/TierBadge'
 
-type SortKey = 'rank' | 'champion' | 'winrate' | 'pickrate' | 'matches'
+type SortKey = 'rank' | 'champion' | 'winrate' | 'pickrate' | 'matches' | 'tier'
 type SortDirection = 'asc' | 'desc'
 
 interface ChampionStats {
   champion_name: string
   overall_winrate: number
   games_analyzed: number
+  tier: string
 }
 
 interface Props {
@@ -22,7 +25,7 @@ interface Props {
 }
 
 export default function ChampionTable({ champions, ddragonVersion, championNames }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortKey, setSortKey] = useState<SortKey | null>('tier')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   const totalGames = useMemo(() => champions.reduce((sum, c) => sum + c.games_analyzed, 0), [champions])
@@ -55,6 +58,9 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
         case 'matches':
           comparison = a.games_analyzed - b.games_analyzed
           break
+        case 'tier':
+          comparison = getTierSortValue(a.tier) - getTierSortValue(b.tier)
+          break
       }
 
       return sortDirection === 'asc' ? comparison : -comparison
@@ -66,7 +72,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
       if (sortDirection === 'desc') {
         setSortDirection('asc')
       } else {
-        setSortKey('winrate')
+        setSortKey('tier')
         setSortDirection('desc')
       }
     } else {
@@ -82,7 +88,8 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
         <div className="w-14 flex items-center justify-center py-3">Rank</div>
         <SortButton label="Champion" sortKey="champion" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-44" />
         <div className="flex-1" />
-        <SortButton label="Win Rate" shortLabel="WR" sortKey="winrate" currentKey={sortKey} direction={sortDirection} onClick={handleSort} isDefault className="w-20 sm:w-24" />
+        <SortButton label="Tier" sortKey="tier" currentKey={sortKey} direction={sortDirection} onClick={handleSort} isDefault className="w-16" />
+        <SortButton label="Win Rate" shortLabel="WR" sortKey="winrate" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
         <SortButton label="Pick Rate" shortLabel="PR" sortKey="pickrate" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
         <SortButton label="Matches" shortLabel="#" sortKey="matches" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
       </div>
@@ -91,6 +98,9 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
       <div>
         {sortedChampions.map((champion, index) => {
           const pickRate = totalGames > 0 ? (champion.games_analyzed / totalGames) * 100 : 0
+          const tier = champion.tier
+          const tierBorder = getTierBorderGradient(tier)
+          const shouldShowGlint = tier === 'S+' || tier === 'S'
 
           return (
             <Link
@@ -103,8 +113,8 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
               </div>
 
               <div className="w-44 flex items-center gap-3">
-                <div className="w-10 h-10 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg flex-shrink-0">
-                  <div className="relative w-full h-full rounded-[inherit] overflow-hidden bg-accent-dark">
+                <div className="p-px rounded-lg overflow-hidden bg-gradient-to-b from-gold-light to-gold-dark">
+                  <div className="relative w-10 h-10 rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark">
                     <Image
                       src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
                       alt={champion.champion_name}
@@ -113,7 +123,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
                       className="w-full h-full object-cover scale-110"
                       unoptimized
                     />
-                    <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                    <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
                   </div>
                 </div>
                 <span className="font-medium text-sm truncate">
@@ -122,6 +132,27 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
               </div>
 
               <div className="flex-1" />
+
+              <div className="w-16 flex items-center justify-center">
+                <div
+                  className="p-px rounded-full overflow-hidden"
+                  style={{ 
+                    background: tierBorder || 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
+                    boxShadow: tier === 'S+' ? '0 0 15px rgba(74, 158, 255, 0.9), 0 0 25px rgba(58, 131, 230, 0.7), 0 0 35px rgba(74, 158, 255, 0.5)' : 'none'
+                  }}
+                >
+                  <div className="px-2 py-0.5 rounded-[inherit] bg-abyss-900 flex items-center justify-center">
+                    <span 
+                      className="text-xs font-bold text-white"
+                      style={{
+                        textShadow: tier === 'S+' ? '0 0 10px rgba(74, 158, 255, 1), 0 0 20px rgba(58, 131, 230, 0.8), 0 0 30px rgba(74, 158, 255, 0.6)' : 'none',
+                      }}
+                    >
+                      {tier}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               <div className="w-20 sm:w-24 text-center">
                 <span className="font-bold" style={{ color: getWinrateColor(champion.overall_winrate) }}>

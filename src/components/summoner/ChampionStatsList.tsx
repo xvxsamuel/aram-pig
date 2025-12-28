@@ -4,9 +4,12 @@ import { useMemo, useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getChampionImageUrl, getChampionDisplayName, getSortedChampionNames, getChampionUrlName } from '@/lib/ddragon'
-import { getWinrateColor, getKdaColor, getPigScoreColor } from '@/lib/ui'
+import { getWinrateColor, getKdaColor, getPigScoreColor, getChampionTier, getTierSortValue, getTierBorderGradient, type ChampionTierStats } from '@/lib/ui'
+import TierBadge from '@/components/ui/TierBadge'
+import ChampionPortrait from '@/components/ui/ChampionPortrait'
+import AnimatedBorder from '@/components/ui/AnimatedBorder'
 
-type SortKey = 'games' | 'winrate' | 'kda' | 'damage' | 'pigScore'
+type SortKey = 'games' | 'winrate' | 'kda' | 'damage' | 'pigScore' | 'tier'
 type SortDirection = 'asc' | 'desc'
 
 // helper to format numbers without trailing .0
@@ -100,6 +103,16 @@ export default function ChampionStatsList({
     }
   }, [championStats])
 
+  // convert champion stats to tier stats format
+  const championTierStats = useMemo<ChampionTierStats[]>(() => {
+    return championStats.map(c => ({
+      winrate: (c.wins / c.games) * 100,
+      games: c.games,
+      avgDamage: c.totalDamage / c.games,
+      kda: c.deaths > 0 ? (c.kills + c.assists) / c.deaths : c.kills + c.assists,
+    }))
+  }, [championStats])
+
   // sorted champion stats based on current sort settings
   const sortedChampionStats = useMemo(() => {
     return [...championStats].sort((a, b) => {
@@ -131,6 +144,12 @@ export default function ChampionStatsList({
           const pigA = a.averagePigScore ?? -1
           const pigB = b.averagePigScore ?? -1
           comparison = pigA - pigB
+          break
+        }
+        case 'tier': {
+          const tierA = getTierSortValue(getChampionTier(championTierStats[championStats.indexOf(a)], championTierStats))
+          const tierB = getTierSortValue(getChampionTier(championTierStats[championStats.indexOf(b)], championTierStats))
+          comparison = tierA - tierB
           break
         }
       }
@@ -187,12 +206,13 @@ export default function ChampionStatsList({
       <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
         <table className="w-full table-fixed">
           <colgroup>
+            <col className="w-[6%]" />
+            <col className="w-[18%]" />
+            <col className="w-[26%]" />
             <col className="w-[8%]" />
-            <col className="w-[20%]" />
-            <col className="w-[28%]" />
-            <col className="w-[10%]" />
             <col className="w-[16%]" />
             <col className="w-[10%]" />
+            <col className="w-[8%]" />
             <col className="w-[8%]" />
           </colgroup>
           <thead>
@@ -243,6 +263,16 @@ export default function ChampionStatsList({
                 <button onClick={() => handleSort('pigScore')} className="hover:text-white transition-colors relative">
                   PIG
                   {sortKey === 'pigScore' && (
+                    <span
+                      className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[30px] h-0.5 bg-accent-light`}
+                    />
+                  )}
+                </button>
+              </th>
+              <th className="py-3 text-center font-normal">
+                <button onClick={() => handleSort('tier')} className="hover:text-white transition-colors relative">
+                  Tier
+                  {sortKey === 'tier' && (
                     <span
                       className={`absolute ${sortDirection === 'desc' ? '-bottom-3' : '-top-3'} left-1/2 -translate-x-1/2 w-[30px] h-0.5 bg-accent-light`}
                     />
@@ -339,6 +369,24 @@ export default function ChampionStatsList({
                     <span className="text-gray-500">-</span>
                   )}
                 </td>
+                <td className="py-2 text-center">
+                  <div className="flex items-center justify-center">
+                    <TierBadge
+                      stats={{
+                        winrate: (aggregateStats.wins / aggregateStats.games) * 100,
+                        games: aggregateStats.games,
+                        avgDamage: aggregateStats.totalDamage / aggregateStats.games,
+                        kda:
+                          aggregateStats.deaths > 0
+                            ? (aggregateStats.kills + aggregateStats.assists) / aggregateStats.deaths
+                            : aggregateStats.kills + aggregateStats.assists,
+                      }}
+                      allStats={championTierStats}
+                      size="md"
+                      showGlint={false}
+                    />
+                  </div>
+                </td>
               </tr>
             )}
 
@@ -352,6 +400,11 @@ export default function ChampionStatsList({
                     : '0.0'
               const winRate = !isLoading && stats.games > 0 ? ((stats.wins / stats.games) * 100).toFixed(0) : '0'
               const avgDamage = !isLoading && stats.games > 0 ? Math.round(stats.totalDamage / stats.games) : 0
+
+              // Get tier for this champion
+              const championTier = !isLoading ? getChampionTier(championTierStats[index], championTierStats) : null
+              const tierBorder = championTier ? getTierBorderGradient(championTier) : null
+              const shouldShowGlint = championTier === 'S+' || championTier === 'S'
 
               return (
                 <tr key={stats.championName} className={isLoading ? 'animate-pulse' : ''}>
@@ -373,19 +426,23 @@ export default function ChampionStatsList({
                         href={`/champions/${getChampionUrlName(stats.championName, championNames)}`}
                         className="flex items-center gap-3 hover:brightness-75 transition-all"
                       >
-                        <div className="w-10 h-10 p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-lg flex-shrink-0">
-                          <div className="relative w-full h-full rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark">
-                            <Image
-                              src={getChampionImageUrl(stats.championName, ddragonVersion)}
-                              alt={stats.championName}
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-cover scale-110"
-                              unoptimized
-                            />
-                            <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
-                          </div>
-                        </div>
+                        <AnimatedBorder
+                          specialBorder={tierBorder}
+                          showGlint={shouldShowGlint}
+                          glintTrigger="auto"
+                          borderRadius="lg"
+                          innerClassName="relative w-10 h-10 rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark"
+                        >
+                          <Image
+                            src={getChampionImageUrl(stats.championName, ddragonVersion)}
+                            alt={stats.championName}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover scale-110"
+                            unoptimized
+                          />
+                          <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                        </AnimatedBorder>
                         <span className="text-white font-medium text-sm truncate">
                           {getChampionDisplayName(stats.championName, championNames)}
                         </span>
@@ -461,6 +518,15 @@ export default function ChampionStatsList({
                       </span>
                     ) : (
                       <span className="text-gray-500">-</span>
+                    )}
+                  </td>
+                  <td className="py-2 text-center">
+                    {isLoading ? (
+                      <div className="h-10 w-10 bg-abyss-500 rounded-lg mx-auto"></div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        <TierBadge stats={championTierStats[index]} allStats={championTierStats} size="md" />
+                      </div>
                     )}
                   </td>
                 </tr>

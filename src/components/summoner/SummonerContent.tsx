@@ -496,6 +496,39 @@ export default function SummonerContentV2({
     [puuid, ddragonVersion, championNames, profileIconUrl, champions]
   )
 
+  // calculate tier stats for all champions
+  const allChampionTierStats = useMemo(() => {
+    if (champions.length === 0) return []
+
+    return champions.map(c => ({
+      winrate: (c.wins / c.games) * 100,
+      games: c.games,
+      avgDamage: c.totalDamage / c.games,
+      kda: c.deaths > 0 ? (c.kills + c.assists) / c.deaths : c.kills + c.assists,
+    }))
+  }, [champions])
+
+  // calculate overall tier stats (weighted by games)
+  const overallTierStats = useMemo(() => {
+    if (champions.length === 0) return null
+
+    const totalGames = champions.reduce((sum, c) => sum + c.games, 0)
+    if (totalGames === 0) return null
+
+    const totalWins = champions.reduce((sum, c) => sum + c.wins, 0)
+    const totalKills = champions.reduce((sum, c) => sum + c.kills, 0)
+    const totalDeaths = champions.reduce((sum, c) => sum + c.deaths, 0)
+    const totalAssists = champions.reduce((sum, c) => sum + c.assists, 0)
+    const totalDamage = champions.reduce((sum, c) => sum + c.totalDamage, 0)
+
+    return {
+      winrate: (totalWins / totalGames) * 100,
+      games: totalGames,
+      avgDamage: totalDamage / totalGames,
+      kda: totalDeaths > 0 ? (totalKills + totalAssists) / totalDeaths : totalKills + totalAssists,
+    }
+  }, [champions])
+
   return (
     <>
       {showSkeleton ? (

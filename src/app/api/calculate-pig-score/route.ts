@@ -108,7 +108,7 @@ export async function POST(request: Request) {
 
     const pigScore = breakdown?.finalScore ?? null
 
-    // Store the calculated pig score
+    // store the calculated pig score
     if (pigScore !== null) {
       const updatedMatchData = {
         ...participantData.match_data,
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
   }
 }
 
-// Batch calculation for match details
+// batch calculation for match details
 export async function PUT(request: Request) {
   try {
     const { matchId } = await request.json()
@@ -141,7 +141,7 @@ export async function PUT(request: Request) {
 
     const supabase = createAdminClient()
 
-    // Get all participants for this match
+    // get all participants for this match
     const { data: participants, error: participantsError } = await supabase
       .from('summoner_matches')
       .select('puuid, match_data, patch, champion_name')
@@ -151,7 +151,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 })
     }
 
-    // Get game_duration and game_creation from matches table
+    // get game_duration and game_creation from matches table
     const { data: matchRecord, error: matchError } = await supabase
       .from('matches')
       .select('game_duration, game_creation')
@@ -162,7 +162,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Match record not found' }, { status: 404 })
     }
 
-    // Check if match is older than 1 year
+    // check if match is older than 1 year
     const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
     const isOlderThan1Year = matchRecord.game_creation < oneYearAgo
 
@@ -170,19 +170,19 @@ export async function PUT(request: Request) {
     const updates: Array<{ puuid: string; pigScore: number; pigScoreBreakdown: any }> = []
 
     for (const participant of participants) {
-      // Always return cached pig score if it exists
+      // always return cached pig score if it exists
       if (participant.match_data?.pigScore !== null && participant.match_data?.pigScore !== undefined) {
         results[participant.puuid] = participant.match_data.pigScore
         continue
       }
 
-      // Skip calculation for old matches - timeline data not available
+      // skip calculation for old matches - timeline data not available
       if (isOlderThan1Year) {
         results[participant.puuid] = null
         continue
       }
 
-      // Calculate pig score
+      // calculate pig score
       const breakdown = await calculatePigScoreWithBreakdown({
         championName: participant.champion_name,
         damage_dealt_to_champions: participant.match_data.stats?.damage || 0,
@@ -201,7 +201,6 @@ export async function PUT(request: Request) {
         perk0: participant.match_data.runes?.primary?.perks?.[0] || 0,
         patch: participant.patch,
         teamTotalDamage: participant.match_data.stats?.teamDamage || 0,
-        // new fields
         spell1: participant.match_data.spells?.[0] || 0,
         spell2: participant.match_data.spells?.[1] || 0,
         skillOrder: extractSkillOrderFromAbilityOrder(participant.match_data.abilityOrder),
@@ -216,7 +215,7 @@ export async function PUT(request: Request) {
       }
     }
 
-    // Batch update all participants
+    // batch update all participants
     for (const update of updates) {
       const participant = participants.find(p => p.puuid === update.puuid)
       if (participant) {

@@ -5,12 +5,14 @@ import { useRouter, usePathname } from 'next/navigation'
 import useSWR from 'swr'
 import Image from 'next/image'
 import clsx from 'clsx'
+import { motion } from 'motion/react'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { getChampionImageUrl } from '@/lib/ddragon'
-import { getWinrateColor } from '@/lib/ui'
+import { getWinrateColor, getTierBorderGradient, shouldShowGlint } from '@/lib/ui'
 import ChampionDetailTabs from './ChampionDetailTabs'
 import PatchFilter from '@/components/filters/PatchFilter'
 import itemsData from '@/data/items.json'
+import type { ChampionTier } from '@/lib/ui'
 
 // swr fetcher
 const fetcher = (url: string) =>
@@ -24,6 +26,7 @@ interface ChampionStatsResponse {
   championName: string
   apiName: string
   patch: string
+  tier?: ChampionTier
   overview: {
     games: number
     wins: number
@@ -99,11 +102,17 @@ export default function ChampionPageClient({
   const currentPatch = selectedPatch || availablePatches[0]
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
   const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
+  const [animateBorder, setAnimateBorder] = useState(false)
+
+  // scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   // redirect to default patch if none specified
   useEffect(() => {
     if (!selectedPatch && availablePatches[0]) {
-      router.replace(`${pathname}?patch=${availablePatches[0]}`)
+      router.replace(`${pathname}?patch=${availablePatches[0]}#best`)
     }
   }, [selectedPatch, availablePatches, router, pathname])
 
@@ -120,18 +129,15 @@ export default function ChampionPageClient({
 
     handleHashChange()
     
-    // set default hash if none present
-    if (!window.location.hash) {
-      window.location.hash = 'best'
-    }
-    
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
   const handleTabChange = (tab: 'overview' | 'items' | 'runes' | 'leveling') => {
     setSelectedTab(tab)
-    window.location.hash = tab === 'overview' ? 'best' : tab
+    const hash = tab === 'overview' ? 'best' : tab
+    const searchParams = new URLSearchParams(window.location.search)
+    router.push(`${pathname}?${searchParams.toString()}#${hash}`, { scroll: false })
   }
 
   useEffect(() => {
@@ -154,6 +160,14 @@ export default function ChampionPageClient({
       keepPreviousData: true,
     }
   )
+
+  // trigger border animation when tier data is available
+  useEffect(() => {
+    if (data?.tier && (data.tier === 'S+' || data.tier === 'S' || data.tier === 'A')) {
+      const timer = setTimeout(() => setAnimateBorder(true), 100)
+      return () => clearTimeout(timer)
+    }
+  }, [data?.tier])
 
   // loading state
   if (isLoading && !data) {
@@ -575,19 +589,176 @@ export default function ChampionPageClient({
         )}
         <div className="max-w-6xl mx-auto px-8 py-6 pb-8 relative z-10">
           <div className="flex items-start gap-6">
-            {/* champion icon*/}
-            <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark flex-shrink-0">
-              <div className="relative w-24 h-24 rounded-[inherit] bg-abyss-800 overflow-hidden">
-                <Image
-                  src={getChampionImageUrl(apiName, ddragonVersion)}
-                  alt={displayName}
-                  width={96}
-                  height={96}
-                  className="w-full h-full object-cover scale-110"
-                  unoptimized
-                />
-                <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+            {/* champion icon with tier badge */}
+            <div className="relative flex-shrink-0">
+              {/* accent-light glow for S+ only (outside border) */}
+              {data?.tier === 'S+' && (
+                <>
+                  {/* subtle halo glow */}
+                  <motion.div
+                    className="absolute -inset-2 rounded-xl pointer-events-none"
+                    animate={{
+                      opacity: [0.3, 0.5, 0.4, 0.5, 0.3],
+                    }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                    style={{
+                      background: 'radial-gradient(ellipse at center, rgba(74, 158, 255, 0.4) 0%, rgba(74, 158, 255, 0.2) 50%, transparent 80%)',
+                      filter: 'blur(16px)',
+                    }}
+                  />
+                  {/* sharp blue glint tracing outer edge */}
+                  <motion.div
+                    className="absolute -inset-1 rounded-xl pointer-events-none"
+                    animate={{
+                      background: [
+                        'conic-gradient(from 0deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
+                        'conic-gradient(from 90deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
+                        'conic-gradient(from 180deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
+                        'conic-gradient(from 270deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
+                        'conic-gradient(from 360deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
+                      ],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                    style={{
+                      filter: 'blur(3px)',
+                    }}
+                  />
+                  {/* persistent base glow */}
+                  <div
+                    className="absolute inset-0 rounded-xl pointer-events-none"
+                    style={{
+                      boxShadow: '0 0 8px 2px rgba(74, 158, 255, 0.4), 0 0 16px 4px rgba(74, 158, 255, 0.2)',
+                    }}
+                  />
+                  {/* animated glow variation */}
+                  <motion.div
+                    className="absolute inset-0 rounded-xl pointer-events-none"
+                    animate={{
+                      boxShadow: [
+                        '0 0 6px 1px rgba(74, 158, 255, 0.3), 0 0 12px 2px rgba(74, 158, 255, 0.15)',
+                        '0 0 10px 2px rgba(74, 158, 255, 0.45), 0 0 18px 4px rgba(74, 158, 255, 0.25)',
+                        '0 0 6px 1px rgba(74, 158, 255, 0.3), 0 0 12px 2px rgba(74, 158, 255, 0.15)',
+                      ],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                  {/* particle streaks emanating outward */}
+                  <>
+                    {[0, 72, 144, 216, 288].map((angle, i) => (
+                      <motion.div
+                        key={angle}
+                        className="absolute top-1/2 left-1/2 w-0.5 origin-left pointer-events-none"
+                        style={{
+                          transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                          background: 'linear-gradient(90deg, rgba(74, 158, 255, 0.6), rgba(74, 158, 255, 0))',
+                        }}
+                        animate={{
+                          height: ['8px', '16px', '8px'],
+                          opacity: [0.4, 0.7, 0.4],
+                        }}
+                        transition={{
+                          duration: 2.5,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                          delay: i * 0.2,
+                        }}
+                      />
+                    ))}
+                  </>
+                </>
+              )}
+
+              <div
+                className="rounded-xl p-px relative overflow-hidden"
+                style={{ 
+                  background: getTierBorderGradient(data?.tier || null) || 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
+                  boxShadow: 'none'
+                }}
+              >
+                {/* animated tier color overlay */}
+                {data?.tier && getTierBorderGradient(data.tier) && (
+                  <div
+                    className="absolute inset-0 rounded-xl transition-transform duration-500 ease-out"
+                    style={{
+                      background: getTierBorderGradient(data.tier) || '',
+                      transform: animateBorder ? 'translateY(0)' : 'translateY(100%)',
+                    }}
+                  />
+                )}
+                {/* glint effect on border - white for metallic look - S+, S, and A tiers */}
+                {data?.tier && (data.tier === 'S+' || data.tier === 'S' || data.tier === 'A') && animateBorder && (
+                  <motion.div
+                    className="absolute top-0 bottom-0 rounded-xl pointer-events-none"
+                    animate={{
+                      left: ['-35%', '135%'],
+                      opacity: [0, 0.7, 0.9, 0.7, 0],
+                    }}
+                    transition={{
+                      duration: 1.2,
+                      repeat: Infinity,
+                      repeatDelay: 3,
+                      ease: 'easeInOut',
+                      times: [0, 0.2, 0.5, 0.8, 1],
+                    }}
+                    style={{
+                      background: data.tier === 'S+'
+                        ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3) 35%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0.3) 65%, transparent)'
+                        : 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2) 35%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.2) 65%, transparent)',
+                      width: '40%',
+                    }}
+                  />
+                )}
+                <div className="w-24 h-24 rounded-[inherit] bg-abyss-800 overflow-hidden relative">
+                  <Image
+                    src={getChampionImageUrl(apiName, ddragonVersion)}
+                    alt={displayName}
+                    width={96}
+                    height={96}
+                    className="w-full h-full object-cover scale-110"
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                </div>
               </div>
+              {/* tier badge */}
+              {data?.tier && (
+                <>
+                  <div
+                    className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-full p-px overflow-hidden"
+                    style={{
+                      background: getTierBorderGradient(data.tier) || 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
+                    }}
+                  >
+                    {/* animated tier color overlay for badge */}
+                    {getTierBorderGradient(data.tier) && (
+                      <div
+                        className="absolute inset-0 rounded-full transition-transform duration-150"
+                        style={{
+                          background: getTierBorderGradient(data.tier) || '',
+                          transform: animateBorder ? 'translateY(0)' : 'translateY(100%)',
+                        }}
+                      />
+                    )}
+                    <div className="px-2 rounded-[inherit] bg-abyss-500 relative">
+                      <span className="text-sm font-bold text-white relative z-10">
+                        {data.tier}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             
             <div className="flex-1 flex flex-col justify-between h-28">

@@ -5,6 +5,7 @@ import { useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import PatchFilter from '@/components/filters/PatchFilter'
 import ChampionTable from '@/components/champions/ChampionTable'
+import ErrorMessage from '@/components/ui/ErrorMessage'
 
 const fetcher = (url: string) =>
   fetch(url).then(res => {
@@ -17,6 +18,7 @@ interface ChampionStats {
   overall_winrate: number
   games_analyzed: number
   last_updated?: string
+  tier: string
 }
 
 interface ChampionData {
@@ -114,9 +116,12 @@ export default function ChampionsPageClient({
 
         {/* error message */}
         {error && (
-          <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-6 text-red-300">
-            <p className="font-semibold mb-1">Failed to load champion data</p>
-            <p className="text-sm">Please try again or select a different patch.</p>
+          <div className="mb-6">
+            <ErrorMessage
+              title="Failed to load champion data"
+              message="Please try again or select a different patch."
+              onClose={() => window.location.reload()}
+            />
           </div>
         )}
 

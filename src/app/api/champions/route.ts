@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const [statsResult, matchCountResult] = await Promise.all([
       supabase
         .from('champion_stats')
-        .select('champion_name, games, wins, last_updated, winrate')
+        .select('champion_name, games, wins, last_updated, winrate, tier:data->>tier')
         .eq('patch', patch)
         .gte('games', 1)
         .order('winrate', { ascending: false })
@@ -33,8 +33,14 @@ export async function GET(request: NextRequest) {
     ])
 
     if (statsResult.error) {
-      console.error('[Champions API] Database error:', statsResult.error)
-      return NextResponse.json({ error: statsResult.error.message }, { status: 500 })
+      console.error('[Champions API] Database error:', {
+        error: statsResult.error,
+        message: statsResult.error?.message,
+        details: statsResult.error?.details,
+        hint: statsResult.error?.hint,
+        code: statsResult.error?.code,
+      })
+      return NextResponse.json({ error: statsResult.error.message || 'Database error' }, { status: 500 })
     }
 
     const champions = (statsResult.data || []).map(row => ({
@@ -42,6 +48,7 @@ export async function GET(request: NextRequest) {
       overall_winrate: Number(row.winrate) || 0,
       games_analyzed: row.games || 0,
       last_updated: row.last_updated,
+      tier: row.tier || 'COAL',
     }))
 
     // already sorted by db, no need to sort again

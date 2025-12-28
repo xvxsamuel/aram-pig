@@ -141,7 +141,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const [championResponse, patchResponse] = await Promise.all([
     supabase
       .from('champion_stats')
-      .select('*')
+      .select('*, tier:data->>tier')
       .eq('champion_name', apiName)
       .eq('patch', targetPatch)
       .maybeSingle(),
@@ -220,6 +220,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     championName,
     apiName,
     patch: targetPatch,
+    tier: (data as any).tier || 'COAL',
     lastUpdated: data.last_updated,
 
     // basic stats

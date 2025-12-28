@@ -23,7 +23,7 @@ async function prefetchChampionStats(patch: string) {
     const [statsResult, matchCountResult] = await Promise.all([
       supabase
         .from('champion_stats')
-        .select('champion_name, games, wins, last_updated')
+        .select('champion_name, games, wins, last_updated, tier:data->>tier')
         .eq('patch', patch)
         .gte('games', 1)
         .order('wins', { ascending: false })
@@ -36,7 +36,13 @@ async function prefetchChampionStats(patch: string) {
     ])
 
     if (statsResult.error) {
-      console.error('[ChampionsPage] Failed to prefetch stats:', statsResult.error)
+      console.error('[ChampionsPage] Failed to prefetch stats:', {
+        error: statsResult.error,
+        message: statsResult.error?.message,
+        details: statsResult.error?.details,
+        hint: statsResult.error?.hint,
+        code: statsResult.error?.code,
+      })
       return null
     }
 
@@ -45,6 +51,7 @@ async function prefetchChampionStats(patch: string) {
       overall_winrate: row.games > 0 ? Number(((row.wins / row.games) * 100).toFixed(2)) : 0,
       games_analyzed: row.games || 0,
       last_updated: row.last_updated,
+      tier: row.tier || 'COAL',
     }))
 
     // sort by winrate descending
