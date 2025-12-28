@@ -5,7 +5,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getChampionImageUrl, getChampionDisplayName, getChampionUrlName } from '@/lib/ddragon'
 import { getWinrateColor, getTierSortValue, getTierBorderGradient, type ChampionTier } from '@/lib/ui'
-import AnimatedBorder from '@/components/ui/AnimatedBorder'
 
 type SortKey = 'rank' | 'champion' | 'winrate' | 'pickrate' | 'matches' | 'tier'
 type SortDirection = 'asc' | 'desc'
@@ -99,7 +98,6 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
           const pickRate = totalGames > 0 ? (champion.games_analyzed / totalGames) * 100 : 0
           const tier = champion.tier
           const tierBorder = getTierBorderGradient(tier)
-          const shouldShowGlint = tier === 'S+' || tier === 'S'
 
           return (
             <Link
@@ -112,13 +110,7 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
               </div>
 
               <div className="w-44 flex items-center gap-3">
-                <AnimatedBorder
-                  specialBorder={tierBorder}
-                  showGlint={shouldShowGlint}
-                  glintTrigger="auto"
-                  borderRadius="lg"
-                  innerClassName="relative w-10 h-10 rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark"
-                >
+                <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-accent-dark border border-gold-dark/40">
                   <Image
                     src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
                     alt={champion.champion_name}
@@ -127,8 +119,8 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
                     className="w-full h-full object-cover scale-110"
                     unoptimized
                   />
-                  <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
-                </AnimatedBorder>
+                  <div className="absolute inset-0 rounded-lg shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                </div>
                 <span className="font-medium text-sm truncate">
                   {getChampionDisplayName(champion.champion_name, championNames)}
                 </span>
