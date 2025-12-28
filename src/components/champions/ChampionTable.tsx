@@ -109,19 +109,21 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
                 <h2 className="text-lg font-bold">{index + 1}</h2>
               </div>
 
-              <div className="w-44 flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-accent-dark border border-gold-dark/40">
-                  <Image
-                    src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
-                    alt={champion.champion_name}
-                    width={40}
-                    height={40}
-                    className="w-full h-full object-cover scale-110"
-                    unoptimized
-                  />
-                  <div className="absolute inset-0 rounded-lg shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+              <div className="w-44 flex items-center gap-4">
+                <div className="p-px rounded-lg bg-gradient-to-b from-gold-light to-gold-dark">
+                  <div className="relative w-10 h-10 rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark">
+                    <Image
+                      src={getChampionImageUrl(champion.champion_name, ddragonVersion)}
+                      alt={champion.champion_name}
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-cover scale-110"
+                      unoptimized
+                    />
+                    <div className="absolute inset-0 rounded-[calc(0.5rem-1px)] shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.9)] pointer-events-none" />
+                  </div>
                 </div>
-                <span className="font-medium text-sm truncate">
+                <span className="font-semibold truncate">
                   {getChampionDisplayName(champion.champion_name, championNames)}
                 </span>
               </div>
