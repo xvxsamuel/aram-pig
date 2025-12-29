@@ -100,6 +100,9 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     ? summonerName.split('#')
     : [summonerName, getDefaultTag(regionLabel)]
 
+  // Check if this is the test profile
+  const isTestProfile = gameName === 'TestSummoner' && tagLine === 'TEST'
+
   let summonerData = null
   let error = null
 
@@ -126,7 +129,23 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
     championNames = {}
   }
 
-  try {
+  // For test profile, create mock summoner data
+  if (isTestProfile) {
+    summonerData = {
+      account: {
+        puuid: 'test-puuid-12345',
+        gameName: 'TestSummoner',
+        tagLine: 'TEST',
+      },
+      summoner: {
+        puuid: 'test-puuid-12345',
+        summonerLevel: 420,
+        profileIconId: 4568,
+      },
+    }
+  } else {
+    // Normal profile lookup logic
+    try {
     // try to load from database first to avoid riot api calls
     let loadedFromCache = false
 
@@ -234,6 +253,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
       }
     }
   }
+  } // Close the else block for test profile
 
   // fetch profile icon if summoner data exists
   const profileIconUrl = summonerData ? await getProfileIconUrl(summonerData.summoner.profileIconId).catch(err => {
@@ -244,7 +264,7 @@ export default async function SummonerPage({ params }: { params: Promise<Params>
   // fetch last_updated and check if has matches for new profile detection
   let lastUpdated: string | null = null
   let hasMatches = false
-  if (summonerData) {
+  if (summonerData && !isTestProfile) {
     const { data: summonerRecord } = await supabase
       .from('summoners')
       .select('last_updated')

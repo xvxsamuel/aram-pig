@@ -68,7 +68,11 @@ export function useProfileData({
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/profile/${puuid}`)
+      // Use test API for TestSummoner
+      const isTestProfile = currentName?.gameName === 'TestSummoner' && currentName?.tagLine === 'TEST'
+      const endpoint = isTestProfile ? '/api/test-profile' : `/api/profile/${puuid}`
+
+      const response = await fetch(endpoint)
 
       if (!response.ok) {
         const data = await response.json()
@@ -92,7 +96,7 @@ export function useProfileData({
     } finally {
       setLoading(false)
     }
-  }, [puuid])
+  }, [puuid, currentName])
 
   // load more matches
   const loadMoreMatches = useCallback(

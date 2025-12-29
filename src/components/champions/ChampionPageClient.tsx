@@ -102,7 +102,6 @@ export default function ChampionPageClient({
   const currentPatch = selectedPatch || availablePatches[0]
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
   const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
-  const [animateBorder, setAnimateBorder] = useState(false)
 
   // redirect to default patch if none specified
   useEffect(() => {
@@ -155,14 +154,6 @@ export default function ChampionPageClient({
       keepPreviousData: true,
     }
   )
-
-  // trigger border animation when tier data is available
-  useEffect(() => {
-    if (data?.tier && (data.tier === 'S+' || data.tier === 'S' || data.tier === 'A')) {
-      const timer = setTimeout(() => setAnimateBorder(true), 100)
-      return () => clearTimeout(timer)
-    }
-  }, [data?.tier])
 
   // loading state
   if (isLoading && !data) {
@@ -685,21 +676,8 @@ export default function ChampionPageClient({
                   boxShadow: 'none'
                 }}
               >
-                {/* animated tier color overlay */}
-                {data?.tier && getTierBorderGradient(data.tier) && (
-                  <div
-                    className="absolute inset-0 rounded-xl transition-transform duration-500 ease-out"
-                    style={{
-                      background: (() => {
-                        const gradient = getTierBorderGradient(data.tier)
-                        return gradient ? `linear-gradient(to bottom, ${gradient.from}, ${gradient.to})` : ''
-                      })(),
-                      transform: animateBorder ? 'translateY(0)' : 'translateY(100%)',
-                    }}
-                  />
-                )}
-                {/* glint effect on border - white for metallic look - S+, S, and A tiers */}
-                {data?.tier && (data.tier === 'S+' || data.tier === 'S' || data.tier === 'A') && animateBorder && (
+                {/* glint effect on border for S+, S, and A tiers */}
+                {data?.tier && (data.tier === 'S+' || data.tier === 'S' || data.tier === 'A') && (
                   <motion.div
                     className="absolute top-0 bottom-0 rounded-xl pointer-events-none"
                     animate={{
@@ -745,19 +723,6 @@ export default function ChampionPageClient({
                       })(),
                     }}
                   >
-                    {/* animated tier color overlay for badge */}
-                    {getTierBorderGradient(data.tier) && (
-                      <div
-                        className="absolute inset-0 rounded-full transition-transform duration-150"
-                        style={{
-                          background: (() => {
-                            const gradient = getTierBorderGradient(data.tier)
-                            return gradient ? `linear-gradient(to bottom, ${gradient.from}, ${gradient.to})` : ''
-                          })(),
-                          transform: animateBorder ? 'translateY(0)' : 'translateY(100%)',
-                        }}
-                      />
-                    )}
                     <div className="px-2 rounded-[inherit] bg-abyss-500 relative">
                       <span className="text-sm font-bold text-white relative z-10">
                         {data.tier}

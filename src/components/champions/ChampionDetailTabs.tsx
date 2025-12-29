@@ -61,9 +61,31 @@ export default function ChampionDetailTabs({
         const winrate = combo.winrate ?? (combo.games > 0 ? (combo.wins / combo.games) * 100 : 0)
         const wilsonScore = calculateWilsonScore(combo.games, combo.wins)
         
+        // sort items within build by which position they appear in most often
+        const itemIds = combo.normalizedItems
+          .filter(id => id !== 99999)
+          .map(itemId => {
+            // find which position this item is built in most often for this combo
+            const itemData = combo.itemStats[itemId]
+            if (!itemData?.positions) return { itemId, mostCommonPosition: 999, games: 0 }
+            
+            let maxGames = 0
+            let mostCommonPosition = 999
+            Object.entries(itemData.positions).forEach(([pos, data]) => {
+              if (data.games > maxGames) {
+                maxGames = data.games
+                mostCommonPosition = parseInt(pos)
+              }
+            })
+            
+            return { itemId, mostCommonPosition, games: maxGames }
+          })
+          .sort((a, b) => a.mostCommonPosition - b.mostCommonPosition)
+          .map(item => item.itemId)
+        
         return {
           originalIndex: idx,
-          itemIds: combo.normalizedItems.filter(id => id !== 99999),
+          itemIds,
           hasBoots: combo.normalizedItems.includes(99999),
           games: combo.games,
           winrate,

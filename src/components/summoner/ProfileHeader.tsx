@@ -67,25 +67,23 @@ export default function ProfileHeader({
   const [animateColor, setAnimateColor] = useState(false)
   const [glintKey, setGlintKey] = useState(0)
 
-  // trigger animation when borderColors changes from null to a value
+  // trigger animation on mount
   useEffect(() => {
-    if (longestWinStreak >= 10) {
-      // small delay to ensure initial render happens first
-      const timer = setTimeout(() => setAnimateColor(true), 100)
-      return () => clearTimeout(timer)
-    }
-  }, [longestWinStreak])
+    // small delay to ensure initial render happens first
+    const timer = setTimeout(() => setAnimateColor(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   // get border gradient colors based on longest win streak
   const getBorderColors = (streak: number): { from: string; to: string } | null => {
     if (streak >= 50) return { from: 'var(--color-kda-5)', to: 'var(--color-kda-5-dark)' }
-    if (streak >= 20) return { from: 'var(--color-kda-4)', to: 'var(--color-kda-4-dark)' }
+    if (streak >= 30) return { from: 'var(--color-kda-4)', to: 'var(--color-kda-4-dark)' }
     if (streak >= 10) return { from: 'var(--color-kda-3)', to: 'var(--color-kda-3-dark)' }
     return null // default gold
   }
 
   const borderColors = getBorderColors(longestWinStreak)
-  const shouldShowGlint = longestWinStreak >= 20
+  const shouldShowGlint = longestWinStreak >= 30
 
   const tabs = [
     { id: 'overview' as const, label: 'Overview' },
@@ -98,15 +96,16 @@ export default function ProfileHeader({
       content={
         <span className="flex items-center gap-1">
           <span
-            className={`text-sm font-bold ${
-              longestWinStreak >= 50
-                ? 'text-kda-5'
-                : longestWinStreak >= 20
-                  ? 'text-kda-4'
+            className="text-sm font-bold"
+            style={{
+              color: longestWinStreak >= 50
+                ? 'var(--color-tier-splus)'
+                : longestWinStreak >= 30
+                  ? 'var(--color-kda-4)'
                   : longestWinStreak >= 10
-                    ? 'text-kda-3'
-                    : 'text-gold-light'
-            }`}
+                    ? 'var(--color-kda-3)'
+                    : 'var(--color-gold-light)',
+            }}
           >
             {longestWinStreak}
           </span>
@@ -206,13 +205,21 @@ export default function ProfileHeader({
         <div
           className="rounded-xl p-px relative overflow-hidden"
           style={{ 
-            background: longestWinStreak >= 50 
-              ? 'linear-gradient(to bottom, var(--color-tier-splus), var(--color-tier-splus-dark))'
-              : 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))'
+            background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))'
           }}
         >
-          {/* animated color overlay for 10-49 winstreaks (not 50+ as it uses gold S+ border) */}
-          {borderColors && longestWinStreak < 50 && (
+          {/* animated color overlay for winstreaks with different colors */}
+          {longestWinStreak >= 50 ? (
+            // 50+ winstreak: S+ gold border with animation
+            <div
+              className="absolute inset-0 rounded-xl transition-transform duration-500 ease-out"
+              style={{
+                background: 'linear-gradient(to bottom, var(--color-tier-splus), var(--color-tier-splus-dark))',
+                transform: animateColor ? 'translateY(0)' : 'translateY(100%)',
+              }}
+            />
+          ) : borderColors ? (
+            // 10-49 winstreak: colored overlay (green or purple) - animates
             <div
               className="absolute inset-0 rounded-xl transition-transform duration-500 ease-out"
               style={{
@@ -220,8 +227,8 @@ export default function ProfileHeader({
                 transform: animateColor ? 'translateY(0)' : 'translateY(100%)',
               }}
             />
-          )}
-          {/* glint effect for purple and red winstreaks (20-49, not 50+ as it has S+ effects) */}
+          ) : null /* <10 winstreak: no animation, already default gold */}
+          {/* glint effect for purple and red winstreaks (30-49, not 50+ as it has S+ effects) */}
           {shouldShowGlint && longestWinStreak < 50 && animateColor && (
             <motion.div
               key={glintKey}
@@ -259,10 +266,16 @@ export default function ProfileHeader({
         </div>
         <div
           className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-lg p-px overflow-hidden"
-          style={{ background: 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))' }}
+          style={{
+            background: longestWinStreak >= 50
+              ? 'linear-gradient(to bottom, var(--color-tier-splus), var(--color-tier-splus-dark))'
+              : borderColors
+              ? `linear-gradient(to bottom, ${borderColors.from}, ${borderColors.to})`
+              : 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))',
+          }}
         >
-          {/* animated color overlay for level badge */}
-          {borderColors && (
+          {/* animated color overlay for level badge (only for 10-49 winstreaks, not 50+ as it uses gold) */}
+          {borderColors && longestWinStreak < 50 && (
             <div
               className="absolute inset-0 rounded-lg transition-transform duration-150"
               style={{
