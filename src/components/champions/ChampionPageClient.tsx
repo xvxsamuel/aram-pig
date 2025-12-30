@@ -150,7 +150,9 @@ export default function ChampionPageClient({
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 60000,
+      revalidateOnMount: false,
+      dedupingInterval: 3600000, // 1 hour - champion stats change infrequently
+      refreshInterval: 0, // disable automatic revalidation
       keepPreviousData: true,
     }
   )
