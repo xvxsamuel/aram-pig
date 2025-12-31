@@ -52,12 +52,19 @@ export async function GET(request: NextRequest) {
       tier: row.tier || 'COAL',
     }))
 
+    // find most recent update timestamp from all champions
+    const lastFetched = champions.reduce((latest, champ) => {
+      const champTime = new Date(champ.last_updated).getTime()
+      return champTime > latest ? champTime : latest
+    }, 0)
+
     // already sorted by db, no need to sort again
 
     const response = NextResponse.json({
       champions,
       totalMatches: matchCountResult.count || 0,
       patch,
+      lastFetched: new Date(lastFetched).toISOString(),
     })
     response.headers.set('Cache-Control', CACHE_CONTROL)
     return response

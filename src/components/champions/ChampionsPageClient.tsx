@@ -53,8 +53,8 @@ export default function ChampionsPageClient({
   const pathname = usePathname()
   const urlPatch = searchParams.get('patch')
 
-  // track when data was last loaded
-  const [lastLoadTime, setLastLoadTime] = useState<number>(Date.now())
+  // track when data was last fetched from API
+  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null)
 
   // check if initialData has error
   const initialError = initialData && 'error' in initialData ? initialData.error : null
@@ -87,16 +87,18 @@ export default function ChampionsPageClient({
   const champions = data?.champions || []
   const totalMatches = data?.totalMatches || 0
 
-  // update load time whenever data changes
+  // update fetch time when new data arrives from API (not from cache)
   useEffect(() => {
-    if (data && !isLoading) {
-      setLastLoadTime(Date.now())
+    if (data?.lastFetched) {
+      setLastFetchTime(new Date(data.lastFetched).getTime())
     }
-  }, [data, isLoading])
+  }, [data?.lastFetched])
 
-  // time since last SWR load
+  // time since last DB fetch
   const timeAgo = useMemo(() => {
-    const diffMs = Date.now() - lastLoadTime
+    if (!lastFetchTime) return 'Loading...'
+    
+    const diffMs = Date.now() - lastFetchTime
     const diffMins = Math.floor(diffMs / 60000)
     const diffHours = Math.floor(diffMins / 60)
     const diffDays = Math.floor(diffHours / 24)
@@ -105,7 +107,7 @@ export default function ChampionsPageClient({
     if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
     if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
     return 'just now'
-  }, [lastLoadTime])
+  }, [lastFetchTime])
 
   // show skeleton only when actually loading with no data
   const showSkeleton = isLoading && champions.length === 0
