@@ -25,6 +25,7 @@ interface GameStats {
 interface ChampionStatsData {
   games: number
   wins: number
+  tier?: string
   championStats?: {
     sumDamageToChampions: number
     sumTotalDamage: number
