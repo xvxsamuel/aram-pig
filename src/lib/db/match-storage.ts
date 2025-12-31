@@ -44,7 +44,7 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
     console.log(`[DB] Flushing ${aggregatedStats.length} champion+patch combos (${participantCount} participants)...`)
 
     const supabase = createAdminClient()
-    const BATCH_SIZE = 50 // Larger batches reduce total RPC calls
+    const BATCH_SIZE = 25 // Balance between RPC call count and timeout prevention
     let totalFlushed = 0
     let failedBatches = 0
 
@@ -339,19 +339,33 @@ export async function storeMatchDataBatch(
   
   if (matchesData.length === 0) return { success: true, storedCount: 0 }
 
-  // 1. Filter out existing matches (bulk check)
-  const matchIds = matchesData.map(m => m.metadata.matchId)
-  const { data: existingMatches } = await supabase
+  // 1. Prepare match rows (no pre-check needed - DB handles duplicates via ON CONFLICT)
+  const matchRows = matchesData.map(match => ({
+    match_id: match.metadata.matchId,
+    game_creation: match.info.gameCreation,
+    game_duration: match.info.gameDuration,
+    patch: match.info.gameVersion ? extractPatch(match.info.gameVersion) : getPatchFromDate(match.info.gameCreation),
+  }))
+
+  // 2. Upsert matches to avoid duplicates (eliminates read queries)
+  // ignoreDuplicates: true means conflicts are silently skipped, not updated
+  const { data: insertedMatches, error: matchError } = await supabase
     .from('matches')
+    .upsert(matchRows, { onConflict: 'match_id', ignoreDuplicates: true })
     .select('match_id')
-    .in('match_id', matchIds)
   
-  const existingIds = new Set(existingMatches?.map(m => m.match_id) || [])
-  const newMatches = matchesData.filter(m => !existingIds.has(m.metadata.matchId))
+  if (matchError) {
+    console.error('error storing matches batch:', matchError)
+    return { success: false, storedCount: 0 }
+  }
+
+  // Only successfully inserted matches are returned - duplicates are excluded
+  const insertedIds = new Set((insertedMatches || []).map(m => m.match_id))
+  const newMatches = matchesData.filter(m => insertedIds.has(m.metadata.matchId))
   
   if (newMatches.length === 0) return { success: true, storedCount: 0 }
 
-  // 2. Fetch timelines in parallel
+  // 3. Fetch timelines in parallel (only for newly inserted matches)
   const timelines = new Map<string, any>()
   if (region && !skipTimeline) {
     await Promise.all(newMatches.map(async (match) => {
@@ -366,22 +380,7 @@ export async function storeMatchDataBatch(
     }))
   }
 
-  // 3. Prepare match rows
-  const matchRows = newMatches.map(match => ({
-    match_id: match.metadata.matchId,
-    game_creation: match.info.gameCreation,
-    game_duration: match.info.gameDuration,
-    patch: match.info.gameVersion ? extractPatch(match.info.gameVersion) : getPatchFromDate(match.info.gameCreation),
-  }))
-
-  // 4. Insert matches (bulk)
-  const { error: matchError } = await supabase.from('matches').insert(matchRows)
-  if (matchError) {
-    console.error('error storing matches batch:', matchError)
-    return { success: false, storedCount: 0 }
-  }
-
-  // 5. Process participants
+  // 4. Process participants
   const itemsDataImport = await import('@/data/items.json')
   const itemsData = itemsDataImport.default as Record<string, { itemType?: string }>
   
@@ -407,7 +406,7 @@ export async function storeMatchDataBatch(
     }
   }
 
-  // 6. Insert summoner_matches (bulk)
+  // 5. Insert summoner_matches with ON CONFLICT (bulk, no pre-check)
   const trackedRows = allParticipantRows.filter(p => trackedPuuids.has(p.puuid))
   if (trackedRows.length > 0) {
     const insertRows = trackedRows.map(p => ({
@@ -422,13 +421,16 @@ export async function storeMatchDataBatch(
         match_data: p.match_data,
     }))
     
-    const { error: trackedError } = await supabase.from('summoner_matches').insert(insertRows)
+    const { error: trackedError } = await supabase
+      .from('summoner_matches')
+      .upsert(insertRows, { onConflict: 'puuid,match_id' })
+    
     if (trackedError) {
        console.error('error storing tracked participants batch:', trackedError)
     }
   }
 
-  // 7. Add stats to aggregator
+  // 6. Add stats to aggregator
   for (const stats of allStatsData) {
     statsAggregator.add(stats)
   }
