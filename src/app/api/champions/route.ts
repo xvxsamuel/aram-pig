@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const [statsResult, matchCountResult] = await Promise.all([
       supabase
         .from('champion_stats')
-        .select('champion_name, games, wins, last_updated, winrate, tier:data->>tier')
+        .select('champion_name, games, wins, last_updated, winrate, data')
         .eq('patch', patch)
         .gte('games', 1)
         .order('winrate', { ascending: false })
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       overall_winrate: Number(row.winrate) || 0,
       games_analyzed: row.games || 0,
       last_updated: row.last_updated,
-      tier: row.tier || 'COAL',
+      tier: (row.data as any)?.tier || 'COAL',
     }))
 
     // find most recent update timestamp from all champions

@@ -44,7 +44,7 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
     console.log(`[DB] Flushing ${aggregatedStats.length} champion+patch combos (${participantCount} participants)...`)
 
     const supabase = createAdminClient()
-    const BATCH_SIZE = 5 // Reduced batch size to prevent timeouts
+    const BATCH_SIZE = 50 // Larger batches reduce total RPC calls
     let totalFlushed = 0
     let failedBatches = 0
 
@@ -53,8 +53,8 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
       const batchNum = Math.floor(i / BATCH_SIZE) + 1
       const totalBatches = Math.ceil(aggregatedStats.length / BATCH_SIZE)
 
-      // Log progress every 5 batches or on the last batch
-      if (batchNum % 5 === 0 || batchNum === totalBatches) {
+      // Log progress every 2 batches or on the last batch
+      if (batchNum % 2 === 0 || batchNum === totalBatches) {
          process.stdout.write(`\r[DB] Processing batch ${batchNum}/${totalBatches} (${Math.round((batchNum / totalBatches) * 100)}%)...`)
       }
 
@@ -73,9 +73,9 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
         failedBatches++
       }
       
-      // Delay to prevent overwhelming the DB
+      // Longer delay to give DB time to process and prevent timeouts
       if (i + BATCH_SIZE < aggregatedStats.length) {
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 2000))
       }
     }
     console.log('') // Newline after progress bar

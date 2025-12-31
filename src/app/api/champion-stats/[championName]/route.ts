@@ -147,7 +147,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     targetPatch = latestPatches[0] // most recent patch
   }
 
-  // fetch champion stats data - optimized queries with minimal columns
+  // fetch champion stats data
+  // games/wins are generated columns from data->>'games' and data->>'wins'
   const [championResponse, totalGamesCount] = await Promise.all([
     supabase
       .from('champion_stats')
@@ -196,8 +197,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const championStats = rawData.championStats
   const welford = championStats?.welford
 
-  // compute per-minute averages from sums
-  const totalGames = rawData.games || 0
+  // use database columns for games/wins (they're computed from JSONB)
+  const totalGames = data.games || 0
+  const totalWins = data.wins || 0
   const avgGameDuration =
     totalGames > 0 && championStats?.sumGameDuration
       ? championStats.sumGameDuration / totalGames / 60 // convert to minutes
@@ -236,10 +238,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // basic stats
     overview: {
-      games: rawData.games,
-      wins: rawData.wins,
-      winrate: rawData.games > 0 ? (rawData.wins / rawData.games) * 100 : 0,
-      pickrate: (rawData.games / totalMatches) * 100,
+      games: totalGames,
+      wins: totalWins,
+      winrate: totalGames > 0 ? (totalWins / totalGames) * 100 : 0,
+      pickrate: (totalGames / totalMatches) * 100,
     },
 
     // computed averages per game

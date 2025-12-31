@@ -26,6 +26,7 @@ interface ChampionData {
   champions: ChampionStats[]
   totalMatches: number
   patch: string
+  lastFetched?: string
 }
 
 interface ChampionError {
@@ -56,9 +57,6 @@ export default function ChampionsPageClient({
   // track when data was last fetched from API
   const [lastFetchTime, setLastFetchTime] = useState<number | null>(null)
 
-  // check if initialData has error
-  const initialError = initialData && 'error' in initialData ? initialData.error : null
-
   // redirect to default patch if none specified
   useEffect(() => {
     if (!urlPatch && defaultPatch) {
@@ -68,8 +66,8 @@ export default function ChampionsPageClient({
 
   const currentPatch = urlPatch || defaultPatch
 
-  // determine if we can use prefetched data (same patch and no error)
-  const canUsePrefetchedData = !initialError && initialData && 'patch' in initialData && initialData.patch === currentPatch
+  // determine if we can use prefetched data (same patch)
+  const canUsePrefetchedData = initialData && 'patch' in initialData && initialData.patch === currentPatch
 
   // swr with fallback data for instant load - matches API cache (6 hours)
   const { data, isLoading, error } = useSWR<ChampionData>(
@@ -129,11 +127,11 @@ export default function ChampionsPageClient({
         </div>
 
         {/* error message */}
-        {(error || initialError) && (
+        {error && (
           <div className="mb-6">
             <ErrorMessage
-              title={initialError?.title || 'Failed to load champion data'}
-              message={initialError?.message || 'Please try again or select a different patch.'}
+              title="Failed to load champion data"
+              message="Please try again or select a different patch."
               onClose={() => window.location.reload()}
             />
           </div>
