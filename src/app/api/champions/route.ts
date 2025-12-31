@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/db'
 
-// aggressive caching: 5 min fresh, 30 min stale-while-revalidate
-const CACHE_CONTROL = 'public, s-maxage=300, stale-while-revalidate=1800'
+// aggressive caching: 6 hours fresh, 12 hours stale-while-revalidate
+// champions list updates infrequently, so long cache is optimal
+const CACHE_CONTROL = 'public, s-maxage=21600, stale-while-revalidate=43200'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams

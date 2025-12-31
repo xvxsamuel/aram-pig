@@ -143,17 +143,16 @@ export default function ChampionPageClient({
     }
   }, [apiName])
 
-  // swr with stale-while-revalidate caching
+  // swr with aggressive caching - matches API cache (6 hours)
   const { data, error, isLoading } = useSWR<ChampionStatsResponse | null>(
     `/api/champion-stats/${championName}?patch=${currentPatch}`,
     fetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      revalidateOnMount: false,
-      dedupingInterval: 3600000, // 1 hour - champion stats change infrequently
+      dedupingInterval: 21600000, // 6 hours - matches server cache
       refreshInterval: 0, // disable automatic revalidation
-      keepPreviousData: true,
+      keepPreviousData: false, // don't mix data between champions
     }
   )
 

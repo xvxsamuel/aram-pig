@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
 import PatchFilter from '@/components/filters/PatchFilter'
 import ChampionTable from '@/components/champions/ChampionTable'
@@ -53,6 +53,9 @@ export default function ChampionsPageClient({
   const pathname = usePathname()
   const urlPatch = searchParams.get('patch')
 
+  // track when data was last loaded
+  const [lastLoadTime, setLastLoadTime] = useState<number>(Date.now())
+
   // check if initialData has error
   const initialError = initialData && 'error' in initialData ? initialData.error : null
 
@@ -68,7 +71,7 @@ export default function ChampionsPageClient({
   // determine if we can use prefetched data (same patch and no error)
   const canUsePrefetchedData = !initialError && initialData && 'patch' in initialData && initialData.patch === currentPatch
 
-  // swr with fallback data for instant load
+  // swr with fallback data for instant load - matches API cache (6 hours)
   const { data, isLoading, error } = useSWR<ChampionData>(
     currentPatch ? `/api/champions?patch=${currentPatch}` : null,
     fetcher,
@@ -76,7 +79,7 @@ export default function ChampionsPageClient({
       fallbackData: canUsePrefetchedData ? initialData : undefined,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 300000, // 5 minutes - match server cache
+      dedupingInterval: 21600000, // 6 hours - matches server cache
       revalidateOnMount: !canUsePrefetchedData, // only revalidate if patch changed
     }
   )
@@ -84,25 +87,25 @@ export default function ChampionsPageClient({
   const champions = data?.champions || []
   const totalMatches = data?.totalMatches || 0
 
-  // time since last update
-  const timeAgo = useMemo(() => {
-    const lastUpdated = champions[0]?.last_updated
-    if (!lastUpdated) return 'Unknown'
-
-    try {
-      const diffMs = Date.now() - new Date(lastUpdated).getTime()
-      const diffMins = Math.floor(diffMs / 60000)
-      const diffHours = Math.floor(diffMins / 60)
-      const diffDays = Math.floor(diffHours / 24)
-
-      if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-      if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-      if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
-      return 'just now'
-    } catch {
-      return 'Unknown'
+  // update load time whenever data changes
+  useEffect(() => {
+    if (data && !isLoading) {
+      setLastLoadTime(Date.now())
     }
-  }, [champions])
+  }, [data, isLoading])
+
+  // time since last SWR load
+  const timeAgo = useMemo(() => {
+    const diffMs = Date.now() - lastLoadTime
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+    return 'just now'
+  }, [lastLoadTime])
 
   // show skeleton only when actually loading with no data
   const showSkeleton = isLoading && champions.length === 0
