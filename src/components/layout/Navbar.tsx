@@ -101,7 +101,8 @@ export default function Navbar() {
               sidebarHovered={sidebarHovered}
               onClick={() => setOptimisticPath('/champions')}
             />
-            <NavItemmayhem"
+            <NavItem
+              href="/mayhem"
               icon={SparklesIcon}
               label="Mayhem"
               isActive={isMayhemActive}
@@ -109,7 +110,6 @@ export default function Navbar() {
               onClick={() => setOptimisticPath('/mayhem')}
             />
             <NavItem
-              href="/
               href="/about"
               icon={InformationCircleIcon}
               label="About"
