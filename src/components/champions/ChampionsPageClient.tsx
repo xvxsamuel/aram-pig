@@ -85,7 +85,7 @@ export default function ChampionsPageClient({
   const champions = data?.champions || []
   const totalMatches = data?.totalMatches || 0
 
-  // update fetch time when new data arrives from API (not from cache)
+  // update fetch time when new data arrives from API
   useEffect(() => {
     if (data?.lastFetched) {
       setLastFetchTime(new Date(data.lastFetched).getTime())
@@ -94,7 +94,7 @@ export default function ChampionsPageClient({
 
   // time since last DB fetch
   const timeAgo = useMemo(() => {
-    if (!lastFetchTime) return 'Loading...'
+    if (!lastFetchTime) return 'Unknown'
     
     const diffMs = Date.now() - lastFetchTime
     const diffMins = Math.floor(diffMs / 60000)

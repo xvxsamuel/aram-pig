@@ -50,7 +50,7 @@ export function CoreBuildsSelector({
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  // Initialize selection if null
+  // initialize selection if null
   useEffect(() => {
     if (selectedCombo === null && bestCombinations.length > 0) {
       onComboSelect(bestCombinations[0].originalIndex)

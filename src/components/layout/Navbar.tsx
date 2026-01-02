@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { UserGroupIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import { UserGroupIcon, InformationCircleIcon, SparklesIcon } from '@heroicons/react/24/outline'
 
 interface NavItemProps {
   href: string
@@ -57,6 +57,7 @@ export default function Navbar() {
 
   // check if current page is active using optimistic path for instant feedback
   const isChampionsActive = optimisticPath === '/champions'
+  const isMayhemActive = optimisticPath === '/mayhem'
   const isAboutActive = optimisticPath?.startsWith('/about')
 
   return (
@@ -100,7 +101,15 @@ export default function Navbar() {
               sidebarHovered={sidebarHovered}
               onClick={() => setOptimisticPath('/champions')}
             />
+            <NavItemmayhem"
+              icon={SparklesIcon}
+              label="Mayhem"
+              isActive={isMayhemActive}
+              sidebarHovered={sidebarHovered}
+              onClick={() => setOptimisticPath('/mayhem')}
+            />
             <NavItem
+              href="/
               href="/about"
               icon={InformationCircleIcon}
               label="About"

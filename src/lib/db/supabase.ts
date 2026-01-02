@@ -14,7 +14,20 @@ export function createAdminClient() {
     throw new Error('createAdminClient() can only be used on the server side')
   }
   if (!adminClient) {
-    adminClient = createSupabaseClient(supabaseUrl, supabaseSecretKey)
+    adminClient = createSupabaseClient(supabaseUrl, supabaseSecretKey, {
+      db: {
+        schema: 'public',
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'aram-pig-scraper/1.0',
+        },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
   }
   return adminClient
 }

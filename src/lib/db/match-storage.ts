@@ -41,54 +41,61 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
 
   try {
     const participantCount = statsAggregator.getParticipantCount()
-    console.log(`[DB] Flushing ${aggregatedStats.length} champion+patch combos (${participantCount} participants)...`)
+    console.log(`[DB] Flushing ${aggregatedStats.length} champion stats (${participantCount} participants)...`)
 
     const supabase = createAdminClient()
-    const BATCH_SIZE = 25 // Balance between RPC call count and timeout prevention
+    // All champions in one batch - should complete in ~60-90s, well under 120s HTTP timeout
+    const BATCH_SIZE = 200
     let totalFlushed = 0
-    let failedBatches = 0
 
     for (let i = 0; i < aggregatedStats.length; i += BATCH_SIZE) {
       const batch = aggregatedStats.slice(i, i + BATCH_SIZE)
       const batchNum = Math.floor(i / BATCH_SIZE) + 1
       const totalBatches = Math.ceil(aggregatedStats.length / BATCH_SIZE)
 
-      // Log progress every 2 batches or on the last batch
-      if (batchNum % 2 === 0 || batchNum === totalBatches) {
-         process.stdout.write(`\r[DB] Processing batch ${batchNum}/${totalBatches} (${Math.round((batchNum / totalBatches) * 100)}%)...`)
-      }
-
-      try {
-        // Use RPC for server-side merging to reduce network I/O and client CPU
-        // This sends only the deltas (new stats) to the DB, which merges them with existing data
-        const { error } = await supabase.rpc('upsert_aggregated_champion_stats_batch', {
-          p_stats_array: batch
-        })
-
-        if (error) throw error
-
-        totalFlushed += batch.length
-      } catch (error: any) {
-        console.log(`\n[DB] Batch ${batchNum}/${totalBatches} failed: ${error.message}`)
-        failedBatches++
+      // Retry forever with exponential backoff - never lose data
+      let attempt = 0
+      while (true) {
+        attempt++
+        const batchStartTime = Date.now()
+        
+        try {
+          const { error } = await supabase.rpc('upsert_aggregated_champion_stats_batch', {
+            p_stats_array: batch
+          })
+          
+          const elapsed = ((Date.now() - batchStartTime) / 1000).toFixed(1)
+          
+          if (error) {
+            throw error
+          }
+          
+          console.log(`[DB] Batch ${batchNum}/${totalBatches}: ${batch.length} champions merged in ${elapsed}s`)
+          totalFlushed += batch.length
+          break // Success - exit retry loop
+          
+        } catch (error: any) {
+          const elapsed = ((Date.now() - batchStartTime) / 1000).toFixed(1)
+          console.error(`[DB] Batch ${batchNum} attempt ${attempt} failed after ${elapsed}s:`, error.message)
+          
+          // Exponential backoff: 10s, 20s, 40s, 60s, 60s, 60s...
+          const delay = Math.min(10000 * Math.pow(2, attempt - 1), 60000)
+          console.log(`[DB] Retrying in ${delay / 1000}s...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
       }
       
-      // Longer delay to give DB time to process and prevent timeouts
+      // Brief delay between batches (if multiple)
       if (i + BATCH_SIZE < aggregatedStats.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
-    console.log('') // Newline after progress bar
 
+    // Only clear buffer after ALL batches succeed
     statsAggregator.clear()
+    console.log(`[DB] Flush complete: ${totalFlushed} champion stats merged`)
 
-    if (failedBatches > 0) {
-      console.log(`[DB] Flushed ${totalFlushed}/${aggregatedStats.length} combos (${failedBatches} batches failed)`)
-    } else {
-      console.log(`[DB] Flushed ${totalFlushed} champion+patch combos`)
-    }
-
-    return { success: totalFlushed > 0, count: totalFlushed }
+    return { success: true, count: totalFlushed }
   } finally {
     flushInProgress = false
   }
