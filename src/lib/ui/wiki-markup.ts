@@ -19,6 +19,9 @@ export function cleanWikiMarkup(text: string): string {
     prevCleaned = cleaned
     iterations++
 
+    // {{#invoke:...}} - mediawiki module invocation, remove entirely
+    cleaned = cleaned.replace(/\{\{#invoke:[^}]+\}\}/g, '')
+
     // {{#vardefineecho:varname|value}} - mediawiki variable definition, extract the value
     cleaned = cleaned.replace(/\{\{#vardefineecho:[^|]+\|([^}]+)\}\}/g, '$1')
     
@@ -152,6 +155,7 @@ export function cleanWikiMarkup(text: string): string {
     cleaned = cleaned.replace(/\{\{tip\|([^}]+)\}\}/g, '<tip>$1|||$1</tip>')
 
     // {{bi|buff name}} - buff icon, just show the buff name
+    cleaned = cleaned.replace(/\{\{bi\|([^}|]+)\|([^}]+)\}\}/g, '<keyword>$2</keyword>')
     cleaned = cleaned.replace(/\{\{bi\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
 
     // {{ii|item name}} - item icon, just show the item name
@@ -163,8 +167,14 @@ export function cleanWikiMarkup(text: string): string {
     // {{si|spell name}} - summoner spell icon, just show the spell name
     cleaned = cleaned.replace(/\{\{si\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
 
+    // {{ai|ability|champion|display}} - ability icon with champion and display text, show display text
+    cleaned = cleaned.replace(/\{\{ai\|([^}|]+)\|([^}|]+)\|([^}|]+)\}\}/g, '<keyword>$3</keyword>')
+
     // {{ai|ability|champion}} - ability icon with champion, show ability name
     cleaned = cleaned.replace(/\{\{ai\|([^}|]+)\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{cai|ability|champion}} - champion ability icon, show ability name
+    cleaned = cleaned.replace(/\{\{cai\|([^}|]+)\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
 
     // {{ais|ability|champion}} - ability icon with champion (possessive), show ability name
     cleaned = cleaned.replace(/\{\{ais\|([^}|]+)\|([^}|]+)\}\}/g, "<keyword>$1</keyword>'s")
@@ -195,7 +205,8 @@ export function cleanWikiMarkup(text: string): string {
     })
 
     // {{sti|text}} or {{ai|text}} - stat/ability icon (single param fallback)
-    cleaned = cleaned.replace(/\{\{(?:sti|ai)\|([^}]+)\}\}/g, '<keyword>$1</keyword>')
+    // Use .+? to match content that may contain nested tags like <health>...</health>
+    cleaned = cleaned.replace(/\{\{(?:sti|ai)\|(.+?)\}\}/g, '$1')
 
     // {{stil|text}} - stat icon link, color based on stat type
     cleaned = cleaned.replace(/\{\{stil\|([^}|]+)\}\}/g, (match, content) => {
@@ -251,6 +262,10 @@ export function cleanWikiMarkup(text: string): string {
     cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:healing|heal|shield|shielding|hsp)\}\}/gi, '<heal>$1</heal>')
     cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:movement speed|ms)\}\}/gi, '<ms>$1</ms>')
 
+    // {{as|text|buzzword...}} - special highlight text, just show the text (handles nested <bold> tags)
+    cleaned = cleaned.replace(/\{\{as\|(<bold>.*?<\/bold>)\|buzzword\d*\}\}/gi, '$1')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|buzzword\d*\}\}/gi, '<keyword>$1</keyword>')
+
     // nested content (with markers)
     cleaned = cleaned.replace(/\{\{as\|(.+?)\|magic damage\}\}/gi, '<magic>$1</magic>')
     cleaned = cleaned.replace(/\{\{as\|(.+?)\|physical damage\}\}/gi, '<ad-bonus>$1</ad-bonus>')
@@ -262,6 +277,8 @@ export function cleanWikiMarkup(text: string): string {
     cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:magic resistance|mr)\}\}/gi, '<mr>$1</mr>')
     cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:healing|heal|shield|shielding|hsp)\}\}/gi, '<heal>$1</heal>')
     cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:movement speed|ms)\}\}/gi, '<ms>$1</ms>')
+    cleaned = cleaned.replace(/\{\{as\|(<bold>.*?<\/bold>)\|buzzword\d*\}\}/gi, '$1')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|buzzword\d*\}\}/gi, '$1')
 
     // remove any remaining {{}} templates
     cleaned = cleaned.replace(/\{\{([^}]+)\}\}/g, '')
@@ -276,6 +293,9 @@ export function cleanWikiMarkup(text: string): string {
   cleaned = cleaned.replace(/\[\[(on-hit|on-attack)\]\]/g, '<keyword>$1</keyword>')
   // [[link]] - show link
   cleaned = cleaned.replace(/\[\[([^\]]+)\]\]/g, '$1')
+  
+  // [text] - single bracket links, just show the text
+  cleaned = cleaned.replace(/\[([^\]]+)\]/g, '$1')
 
   // process plain text rd - add melee/ranged icons
   // first handle "range – range / range – range" patterns
@@ -292,6 +312,15 @@ export function cleanWikiMarkup(text: string): string {
 
   // remove leading ": " (wiki markup indentation)
   cleaned = cleaned.replace(/^:\s+/gm, '')
+
+  // remove HTML comments
+  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '')
+
+  // convert HTML list tags to readable format
+  cleaned = cleaned.replace(/<ul>/gi, '\n')
+  cleaned = cleaned.replace(/<\/ul>/gi, '\n')
+  cleaned = cleaned.replace(/<li>/gi, '• ')
+  cleaned = cleaned.replace(/<\/li>/gi, '\n')
 
   // convert <br> tags to newlines
   cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n')
