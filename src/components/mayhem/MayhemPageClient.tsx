@@ -84,14 +84,14 @@ export default function MayhemPageClient({ augments }: Props) {
                 key={tier} 
                 className="flex items-stretch rounded-lg overflow-hidden border border-gold-dark/40"
                 style={{
-                  background: `linear-gradient(to right, ${tierConfig.borderColors.from}, ${tierConfig.borderColors.to})`,
+                  background: `linear-gradient(to bottom, ${tierConfig.borderColors.from}, ${tierConfig.borderColors.to})`,
                 }}
               >
                 {/* Tier badge */}
                 <div 
                   className="flex items-center justify-center w-[80px] px-4"
                   style={{
-                    background: `linear-gradient(135deg, ${tierConfig.borderColors.from}, ${tierConfig.borderColors.to})`,
+                    background: `linear-gradient(to bottom, ${tierConfig.borderColors.from}, ${tierConfig.borderColors.to})`,
                   }}
                 >
                   <span

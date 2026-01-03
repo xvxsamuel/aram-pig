@@ -810,7 +810,7 @@
     "icon": "ominouspact"
   },
   "Omni Soul": {
-    "description": "Grants 3 random {{bi|Dragon Soul|Dragon Souls}}.",
+    "description": "Gain 3 random Dragon Souls.",
     "tier": "Prismatic",
     "performanceTier": "B",
     "icon": "omnisoul"
@@ -828,7 +828,7 @@
     "icon": "quantumcomputing"
   },
   "Quest: Sneakerhead": {
-    "description": "You have now been assigned with a number of quests to complete that each involve performing specific tasks while equipped with a particular [https://wiki.leagueoflegends.com/en-us/Category:Boots_items Boots item], which is granted to you for free during its respective quest. Finish the following quests, which are assigned to you in a random order:<br><ul><li>{{sbc|Quest - {{ii|Berserker's Greaves}}:}} Basic attack 25 times.</li><li>{{sbc|Quest - {{ii|Boots of Swiftness}}:}} Run 300 steps.<!--extremely vague, needs in-game testing--></li><li>{{sbc|Quest - {{ii|Ionian Boots of Lucidity}}:}} Cast 20 abilities.</li><li>{{sbc|Quest - {{ii|Mercury's Treads}}:}} Become afflicted by {{tip|crowd control}} 5 times.</li><li>{{sbc|Quest - {{ii|Plated Steelcaps}}:}} Reduce a total of 200 damage with {{nie|Plating}}.</li><li>{{sbc|Quest - {{ii|Sorcerer's Shoes}}:}} Deal a total of 1500 damage with abilities.</li></ul><br>{{sbc|Reward:}} Upon completing all of the above quests, you receive {{ii|Jarvan I's}}.<br><br>''You cannot purchase any Boots items while equipped with this augment. If you already have a Boots item, it is replaced by the Boots granted by this effect. Boots items gained from this effect cannot be sold.''<br><br>{{as|'''This augment is currently disabled.'''|buzzword3}}",
+    "description": "You have now been assigned with a number of quests to complete that each involve performing specific tasks while equipped with a particular [Boots item], which is granted to you for free during its respective quest. Finish the following quests, which are assigned to you in a random order:<br><ul><li>{{sbc|Quest - {{ii|Berserker's Greaves}}:}} Basic attack 25 times.</li><li>{{sbc|Quest - {{ii|Boots of Swiftness}}:}} Run 300 steps.<!--extremely vague, needs in-game testing--></li><li>{{sbc|Quest - {{ii|Ionian Boots of Lucidity}}:}} Cast 20 abilities.</li><li>{{sbc|Quest - {{ii|Mercury's Treads}}:}} Become afflicted by {{tip|crowd control}} 5 times.</li><li>{{sbc|Quest - {{ii|Plated Steelcaps}}:}} Reduce a total of 200 damage with {{nie|Plating}}.</li><li>{{sbc|Quest - {{ii|Sorcerer's Shoes}}:}} Deal a total of 1500 damage with abilities.</li></ul><br>{{sbc|Reward:}} Upon completing all of the above quests, you receive {{ii|Jarvan I's}}.<br><br>''You cannot purchase any Boots items while equipped with this augment. If you already have a Boots item, it is replaced by the Boots granted by this effect. Boots items gained from this effect cannot be sold.''<br><br>{{as|'''This augment is currently disabled.'''|buzzword3}}",
     "tier": "Prismatic",
     "performanceTier": "COAL",
     "icon": "sneakerhead"
