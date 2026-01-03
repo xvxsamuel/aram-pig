@@ -19,15 +19,9 @@ type SizePreset = keyof typeof SIZE_MAP
 
 // tier border colors using our theme colors
 const TIER_BORDER_COLORS: Record<string, string> = {
-  Silver: '#94A3B8', // slate-400 approximation
+  Silver: 'var(--color-augment-silver)',
   Gold: 'var(--color-gold-light)',
-  Prismatic: '#E879F9', // fuchsia-400 approximation
-}
-
-const TIER_GLOW_COLORS: Record<string, string> = {
-  Silver: 'rgba(148, 163, 184, 0.3)',
-  Gold: 'rgba(237, 197, 63, 0.3)',
-  Prismatic: 'rgba(232, 121, 249, 0.4)',
+  Prismatic: 'var(--color-augment-prismatic)',
 }
 
 interface AugmentIconProps {
@@ -91,7 +85,6 @@ export default function AugmentIcon({
         height: pixelSize,
         ...(border === 'default' && {
           borderColor: TIER_BORDER_COLORS[tier] || 'var(--color-gold-dark)',
-          boxShadow: `0 1px 2px 0 ${TIER_GLOW_COLORS[tier] || 'rgba(0,0,0,0.05)'}`,
         })
       }}
     >
