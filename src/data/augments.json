@@ -381,7 +381,7 @@
     "description": "Deal 10% increased damage to enemies below {{as|30% of their '''maximum''' health}}. Scoring a champion {{tip|takedown}} resets the cooldown of all your basic abilities.",
     "tier": "Gold",
     "performanceTier": "S+",
-    "icon": "executioner"
+    "icon": "spiritualpurification"
   },
   "Firebrand": {
     "description": "Basic attacks apply a {{as|Burn}} for 5 seconds that deals {{as|'''bonus''' magic damage}} equal to{{ft|{{as|{{ap|2/5}}% of the target's '''maximum''' health}} per second.|{{as|2% of the target's '''maximum''' health}} over the duration.}}This {{as|Burn}} stacks infinitely and refreshes with each application.",
@@ -807,7 +807,7 @@
     "description": "Your abilities now have a {{tip|health resource|health cost}} of {{as|5% '''current''' health}} to cast them. In return, you gain {{as|ability power}} based on your {{as|'''missing''' health}}, up to {{as|{{pp|75 to 150}}|AP}} at {{as|70% '''missing''' health}}, {{pp|key=%|key1=%|type='''missing''' health|0 to 50 for 11|0 to 70|formula=0.714% per 1% '''missing''' health, capped at 70% '''missing''' health}} {{as|'''bonus''' movement speed}}, and {{pp|key=%|key1=%|type='''missing''' health|0 to 20 for 11|0 to 70|formula=0.286% per 1% '''missing''' health, capped at 70% '''missing''' health}} {{as|omnivamp}}.",
     "tier": "Prismatic",
     "performanceTier": "S+",
-    "icon": "phenomenalevil"
+    "icon": "ominouspact"
   },
   "Omni Soul": {
     "description": "Grants 3 random {{bi|Dragon Soul|Dragon Souls}}.",
@@ -937,7 +937,7 @@
   },
   "Trueshot Prodigy": {
     "description": "Upon damaging an enemy while located at over {{tt|700 units away|center-to-edge}} at the time of the hit, cast {{cai|Trueshot Barrage|Ezreal}} in their direction. The barrage deals {{as|{{pp|100 to 350}}|magic damage}} {{as|(+ 80% '''bonus''' AD)}} {{as|(+ 60% AP)}} {{as|magic damage}} to enemies it passes through (15 second cooldown).<br><br>This augment is only offered to up to 1 player on each team for a given game.",
-    "tier": "Silver",
+    "tier": "Prismatic",
     "performanceTier": "S",
     "icon": "trueshotprodigy"
   }

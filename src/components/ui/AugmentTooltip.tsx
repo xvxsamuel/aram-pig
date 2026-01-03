@@ -64,7 +64,7 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
           <img
             src="/icons/tooltips/gold_colored_icon.png"
             alt=""
-            className="inline h-[1em] w-auto align-baseline mr-0.5"
+            className="inline h-[1em] w-auto align-text-bottom mr-0.5"
           />
           {content}
         </span>
@@ -140,12 +140,12 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
         if (icon) {
           if (isIconOnly) {
             parts.push(
-              <img key={keyStr} src={icon} alt={tipKeyword} className="inline h-[1em] w-auto align-baseline" />
+              <img key={keyStr} src={icon} alt={tipKeyword} className="inline h-[1em] w-auto align-text-bottom" />
             )
           } else {
             parts.push(
               <span key={keyStr} style={{ whiteSpace: 'nowrap' }}>
-                <img src={icon} alt="" className="inline h-[1em] w-auto align-baseline mr-0.5" />
+                <img src={icon} alt="" className="inline h-[1em] w-auto align-text-bottom mr-0.5" />
                 {displayText}
               </span>
             )
@@ -162,7 +162,7 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
       if (icon) {
         parts.push(
           <span key={keyStr} style={{ whiteSpace: 'nowrap' }}>
-            <img src={icon} alt="" className="inline h-[1em] w-auto align-baseline mr-0.5" />
+            <img src={icon} alt="" className="inline h-[1em] w-auto align-text-bottom mr-0.5" />
             {content}
           </span>
         )

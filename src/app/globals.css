@@ -1,6 +1,9 @@
 @import 'tailwindcss';
 
 @theme {
+  --font-family-light: var(--font-league-spartan);
+  --font-family-title: var(--font-league-spartan);
+  
   --color-text-muted: oklch(73.16% 0 0);
 
   --color-accent-light: oklch(0.6537 0.118 223.64);
@@ -21,10 +24,13 @@
   --color-gold-light: oklch(0.7975 0.0627 90.79);
   --color-gold-dark: oklch(0.4713 0.0697 81.41);
 
+  --color-augment-silver: oklch(75% 0.02 240);
+  --color-augment-prismatic: oklch(91.332% 0.06636 318.884);
+
   --color-negative: oklch(62.451% 0.20324 17.952);
   --color-negative-dark: oklch(35.119% 0.08205 13.484);
   --color-worst-dark: oklch(18.096% 0.03814 18.802);
-   --color-worst-darker: oklch(13.276% 0.03423 17.025);
+  --color-worst-darker: oklch(13.276% 0.03423 17.025);
   --color-warning: oklch(75% 0.18 70);
   --color-loss: oklch(33.809% 0.04742 13.776);
   --color-loss-light: oklch(40% 0.05 13.776);
@@ -42,7 +48,7 @@
   --color-kda-5: oklch(72.69% 0.17193 36.338);
   --color-kda-5-dark: oklch(30.07% 0.11341 27.517);
 
-  /* Tier border colors */
+  /* tier border colors */
   --color-tier-splus: oklch(92.025% 0.15984 99.274);
   --color-tier-splus-dark: oklch(82.663% 0.15997 77.552);
   --color-tier-d: oklch(60.68% 0.0687 57.417);
@@ -50,21 +56,21 @@
   --color-tier-coal: oklch(56.926% 0.00006 271.152);
   --color-tier-coal-dark: oklch(30.919% 0.00004 271.152);
 
-  --font-family-light: var(--font-league-spartan);
-  --font-family-title: var(--font-league-spartan);
+
   /* tooltip colors */
-  --tooltip-ap: oklch(78.453% 0.13254 181.95);
+  --tooltip-ap: oklch(67.132% 0.12355 231.886);
   --tooltip-ad: oklch(80.595% 0.14126 63.272);
   --tooltip-ad-bonus: oklch(74.746% 0.16545 47.879);
-  --tooltip-health: oklch(59.767% 0.15096 145.035);
-  --tooltip-mana: oklch(65.146% 0.18521 264.421);
+  --tooltip-health: oklch(54.989% 0.15003 144.644);
+  --tooltip-mana: oklch(56.204% 0.21948 263.437);
   --tooltip-armor: oklch(89.995% 0.1738 96.865);
   --tooltip-mr: oklch(76.642% 0.1284 244.779);
-  --tooltip-ms: oklch(90.661% 0.21149 136.668);
+  --tooltip-ms: oklch(93.857% 0.15054 130.111);
   --tooltip-magic: oklch(70.918% 0.17045 294.845);
-  --tooltip-heal: oklab(79.099% -0.17555 0.11299);
-  --tooltip-gold: oklch(76.652% 0.13861 91.065);
+  --tooltip-heal: oklab(83.337% -0.15704 0.10621);
+  --tooltip-gold: oklch(78.812% 0.13214 92.278);
   --tooltip-vamp: oklch(53.081% 0.19688 19.524);
+  --tooltip-haste: oklch(89.047% 0.03918 247.136);
 }
 
 /* hide scrollbar */

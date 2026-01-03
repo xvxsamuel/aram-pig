@@ -9,6 +9,9 @@ export function cleanWikiMarkup(text: string): string {
   // ''text'' - italic (two single quotes) - process first before templates
   cleaned = cleaned.replace(/''(.+?)''/g, '<italic>$1</italic>')
 
+  // Remove any leftover unpaired quote markers ('' that didn't match)
+  cleaned = cleaned.replace(/''/g, '')
+
   // keep replacing nested templates until none left
   let prevCleaned = ''
   let iterations = 0
@@ -117,6 +120,17 @@ export function cleanWikiMarkup(text: string): string {
       }
     )
 
+    // {{pp|key=%|type=text|values;separated;by;semicolons}} - handle semicolon-separated values with key=%
+    cleaned = cleaned.replace(
+      /\{\{pp\|key=%\|type=([^|]+)\|(\d+);(\d+);(\d+);(\d+)([^}]*)\}\}/g,
+      (match, type, v1, v2, v3, v4) => {
+        const nums = [v1, v2, v3, v4].map(v => parseFloat(v)).filter(n => !isNaN(n))
+        const min = Math.min(...nums)
+        const max = Math.max(...nums)
+        return `${min}% – ${max}% (based on ${type})`
+      }
+    )
+
     cleaned = cleaned.replace(/\{\{pp\|([^}|]+)([^}]*)\}\}/g, '$1')
 
     // {{tt|text|tooltip}} - show text only
@@ -140,6 +154,12 @@ export function cleanWikiMarkup(text: string): string {
     // {{bi|buff name}} - buff icon, just show the buff name
     cleaned = cleaned.replace(/\{\{bi\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
 
+    // {{ii|item name}} - item icon, just show the item name
+    cleaned = cleaned.replace(/\{\{ii\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{nie|named effect}} - named item effect, show as keyword
+    cleaned = cleaned.replace(/\{\{nie\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
     // {{si|spell name}} - summoner spell icon, just show the spell name
     cleaned = cleaned.replace(/\{\{si\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
 
@@ -157,6 +177,22 @@ export function cleanWikiMarkup(text: string): string {
 
     // {{ccs|text|type}} - colored text with type, extract the text
     cleaned = cleaned.replace(/\{\{ccs\|([^}|]+)\|([^}|]+)\}\}/g, '$1')
+
+    // {{sti|type|content}} or {{ai|type|content}} - stat/ability icon with two parameters
+    cleaned = cleaned.replace(/\{\{(?:sti|ai)\|([^}|]+)\|([^}]+)\}\}/g, (match, type, content) => {
+      const lower = type.toLowerCase()
+      // map stat types to their colored markers
+      if (lower === 'cdr' || lower === 'ability haste') return `<haste>${content}</haste>`
+      if (lower === 'ad' || lower === 'attack damage') return `<ad>${content}</ad>`
+      if (lower === 'ap' || lower === 'ability power') return `<ap>${content}</ap>`
+      if (lower === 'health' || lower === 'hp') return `<health>${content}</health>`
+      if (lower === 'mana' || lower === 'mp') return `<mana>${content}</mana>`
+      if (lower === 'armor') return `<armor>${content}</armor>`
+      if (lower === 'magic resistance' || lower === 'mr') return `<mr>${content}</mr>`
+      if (lower === 'movement speed' || lower === 'ms') return `<ms>${content}</ms>`
+      if (lower.includes('heal') || lower.includes('shield')) return `<heal>${content}</heal>`
+      return `<keyword>${content}</keyword>`
+    })
 
     // {{sti|text}} or {{ai|text}} - stat/ability icon (single param fallback)
     cleaned = cleaned.replace(/\{\{(?:sti|ai)\|([^}]+)\}\}/g, '<keyword>$1</keyword>')

@@ -53,7 +53,7 @@ function getKeywordIcon(keyword: string): string | null {
 }
 
 const MARKER_REGEX =
-  /(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g
+  /(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<haste>(?:(?!<\/haste>).)*<\/haste>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g
 
 export function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
   const parts: React.ReactNode[] = []
@@ -85,7 +85,7 @@ export function renderNestedMarkers(text: string, baseKey: number): React.ReactN
           <img
             src="/icons/tooltips/gold_colored_icon.png"
             alt=""
-            className="inline h-[1em] w-auto align-baseline mr-0.5"
+            className="inline h-[1em] w-auto align-text-bottom mr-0.5"
           />
           {content}
         </span>
@@ -150,6 +150,12 @@ export function renderNestedMarkers(text: string, baseKey: number): React.ReactN
           {renderNestedMarkers(segment.slice(4, -5), baseKey * 1000)}
         </span>
       )
+    } else if (segment.startsWith('<haste>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-haste)' }}>
+          {renderNestedMarkers(segment.slice(7, -8), baseKey * 1000)}
+        </span>
+      )
     } else if (segment.startsWith('<tip>')) {
       const content = segment.slice(5, -6)
       const tipParts = content.split('|||')
@@ -161,12 +167,12 @@ export function renderNestedMarkers(text: string, baseKey: number): React.ReactN
         if (icon) {
           if (isIconOnly) {
             parts.push(
-              <img key={keyStr} src={icon} alt={tipKeyword} className="inline h-[1em] w-auto align-baseline" />
+              <img key={keyStr} src={icon} alt={tipKeyword} className="inline h-[1em] w-auto align-text-bottom" />
             )
           } else {
             parts.push(
               <span key={keyStr} style={{ whiteSpace: 'nowrap' }}>
-                <img src={icon} alt="" className="inline h-[1em] w-auto align-baseline mr-0.5" />
+                <img src={icon} alt="" className="inline h-[1em] w-auto align-text-bottom mr-0.5" />
                 {displayText}
               </span>
             )
@@ -183,7 +189,7 @@ export function renderNestedMarkers(text: string, baseKey: number): React.ReactN
       if (icon) {
         parts.push(
           <span key={keyStr} style={{ whiteSpace: 'nowrap' }}>
-            <img src={icon} alt="" className="inline h-[1em] w-auto align-baseline mr-0.5" />
+            <img src={icon} alt="" className="inline h-[1em] w-auto align-text-bottom mr-0.5" />
             {content}
           </span>
         )
