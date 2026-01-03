@@ -63,10 +63,18 @@ async function prefetchChampionStats(patch: string) {
     // sort by winrate descending
     champions.sort((a, b) => b.overall_winrate - a.overall_winrate)
 
+    // find most recent update timestamp from all champions
+    const lastFetched = champions.reduce((latest, champ) => {
+      if (!champ.last_updated) return latest
+      const champTime = new Date(champ.last_updated).getTime()
+      return !isNaN(champTime) && champTime > latest ? champTime : latest
+    }, 0)
+
     return {
       champions,
       totalMatches: matchCountResult.count || 0,
       patch,
+      lastFetched: lastFetched > 0 ? new Date(lastFetched).toISOString() : new Date().toISOString(),
     }
   } catch (error) {
     console.error('[ChampionsPage] Prefetch error:', error)

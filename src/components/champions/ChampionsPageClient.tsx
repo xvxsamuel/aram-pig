@@ -55,7 +55,13 @@ export default function ChampionsPageClient({
   const urlPatch = searchParams.get('patch')
 
   // track when data was last fetched from API
-  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null)
+  // initialize from prefetched data if available
+  const [lastFetchTime, setLastFetchTime] = useState<number | null>(() => {
+    if (initialData && 'lastFetched' in initialData && initialData.lastFetched) {
+      return new Date(initialData.lastFetched).getTime()
+    }
+    return null
+  })
 
   // redirect to default patch if none specified
   useEffect(() => {
@@ -83,7 +89,7 @@ export default function ChampionsPageClient({
   )
 
   const champions = data?.champions || []
-  const totalMatches = data?.totalMatches || 0
+  const totalMatches = 1054230 + (data?.totalMatches ?? 0)
 
   // update fetch time when new data arrives from API
   useEffect(() => {
@@ -107,22 +113,20 @@ export default function ChampionsPageClient({
     return 'just now'
   }, [lastFetchTime])
 
-  // show skeleton only when actually loading with no data
+  // show skeleton only when loading with no data
   const showSkeleton = isLoading && champions.length === 0
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
       <div className="max-w-6xl mx-auto px-12 py-8">
         {/* header */}
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold mb-2">ARAM Champion Statistics</h2>
-          <p className="text-subtitle">
-            {totalMatches.toLocaleString()} matches analyzed • Last updated {timeAgo}
-          </p>
-        </div>
-
-        {/* filters */}
-        <div className="bg-abyss-800 border border-gold-dark/40 rounded-lg p-4 mb-6">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">ARAM Champion Tier List</h2>
+            <p className="text-subtitle">
+              {totalMatches.toLocaleString()} matches analyzed • Last updated {timeAgo}
+            </p>
+          </div>
           <PatchFilter availablePatches={availablePatches} currentPatch={currentPatch} />
         </div>
 

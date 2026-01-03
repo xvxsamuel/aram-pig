@@ -54,8 +54,9 @@ export async function GET(request: NextRequest) {
 
     // find most recent update timestamp from all champions
     const lastFetched = champions.reduce((latest, champ) => {
+      if (!champ.last_updated) return latest
       const champTime = new Date(champ.last_updated).getTime()
-      return champTime > latest ? champTime : latest
+      return !isNaN(champTime) && champTime > latest ? champTime : latest
     }, 0)
 
     // already sorted by db, no need to sort again
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
       champions,
       totalMatches: matchCountResult.count || 0,
       patch,
-      lastFetched: new Date(lastFetched).toISOString(),
+      lastFetched: lastFetched > 0 ? new Date(lastFetched).toISOString() : new Date().toISOString(),
     })
     response.headers.set('Cache-Control', CACHE_CONTROL)
     return response

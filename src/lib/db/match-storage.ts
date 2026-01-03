@@ -44,8 +44,8 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
     console.log(`[DB] Flushing ${aggregatedStats.length} champion stats (${participantCount} participants)...`)
 
     const supabase = createAdminClient()
-    // All champions in one batch - should complete in ~60-90s, well under 120s HTTP timeout
-    const BATCH_SIZE = 200
+    // Reasonable batch size - fewer HTTP requests but still manageable per-batch CPU
+    const BATCH_SIZE = 40
     let totalFlushed = 0
 
     for (let i = 0; i < aggregatedStats.length; i += BATCH_SIZE) {
@@ -53,9 +53,10 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
       const batchNum = Math.floor(i / BATCH_SIZE) + 1
       const totalBatches = Math.ceil(aggregatedStats.length / BATCH_SIZE)
 
-      // Retry forever with exponential backoff - never lose data
+      // Retry with exponential backoff - max 10 attempts then skip batch
       let attempt = 0
-      while (true) {
+      const MAX_ATTEMPTS = 10
+      while (attempt < MAX_ATTEMPTS) {
         attempt++
         const batchStartTime = Date.now()
         
@@ -76,18 +77,23 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
           
         } catch (error: any) {
           const elapsed = ((Date.now() - batchStartTime) / 1000).toFixed(1)
-          console.error(`[DB] Batch ${batchNum} attempt ${attempt} failed after ${elapsed}s:`, error.message)
+          console.error(`[DB] Batch ${batchNum} attempt ${attempt}/${MAX_ATTEMPTS} failed after ${elapsed}s:`, error.message)
           
-          // Exponential backoff: 10s, 20s, 40s, 60s, 60s, 60s...
-          const delay = Math.min(10000 * Math.pow(2, attempt - 1), 60000)
+          if (attempt >= MAX_ATTEMPTS) {
+            console.error(`[DB] Batch ${batchNum} failed after ${MAX_ATTEMPTS} attempts, skipping to prevent infinite loop`)
+            break
+          }
+          
+          // Longer exponential backoff: 30s, 60s, 120s, max 180s
+          const delay = Math.min(30000 * Math.pow(2, attempt - 1), 180000)
           console.log(`[DB] Retrying in ${delay / 1000}s...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
       
-      // Brief delay between batches (if multiple)
+      // Small delay between batches - just enough to prevent overwhelming
       if (i + BATCH_SIZE < aggregatedStats.length) {
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
     }
 

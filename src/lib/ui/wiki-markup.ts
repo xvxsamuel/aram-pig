@@ -137,8 +137,37 @@ export function cleanWikiMarkup(text: string): string {
     // {{tip|keyword}} - use keyword with itself as display
     cleaned = cleaned.replace(/\{\{tip\|([^}]+)\}\}/g, '<tip>$1|||$1</tip>')
 
-    // {{sti|text}} or {{ai|text}} - stat/ability icon
+    // {{bi|buff name}} - buff icon, just show the buff name
+    cleaned = cleaned.replace(/\{\{bi\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{si|spell name}} - summoner spell icon, just show the spell name
+    cleaned = cleaned.replace(/\{\{si\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{ai|ability|champion}} - ability icon with champion, show ability name
+    cleaned = cleaned.replace(/\{\{ai\|([^}|]+)\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{ais|ability|champion}} - ability icon with champion (possessive), show ability name
+    cleaned = cleaned.replace(/\{\{ais\|([^}|]+)\|([^}|]+)\}\}/g, "<keyword>$1</keyword>'s")
+
+    // {{cis|champion}} - champion icon small, show champion name
+    cleaned = cleaned.replace(/\{\{cis\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{sbc|label:}} - stat block category (bold label)
+    cleaned = cleaned.replace(/\{\{sbc\|([^}]+)\}\}/g, '<bold>$1</bold>')
+
+    // {{ccs|text|type}} - colored text with type, extract the text
+    cleaned = cleaned.replace(/\{\{ccs\|([^}|]+)\|([^}|]+)\}\}/g, '$1')
+
+    // {{sti|text}} or {{ai|text}} - stat/ability icon (single param fallback)
     cleaned = cleaned.replace(/\{\{(?:sti|ai)\|([^}]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{stil|text}} - stat icon link, color based on stat type
+    cleaned = cleaned.replace(/\{\{stil\|([^}|]+)\}\}/g, (match, content) => {
+      const lower = content.toLowerCase()
+      if (lower.includes('heal') || lower.includes('shield')) return `<heal>${content}</heal>`
+      if (lower.includes('health') || lower.includes('regeneration')) return `<health>${content}</health>`
+      return `<keyword>${content}</keyword>`
+    })
 
     // process single-parameter {{as|text}} templates
     cleaned = cleaned.replace(/\{\{as\|([^}|]+)\}\}/g, (match, content) => {
@@ -174,34 +203,37 @@ export function cleanWikiMarkup(text: string): string {
     // then process {{as|text|type}} templates (two parameters)
 
     // simple content first
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|true damage\}\}/g, '$1')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|magic damage\}\}/g, '<magic>$1</magic>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|physical damage\}\}/g, '<ad-bonus>$1</ad-bonus>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|ad\}\}/g, '<ad>$1</ad>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|ap\}\}/g, '<ap>$1</ap>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:health|hp)\}\}/g, '<health>$1</health>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:mana|mp)\}\}/g, '<mana>$1</mana>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|armor\}\}/g, '<armor>$1</armor>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:magic resistance|mr)\}\}/g, '<mr>$1</mr>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:healing|heal|shield|shielding|hsp)\}\}/g, '<heal>$1</heal>')
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:movement speed|ms)\}\}/g, '<ms>$1</ms>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|true damage\}\}/gi, '$1')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|magic damage\}\}/gi, '<magic>$1</magic>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|physical damage\}\}/gi, '<ad-bonus>$1</ad-bonus>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|ad\}\}/gi, '<ad>$1</ad>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|ap\}\}/gi, '<ap>$1</ap>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:health|hp)\}\}/gi, '<health>$1</health>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:mana|mp)\}\}/gi, '<mana>$1</mana>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|armor\}\}/gi, '<armor>$1</armor>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:magic resistance|mr)\}\}/gi, '<mr>$1</mr>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:healing|heal|shield|shielding|hsp)\}\}/gi, '<heal>$1</heal>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:movement speed|ms)\}\}/gi, '<ms>$1</ms>')
 
     // nested content (with markers)
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|magic damage\}\}/g, '<magic>$1</magic>')
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|physical damage\}\}/g, '<ad-bonus>$1</ad-bonus>')
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|ap\}\}/g, '<ap>$1</ap>')
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:health|hp)\}\}/g, '<health>$1</health>')
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:mana|mp)\}\}/g, '<mana>$1</mana>')
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|armor\}\}/g, '<armor>$1</armor>')
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:magic resistance|mr)\}\}/g, '<mr>$1</mr>')
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:healing|heal|shield|shielding|hsp)\}\}/g, '<heal>$1</heal>')
-    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:movement speed|ms)\}\}/g, '<ms>$1</ms>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|magic damage\}\}/gi, '<magic>$1</magic>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|physical damage\}\}/gi, '<ad-bonus>$1</ad-bonus>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|ad\}\}/gi, '<ad>$1</ad>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|ap\}\}/gi, '<ap>$1</ap>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:health|hp)\}\}/gi, '<health>$1</health>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:mana|mp)\}\}/gi, '<mana>$1</mana>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|armor\}\}/gi, '<armor>$1</armor>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:magic resistance|mr)\}\}/gi, '<mr>$1</mr>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:healing|heal|shield|shielding|hsp)\}\}/gi, '<heal>$1</heal>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:movement speed|ms)\}\}/gi, '<ms>$1</ms>')
 
     // remove any remaining {{}} templates
     cleaned = cleaned.replace(/\{\{([^}]+)\}\}/g, '')
   }
 
   // process [[link]] brackets AFTER the loop
+  // [[File:...]] - remove file/image references
+  cleaned = cleaned.replace(/\[\[File:[^\]]+\]\]/g, '')
   // [[link|text]] - show text
   cleaned = cleaned.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2')
   // [[on-hit]] and [[on-attack]] - convert to keyword with icon
@@ -224,6 +256,12 @@ export function cleanWikiMarkup(text: string): string {
 
   // remove leading ": " (wiki markup indentation)
   cleaned = cleaned.replace(/^:\s+/gm, '')
+
+  // convert <br> tags to newlines
+  cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n')
+
+  // clean up multiple consecutive newlines
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n')
 
   return cleaned
 }

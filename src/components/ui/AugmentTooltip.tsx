@@ -1,8 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
+import Image from 'next/image'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { getTooltipData, cleanWikiMarkup } from '@/lib/ui'
+import augmentsData from '@/data/augments.json'
 
 // Import the rendering logic from ItemTooltip
 const MARKER_REGEX =
@@ -79,6 +81,12 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
           {renderNestedMarkers(segment.slice(4, -5), baseKey * 1000)}
         </span>
       )
+    } else if (segment.startsWith('<ad-bonus>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-ad-bonus)' }}>
+          {renderNestedMarkers(segment.slice(10, -11), baseKey * 1000)}
+        </span>
+      )
     } else if (segment.startsWith('<health>')) {
       parts.push(
         <span key={keyStr} style={{ color: 'var(--tooltip-health)' }}>
@@ -89,6 +97,36 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
       parts.push(
         <span key={keyStr} style={{ color: 'var(--tooltip-mana)' }}>
           {renderNestedMarkers(segment.slice(6, -7), baseKey * 1000)}
+        </span>
+      )
+    } else if (segment.startsWith('<armor>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-armor)' }}>
+          {renderNestedMarkers(segment.slice(7, -8), baseKey * 1000)}
+        </span>
+      )
+    } else if (segment.startsWith('<mr>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-mr)' }}>
+          {renderNestedMarkers(segment.slice(4, -5), baseKey * 1000)}
+        </span>
+      )
+    } else if (segment.startsWith('<heal>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-heal)' }}>
+          {renderNestedMarkers(segment.slice(6, -7), baseKey * 1000)}
+        </span>
+      )
+    } else if (segment.startsWith('<vamp>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-vamp)' }}>
+          {renderNestedMarkers(segment.slice(6, -7), baseKey * 1000)}
+        </span>
+      )
+    } else if (segment.startsWith('<ms>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-ms)' }}>
+          {renderNestedMarkers(segment.slice(4, -5), baseKey * 1000)}
         </span>
       )
     } else if (segment.startsWith('<tip>')) {
@@ -150,18 +188,26 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
 function formatDescription(desc: string): React.ReactNode {
   if (!desc) return null
 
-  const lines = desc.split('\n').filter(line => line.trim())
+  // Clean wiki markup first (this converts <br> to \n)
+  const cleanedDesc = cleanWikiMarkup(desc)
+  const lines = cleanedDesc.split('\n').filter(line => line.trim())
 
   return lines.map((line, lineIdx) => {
-    const cleanedText = cleanWikiMarkup(line)
-    const rendered = renderNestedMarkers(cleanedText, lineIdx * 10000)
+    const rendered = renderNestedMarkers(line, lineIdx * 10000)
 
     return (
-      <div key={lineIdx} className="mb-1 last:mb-0">
+      <div key={lineIdx} className="mb-2 last:mb-0">
         {rendered}
       </div>
     )
   })
+}
+
+// Tier label mapping
+const TIER_LABELS: Record<string, string> = {
+  Silver: 'Silver Augment',
+  Gold: 'Gold Augment',
+  Prismatic: 'Prismatic Augment',
 }
 
 interface AugmentTooltipProps {
@@ -169,39 +215,70 @@ interface AugmentTooltipProps {
   children: React.ReactNode
 }
 
-export default function AugmentTooltip({ augmentName, children }: AugmentTooltipProps) {
-  const tooltipData = getTooltipData(augmentName, 'augment')
-  
-  if (!tooltipData) {
-    return <>{children}</>
-  }
-
+const AugmentTooltipContent = memo(({ tooltipData, augmentName }: { tooltipData: any; augmentName: string }) => {
   const formattedDescription = useMemo(
     () => formatDescription(tooltipData.description),
     [tooltipData.description]
   )
 
-  const tooltipContent = (
-    <div className="w-96 max-w-[90vw]">
-      {/* Header */}
-      <div className="border-b border-gold-dark/30 pb-2 mb-3">
-        <h3 className="text-lg font-bold text-white mb-1">{tooltipData.name}</h3>
-        {tooltipData.tier && (
-          <p className="text-xs text-subtitle uppercase tracking-wider">{tooltipData.tier} Augment</p>
+  // Get augment icon from augments.json
+  const augmentEntry = (augmentsData as Record<string, { icon?: string; tier?: string }>)[augmentName]
+  const iconName = augmentEntry?.icon
+  const iconSrc = iconName ? `/icons/augments/${iconName}.png` : null
+
+  return (
+    <div className="text-left p-1 min-w-0 max-w-[320px]">
+      {/* Header with icon */}
+      <div className="flex items-center gap-2 mb-2">
+        {iconSrc && (
+          <div className="w-8 h-8 flex-shrink-0 rounded border border-gold-dark/40 overflow-hidden relative">
+            <Image
+              src={iconSrc}
+              alt={tooltipData.name}
+              width={32}
+              height={32}
+              className="w-full h-full object-cover"
+              unoptimized
+            />
+          </div>
         )}
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-gold-light break-words">{tooltipData.name}</div>
+        </div>
       </div>
+
+      {/* Divider */}
+      <div className="h-px bg-gradient-to-r from-gold-dark/40 to-transparent -mx-4 mb-2" />
 
       {/* Description */}
       {tooltipData.description && (
-        <div className="text-sm text-gray-300 leading-relaxed">
+        <div className="text-xs text-gray-300 leading-relaxed break-words overflow-wrap-anywhere mb-2">
           {formattedDescription}
         </div>
       )}
+
+      {/* Tier label at bottom like item types */}
+      {tooltipData.tier && (
+        <>
+          <div className="h-px bg-gradient-to-r from-gold-dark/40 to-transparent -mx-4 mb-2" />
+          <div className="text-xs text-gold-dark italic">{TIER_LABELS[tooltipData.tier] || `${tooltipData.tier} Augment`}</div>
+        </>
+      )}
     </div>
   )
+})
+
+AugmentTooltipContent.displayName = 'AugmentTooltipContent'
+
+export default function AugmentTooltip({ augmentName, children }: AugmentTooltipProps) {
+  const tooltipData = useMemo(() => getTooltipData(augmentName, 'augment'), [augmentName])
+  
+  if (!tooltipData) {
+    return <>{children}</>
+  }
 
   return (
-    <SimpleTooltip content={tooltipContent}>
+    <SimpleTooltip content={<AugmentTooltipContent tooltipData={tooltipData} augmentName={augmentName} />}>
       {children}
     </SimpleTooltip>
   )

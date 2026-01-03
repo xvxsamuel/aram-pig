@@ -1,6 +1,10 @@
 // stats aggregator - typescript-side aggregation for champion stats
 // reduces db operations from n (per participant) to m (per unique champion+patch)
 
+import itemsData from '@/data/items.json'
+
+const items = itemsData as Record<string, { itemType?: string }>
+
 // tier 1 boots - not completed (excluded from cores)
 const TIER1_BOOT_ID = 1001
 
@@ -10,17 +14,20 @@ const TIER2_BOOT_IDS = new Set([3006, 3009, 3020, 3047, 3111, 3117, 3158])
 // normalized boot id for core key grouping
 const NORMALIZED_BOOT_ID = 99999
 
-// check if item is a completed item (legendary or tier 2 boots)
+// check if item is a completed item (legendary, mythic, or tier 2 boots)
 // tier 1 boots (1001) are not completed items for core purposes
+// components, starters, and consumables are NOT completed items
 function isCompletedItemForCore(itemId: number): boolean {
   // tier 1 boots are not completed items
   if (itemId === TIER1_BOOT_ID) return false
   // tier 2 boots are completed items
   if (TIER2_BOOT_IDS.has(itemId)) return true
-  // for non-boots, we need to check if it's a legendary
-  // items >= 3000 and not component items are generally legendaries
-  // this is a simplified check - the full check uses items.json
-  return itemId >= 3000
+  // check items.json for the actual item type
+  const item = items[String(itemId)]
+  if (!item) return false
+  const type = item.itemType
+  // only legendary and mythic items are considered completed
+  return type === 'legendary' || type === 'mythic'
 }
 
 function createComboKey(items: number[]): string | null {

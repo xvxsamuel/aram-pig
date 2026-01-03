@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
-import AugmentDisplay from '@/components/game/AugmentDisplay'
+import { useMemo, useState } from 'react'
+import AugmentIcon from '@/components/ui/AugmentIcon'
+import TierFilter, { type AugmentTier } from '@/components/filters/TierFilter'
 import { TIER_CONFIGS, type ChampionTier } from '@/lib/ui'
 
 interface Augment {
@@ -19,6 +20,14 @@ interface Props {
 const TIER_ORDER: ChampionTier[] = ['S+', 'S', 'A', 'B', 'C', 'D', 'COAL']
 
 export default function MayhemPageClient({ augments }: Props) {
+  const [selectedTier, setSelectedTier] = useState<AugmentTier>('All')
+
+  // Filter augments by selected tier (Silver/Gold/Prismatic)
+  const filteredAugments = useMemo(() => {
+    if (selectedTier === 'All') return augments
+    return augments.filter(augment => augment.tier === selectedTier)
+  }, [augments, selectedTier])
+
   // Group augments by performance tier
   const groupedAugments = useMemo(() => {
     const groups: Record<ChampionTier, Augment[]> = {
@@ -31,85 +40,89 @@ export default function MayhemPageClient({ augments }: Props) {
       COAL: [],
     }
 
-    augments.forEach(augment => {
+    filteredAugments.forEach(augment => {
       groups[augment.performanceTier].push(augment)
     })
 
-    // Sort augments within each tier alphabetically
+    // Sort augments within each tier: by tier (Prismatic > Gold > Silver), then alphabetically
+    const tierPriority = { Prismatic: 0, Gold: 1, Silver: 2 }
     Object.values(groups).forEach(group => {
-      group.sort((a, b) => a.name.localeCompare(b.name))
+      group.sort((a, b) => {
+        const tierDiff = (tierPriority[a.tier as keyof typeof tierPriority] ?? 99) - (tierPriority[b.tier as keyof typeof tierPriority] ?? 99)
+        if (tierDiff !== 0) return tierDiff
+        return a.name.localeCompare(b.name)
+      })
     })
 
     return groups
-  }, [augments])
+  }, [filteredAugments])
 
   return (
     <main className="min-h-screen bg-accent-darker text-white">
       <div className="max-w-6xl mx-auto px-12 py-8">
         {/* Header */}
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold mb-2">ARAM Mayhem Augments</h2>
-          <p className="text-subtitle">
-            {augments.length} augments analyzed
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">ARAM Mayhem Augment Tier List</h2>
+            <p className="text-subtitle">
+              {filteredAugments.length} augments analyzed
+            </p>
+          </div>
+          <TierFilter selectedTier={selectedTier} onTierChange={setSelectedTier} />
         </div>
 
-        {/* Tier groups */}
-        <div className="space-y-4">
+        {/* Tier list */}
+        <div className="space-y-3">
           {TIER_ORDER.map(tier => {
             const tierAugments = groupedAugments[tier]
             if (tierAugments.length === 0) return null
 
             const tierConfig = TIER_CONFIGS[tier]
-            const tierBorder = `linear-gradient(to bottom, ${tierConfig.borderColors.from}, ${tierConfig.borderColors.to})`
 
             return (
-              <div key={tier} className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-                {/* Tier header */}
-                <div
-                  className="px-4 py-3 border-b border-abyss-700"
+              <div 
+                key={tier} 
+                className="flex items-stretch rounded-lg overflow-hidden border border-gold-dark/40"
+                style={{
+                  background: `linear-gradient(to right, ${tierConfig.borderColors.from}, ${tierConfig.borderColors.to})`,
+                }}
+              >
+                {/* Tier badge */}
+                <div 
+                  className="flex items-center justify-center w-[80px] px-4"
                   style={{
-                    background: tierConfig.bgColor,
-                    borderBottom: `2px solid ${tierConfig.borderColors.from}`,
+                    background: `linear-gradient(135deg, ${tierConfig.borderColors.from}, ${tierConfig.borderColors.to})`,
                   }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="p-px rounded-full"
-                      style={{ background: tierBorder }}
-                    >
-                      <div className="px-3 py-1 rounded-[inherit] bg-abyss-900 flex items-center justify-center">
-                        <span
-                          className="text-sm font-bold"
-                          style={{
-                            color: tierConfig.textColor,
-                            textShadow: tier === 'S+' ? '0 0 10px rgba(74, 158, 255, 1)' : 'none',
-                          }}
-                        >
-                          {tier}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-lg font-semibold text-white">
-                      {tierAugments.length} {tierAugments.length === 1 ? 'Augment' : 'Augments'}
-                    </span>
-                  </div>
+                  <span
+                    className={`font-bold ${tier === 'COAL' ? 'text-2xl' : 'text-3xl'}`}
+                    style={{
+                      color: tierConfig.textColor,
+                    }}
+                  >
+                    {tier}
+                  </span>
                 </div>
 
-                {/* Augments grid */}
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {tierAugments.map(augment => (
-                    <div
-                      key={augment.name}
-                      className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3 hover:bg-gold-light/10 transition-colors"
-                    >
-                      <AugmentDisplay
-                        augmentName={augment.name}
-                        tier={augment.tier}
-                        showTooltip={true}
-                      />
-                    </div>
-                  ))}
+                {/* Augments container */}
+                <div className="flex-1 bg-abyss-600 p-4">
+                  <div className="flex flex-wrap gap-3">
+                    {tierAugments.map(augment => (
+                      <div
+                        key={augment.name}
+                        className="flex flex-col items-center gap-1 h-[72px] w-[72px]"
+                      >
+                        <AugmentIcon
+                          augmentName={augment.name}
+                          size="lg"
+                          showTooltip={true}
+                        />
+                        <span className="text-xs text-center text-subtitle line-clamp-2 leading-tight max-w-[72px]">
+                          {augment.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )

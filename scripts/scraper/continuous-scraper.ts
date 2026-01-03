@@ -27,20 +27,32 @@ async function getCurrentPatch(): Promise<string[]> {
 }
 
 // stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-// larger buffer = more data per champion = one big batch instead of many small ones
-const STATS_BUFFER_FLUSH_SIZE = 5000 // flush every 5000 participants (~500 matches, ~6 min)
+// aggregator combines all participants into ~172 champion rows, so bigger buffer = same DB load, fewer operations
+const STATS_BUFFER_FLUSH_SIZE = 30000 // flush every 30k participants (~3000 matches, ~40 min at 80/min)
 let lastStatsFlush = Date.now()
-const STATS_FLUSH_INTERVAL = 600000 // or every 10 minutes
+const STATS_FLUSH_INTERVAL = 3600000 // or every 60 minutes as fallback
+const STATS_FLUSH_COOLDOWN = 300000 // minimum 5 minutes between flushes (safety)
+let flushInProgress = false
 
-// check if stats buffer should be flushed (using match-storage's buffer)
-async function maybeFlushStats(): Promise<void> {
+// NON-BLOCKING flush - scraper continues while DB catches up
+function maybeFlushStats(): void {
+  if (flushInProgress) return
+  
   const bufferCount = getStatsBufferCount()
   const now = Date.now()
-  if (bufferCount >= STATS_BUFFER_FLUSH_SIZE || (now - lastStatsFlush > STATS_FLUSH_INTERVAL && bufferCount > 0)) {
-    await flushStatsBatch()
-    lastStatsFlush = Date.now()
-    // give database more time to process the batch and reduce i/o spikes
-    await sleep(2000)
+  const timeSinceLastFlush = now - lastStatsFlush
+  
+  // respect cooldown to prevent rapid consecutive flushes
+  if (timeSinceLastFlush < STATS_FLUSH_COOLDOWN) return
+  
+  if (bufferCount >= STATS_BUFFER_FLUSH_SIZE || (timeSinceLastFlush > STATS_FLUSH_INTERVAL && bufferCount > 0)) {
+    flushInProgress = true
+    lastStatsFlush = now
+    
+    // fire and forget - don't await, let scraper continue
+    flushStatsBatch()
+      .catch(err => console.error('[FLUSH] Background flush error:', err))
+      .finally(() => { flushInProgress = false })
   }
 }
 

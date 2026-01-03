@@ -86,7 +86,8 @@ const isFinishedItem = (itemId: number): boolean => {
   const item = items[itemId.toString()]
   if (!item) return false
   const type = item.itemType
-  return type === 'legendary' || type === 'boots'
+  // Only legendary items (exclude boots - they have their own section)
+  return type === 'legendary'
 }
 
 export default function ChampionPageClient({

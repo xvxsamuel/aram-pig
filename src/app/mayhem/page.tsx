@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import MayhemPageClient from '@/components/mayhem/MayhemPageClient'
 import augmentsData from '@/data/augments.json'
+import type { ChampionTier } from '@/lib/ui'
 
 export const metadata: Metadata = {
   title: 'Mayhem Augments | ARAM PIG',
@@ -13,8 +14,7 @@ export default function MayhemPage() {
     name,
     tier: (data as { tier: string }).tier,
     description: (data as { description: string }).description,
-    // For now, assign all to COAL tier
-    performanceTier: 'COAL' as const,
+    performanceTier: ((data as { performanceTier?: string }).performanceTier || 'COAL') as ChampionTier,
   }))
 
   return <MayhemPageClient augments={augments} />
