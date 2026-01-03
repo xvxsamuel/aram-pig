@@ -9,11 +9,11 @@ interface TierFilterProps {
   onTierChange: (tier: AugmentTier) => void
 }
 
-const TIER_OPTIONS: { value: AugmentTier; label: string; color?: string }[] = [
+const TIER_OPTIONS: { value: AugmentTier; label: string; colorClass?: string }[] = [
   { value: 'All', label: 'All Tiers' },
-  { value: 'Prismatic', label: 'Prismatic', color: '#E879F9' },
-  { value: 'Gold', label: 'Gold', color: '#F59E0B' },
-  { value: 'Silver', label: 'Silver', color: '#94A3B8' },
+  { value: 'Prismatic', label: 'Prismatic', colorClass: 'bg-augment-prismatic' },
+  { value: 'Gold', label: 'Gold', colorClass: 'bg-gold-light' },
+  { value: 'Silver', label: 'Silver', colorClass: 'bg-augment-silver' },
 ]
 
 export default function TierFilter({ selectedTier, onTierChange }: TierFilterProps) {
@@ -46,10 +46,9 @@ export default function TierFilter({ selectedTier, onTierChange }: TierFilterPro
           className="relative z-10 w-full h-full px-4 py-2 text-sm bg-abyss-800 text-white rounded-[inherit] transition-all flex items-center justify-between gap-2"
         >
           <span className="flex items-center gap-2">
-            {currentOption.color && (
+            {currentOption.colorClass && (
               <span 
-                className="w-2 h-2 rounded-full" 
-                style={{ backgroundColor: currentOption.color }}
+                className={`w-2 h-2 rounded-full ${currentOption.colorClass}`}
               />
             )}
             {currentOption.label}
@@ -78,10 +77,9 @@ export default function TierFilter({ selectedTier, onTierChange }: TierFilterPro
                 selectedTier === option.value ? 'bg-accent-light/20' : ''
               }`}
             >
-              {option.color && (
+              {option.colorClass && (
                 <span 
-                  className="w-2 h-2 rounded-full" 
-                  style={{ backgroundColor: option.color }}
+                  className={`w-2 h-2 rounded-full ${option.colorClass}`}
                 />
               )}
               {option.label}
