@@ -642,7 +642,7 @@
     "icon": "biggestsnowballever"
   },
   "Blade Waltz": {
-    "description": "Replaces the summoner spell in the slot not occupied by {{si|Flash}} with ''{{si|Blade Waltz}}''.<br><br>[[File:Blade Waltz augment spell.png|20px|link=]] {{sbc|Blade Waltz:}} {{#invoke:SpellData|geteffect|Blade Waltz}}",
+    "description": "Replaces the summoner spell in the slot not occupied by {{si|Flash}} with ''{{si|Blade Waltz}}''.<br><br>{{sbc|Blade Waltz:}} {{tip|Blink}} to the target enemy champion. After {{fd|0.25}} seconds, you then blink to the nearest enemy champion every {{fd|0.25}} seconds over the next {{fd|1.75}} seconds, blinking up to 7 additional times. Each time you blink to a target, deal {{pp|30 to 150}} {{as|(+ 10% '''bonus''' AD)}} {{as|(+ 6% AP)}} {{as|physical damage}} to them and apply on-hit effects at 50% effectiveness, up to a total of {{pp|240 to 1200}} {{as|(+ 80% '''bonus''' AD)}} {{as|(+ 48% AP)}}.<br><br>While Blade Waltz is active, you are {{tip|untargetable}} and {{tip|Lockout|unable to act}}. This effect will end prematurely if there are no longer any nearby valid targets to blink to. A target can be blinked to more than once.",
     "tier": "Prismatic",
     "performanceTier": "D",
     "icon": "bladewaltz"
@@ -744,7 +744,7 @@
     "icon": "giantslayer"
   },
   "Glass Cannon": {
-    "description": "You gain a [[Health#Health_threshold|health threshold]] equal to {{sti|{{as|70% '''maximum''' health}}}} which cannot be {{tt|modified|By increases or decreases to maximum health}} nor {{tt|exceeded|By healing and health regeneration}} by any means. In return, you deal {{as|'''bonus''' true damage}} equal to 15% of all of the damage you deal {{tt|post-mitigation|Damage calculated after modifiers}}.",
+    "description": "You gain a health threshold equal to {{as|70% '''maximum''' health}} which cannot be modified nor exceeded by any means. In return, you deal {{as|'''bonus''' true damage}} equal to 15% of all of the damage you deal post-mitigation.",
     "tier": "Prismatic",
     "performanceTier": "COAL",
     "icon": "glasscannon"
@@ -762,13 +762,13 @@
     "icon": "goliath"
   },
   "Infernal Conduit": {
-    "description": "Your ability hits against champions apply a {{as|Burn}} for 5 seconds that deals{{ft|{{pp|6/5 to 60/5|color=magic damage}} {{as|(+ {{ap|14/5}}% '''bonus''' AD)}} {{as|(+ {{ap|6/5}}% AP)}} {{as|'''bonus''' magic damage}} per second|{{pp|6 to 60|color=magic damage}} {{as|(+ 14% '''bonus''' AD)}} {{as|(+ 6% AP)}} {{as|'''bonus''' magic damage}} over the duration}}(1 second cooldown per {{tip|cast instance}}). This {{as|Burn}} stacks infinitely and refreshes with each application.<br><br>Additionally, all of your {{as|Burn}} effects reduce the cooldowns of all your basic abilities by {{fd|0.08}} seconds for each tick of damage they deal to a target.",
+    "description": "Your ability hits against champions apply a {{as|Burn}} for 5 seconds that deals {{pp|1.2 to 12}} {{as|(+ {{fd|2.8}}% '''bonus''' AD)}} {{as|(+ {{fd|1.2}}% AP)}} {{as|'''bonus''' magic damage}} per second (1 second cooldown per {{tip|cast instance}}). This {{as|Burn}} stacks infinitely and refreshes with each application.<br><br>Additionally, all of your {{as|Burn}} effects reduce the cooldowns of all your basic abilities by {{fd|0.08}} seconds for each tick of damage they deal to a target.",
     "tier": "Prismatic",
     "performanceTier": "S",
     "icon": "infernalconduit"
   },
   "Jeweled Gauntlet": {
-    "description": "Your abilities can now {{tip|critical strike|critically strike}} for (145% + {{sti|{{as|'''bonus''' critical damage}}}}) damage. Additionally, gain {{as|25%|critical strike chance}} {{as|(+ {{fd|4.5}}% per 100 AP)}} {{as|critical strike chance}}.<br><br>If both ''Jeweled Gauntlet'' and [[File:Vulnerability augment.png|20px|link=|An icon for the ARAM: Mayhem augment Vulnerability]] ''Vulnerability'' are equipped, only rolls the critical strike chance of the augment that has the higher critical damage (or either if equal).",
+    "description": "Your abilities can now {{tip|critical strike|critically strike}} for (145% + '''bonus''' critical damage) damage. Additionally, gain {{as|25% (+ {{fd|4.5}}% per 100 AP) critical strike chance}}.<br><br>If both ''Jeweled Gauntlet'' and ''Vulnerability'' are equipped, only rolls the critical strike chance of the augment that has the higher critical damage (or either if equal).",
     "tier": "Prismatic",
     "performanceTier": "S+",
     "icon": "jeweledgauntlet"
@@ -804,7 +804,7 @@
     "icon": "mysticpunch"
   },
   "Ominous Pact": {
-    "description": "Your abilities now have a {{tip|health resource|health cost}} of {{as|5% '''current''' health}} to cast them. In return, you gain {{as|ability power}} based on your {{as|'''missing''' health}}, up to {{as|{{pp|75 to 150}}|AP}} at {{as|70% '''missing''' health}}, {{pp|key=%|key1=%|type='''missing''' health|0 to 50 for 11|0 to 70|formula=0.714% per 1% '''missing''' health, capped at 70% '''missing''' health}} {{as|'''bonus''' movement speed}}, and {{pp|key=%|key1=%|type='''missing''' health|0 to 20 for 11|0 to 70|formula=0.286% per 1% '''missing''' health, capped at 70% '''missing''' health}} {{as|omnivamp}}.",
+    "description": "Your abilities now have a {{tip|health resource|health cost}} of {{as|5% '''current''' health}} to cast them. In return, you gain {{as|ability power}} based on your {{as|'''missing''' health}}, up to {{pp|75 to 150}} at {{as|70% '''missing''' health}}, {{as|0% – 50% (based on '''missing''' health) '''bonus''' movement speed|ms}}, and {{as|0% – 20% (based on '''missing''' health) omnivamp}}.",
     "tier": "Prismatic",
     "performanceTier": "S+",
     "icon": "ominouspact"

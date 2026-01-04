@@ -140,7 +140,8 @@ export function cleanWikiMarkup(text: string): string {
     cleaned = cleaned.replace(/\{\{tt\|([^}|]+)\|([^}]*)\}\}/g, '$1')
 
     // {{ft|text|fallback}} - show first option
-    cleaned = cleaned.replace(/\{\{ft\|([^|]+?)\|.+\}\}\}/gs, ' $1 ')
+    // Need to handle nested braces - match until we find the last }}
+    cleaned = cleaned.replace(/\{\{ft\|([^|]+?(?:\{\{[^}]+\}\}[^|]*)*)\|[^}]+(?:\{\{[^}]+\}\}[^}]*)*\}\}/g, ' $1 ')
 
     // {{tip|keyword|icononly=true}} - icon only with special marker
     cleaned = cleaned.replace(/\{\{tip\|([^}|]+)\|icononly\s*=\s*true\}\}/g, '<tip>$1|||ICONONLY</tip>')
