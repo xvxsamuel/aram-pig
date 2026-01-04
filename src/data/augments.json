@@ -38,7 +38,7 @@
   "Don't Blink": {
     "description": "Deal 1% increased damage per {{as|10 movement speed}} you have more than the target.",
     "tier": "Silver",
-    "performanceTier": "A",
+    "performanceTier": "B",
     "icon": "dontblink"
   },
   "Erosion": {
@@ -404,7 +404,7 @@
   "From Beginning to End": {
     "description": "Gain the {{ri|Dark Harvest}} and {{ri|First Strike}} keystone runes.",
     "tier": "Gold",
-    "performanceTier": "B",
+    "performanceTier": "A",
     "icon": "frombeginningtoend"
   },
   "Get Excited": {
@@ -440,7 +440,7 @@
   "Keystone Conjurer": {
     "description": "Gain the {{ri|Arcane Comet}} and {{ri|Summon Aery}} keystone runes.",
     "tier": "Gold",
-    "performanceTier": "D",
+    "performanceTier": "C",
     "icon": "keystoneconjurer"
   },
   "Lightning Strikes": {
@@ -464,7 +464,7 @@
   "Minionmancer": {
     "description": "Your {{tip|pet|pets}} deal 40% increased damage as well as gain 40% {{as|'''bonus''' health}} and size.",
     "tier": "Gold",
-    "performanceTier": "A",
+    "performanceTier": "B",
     "icon": "minionmancer"
   },
   "Nightstalking": {
