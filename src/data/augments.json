@@ -780,7 +780,7 @@
     "icon": "kingme"
   },
   "Laser Heal": {
-    "description": "Replaces the summoner spell in the slot not occupied by {{si|Flash}} with ''{{si|Laser Heal}}''.<br><br>[[File:Life Form Disintegration Ray.png|20px|link=]] {{sbc|Laser Heal:}} {{#invoke:SpellData|geteffect|Laser Heal}}",
+    "description": "Replaces the summoner spell in the slot not occupied by {{si|Flash}} with ''{{si|Laser Heal}}''.<br><br>{{sbc|Laser Heal:}} {{tip|Channel}} for up to {{fd|2.5}} seconds to project an energy beam in the target direction, during which you can steer the beam in the direction of the cursor. The beam {{tip|Heal|heals}} you and allies within for {{pp|150 to 430}} {{as|(+ 70% AP)}} {{as|(+ 50% '''bonus''' health)}} and deals {{pp|100 to 350}} {{as|(+ 50% AP)}} {{as|magic damage}} to enemies within, both over the duration. Enemies hit are also {{tip|Slow|slowed}} by 20%.",
     "tier": "Prismatic",
     "performanceTier": "C",
     "icon": "laseheal"
