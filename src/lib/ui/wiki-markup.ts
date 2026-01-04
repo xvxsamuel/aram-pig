@@ -168,6 +168,9 @@ export function cleanWikiMarkup(text: string): string {
     // {{si|spell name}} - summoner spell icon, just show the spell name
     cleaned = cleaned.replace(/\{\{si\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
 
+    // {{ri|rune name}} - rune icon, just show the rune name
+    cleaned = cleaned.replace(/\{\{ri\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
     // {{ai|ability|champion|display}} - ability icon with champion and display text, show display text
     cleaned = cleaned.replace(/\{\{ai\|([^}|]+)\|([^}|]+)\|([^}|]+)\}\}/g, '<keyword>$3</keyword>')
 
