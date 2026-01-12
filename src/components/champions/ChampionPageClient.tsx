@@ -12,6 +12,7 @@ import { getChampionImageUrl } from '@/lib/ddragon'
 import { getWinrateColor, getTierBorderGradient } from '@/lib/ui'
 import ChampionDetailTabs from './ChampionDetailTabs'
 import PatchFilter from '@/components/filters/PatchFilter'
+import { HIDDEN_PATCHES } from '@/lib/game'
 import itemsData from '@/data/items.json'
 import type { ChampionTier } from '@/lib/ui'
 
@@ -101,16 +102,17 @@ export default function ChampionPageClient({
 }: Props) {
   const router = useRouter()
   const pathname = usePathname()
-  const currentPatch = selectedPatch || availablePatches[0]
+  const defaultPatch = availablePatches.find(p => !HIDDEN_PATCHES.includes(p)) || availablePatches[0]
+  const currentPatch = selectedPatch || defaultPatch
   const [selectedTab, setSelectedTab] = useState<'overview' | 'items' | 'runes' | 'leveling'>('overview')
   const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
 
   // redirect to default patch if none specified
   useEffect(() => {
-    if (!selectedPatch && availablePatches[0]) {
-      router.replace(`${pathname}?patch=${availablePatches[0]}#best`, { scroll: false })
+    if (!selectedPatch && defaultPatch) {
+      router.replace(`${pathname}?patch=${defaultPatch}#best`, { scroll: false })
     }
-  }, [selectedPatch, availablePatches, router, pathname])
+  }, [selectedPatch, defaultPatch, router, pathname])
 
   // handle hash navigation
   useEffect(() => {
