@@ -236,11 +236,11 @@ export async function POST(request: Request) {
 
     await supabase
       .from('summoner_matches')
-      .update({ match_data: { ...matchData, pigScore: breakdown.total, pigScoreBreakdown: breakdown } })
+      .update({ match_data: { ...matchData, pigScore: breakdown.finalScore, pigScoreBreakdown: breakdown } })
       .eq('match_id', matchId)
       .eq('puuid', puuid)
 
-    return NextResponse.json({ pigScore: breakdown.total, pigScoreBreakdown: breakdown })
+    return NextResponse.json({ pigScore: breakdown.finalScore, pigScoreBreakdown: breakdown })
   } catch (error) {
     console.error('POST /api/pig-score-breakdown error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -332,11 +332,11 @@ export async function PUT(request: Request) {
       if (breakdown) {
         await supabase
           .from('summoner_matches')
-          .update({ match_data: { ...matchData, pigScore: breakdown.total, pigScoreBreakdown: breakdown } })
+          .update({ match_data: { ...matchData, pigScore: breakdown.finalScore, pigScoreBreakdown: breakdown } })
           .eq('match_id', matchId)
           .eq('puuid', participant.puuid)
 
-        results.push({ puuid: participant.puuid, pigScore: breakdown.total })
+        results.push({ puuid: participant.puuid, pigScore: breakdown.finalScore })
       }
     }
 

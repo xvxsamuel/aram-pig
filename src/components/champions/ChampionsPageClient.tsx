@@ -138,7 +138,7 @@ export default function ChampionsPageClient({
             <ErrorMessage
               title="Failed to load champion data"
               message="Please try again or select a different patch."
-              onClose={() => window.location.reload()}
+              onRetry={() => window.location.reload()}
             />
           </div>
         )}

@@ -30,7 +30,17 @@ export interface MatchParticipantRecord {
     game_duration: number
     timeline_data: any
     game_creation?: number
-  }
+  } | {
+    game_duration: number
+    timeline_data: any
+    game_creation?: number
+  }[]
+}
+
+// helper to get match info from joined data (handles array or object from supabase join)
+function getMatchInfo(record: MatchParticipantRecord): { game_duration: number; timeline_data: any; game_creation?: number } | undefined {
+  if (!record.matches) return undefined
+  return Array.isArray(record.matches) ? record.matches[0] : record.matches
 }
 
 // helper to calculate team totals from match data
@@ -167,7 +177,7 @@ export async function calculateUserMatchesPigScores(
   // fetch user's matches
   const { data: matches } = await supabase
     .from('summoner_matches')
-    .select('match_id, match_data, champion_name, game_creation, patch, matches!inner(game_duration, timeline_data)')
+    .select('puuid, match_id, match_data, champion_name, game_creation, patch, matches!inner(game_duration, timeline_data)')
     .eq('puuid', puuid)
     .gte('game_creation', oneYearAgo)
     .order('game_creation', { ascending: false })
@@ -215,12 +225,13 @@ export async function calculateUserMatchesPigScores(
     }
 
     const { teamKills, teamDamage } = calculateTeamTotals(matchData.info.participants)
-    const timeline = (match as any).matches?.timeline_data
+    const matchInfo = getMatchInfo(match)
+    const timeline = matchInfo?.timeline_data
 
     const result = await calculateParticipantPigScore(
       match,
       matchParticipant,
-      (match as any).matches?.game_duration || 0,
+      matchInfo?.game_duration || 0,
       match.patch || '',
       timeline,
       teamKills,
@@ -314,16 +325,18 @@ export async function calculateOtherPlayersPigScores(
     }
 
     const { teamKills, teamDamage } = calculateTeamTotals(matchData.info.participants)
-    const timeline = matchParticipants[0].matches?.timeline_data
+    const firstMatchInfo = getMatchInfo(matchParticipants[0])
+    const timeline = firstMatchInfo?.timeline_data
 
     for (const participant of matchParticipants) {
       const matchParticipant = matchData?.info?.participants?.find((p: any) => p.puuid === participant.puuid)
       if (!matchParticipant) continue
 
+      const participantMatchInfo = getMatchInfo(participant)
       const result = await calculateParticipantPigScore(
         participant,
         matchParticipant,
-        participant.matches?.game_duration || 0,
+        participantMatchInfo?.game_duration || 0,
         participant.patch || '',
         timeline,
         teamKills,

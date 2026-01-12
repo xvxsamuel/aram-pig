@@ -25,10 +25,10 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
 
-    // get match data - only select match_data column which contains all needed info
+    // get match data - select match_data and champion_name
     const { data: matchData, error: matchError } = await supabase
       .from('summoner_matches')
-      .select('match_data')
+      .select('match_data, champion_name')
       .eq('match_id', matchId)
       .eq('puuid', puuid)
       .single()
