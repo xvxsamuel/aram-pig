@@ -1,7 +1,6 @@
 // participant processing utilities for match storage
 // extracts common logic for processing match participants
 
-import { calculatePigScoreWithBreakdownCached, prefetchChampionStats, type ChampionStatsCache } from '@/lib/scoring'
 import {
   extractAbilityOrder,
   extractBuildOrder,
@@ -11,7 +10,6 @@ import {
   extractItemTimeline,
   type ItemTimelineEvent,
 } from '@/lib/game'
-import { getKillDeathSummary } from '@/lib/game/kill-timeline'
 import itemsData from '@/data/items.json'
 
 // helper to check if item is a finished item (legendary or boots)
@@ -20,33 +18,6 @@ export function isFinishedItem(itemId: number): boolean {
   if (!item) return false
   const type = item.itemType
   return type === 'legendary' || type === 'boots'
-}
-
-// helper to extract skill max order abbreviation (e.g., "qwe" for q>w>e)
-export function extractSkillOrderAbbreviation(abilityOrder: string): string {
-  if (!abilityOrder || abilityOrder.length === 0) return ''
-
-  const abilities = abilityOrder.split(' ')
-  const counts = { Q: 0, W: 0, E: 0, R: 0 }
-  const maxOrder: string[] = []
-
-  for (const ability of abilities) {
-    if (ability in counts) {
-      counts[ability as keyof typeof counts]++
-      if (ability !== 'R' && counts[ability as keyof typeof counts] === 5) {
-        maxOrder.push(ability.toLowerCase())
-      }
-    }
-  }
-
-  const result = maxOrder.join('')
-  if (result.length === 1) return ''
-  if (result.length === 2) {
-    const abilitiesList = ['q', 'w', 'e']
-    const missing = abilitiesList.find(a => !result.includes(a))
-    return missing ? result + missing : result
-  }
-  return result
 }
 
 // extract runes from participant
@@ -121,22 +92,19 @@ interface ProcessParticipantsOptions {
   timeline: any | null
   isOlderThan1Year: boolean
   isRemake: boolean
-  statsCache: ChampionStatsCache
-  team100Kills: number
-  team200Kills: number
 }
 
 // process all participants in a match
+// NOTE: PIG scores are calculated on-demand via /api/calculate-pig-scores
 export async function processParticipants(options: ProcessParticipantsOptions) {
   const {
-    match, matchId, patch, gameCreation, gameDuration, timeline,
-    isOlderThan1Year, isRemake, statsCache, team100Kills, team200Kills
+    match, matchId, patch, gameCreation, timeline,
+    isOlderThan1Year,
   } = options
 
   return Promise.all(
     match.info.participants.map(async (p: any, index: number) => {
       const participantId = index + 1
-      const teamTotalKills = p.teamId === 100 ? team100Kills : team200Kills
 
       // extract timeline data
       let abilityOrder: string | null = null
@@ -153,45 +121,9 @@ export async function processParticipants(options: ProcessParticipantsOptions) {
         firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
       }
 
-      // calculate PIG score for all participants (optimized scoring makes this feasible)
-      let pigScore: number | null = null
-      let pigScoreBreakdown: any = null
-      if (!isOlderThan1Year && !isRemake && statsCache.size > 0) {
-        try {
-          const killDeathSummary = timeline ? getKillDeathSummary(timeline, participantId, p.teamId) : null
-          const breakdown = await calculatePigScoreWithBreakdownCached({
-            championName: p.championName,
-            damage_dealt_to_champions: p.totalDamageDealtToChampions || 0,
-            total_damage_dealt: p.totalDamageDealt || 0,
-            total_heals_on_teammates: p.totalHealsOnTeammates || 0,
-            total_damage_shielded_on_teammates: p.totalDamageShieldedOnTeammates || 0,
-            time_ccing_others: p.timeCCingOthers || 0,
-            game_duration: gameDuration,
-            deaths: p.deaths,
-            kills: p.kills,
-            assists: p.assists,
-            teamTotalKills,
-            item0: p.item0 || 0,
-            item1: p.item1,
-            item2: p.item2,
-            item3: p.item3,
-            item4: p.item4,
-            item5: p.item5,
-            perk0: p.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
-            patch,
-            spell1: p.summoner1Id || 0,
-            spell2: p.summoner2Id || 0,
-            skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
-            buildOrder: buildOrderStr || undefined,
-            firstBuy: firstBuyStr || undefined,
-            deathQualityScore: killDeathSummary?.deathScore,
-          }, statsCache)
-          if (breakdown) {
-            pigScore = breakdown.finalScore
-            pigScoreBreakdown = breakdown
-          }
-        } catch {}
-      }
+      // PIG score is null - will be calculated on-demand
+      const pigScore: number | null = null
+      const pigScoreBreakdown: any = null
 
       return {
         puuid: p.puuid,
@@ -214,11 +146,4 @@ export function calculateTeamKills(participants: any[]): { team100: number; team
     team100: participants.filter(p => p.teamId === 100).reduce((sum, p) => sum + (p.kills || 0), 0),
     team200: participants.filter(p => p.teamId === 200).reduce((sum, p) => sum + (p.kills || 0), 0),
   }
-}
-
-// prepare champion stats cache for a match
-export async function prepareStatsCache(participants: any[], isOlderThan1Year: boolean, isRemake: boolean): Promise<ChampionStatsCache> {
-  if (isOlderThan1Year || isRemake) return new Map()
-  const championNames = participants.map((p: any) => p.championName)
-  return prefetchChampionStats(championNames)
 }

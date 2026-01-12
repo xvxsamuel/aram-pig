@@ -1,7 +1,34 @@
 // simple wiki markup parser - convert to plain text with markers first, then to react
+// handles both wiki markup and CDragon HTML tags
 
 export function cleanWikiMarkup(text: string): string {
   let cleaned = text
+
+  // === CDragon HTML tags (from CommunityDragon API) ===
+  // These are processed FIRST before wiki markup
+  
+  // <attention>VALUE</attention> - highlighted values (numbers, percentages)
+  cleaned = cleaned.replace(/<attention>([^<]+)<\/attention>/g, '<keyword>$1</keyword>')
+  
+  // <stats>content</stats> - stats container, extract content but preserve nested tags
+  cleaned = cleaned.replace(/<stats>([\s\S]*?)<\/stats>/g, '$1')
+  
+  // <mainText>content</mainText> - main description container
+  cleaned = cleaned.replace(/<mainText>([\s\S]*?)<\/mainText>/g, '$1')
+  
+  // <passive>NAME</passive> - passive ability names
+  cleaned = cleaned.replace(/<passive>([^<]+)<\/passive>/g, '<bold>$1</bold>')
+  
+  // <active>NAME</active> - active ability names
+  cleaned = cleaned.replace(/<active>([^<]+)<\/active>/g, '<bold>$1</bold>')
+  
+  // <rarityMythic>text</rarityMythic> - mythic item text
+  cleaned = cleaned.replace(/<rarityMythic>([^<]+)<\/rarityMythic>/g, '<keyword>$1</keyword>')
+  
+  // <rarityLegendary>text</rarityLegendary> - legendary item text
+  cleaned = cleaned.replace(/<rarityLegendary>([^<]+)<\/rarityLegendary>/g, '<keyword>$1</keyword>')
+  
+  // === Wiki markup processing (existing logic) ===
 
   // '''text''' - bold (three single quotes) - process first before templates
   cleaned = cleaned.replace(/'''(.+?)'''/g, '<bold>$1</bold>')
@@ -254,7 +281,7 @@ export function cleanWikiMarkup(text: string): string {
     // then process {{as|text|type}} templates (two parameters)
 
     // simple content first
-    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|true damage\}\}/gi, '$1')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|true damage\}\}/gi, '<true>$1</true>')
     cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|magic damage\}\}/gi, '<magic>$1</magic>')
     cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|physical damage\}\}/gi, '<ad-bonus>$1</ad-bonus>')
     cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|ad\}\}/gi, '<ad>$1</ad>')

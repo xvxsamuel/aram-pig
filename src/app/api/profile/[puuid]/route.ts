@@ -34,9 +34,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     
     // prefer cached longestWinStreak from profile_data
     const cachedWinStreak = summonerInfo.profileData?.longestWinStreak as number | undefined
-    console.log(`[Profile API] Cached winstreak for ${puuid}:`, cachedWinStreak, 'profile_data:', summonerInfo.profileData)
     
-    const [championStats, { matches, hasMore: _hasMore }, calculatedWinStreak, updateStatus] = await Promise.all([
+    const [championStats, { matches }, calculatedWinStreak, updateStatus] = await Promise.all([
       getChampionStats(puuid, summonerInfo.profileData),
       getMatchesAsMatchData(puuid, 20, 0, currentName),
       cachedWinStreak !== undefined ? Promise.resolve(cachedWinStreak) : getLongestWinStreak(puuid),
@@ -44,7 +43,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     ])
     
     const longestWinStreak = calculatedWinStreak
-    console.log(`[Profile API] Final winstreak for ${puuid}:`, longestWinStreak)
 
     // get profile icons for teammates in matches
     const teammatePuuids = new Set<string>()

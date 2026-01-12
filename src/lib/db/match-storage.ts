@@ -3,6 +3,7 @@
 import { createAdminClient } from './supabase'
 import type { MatchData } from '@/types/match'
 import type { RegionalCluster } from '../game/regions'
+import { extractSkillOrderAbbreviation } from '../scoring'
 import { getMatchTimelineNoWait } from '../riot/api'
 import { extractAbilityOrder } from '../game/ability-leveling'
 import { extractPatch, getPatchFromDate, isPatchAccepted } from '../game/patch'
@@ -108,38 +109,6 @@ export async function flushAggregatedStats(): Promise<{ success: boolean; count:
 }
 
 export const flushStatsBatch = flushAggregatedStats
-
-// skill order extraction
-
-function extractSkillOrderAbbreviation(abilityOrder: string): string {
-  if (!abilityOrder || abilityOrder.length === 0) return ''
-
-  const abilities = abilityOrder.split(' ')
-  const counts = { Q: 0, W: 0, E: 0, R: 0 }
-  const maxOrder: string[] = []
-
-  for (const ability of abilities) {
-    if (ability in counts) {
-      counts[ability as keyof typeof counts]++
-
-      if (ability !== 'R' && counts[ability as keyof typeof counts] === 5) {
-        maxOrder.push(ability.toLowerCase())
-      }
-    }
-  }
-
-  const result = maxOrder.join('')
-
-  if (result.length === 1) return ''
-
-  if (result.length === 2) {
-    const allAbilities = ['q', 'w', 'e']
-    const missing = allAbilities.find(a => !result.includes(a))
-    return missing ? result + missing : result
-  }
-
-  return result
-}
 
 // stats data type
 interface StatsData {
@@ -294,7 +263,7 @@ function processMatchData(
       const firstBuyStr = participantFirstBuys[i]
       const buildOrderStr = participantBuildOrders[i]
 
-      const skillOrder = abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : null
+      const skillOrder = extractSkillOrderAbbreviation(abilityOrder || '')
 
       const itemsForStats = buildOrderStr
         ? buildOrderStr.split(',').map(id => parseInt(id, 10))

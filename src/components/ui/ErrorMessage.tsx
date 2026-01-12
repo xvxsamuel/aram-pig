@@ -1,41 +1,61 @@
 'use client'
 
-import { useState } from 'react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
-
 interface Props {
   title: string
-  message?: string
-  onClose?: () => void
+  message: string
+  errorCode?: string
+  onDismiss?: () => void
+  onRetry?: () => void
 }
 
-export default function ErrorMessage({ title, message, onClose }: Props) {
-  const [isVisible, setIsVisible] = useState(true)
-
-  const handleClose = () => {
-    setIsVisible(false)
-    onClose?.()
-  }
-
-  if (!isVisible) return null
-
+export default function ErrorMessage({ title, message, errorCode, onDismiss, onRetry }: Props) {
   return (
-    <div className="rounded-lg p-px bg-gradient-to-b from-red-500/60 to-red-700/60">
-      <div className="bg-abyss-800 rounded-[inherit] px-4.5 py-4">
+    <div className="mb-6 rounded-lg p-px bg-gradient-to-b from-gold-light to-gold-dark" style={{ minHeight: '60px' }}>
+      <div className="bg-abyss-800 rounded-[inherit] p-4">
         <div className="flex items-start gap-4">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold mb-1 text-red-300">{title}</h2>
-            {message && <p className="text-sm text-text-muted">{message}</p>}
+          <div className="relative w-8 h-8 flex-shrink-0 flex items-center justify-center">
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="#ef4444" strokeWidth="2" />
+              <path d="M12 7v6" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="16" r="1" fill="#dc2626" />
+            </svg>
           </div>
 
-          {onClose && (
-            <button
-              onClick={handleClose}
-              className="flex-shrink-0 p-1 rounded hover:bg-red-500/20 transition-colors text-red-400 hover:text-red-300"
-              aria-label="Dismiss error"
-            >
-              <XMarkIcon className="w-5 h-5" />
-            </button>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold mb-1 text-white">{title}</h2>
+            <p className="text-sm text-text-white">
+              {message}
+            </p>
+            {errorCode && (
+              <p className="text-subtitle text-xs mt-1">
+                {errorCode}
+              </p>
+            )}
+          </div>
+
+          {(onDismiss || onRetry) && (
+            <div className="flex-shrink-0 flex items-center gap-2">
+              {onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="px-3 py-1 text-xs bg-gold-light/20 hover:bg-gold-light/30 border border-gold-light/50 rounded text-gold-light transition-colors"
+                  aria-label="Retry"
+                >
+                  Retry
+                </button>
+              )}
+              {onDismiss && (
+                <button
+                  onClick={onDismiss}
+                  className="w-6 h-6 flex items-center justify-center text-gold-light hover:text-white transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -81,7 +81,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           shadow={false}
         />
         <Navbar />
-        <main className="flex-1" style={{ marginLeft: '64px' }}>
+        <main className="flex-1 md:ml-[64px]">
           {children}
         </main>
         <Footer />

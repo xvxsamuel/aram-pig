@@ -2,13 +2,11 @@ import { NextResponse } from 'next/server'
 import {
   createAdminClient,
   statsAggregator,
-  flushAggregatedStats,
   isFinishedItem,
-  extractSkillOrderAbbreviation,
   extractRunes,
   processParticipants,
-  calculateTeamKills,
 } from '@/lib/db'
+import { extractSkillOrderAbbreviation, recalculateProfileStatsForPlayers } from '@/lib/scoring'
 import {
   getAccountByRiotId,
   getSummonerByPuuid,
@@ -19,7 +17,6 @@ import {
 import { type RequestType } from '@/lib/riot/rate-limiter'
 import type { PlatformCode } from '@/lib/game'
 import type { UpdateJob } from '../../../types/update-jobs'
-import { calculatePigScoreWithBreakdownCached, prefetchChampionStats, recalculateProfileStatsForPlayers } from '@/lib/scoring'
 import {
   extractAbilityOrder,
   extractBuildOrder,
@@ -36,6 +33,36 @@ import {
 
 const CHUNK_SIZE = 12 // matches per chunk (~24 api calls: 12 match + 12 timeline)
 const processingLocks = new Map<string, Promise<Response>>()
+
+// Retry helper for database operations that can timeout
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  maxRetries: number = 3
+): Promise<T> {
+  let lastError: any
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation()
+    } catch (error: any) {
+      lastError = error
+      const isTimeout = error?.message?.includes('522') || 
+                       error?.message?.includes('timeout') ||
+                       error?.message?.includes('timed out')
+      
+      if (attempt < maxRetries && isTimeout) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000) // 1s, 2s, 4s max 10s
+        console.log(`[RetryBackoff] ${operationName} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      } else {
+        break
+      }
+    }
+  }
+  
+  throw lastError
+}
 
 // ============================================================================
 // job management
@@ -61,7 +88,7 @@ async function cleanupStaleJobs(supabase: any) {
 async function getActiveJob(supabase: any, puuid: string): Promise<UpdateJob | null> {
   const { data } = await supabase
     .from('update_jobs')
-    .select('*')
+    .select('id, puuid, status, total_matches, fetched_matches, eta_seconds, region, started_at, created_at, updated_at, completed_at, error_message, pending_match_ids')
     .eq('puuid', puuid)
     .in('status', ['pending', 'processing'])
     .order('created_at', { ascending: false })
@@ -132,90 +159,6 @@ async function fetchMatchIds(region: string, puuid: string, count?: number, requ
     start += 100
   }
   return allMatchIds
-}
-
-// ============================================================================
-// PIG SCORE CALCULATION FOR MISSING MATCHES
-// ============================================================================
-
-async function calculateMissingPigScores(supabase: any, puuid: string) {
-  const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000
-
-  const { data: recentMatches, error } = await supabase
-    .from('summoner_matches')
-    .select('match_id, puuid, match_data, patch, champion_name, game_creation, matches!inner(game_duration)')
-    .eq('puuid', puuid)
-    .gte('game_creation', oneYearAgo)
-    .order('game_creation', { ascending: false })
-    .limit(30)
-
-  if (error || !recentMatches) return 0
-
-  const needsPigScore = recentMatches.filter((m: any) =>
-    m.match_data?.pigScore === null || m.match_data?.pigScore === undefined
-  ).filter((m: any) => !m.match_data?.isRemake)
-
-  if (needsPigScore.length === 0) return 0
-
-  const championNames = [...new Set<string>(needsPigScore.map((m: any) => m.champion_name))]
-  const statsCache = await prefetchChampionStats(championNames)
-
-  // Calculate all breakdowns in parallel (batches of 10 for memory efficiency)
-  const updatesToApply: any[] = []
-  for (let i = 0; i < needsPigScore.length; i += 10) {
-    const batch = await Promise.all(needsPigScore.slice(i, i + 10).map(async (match: any) => {
-      try {
-        const breakdown = await calculatePigScoreWithBreakdownCached({
-          championName: match.champion_name,
-          damage_dealt_to_champions: match.match_data.stats?.damage || 0,
-          total_damage_dealt: match.match_data.stats?.totalDamageDealt || 0,
-          total_heals_on_teammates: match.match_data.stats?.totalHealsOnTeammates || 0,
-          total_damage_shielded_on_teammates: match.match_data.stats?.totalDamageShieldedOnTeammates || 0,
-          time_ccing_others: match.match_data.stats?.timeCCingOthers || 0,
-          game_duration: match.matches?.game_duration || 0,
-          deaths: match.match_data.deaths || 0,
-          item0: match.match_data.items?.[0] || 0,
-          item1: match.match_data.items?.[1] || 0,
-          item2: match.match_data.items?.[2] || 0,
-          item3: match.match_data.items?.[3] || 0,
-          item4: match.match_data.items?.[4] || 0,
-          item5: match.match_data.items?.[5] || 0,
-          perk0: match.match_data.runes?.primary?.perks?.[0] || 0,
-          patch: match.patch,
-          spell1: match.match_data.spells?.[0] || 0,
-          spell2: match.match_data.spells?.[1] || 0,
-          skillOrder: extractSkillOrderAbbreviation(match.match_data.abilityOrder || ''),
-          buildOrder: match.match_data.buildOrder,
-          firstBuy: match.match_data.firstBuy,
-        }, statsCache)
-
-        if (breakdown) {
-          return {
-            match_id: match.match_id,
-            puuid: match.puuid,
-            match_data: { ...match.match_data, pigScore: breakdown.finalScore, pigScoreBreakdown: breakdown }
-          }
-        }
-      } catch {}
-      return null
-    }))
-    updatesToApply.push(...batch.filter(u => u !== null))
-  }
-
-  // Batch upsert all updates at once (with retry on failure)
-  if (updatesToApply.length > 0) {
-    const { error: batchError } = await supabase.from('summoner_matches').upsert(updatesToApply)
-    if (batchError) {
-      console.error('[CalculateMissingPigScores] Batch upsert failed, retrying individually:', batchError)
-      // Retry failed batch individually as fallback
-      for (const update of updatesToApply) {
-        try {
-          await supabase.from('summoner_matches').upsert(update)
-        } catch {}
-      }
-    }
-  }
-  return updatesToApply.length
 }
 
 // ============================================================================
@@ -320,8 +263,8 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
     if (!skipQuickCheck) {
       const quickIds = await fetchMatchIds(region, accountData.puuid, 100, 'overhead')
       if (quickIds.filter(id => !existingMatchIds.has(id)).length === 0) {
-        const pigScoresCalculated = await calculateMissingPigScores(supabase, accountData.puuid)
-        return NextResponse.json({ success: true, newMatches: 0, pigScoresCalculated, message: 'Profile is up to date' })
+        // no new matches - client should trigger pig score calculation separately
+        return NextResponse.json({ success: true, newMatches: 0, message: 'Profile is up to date', puuid: accountData.puuid, region })
       }
     }
 
@@ -330,8 +273,8 @@ async function processProfileUpdate(region: string, gameName: string, tagLine: s
     const newMatchIds = [...new Set(matchIds.filter(id => !existingMatchIds.has(id)))]
 
     if (newMatchIds.length === 0) {
-      const pigScoresCalculated = await calculateMissingPigScores(supabase, accountData.puuid)
-      return NextResponse.json({ success: true, newMatches: 0, pigScoresCalculated, message: 'Profile is up to date' })
+      // no new matches - client should trigger pig score calculation separately
+      return NextResponse.json({ success: true, newMatches: 0, message: 'Profile is up to date', puuid: accountData.puuid, region })
     }
 
     jobId = await createJob(supabase, accountData.puuid, newMatchIds, region)
@@ -382,6 +325,9 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
     return NextResponse.json({ message: 'Update completed', jobId: job.id, newMatches: job.total_matches, completed: true })
   }
 
+  // Track failed matches with error codes
+  const failedMatches: Array<{ matchId: string; error: string }> = []
+
   const chunkToProcess = pendingMatchIds.slice(0, CHUNK_SIZE)
   const remainingMatchIds = pendingMatchIds.slice(CHUNK_SIZE)
 
@@ -396,9 +342,6 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
   const existingMatchesMap = new Map(existingMatchesResult.data?.map((m: any) => [m.match_id, m]) || [])
   const userHasRecord = new Set(existingUserRecordsResult.data?.map((r: any) => r.match_id) || [])
 
-  // Prefetch all champion stats for the entire chunk ONCE to avoid repeated DB calls
-  let globalStatsCache: Map<string, any[]> = new Map()
-  
   // Cache accepted patches to avoid repeated DB queries
   const acceptedPatchesCache = new Set<string>()
   const rejectedPatchesCache = new Set<string>()
@@ -428,27 +371,24 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           try { timeline = await getMatchTimeline(matchId, region as any, 'overhead') } catch {}
         }
 
-        return { matchId, match, existingMatch, gameCreation, isOlderThan1Year, isRemake, timeline, skip: false }
-      } catch (err) {
+        return { matchId, match, existingMatch, gameCreation, isOlderThan1Year, isRemake, timeline, skip: false, error: null }
+      } catch (err: any) {
         console.error(`Failed to fetch match ${matchId}:`, err)
-        return { matchId, skip: true, error: err }
+        const errorMsg = err?.message || err?.toString() || 'Unknown error'
+        return { matchId, skip: true, error: errorMsg }
       }
     })
 
     const matchResults = await Promise.all(matchFetchPromises)
 
-    // Populate global stats cache ONCE with all champions from all matches
-    const allChampions = new Set<string>()
+    // Collect failed matches
     for (const result of matchResults) {
-      if (!result.skip && result.match && !result.isOlderThan1Year && !result.isRemake) {
-        result.match.info.participants.forEach((p: any) => allChampions.add(p.championName))
+      if (result.skip && result.error) {
+        failedMatches.push({ matchId: result.matchId, error: result.error })
       }
     }
-    if (allChampions.size > 0) {
-      globalStatsCache = await prefetchChampionStats([...allChampions])
-    }
 
-    // Batch all new match inserts together
+    // Batch all new match inserts together with smaller batches and retry logic
     const newMatchInserts = matchResults
       .filter((r): r is typeof r & { match: NonNullable<typeof r.match> } => !r.skip && !!r.match && !r.existingMatch)
       .map(r => ({
@@ -459,12 +399,25 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       }))
     
     if (newMatchInserts.length > 0) {
-      const { error: matchInsertError } = await supabase.from('matches').upsert(newMatchInserts)
-      if (matchInsertError) {
-        console.error('[UpdateProfile] Batch match insert failed:', matchInsertError)
-        // Retry individually as fallback
-        for (const insert of newMatchInserts) {
-          try { await supabase.from('matches').upsert(insert) } catch {}
+      // Use smaller batches (50 instead of all at once) to prevent timeouts
+      const MATCH_INSERT_BATCH_SIZE = 50
+      for (let i = 0; i < newMatchInserts.length; i += MATCH_INSERT_BATCH_SIZE) {
+        const batch = newMatchInserts.slice(i, i + MATCH_INSERT_BATCH_SIZE)
+        try {
+          await retryWithBackoff(
+            () => supabase.from('matches').upsert(batch),
+            `Match insert batch ${i / MATCH_INSERT_BATCH_SIZE + 1}`
+          )
+        } catch (error: any) {
+          console.error(`[UpdateProfile] Batch match insert failed after retries (${i}-${i + batch.length}):`, error.message)
+          // Final fallback: try one by one
+          for (const insert of batch) {
+            try {
+              await supabase.from('matches').upsert(insert)
+            } catch (individualError) {
+              console.error(`[UpdateProfile] Individual match insert failed for ${insert.match_id}`, individualError)
+            }
+          }
         }
       }
     }
@@ -483,9 +436,6 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
         const patch = (existingMatch as any)?.patch || (match.info.gameVersion ? extractPatch(match.info.gameVersion) : getPatchFromDate(gameCreation!))
         const gameDuration = (existingMatch as any)?.game_duration || match.info.gameDuration
 
-        const statsCache = isOlderThan1Year || isRemake ? new Map() : globalStatsCache
-        const teamKills = calculateTeamKills(match.info.participants)
-
         const records = await processParticipants({
           match,
           matchId: existingMatch ? matchId : match.metadata.matchId,
@@ -495,9 +445,6 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
           timeline,
           isOlderThan1Year,
           isRemake,
-          statsCache,
-          team100Kills: teamKills.team100,
-          team200Kills: teamKills.team200,
         })
 
         // Check patch acceptance with cache (this is fast, no need to parallelize)
@@ -580,21 +527,28 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
       if (processed.statsUpdate) statsAggregator.add(processed.statsUpdate)
     }
 
-    // Batch upsert all summoner_matches records in chunks
+    // Batch upsert all summoner_matches records in chunks with retry logic
     // Use upsert to overwrite existing records (needed for recalculating PIG scores)
     if (allRecordsToInsert.length > 0) {
-      const UPSERT_BATCH_SIZE = 100 // Supabase handles 100-200 records easily
+      const UPSERT_BATCH_SIZE = 50 // Reduced from 100 to prevent timeouts
       for (let i = 0; i < allRecordsToInsert.length; i += UPSERT_BATCH_SIZE) {
         const batch = allRecordsToInsert.slice(i, i + UPSERT_BATCH_SIZE)
-        const { error: batchUpsertError } = await supabase.from('summoner_matches').upsert(batch)
-        if (batchUpsertError) {
-          console.error(`[UpdateProfile] Batch upsert error (${i}-${i + batch.length}):`, batchUpsertError)
-          // Retry failed batch individually as fallback
+        try {
+          await retryWithBackoff(
+            async () => {
+              const { error } = await supabase.from('summoner_matches').upsert(batch)
+              if (error) throw error
+            },
+            `Summoner matches upsert batch ${Math.floor(i / UPSERT_BATCH_SIZE) + 1}`
+          )
+        } catch (batchUpsertError: any) {
+          console.error(`[UpdateProfile] Batch upsert error after retries (${i}-${i + batch.length}):`, batchUpsertError.message)
+          // Final fallback: retry each record individually
           for (const record of batch) {
             try {
               await supabase.from('summoner_matches').upsert(record)
-            } catch (retryError) {
-              console.error(`[UpdateProfile] Individual retry failed for ${record.match_id}:`, retryError)
+            } catch (retryError: any) {
+              console.error(`[UpdateProfile] Individual retry failed for ${record.match_id}:`, retryError.message)
             }
           }
         }
@@ -607,15 +561,37 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
     // However, for global stats, losing a few user updates is acceptable vs crashing the DB
     // Ideally, we'd write to a 'pending_stats' table, but for now we just skip the flush
     
-    await updateJobProgress(supabase, job.id, job.fetched_matches + fetchedInChunk, remainingMatchIds)
+    // Keep failed matches in the pending queue for retry in next chunk
+    const failedMatchIds = failedMatches.map(f => f.matchId)
+    const updatedPendingIds = [...failedMatchIds, ...remainingMatchIds]
+    
+    await updateJobProgress(supabase, job.id, job.fetched_matches + fetchedInChunk, updatedPendingIds)
+
+    // If we've failed the same matches multiple times, eventually give up
+    // note: retry logic is handled by leaving failed matches in pending queue
+    const shouldFail = failedMatches.length > 0 && remainingMatchIds.length === 0 && pendingMatchIds.every(id => failedMatches.some(f => f.matchId === id))
+    
+    if (shouldFail) {
+      const errorSummary = failedMatches.slice(0, 5).map(f => `${f.matchId.split('_')[1]}: ${f.error}`).join('; ')
+      await failJob(supabase, job.id, `Failed to fetch ${failedMatches.length} matches after retries`)
+      return NextResponse.json({
+        error: `Failed to fetch ${failedMatches.length} matches`,
+        jobId: job.id,
+        failedMatches,
+        errorCode: `Error codes: ${errorSummary}${failedMatches.length > 5 ? '...' : ''}`,
+      }, { status: 500 })
+    }
 
     return NextResponse.json({
-      message: remainingMatchIds.length > 0 ? 'Processing...' : 'Completing...',
+      message: updatedPendingIds.length > 0 ? 'Processing...' : 'Completing...',
       jobId: job.id,
+      puuid: job.puuid,
+      region: job.region,
       newMatches: job.total_matches,
       progress: job.fetched_matches + fetchedInChunk,
-      remaining: remainingMatchIds.length,
-      hasMore: remainingMatchIds.length > 0,
+      remaining: updatedPendingIds.length,
+      hasMore: updatedPendingIds.length > 0,
+      failedInChunk: failedMatches.length,
     })
   } catch (error: any) {
     console.error('[UpdateProfile] Chunk error:', error)
@@ -625,16 +601,10 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
 }
 
 async function finalizeJob(supabase: any, jobId: string, puuid: string) {
-  // Run independent operations in parallel for faster finalization
-  const [, , statsResult] = await Promise.allSettled([
+  // run independent operations in parallel for faster finalization
+  // pig score calculation is now handled separately via /api/calculate-pig-scores
+  const [, statsResult] = await Promise.allSettled([
     supabase.from('summoners').update({ last_updated: new Date().toISOString() }).eq('puuid', puuid),
-    calculateMissingPigScores(supabase, puuid),
-    // Don't flush global stats on every user update - let the scraper handle it
-    // or use a separate background job. This prevents massive write contention.
-    // Promise.all([
-    //   recalculateProfileStatsForPlayers([puuid]),
-    //   flushAggregatedStats(),
-    // ]),
     recalculateProfileStatsForPlayers([puuid]),
   ])
   

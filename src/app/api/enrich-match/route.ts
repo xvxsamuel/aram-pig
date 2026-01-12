@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient, statsAggregator, flushAggregatedStats, type ParticipantStatsInput } from '@/lib/db'
 import { getMatchTimeline, getMatchById } from '@/lib/riot/api'
-import { calculatePigScoreWithBreakdown } from '@/lib/scoring'
+import { calculatePigScoreWithBreakdown, extractSkillOrderAbbreviation } from '@/lib/scoring'
 import {
   extractAbilityOrder,
   extractBuildOrder,
@@ -32,33 +32,6 @@ Object.entries(itemsData).forEach(([id, item]) => {
 
 function isFinishedItem(itemId: number): boolean {
   return finishedItems.has(itemId)
-}
-
-// extract skill max order from ability order string
-function extractSkillOrderAbbreviation(abilityOrder: string): string {
-  if (!abilityOrder) return ''
-
-  const abilities = abilityOrder.split(' ')
-  const counts = { Q: 0, W: 0, E: 0, R: 0 }
-  const maxOrder: string[] = []
-
-  for (const ability of abilities) {
-    if (ability in counts) {
-      counts[ability as keyof typeof counts]++
-      if (ability !== 'R' && counts[ability as keyof typeof counts] === 5) {
-        maxOrder.push(ability.toLowerCase())
-      }
-    }
-  }
-
-  const result = maxOrder.join('')
-  if (result.length < 2) return ''
-  if (result.length === 2) {
-    const allAbilities = ['q', 'w', 'e']
-    const missing = allAbilities.find(a => !result.includes(a))
-    return missing ? result + missing : result
-  }
-  return result
 }
 
 interface EnrichRequest {
@@ -277,7 +250,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
             patch: matchRecord.patch,
             spell1: matchParticipant.summoner1Id || 0,
             spell2: matchParticipant.summoner2Id || 0,
-            skillOrder: abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : undefined,
+            skillOrder: extractSkillOrderAbbreviation(abilityOrder || '') || undefined,
             buildOrder: buildOrderStr || undefined,
             firstBuy: firstBuyStr || undefined,
             deathQualityScore: killDeathSummary.deathScore,
@@ -323,7 +296,7 @@ async function processEnrichment(matchId: string, region: string): Promise<{ dat
       // prepare champion stats increment (only if patch is accepted and not already enriched)
       if (patchAccepted && !anyHasTimeline) {
         const buildOrderForStats = buildOrder.filter(id => isFinishedItem(id)).slice(0, 6)
-        const skillOrder = abilityOrder ? extractSkillOrderAbbreviation(abilityOrder) : ''
+        const skillOrder = extractSkillOrderAbbreviation(abilityOrder || '') || ''
         const itemsForStats =
           buildOrderForStats.length > 0
             ? buildOrderForStats

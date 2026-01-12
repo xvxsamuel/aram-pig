@@ -86,37 +86,41 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
     }
   }
 
+
   return (
-    <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 overflow-hidden">
-      {/* table header */}
-      <div className="flex items-stretch gap-3 px-3 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
-        <div className="w-14 flex items-center justify-center py-3">Rank</div>
-        <SortButton label="Champion" sortKey="champion" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-44" />
-        <div className="flex-1" />
-        <SortButton label="Tier" sortKey="tier" currentKey={sortKey} direction={sortDirection} onClick={handleSort} isDefault className="w-16" />
-        <SortButton label="Win Rate" shortLabel="WR" sortKey="winrate" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
-        <SortButton label="Pick Rate" shortLabel="PR" sortKey="pickrate" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
-        <SortButton label="Matches" shortLabel="#" sortKey="matches" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
-      </div>
+    <div className="bg-abyss-600 rounded-lg border border-gold-dark/40 flex flex-col">
+      <div className="overflow-x-auto">
+        <div className="min-w-[700px]">
+          {/* table header */}
+          <div className="flex items-stretch gap-3 px-3 border-b border-abyss-700 bg-abyss-700 text-sm text-subtitle">
+            <div className="w-14 flex items-center justify-center py-3">Rank</div>
+            <SortButton label="Champion" sortKey="champion" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-44" />
+            <div className="flex-1" />
+            <SortButton label="Tier" sortKey="tier" currentKey={sortKey} direction={sortDirection} onClick={handleSort} isDefault className="w-16" />
+            <SortButton label="Win Rate" shortLabel="WR" sortKey="winrate" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
+            <SortButton label="Pick Rate" shortLabel="PR" sortKey="pickrate" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
+            <SortButton label="Matches" shortLabel="#" sortKey="matches" currentKey={sortKey} direction={sortDirection} onClick={handleSort} className="w-20 sm:w-24" />
+          </div>
 
-      {/* table rows */}
-      <div>
-        {sortedChampions.map((champion, index) => {
-          const pickRate = totalGames > 0 ? (champion.games_analyzed / totalGames) * 100 : 0
-          const tier = champion.tier
-          const tierBorder = getTierBorderGradient(tier)
+          {/* table rows */}
+          <div>
+            {sortedChampions.map((champion, index) => {
+              const pickRate = totalGames > 0 ? (champion.games_analyzed / totalGames) * 100 : 0
+              const tier = champion.tier
+              const tierBorder = getTierBorderGradient(tier)
 
-          return (
-            <Link
-              key={champion.champion_name}
-              href={`/champions/${getChampionUrlName(champion.champion_name, championNames)}`}
-              className="flex items-center gap-3 py-2 px-3 border-b border-abyss-800 hover:bg-gold-light/10 transition-colors"
-            >
-              <div className="w-14 text-center">
-                <h2 className="text-lg font-bold">{index + 1}</h2>
-              </div>
+              return (
+                <Link
+                  key={champion.champion_name}
+                  href={`/champions/${getChampionUrlName(champion.champion_name, championNames)}`}
+                  className="flex items-center gap-3 py-2 px-3 border-b border-abyss-800 hover:bg-gold-light/10 transition-colors"
+                >
+                  <div className="w-14 text-center">
+                    <h2 className="text-lg font-bold">{index + 1}</h2>
+                  </div>
 
-              <div className="w-44 flex items-center gap-4">
+                  <div className="w-44 flex items-center gap-4">
+
                 <div className="p-px rounded-lg bg-gradient-to-b from-gold-light to-gold-dark">
                   <div className="relative w-10 h-10 rounded-[calc(0.5rem-1px)] overflow-hidden bg-accent-dark">
                     <Image
@@ -172,6 +176,8 @@ export default function ChampionTable({ champions, ddragonVersion, championNames
             </Link>
           )
         })}
+      </div>
+      </div>
       </div>
     </div>
   )

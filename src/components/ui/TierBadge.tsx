@@ -37,7 +37,7 @@ export default function TierBadge({ stats, allStats = [], size = 'md', showGlint
         className="p-px rounded-lg overflow-hidden"
         style={{ background: `linear-gradient(to bottom, ${config.borderColors.from}, ${config.borderColors.to})` }}
       >
-        {/* glint effect for S+ and S tiers */}
+        {/* glint effect for S+ and S, A tiers */}
         {hasGlint && (
           <motion.div
             className="absolute top-0 bottom-0 rounded-lg pointer-events-none z-10"

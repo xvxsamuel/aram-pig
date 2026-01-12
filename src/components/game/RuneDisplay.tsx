@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import clsx from 'clsx'
 import { STAT_PERKS, getRuneTreeById } from '@/lib/game/runes'
-import RuneTooltip from '@/components/ui/RuneTooltip'
+import Tooltip from '@/components/ui/Tooltip'
 import runesData from '@/data/runes.json'
 
 interface RuneDisplayProps {
@@ -40,7 +40,7 @@ export function RuneDisplay({
     const imgSize = isKeystone ? 36 : 28
 
     return (
-      <RuneTooltip key={runeId} runeId={runeId}>
+      <Tooltip key={runeId} id={runeId} type="rune">
         <div
           className={clsx(
             size,
@@ -59,7 +59,7 @@ export function RuneDisplay({
             />
           )}
         </div>
-      </RuneTooltip>
+      </Tooltip>
     )
   }
 

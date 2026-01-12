@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useLayoutEffect, Fragment } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import ItemIcon from '@/components/ui/ItemIcon'
+import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { getWinrateColor } from '@/lib/ui'
 import type { ComboDisplay } from './OverviewTab'
 
@@ -264,9 +265,20 @@ export function CoreBuildsSelector({
                         {combo.hasBoots && (
                           <>
                             <span className="text-gold-dark text-xs">+</span>
-                            <div className="w-7 h-7 rounded bg-abyss-900 border border-gold-dark flex items-center justify-center flex-shrink-0">
-                              <span className="text-[9px] text-center leading-tight px-0.5">Any<br />Boots</span>
-                            </div>
+                            <SimpleTooltip
+                              content={
+                                <div className="text-left p-1 min-w-0 max-w-[280px]">
+                                  <div className="text-sm font-semibold text-gold-light mb-2">Any Boots</div>
+                                  <div className="text-xs text-gray-300 leading-relaxed">
+                                    Any boots item. Check detailed statistics for boots information in this build.
+                                  </div>
+                                </div>
+                              }
+                            >
+                              <div className="w-7 h-7 rounded bg-abyss-900 border border-gold-dark flex items-center justify-center flex-shrink-0">
+                                <span className="text-[9px] text-center leading-tight px-0.5">Any<br />Boots</span>
+                              </div>
+                            </SimpleTooltip>
                           </>
                         )}
                       </div>

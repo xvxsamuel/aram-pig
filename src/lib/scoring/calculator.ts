@@ -145,12 +145,9 @@ function calculateStatRelevance(
     const totalOutput = playerStats.damageToChampionsPerMin + playerStats.healingShieldingPerMin
     if (totalOutput > 0) {
       const healRatio = playerStats.healingShieldingPerMin / totalOutput
-      const dmgRatio = playerStats.damageToChampionsPerMin / totalOutput
-      
       // Shift weights based on focus (0.5 base + ratio)
-      // e.g. 80% healing -> 1.3 weight for healing, 0.7 for damage
       relevance.healingShielding = 0.5 + healRatio
-      relevance.damageToChampions = 0.5 + dmgRatio
+      relevance.damageToChampions = 0.5 + (1 - healRatio) // Simplified from separate calculation
     } else {
       relevance.healingShielding = 1.0
     }
@@ -161,20 +158,18 @@ function calculateStatRelevance(
     relevance.ccTime = Math.min(1.0, 0.5 + (avgPerMin.ccTimePerMin - 1) / 12)
   }
 
-  // boost for high variance
+  // boost for high variance - only if we have sufficient data
   if (welford) {
-    if (welford.damageToChampionsPerMin && welford.damageToChampionsPerMin.n >= 30) {
-      const cv = getStdDev(welford.damageToChampionsPerMin) / welford.damageToChampionsPerMin.mean
-      if (cv > 0.3) relevance.damageToChampions = Math.min(1.5, relevance.damageToChampions * (1 + cv * 0.5))
+    // Helper to apply CV boost
+    const applyCVBoost = (state: WelfordState | undefined, current: number, threshold: number, multiplier: number, maxBoost: number): number => {
+      if (!state || state.n < 30 || current === 0) return current
+      const cv = getStdDev(state) / state.mean
+      return cv > threshold ? Math.min(maxBoost, current * (1 + cv * multiplier)) : current
     }
-    if (welford.healingShieldingPerMin && welford.healingShieldingPerMin.n >= 30 && relevance.healingShielding > 0) {
-      const cv = getStdDev(welford.healingShieldingPerMin) / welford.healingShieldingPerMin.mean
-      if (cv > 0.4) relevance.healingShielding = Math.min(1.5, relevance.healingShielding * (1 + cv * 0.3))
-    }
-    if (welford.ccTimePerMin && welford.ccTimePerMin.n >= 30 && relevance.ccTime > 0) {
-      const cv = getStdDev(welford.ccTimePerMin) / welford.ccTimePerMin.mean
-      if (cv > 0.4) relevance.ccTime = Math.min(1.5, relevance.ccTime * (1 + cv * 0.3))
-    }
+
+    relevance.damageToChampions = applyCVBoost(welford.damageToChampionsPerMin, relevance.damageToChampions, 0.3, 0.5, 1.5)
+    relevance.healingShielding = applyCVBoost(welford.healingShieldingPerMin, relevance.healingShielding, 0.4, 0.3, 1.5)
+    relevance.ccTime = applyCVBoost(welford.ccTimePerMin, relevance.ccTime, 0.4, 0.3, 1.5)
   }
 
   return relevance
@@ -253,21 +248,24 @@ export async function calculatePigScoreWithBreakdown(
 
   const totalGames = data.games || 0
   const avgGameDurationMinutes = championAvg.sumGameDuration / totalGames / 60
+  const invTotalGames = 1 / totalGames // Pre-compute for reuse
+  const invAvgDuration = 1 / avgGameDurationMinutes
+  const invGameDuration = 1 / gameDurationMinutes
 
   // calculate stats
   const playerStats = {
-    damageToChampionsPerMin: participant.damage_dealt_to_champions / gameDurationMinutes,
-    totalDamagePerMin: participant.total_damage_dealt / gameDurationMinutes,
-    healingShieldingPerMin: (participant.total_heals_on_teammates + participant.total_damage_shielded_on_teammates) / gameDurationMinutes,
-    ccTimePerMin: participant.time_ccing_others / gameDurationMinutes,
-    deathsPerMin: participant.deaths / gameDurationMinutes,
+    damageToChampionsPerMin: participant.damage_dealt_to_champions * invGameDuration,
+    totalDamagePerMin: participant.total_damage_dealt * invGameDuration,
+    healingShieldingPerMin: (participant.total_heals_on_teammates + participant.total_damage_shielded_on_teammates) * invGameDuration,
+    ccTimePerMin: participant.time_ccing_others * invGameDuration,
+    deathsPerMin: participant.deaths * invGameDuration,
   }
 
   let championAvgPerMin = {
-    damageToChampionsPerMin: championAvg.sumDamageToChampions / totalGames / avgGameDurationMinutes,
-    totalDamagePerMin: championAvg.sumTotalDamage / totalGames / avgGameDurationMinutes,
-    healingShieldingPerMin: (championAvg.sumHealing + championAvg.sumShielding) / totalGames / avgGameDurationMinutes,
-    ccTimePerMin: championAvg.sumCCTime / totalGames / avgGameDurationMinutes,
+    damageToChampionsPerMin: championAvg.sumDamageToChampions * invTotalGames * invAvgDuration,
+    totalDamagePerMin: championAvg.sumTotalDamage * invTotalGames * invAvgDuration,
+    healingShieldingPerMin: (championAvg.sumHealing + championAvg.sumShielding) * invTotalGames * invAvgDuration,
+    ccTimePerMin: championAvg.sumCCTime * invTotalGames * invAvgDuration,
   }
 
   let welford = championAvg.welford || null
@@ -307,16 +305,14 @@ export async function calculatePigScoreWithBreakdown(
   const relevance = calculateStatRelevance(championAvgPerMin, welford, playerStats)
 
   const metrics: PigScoreBreakdown['metrics'] = []
-  const getZScoreSafe = (val: number, w?: WelfordState): number | undefined => {
-    if (!w || w.n < 30 || getStdDev(w) <= w.mean * 0.05) return undefined
-    return getZScore(val, w)
-  }
+  const getZScoreSafe = (val: number, w?: WelfordState): number | undefined => 
+    (w && w.n >= 30 && getStdDev(w) > w.mean * 0.05) ? getZScore(val, w) : undefined
 
   // PERFORMANCE COMPONENT
   const perfScores: { score: number; weight: number }[] = []
   const addPerfMetric = (name: string, player: number, avg: number, welfordState: WelfordState | undefined, weight: number, customScore?: number) => {
     if (avg <= 0 || weight <= 0) return
-    const score = customScore !== undefined ? customScore : calculateStatScore(player, avg, welfordState, true, gameDurationMinutes)
+    const score = customScore ?? calculateStatScore(player, avg, welfordState, true, gameDurationMinutes)
     perfScores.push({ score, weight })
     metrics.push({
       name,

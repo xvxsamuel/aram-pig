@@ -60,10 +60,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // get most recent job for this puuid
+    // get most recent job for this puuid (exclude pending_match_ids to reduce payload)
     const { data: job } = await supabase
       .from('update_jobs')
-      .select('*')
+      .select('id, puuid, status, total_matches, fetched_matches, eta_seconds, region, started_at, created_at, updated_at, completed_at, error_message')
       .eq('puuid', puuid)
       .order('created_at', { ascending: false })
       .limit(1)

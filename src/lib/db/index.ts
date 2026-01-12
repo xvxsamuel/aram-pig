@@ -36,10 +36,8 @@ export { getTrackedPuuids, invalidateTrackedPuuidsCache } from './tracked-player
 
 export {
   isFinishedItem,
-  extractSkillOrderAbbreviation,
   extractRunes,
   buildMatchData,
   processParticipants,
   calculateTeamKills,
-  prepareStatsCache,
 } from './participant-processor'

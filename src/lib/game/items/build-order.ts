@@ -58,7 +58,6 @@ export function isLegendaryOrFinishedBoots(itemId: number): boolean {
 
 /**
  * Normalize a boot ID to the standard value (99999) for core grouping
- * @deprecated Boots are now excluded from cores entirely
  */
 export function normalizeBootId(itemId: number): number {
   return BOOT_IDS.has(itemId) ? BOOTS_NORMALIZED : itemId

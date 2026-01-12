@@ -24,7 +24,7 @@ export default function DataWarning({
     if (usedFallbackPatch) {
       warnings.push("Using data from older patches due to low sample size")
     }
-    // If usedCoreStats is explicitly false (and not undefined), it means we fell back to global stats
+    // if usedCoreStats is explicitly false, fallback to global stats
     if (usedCoreStats === false) {
       warnings.push("Using champion-wide data due to low sample size for this build")
     } else if (usedFallbackCore) {

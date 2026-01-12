@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getMatchById, getMatchIdsByPuuid, getSummonerByRiotId } from '../../src/lib/riot/api'
 import { waitForRateLimit, flushRateLimits } from '../../src/lib/riot/rate-limiter'
 import { type RegionalCluster, type PlatformCode, extractPatch } from '../../src/lib/game'
-import { storeMatchData, storeMatchDataBatch, flushStatsBatch, getStatsBufferCount } from '../../src/lib/db'
+import { storeMatchDataBatch, flushStatsBatch, getStatsBufferCount } from '../../src/lib/db'
 import * as readline from 'readline'
 
 console.log('[CRAWLER] All modules loaded successfully\n')
@@ -20,126 +20,39 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-const ACCEPTED_PATCHES = ['25.24']
+// ══════════════════════════════════════════════════════════════════════════════
+// configuration
+// ══════════════════════════════════════════════════════════════════════════════
 
-async function getCurrentPatch(): Promise<string[]> {
-  return ACCEPTED_PATCHES
-}
+const ACCEPTED_PATCHES = ['26.1']
 
-// stats buffer config - buffer lives in match-storage.ts, we just trigger flushes
-// aggregator combines all participants into ~172 champion rows, so bigger buffer = same DB load, fewer operations
-const STATS_BUFFER_FLUSH_SIZE = 30000 // flush every 30k participants (~3000 matches, ~40 min at 80/min)
-let lastStatsFlush = Date.now()
-const STATS_FLUSH_INTERVAL = 3600000 // or every 60 minutes as fallback
-const STATS_FLUSH_COOLDOWN = 300000 // minimum 5 minutes between flushes (safety)
-let flushInProgress = false
+// stats buffer - flush when buffer is large OR after time interval
+// larger buffer = fewer db writes, but more memory usage
+const STATS_BUFFER_FLUSH_SIZE = 50000 // flush every 50k participants (~5000 matches)
+const STATS_FLUSH_INTERVAL = 7200000 // or every 2 hours as fallback
+const STATS_FLUSH_COOLDOWN = 600000 // minimum 10 minutes between flushes
 
-// NON-BLOCKING flush - scraper continues while DB catches up
-function maybeFlushStats(): void {
-  if (flushInProgress) return
-  
-  const bufferCount = getStatsBufferCount()
-  const now = Date.now()
-  const timeSinceLastFlush = now - lastStatsFlush
-  
-  // respect cooldown to prevent rapid consecutive flushes
-  if (timeSinceLastFlush < STATS_FLUSH_COOLDOWN) return
-  
-  if (bufferCount >= STATS_BUFFER_FLUSH_SIZE || (timeSinceLastFlush > STATS_FLUSH_INTERVAL && bufferCount > 0)) {
-    flushInProgress = true
-    lastStatsFlush = now
-    
-    // fire and forget - don't await, let scraper continue
-    flushStatsBatch()
-      .catch(err => console.error('[FLUSH] Background flush error:', err))
-      .finally(() => { flushInProgress = false })
-  }
-}
+// cleanup config - run sparingly to save cpu
+const CLEANUP_INTERVAL = 12 * 60 * 60 * 1000 // every 12 hours
 
-// cleanup config
-let lastCleanup = Date.now()
-const CLEANUP_INTERVAL = 4 * 60 * 60 * 1000 // 4 hours
+// match batch processing
+const THROTTLE = parseInt(process.env.SCRAPER_THROTTLE || '100', 10)
+const MATCH_BATCH_SIZE = THROTTLE <= 50 ? 2 : 3
 
-async function maybeRunCleanup(): Promise<void> {
-  const now = Date.now()
-  if (now - lastCleanup > CLEANUP_INTERVAL) {
-    console.log('[CRAWLER] Running scheduled database cleanup...')
-    try {
-      const { data, error } = await supabase.rpc('cleanup_champion_stats_noise')
-      if (error) {
-        console.error('[CRAWLER] Cleanup failed:', error)
-      } else {
-        console.log('[CRAWLER] Cleanup complete:', data)
-      }
-    } catch (err) {
-      console.error('[CRAWLER] Cleanup error:', err)
-    }
-    lastCleanup = Date.now()
-  }
-}
+// db query batching
+const DB_CHECK_BATCH_SIZE = 500 // check matches in larger batches
 
-// dfs state per region: stack of puuids to crawl
-const crawlStackByRegion = new Map<RegionalCluster, string[]>([
-  ['europe', []],
-  ['americas', []],
-  ['asia', []],
-  ['sea', []],
-])
+// memory limits
+const MAX_KNOWN_MATCHES = 100000
+const MAX_SEED_POOL = 30000
+const MAX_DRY_PUUIDS = 8000
+const MAX_VISITED = 50000
+const MAX_BACKTRACK_HISTORY = 300
+const MAX_STACK_SIZE = 200
 
-// track visited puuids to avoid cycles
-const visitedPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
-  ['europe', new Set()],
-  ['americas', new Set()],
-  ['asia', new Set()],
-  ['sea', new Set()],
-])
+// region config
+const REGIONS: RegionalCluster[] = ['europe', 'americas', 'asia', 'sea']
 
-// track "dry" puuids (players with no recent aram matches) - avoid re-visiting them
-const dryPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
-  ['europe', new Set()],
-  ['americas', new Set()],
-  ['asia', new Set()],
-  ['sea', new Set()],
-])
-
-// track backtrack history for random backtracking
-const backtrackHistoryByRegion = new Map<RegionalCluster, string[]>([
-  ['europe', []],
-  ['americas', []],
-  ['asia', []],
-  ['sea', []],
-])
-
-// cache: known match ids (avoid redundant db queries)
-const knownMatchIds = new Set<string>()
-
-// seed pool: all puuids discovered from matches (for re-seeding when stuck)
-const seedPoolByRegion = new Map<RegionalCluster, Set<string>>([
-  ['europe', new Set()],
-  ['americas', new Set()],
-  ['asia', new Set()],
-  ['sea', new Set()],
-])
-
-// map platforms to regional clusters
-const _PLATFORM_TO_REGION: Record<string, RegionalCluster> = {
-  na1: 'americas',
-  br1: 'americas',
-  la1: 'americas',
-  la2: 'americas',
-  euw1: 'europe',
-  eun1: 'europe',
-  tr1: 'europe',
-  ru: 'europe',
-  kr: 'asia',
-  jp1: 'asia',
-  oc1: 'sea',
-  sg2: 'sea',
-  tw2: 'sea',
-  vn2: 'sea',
-}
-
-// reverse mapping: regional cluster to platform prefixes for match id filtering
 const REGION_TO_PREFIXES: Record<RegionalCluster, string[]> = {
   americas: ['NA1', 'BR1', 'LA1', 'LA2'],
   europe: ['EUW1', 'EUN1', 'TR1', 'RU'],
@@ -147,92 +60,185 @@ const REGION_TO_PREFIXES: Record<RegionalCluster, string[]> = {
   sea: ['OC1', 'SG2', 'TW2', 'VN2', 'PH2', 'TH2'],
 }
 
-// get random seeds from the seed pool (puuids we've seen from matches)
-function getRandomSeedsFromPool(region: RegionalCluster): string[] {
-  const seedPool = seedPoolByRegion.get(region)!
-  const visited = visitedPuuidsByRegion.get(region)!
-  const dryPuuids = dryPuuidsByRegion.get(region)!
+const DEFAULT_SEEDS: Array<{ cluster: RegionalCluster; platform: PlatformCode; summoner: string }> = [
+  { cluster: 'europe', platform: 'euw1', summoner: 'TwTv Yikesu0#Yikes' },
+  { cluster: 'americas', platform: 'na1', summoner: 'Usni#Boba' },
+  { cluster: 'asia', platform: 'kr', summoner: 'DK Sharvel#KR1' },
+  { cluster: 'sea', platform: 'sg2', summoner: 'Miss Lys#Lys' },
+]
 
-  // filter to unvisited, non-dry puuids
-  const available = Array.from(seedPool).filter(p => !visited.has(p) && !dryPuuids.has(p))
+// ══════════════════════════════════════════════════════════════════════════════
+// state management
+// ══════════════════════════════════════════════════════════════════════════════
 
-  if (available.length === 0) {
-    console.log(`[${region}] Seed pool exhausted (${seedPool.size} total, all visited/dry)`)
-    return []
-  }
-
-  // shuffle and return up to 20 seeds
-  const shuffled = available.sort(() => Math.random() - 0.5)
-  const seeds = shuffled.slice(0, Math.min(20, shuffled.length))
-
-  console.log(`[${region}] Got ${seeds.length} seeds from pool (${available.length} available, ${seedPool.size} total)`)
-  return seeds
+// per-region crawl state
+interface RegionState {
+  stack: string[]
+  visited: Set<string>
+  dry: Set<string>
+  backtrack: string[]
+  seedPool: Set<string>
 }
 
-// fetch puuids from existing matches in db for a region
-// gets match ids from db, then fetches matches from riot api to get participants
-// this is a last resort - uses up to 3 api calls to get fresh puuids
-async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
-  const acceptedPatches = await getCurrentPatch()
-  const prefixes = REGION_TO_PREFIXES[region]
-  const visited = visitedPuuidsByRegion.get(region)!
-  const dryPuuids = dryPuuidsByRegion.get(region)!
+const regionState = new Map<RegionalCluster, RegionState>()
+const regionStats = new Map<RegionalCluster, { matches: number; lastUpdate: number }>()
 
-  console.log(`[${region}] Fetching seeds from existing matches in DB (up to 3 API calls)...`)
+// global state
+const knownMatchIds = new Set<string>()
+let totalMatchesScraped = 0
+let startTime = Date.now()
+let lastStatsFlush = Date.now()
+let lastCleanup = Date.now()
+let flushInProgress = false
+
+// initialize region state
+for (const region of REGIONS) {
+  regionState.set(region, {
+    stack: [],
+    visited: new Set(),
+    dry: new Set(),
+    backtrack: [],
+    seedPool: new Set(),
+  })
+  regionStats.set(region, { matches: 0, lastUpdate: Date.now() })
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// utility functions
+// ══════════════════════════════════════════════════════════════════════════════
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  if (hours > 0) return `${hours}h ${minutes % 60}m`
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`
+  return `${seconds}s`
+}
+
+function trimSet<T>(set: Set<T>, maxSize: number): void {
+  if (set.size <= maxSize) return
+  const arr = Array.from(set)
+  const toDelete = arr.slice(0, set.size - maxSize)
+  toDelete.forEach(item => set.delete(item))
+}
+
+function trimArray<T>(arr: T[], maxSize: number): void {
+  if (arr.length <= maxSize) return
+  arr.splice(0, arr.length - maxSize)
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// stats flush and cleanup
+// ══════════════════════════════════════════════════════════════════════════════
+
+function maybeFlushStats(): void {
+  if (flushInProgress) return
+
+  const bufferCount = getStatsBufferCount()
+  const now = Date.now()
+  const timeSinceLastFlush = now - lastStatsFlush
+
+  if (timeSinceLastFlush < STATS_FLUSH_COOLDOWN) return
+
+  if (bufferCount >= STATS_BUFFER_FLUSH_SIZE || (timeSinceLastFlush > STATS_FLUSH_INTERVAL && bufferCount > 0)) {
+    flushInProgress = true
+    lastStatsFlush = now
+
+    // non-blocking flush
+    flushStatsBatch()
+      .catch(err => console.error('[FLUSH] Background flush error:', err))
+      .finally(() => { flushInProgress = false })
+  }
+}
+
+async function maybeRunCleanup(): Promise<void> {
+  const now = Date.now()
+  if (now - lastCleanup < CLEANUP_INTERVAL) return
+
+  console.log('[CRAWLER] Running scheduled database cleanup...')
+  try {
+    const { data, error } = await supabase.rpc('cleanup_champion_stats_noise')
+    if (error) {
+      console.error('[CRAWLER] Cleanup failed:', error)
+    } else {
+      console.log('[CRAWLER] Cleanup complete:', data)
+    }
+  } catch (err) {
+    console.error('[CRAWLER] Cleanup error:', err)
+  }
+  lastCleanup = Date.now()
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// seeding functions
+// ══════════════════════════════════════════════════════════════════════════════
+
+function getRandomSeedsFromPool(region: RegionalCluster, count: number = 15): string[] {
+  const state = regionState.get(region)!
+  const available = Array.from(state.seedPool).filter(p => !state.visited.has(p) && !state.dry.has(p))
+
+  if (available.length === 0) return []
+
+  // shuffle and return
+  const shuffled = available.sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, Math.min(count, shuffled.length))
+}
+
+async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
+  const prefixes = REGION_TO_PREFIXES[region]
+  const state = regionState.get(region)!
+
+  console.log(`[${region}] Fetching seeds from existing matches in DB...`)
 
   try {
-    // get multiple random matches from this region's prefixes
+    // get random matches from this region
     const shuffledPrefixes = prefixes.sort(() => Math.random() - 0.5)
-    const allPuuids: string[] = []
 
     for (const prefix of shuffledPrefixes) {
-      // query for recent matches, get more candidates
       const { data: matches, error } = await supabase
         .from('matches')
         .select('match_id')
         .like('match_id', `${prefix}_%`)
-        .in('patch', acceptedPatches)
+        .in('patch', ACCEPTED_PATCHES)
         .order('game_creation', { ascending: false })
-        .limit(100) // get more candidates to reduce query frequency
+        .limit(50)
 
       if (error || !matches || matches.length === 0) continue
 
-      // shuffle matches and try up to 3
-      const shuffledMatches = matches.sort(() => Math.random() - 0.5)
-      const matchesToTry = shuffledMatches.slice(0, 3)
+      // try up to 2 matches (save api calls)
+      const shuffledMatches = matches.sort(() => Math.random() - 0.5).slice(0, 2)
+      const allPuuids: string[] = []
 
-      for (const match of matchesToTry) {
-        // if we already have enough seeds, stop
-        if (allPuuids.length >= 15) break
+      for (const match of shuffledMatches) {
+        if (allPuuids.length >= 10) break
 
         try {
-          // fetch this match from riot api
           await waitForRateLimit(region, 'batch')
-          const matchData = await getMatchById(match.match_id, region)
+          const matchData = await getMatchById(match.match_id, region, 'batch')
 
           if (matchData?.info?.participants) {
             const puuids = matchData.info.participants
               .map(p => p.puuid)
-              .filter(p => p && !visited.has(p) && !dryPuuids.has(p))
-
+              .filter(p => p && !state.visited.has(p) && !state.dry.has(p))
             allPuuids.push(...puuids)
-            console.log(`[${region}] Found ${puuids.length} unvisited PUUIDs from match ${match.match_id}`)
           }
-        } catch (err) {
-          console.error(`[${region}] Failed to fetch match ${match.match_id}:`, err)
+        } catch {
           continue
         }
       }
 
-      // if we got seeds from this prefix, return them
       if (allPuuids.length > 0) {
         const uniquePuuids = [...new Set(allPuuids)]
-        console.log(`[${region}] Found ${uniquePuuids.length} total seeds from DB matches (tried ${matchesToTry.length} matches)`)
+        console.log(`[${region}] Found ${uniquePuuids.length} seeds from DB`)
         return uniquePuuids
       }
     }
 
-    console.log(`[${region}] No unvisited PUUIDs found from DB matches (all players already visited/dry)`)
     return []
   } catch (error) {
     console.error(`[${region}] Error fetching seeds from DB:`, error)
@@ -240,83 +246,118 @@ async function fetchSeedsFromDB(region: RegionalCluster): Promise<string[]> {
   }
 }
 
-// dfs crawler: process a summoner and return discovered summoners
+async function tryGetSeeds(region: RegionalCluster): Promise<boolean> {
+  const state = regionState.get(region)!
+
+  // try seed pool first
+  const poolSeeds = getRandomSeedsFromPool(region)
+  if (poolSeeds.length > 0) {
+    poolSeeds.forEach(p => state.stack.push(p))
+    console.log(`[${region}] Added ${poolSeeds.length} seeds from pool`)
+    return true
+  }
+
+  // try db
+  const dbSeeds = await fetchSeedsFromDB(region)
+  if (dbSeeds.length > 0) {
+    dbSeeds.forEach(p => {
+      state.stack.push(p)
+      state.seedPool.add(p)
+    })
+    console.log(`[${region}] Added ${dbSeeds.length} seeds from DB`)
+    return true
+  }
+
+  return false
+}
+
+function clearStaleState(region: RegionalCluster): void {
+  const state = regionState.get(region)!
+
+  // clear 80% of dry puuids
+  if (state.dry.size > 50) {
+    const toDelete = Array.from(state.dry).slice(0, Math.floor(state.dry.size * 0.8))
+    toDelete.forEach(p => state.dry.delete(p))
+    console.log(`[${region}] Cleared ${toDelete.length} dry entries`)
+  }
+
+  // clear 50% of visited to allow re-crawling
+  if (state.visited.size > 50) {
+    const toDelete = Array.from(state.visited).slice(0, Math.floor(state.visited.size * 0.5))
+    toDelete.forEach(p => state.visited.delete(p))
+    console.log(`[${region}] Cleared ${toDelete.length} visited entries`)
+  }
+
+  // re-queue seeds
+  if (state.seedPool.size > 0) {
+    const seeds = Array.from(state.seedPool).slice(0, 15)
+    seeds.forEach(p => state.stack.push(p))
+    console.log(`[${region}] Re-queued ${seeds.length} seeds`)
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// crawl functions
+// ══════════════════════════════════════════════════════════════════════════════
+
 async function crawlSummoner(
   puuid: string,
   region: RegionalCluster
 ): Promise<{ stored: number; discovered: string[]; isDry: boolean }> {
-  try {
-    const acceptedPatches = await getCurrentPatch()
-    const discovered: string[] = []
-    const dryPuuids = dryPuuidsByRegion.get(region)!
+  const state = regionState.get(region)!
 
-    // fetch matches from last 14 days for maximum data collection
+  try {
+    // fetch matches from last 14 days
     const twoWeeksAgo = new Date()
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
-    const startTime = Math.floor(twoWeeksAgo.getTime() / 1000)
+    const matchStartTime = Math.floor(twoWeeksAgo.getTime() / 1000)
 
     await waitForRateLimit(region, 'batch')
-    const matchIds = await getMatchIdsByPuuid(puuid, region, 450, 100, 0, 'batch', startTime)
+    const matchIds = await getMatchIdsByPuuid(puuid, region, 450, 100, 0, 'batch', matchStartTime)
 
-    // skip if no recent aram matches - mark as dry
     if (!matchIds || matchIds.length === 0) {
       return { stored: 0, discovered: [], isDry: true }
     }
 
     console.log(`  Found ${matchIds.length} matches for PUUID ${puuid.substring(0, 8)}`)
 
-    // filter out matches we already know about (in-memory cache)
+    // filter matches we already know about (in-memory cache)
     const potentiallyNewMatchIds = matchIds.filter((id: string) => !knownMatchIds.has(id))
 
-    // only query db for matches not in cache - check in batches to reduce i/o
-    let newMatchIds: string[] = []
     if (potentiallyNewMatchIds.length === 0) {
-      // all matches are in cache - this player is "exhausted" (all matches already scraped)
-      // don't waste api calls discovering from their matches
-      console.log(`  All ${matchIds.length} matches already known (cache hit) - player exhausted`)
-      return { stored: 0, discovered: [], isDry: true }
-    } else {
-      console.log(`  ${potentiallyNewMatchIds.length} potentially new, checking DB...`)
-
-      // check db in batches of 200 to reduce query overhead
-      const DB_CHECK_BATCH_SIZE = 200
-      const existingIds = new Set<string>()
-      
-      for (let i = 0; i < potentiallyNewMatchIds.length; i += DB_CHECK_BATCH_SIZE) {
-        const batch = potentiallyNewMatchIds.slice(i, i + DB_CHECK_BATCH_SIZE)
-        const { data: existingMatches } = await supabase
-          .from('matches')
-          .select('match_id')
-          .in('match_id', batch)
-        
-        existingMatches?.forEach(m => existingIds.add(m.match_id))
-      }
-      
-      // add all checked matches to cache (existing and new)
-      potentiallyNewMatchIds.forEach(id => knownMatchIds.add(id))
-
-      newMatchIds = potentiallyNewMatchIds.filter((id: string) => !existingIds.has(id))
-    }
-
-    console.log(`  ${newMatchIds.length} new matches, ${matchIds.length - newMatchIds.length} already in DB`)
-
-    // if no new matches after db check, player is exhausted
-    if (newMatchIds.length === 0 && matchIds.length > 0) {
-      console.log(`  Player exhausted - all matches already in DB`)
+      console.log(`  All ${matchIds.length} matches already known (cache hit)`)
       return { stored: 0, discovered: [], isDry: true }
     }
 
-    // for new matches: fetch them to discover puuids, but only store if they're from current patch
+    // check db in larger batches
+    const existingIds = new Set<string>()
+    for (let i = 0; i < potentiallyNewMatchIds.length; i += DB_CHECK_BATCH_SIZE) {
+      const batch = potentiallyNewMatchIds.slice(i, i + DB_CHECK_BATCH_SIZE)
+      const { data: existingMatches } = await supabase
+        .from('matches')
+        .select('match_id')
+        .in('match_id', batch)
+
+      existingMatches?.forEach(m => existingIds.add(m.match_id))
+    }
+
+    // add all checked matches to cache
+    potentiallyNewMatchIds.forEach(id => knownMatchIds.add(id))
+
+    const newMatchIds = potentiallyNewMatchIds.filter((id: string) => !existingIds.has(id))
+    console.log(`  ${newMatchIds.length} new matches, ${potentiallyNewMatchIds.length - newMatchIds.length} already in DB`)
+
+    if (newMatchIds.length === 0) {
+      return { stored: 0, discovered: [], isDry: true }
+    }
+
+    // fetch and store matches
     let stored = 0
     let skippedOldPatch = 0
+    const discovered: string[] = []
 
-    // process matches in parallel batches
-    // with 50% throttle (50 req/2min), use smaller batches to avoid rate limit waits
-    // each match = 1 api call (match data), so batch of 5 = 5 calls
-    const THROTTLE = parseInt(process.env.SCRAPER_THROTTLE || '100', 10)
-    const BATCH_SIZE = THROTTLE <= 50 ? 2 : 3 // reduced to 3 max to lower db io pressure
-    for (let i = 0; i < newMatchIds.length; i += BATCH_SIZE) {
-      const batch = newMatchIds.slice(i, i + BATCH_SIZE)
+    for (let i = 0; i < newMatchIds.length; i += MATCH_BATCH_SIZE) {
+      const batch = newMatchIds.slice(i, i + MATCH_BATCH_SIZE)
 
       const results = await Promise.all(
         batch.map(async matchId => {
@@ -335,7 +376,7 @@ async function crawlSummoner(
       for (const { matchId, matchData, error } of results) {
         if (error) {
           if (error?.status === 429) {
-            console.log(`[RIOT API] Rate limited on ${region} (match endpoint), skipping remaining matches`)
+            console.log(`[RIOT API] Rate limited on ${region}`)
             return { stored, discovered, isDry: false }
           }
           console.error(`  Error fetching match ${matchId}:`, error?.message || error)
@@ -346,70 +387,53 @@ async function crawlSummoner(
 
         const matchPatch = extractPatch(matchData.info.gameVersion)
 
-        // Filter: only process matches from accepted patches
-        if (!acceptedPatches.includes(matchPatch)) {
+        if (!ACCEPTED_PATCHES.includes(matchPatch)) {
           skippedOldPatch++
           continue
         }
 
-        // Extract PUUIDs from valid patch matches - these are HIGH PRIORITY (active on current patch)
+        // extract puuids from valid matches
         if (matchData.info?.participants) {
-          const currentStack = crawlStackByRegion.get(region)
-          const seedPool = seedPoolByRegion.get(region)!
-
-          // For current patch matches, add to stack (lower threshold to prevent over-accumulation)
-          // Balance between exploration and exploitation
-          const shouldAddToStack = !currentStack || currentStack.length < 200
+          const shouldAddToStack = state.stack.length < MAX_STACK_SIZE
 
           matchData.info.participants.forEach(p => {
             if (p.puuid && p.puuid !== puuid) {
-              // Always add to seed pool for future re-seeding
-              seedPool.add(p.puuid)
+              state.seedPool.add(p.puuid)
 
-              // Add to discovered for immediate stack (prioritize active players)
-              if (shouldAddToStack && !visitedPuuidsByRegion.get(region)?.has(p.puuid) && !dryPuuids.has(p.puuid)) {
+              if (shouldAddToStack && !state.visited.has(p.puuid) && !state.dry.has(p.puuid)) {
                 discovered.push(p.puuid)
               }
             }
           })
 
-          // Limit seed pool size to prevent memory bloat
-          if (seedPool.size > 50000) {
-            const toDelete = Array.from(seedPool).slice(0, 10000)
-            toDelete.forEach(p => seedPool.delete(p))
-          }
+          // trim seed pool if too large
+          trimSet(state.seedPool, MAX_SEED_POOL)
 
           validMatches.push(matchData)
         }
       }
 
       if (validMatches.length > 0) {
-        // Store matches in batch (stats buffered in memory with Welford's algorithm)
         const { success, storedCount } = await storeMatchDataBatch(validMatches, region, false)
         if (success) {
           stored += storedCount
-          // Add to cache after successful storage
           validMatches.forEach(m => knownMatchIds.add(m.metadata.matchId))
         }
-        // Increased delay to reduce database I/O pressure
-        await sleep(250)
+        // small delay between batches
+        await sleep(200)
       }
 
-      // Check if we should flush stats buffer
-      await maybeFlushStats()
+      maybeFlushStats()
     }
 
     if (stored > 0 || skippedOldPatch > 0) {
-      console.log(
-        `  Completed: ${stored} matches stored${skippedOldPatch > 0 ? `, ${skippedOldPatch} skipped (old patch)` : ''}`
-      )
+      console.log(`  Completed: ${stored} matches stored${skippedOldPatch > 0 ? `, ${skippedOldPatch} skipped (old patch)` : ''}`)
     }
 
-    // Return unique discovered PUUIDs
     return { stored, discovered: [...new Set(discovered)], isDry: false }
   } catch (error: any) {
     if (error?.status === 429) {
-      console.log(`[RIOT API] Rate limited on ${region} (match-list endpoint)`)
+      console.log(`[RIOT API] Rate limited on ${region}`)
     } else {
       console.error(`Error crawling puuid ${puuid.substring(0, 8)}...:`, error?.message || error)
     }
@@ -417,723 +441,413 @@ async function crawlSummoner(
   }
 }
 
-// State file path
-const STATE_FILE = path.join(__dirname, 'scraper-state.json')
+// ══════════════════════════════════════════════════════════════════════════════
+// state persistence
+// ══════════════════════════════════════════════════════════════════════════════
 
-// Load or initialize state
-function loadState(): {
+const STATE_FILE = path.join(__dirname, 'scraper-state.json')
+const MATCH_CACHE_FILE = path.join(__dirname, 'match-cache.json')
+
+interface SavedState {
   stacks: Record<string, string[]>
   visited: Record<string, string[]>
-  backtrackHistory: Record<string, string[]>
+  backtrack: Record<string, string[]>
   dry: Record<string, string[]>
   seedPool: Record<string, string[]>
   lastPatch?: string
-} {
-  if (existsSync(STATE_FILE) && !process.argv.includes('--reset')) {
-    try {
-      const data = readFileSync(STATE_FILE, 'utf-8')
-      const state = JSON.parse(data)
-      console.log('[CRAWLER] Loaded state from scraper-state.json')
-      return { ...state, dry: state.dry || {}, seedPool: state.seedPool || {}, lastPatch: state.lastPatch }
-    } catch (_error) {
-      console.log('[CRAWLER] Failed to load state, starting fresh')
-    }
-  }
-  console.log('[CRAWLER] Starting with fresh state')
-  return { stacks: {}, visited: {}, backtrackHistory: {}, dry: {}, seedPool: {} }
 }
 
-// Save state
-function saveState() {
-  const state = {
-    stacks: {
-      europe: crawlStackByRegion.get('europe')!,
-      americas: crawlStackByRegion.get('americas')!,
-      asia: crawlStackByRegion.get('asia')!,
-      sea: crawlStackByRegion.get('sea')!,
-    },
-    visited: {
-      europe: Array.from(visitedPuuidsByRegion.get('europe')!),
-      americas: Array.from(visitedPuuidsByRegion.get('americas')!),
-      asia: Array.from(visitedPuuidsByRegion.get('asia')!),
-      sea: Array.from(visitedPuuidsByRegion.get('sea')!),
-    },
-    backtrackHistory: {
-      europe: backtrackHistoryByRegion.get('europe')!,
-      americas: backtrackHistoryByRegion.get('americas')!,
-      asia: backtrackHistoryByRegion.get('asia')!,
-      sea: backtrackHistoryByRegion.get('sea')!,
-    },
-    dry: {
-      europe: Array.from(dryPuuidsByRegion.get('europe')!).slice(-5000),
-      americas: Array.from(dryPuuidsByRegion.get('americas')!).slice(-5000),
-      asia: Array.from(dryPuuidsByRegion.get('asia')!).slice(-5000),
-      sea: Array.from(dryPuuidsByRegion.get('sea')!).slice(-5000),
-    },
-    seedPool: {
-      europe: Array.from(seedPoolByRegion.get('europe')!).slice(-10000),
-      americas: Array.from(seedPoolByRegion.get('americas')!).slice(-10000),
-      asia: Array.from(seedPoolByRegion.get('asia')!).slice(-10000),
-      sea: Array.from(seedPoolByRegion.get('sea')!).slice(-10000),
-    },
+function loadState(): SavedState | null {
+  if (!existsSync(STATE_FILE) || process.argv.includes('--reset')) {
+    console.log('[CRAWLER] Starting with fresh state')
+    return null
+  }
+
+  try {
+    const data = readFileSync(STATE_FILE, 'utf-8')
+    const state = JSON.parse(data)
+    console.log('[CRAWLER] Loaded state from scraper-state.json')
+    return state
+  } catch {
+    console.log('[CRAWLER] Failed to load state, starting fresh')
+    return null
+  }
+}
+
+function saveState(): void {
+  const state: SavedState = {
+    stacks: {},
+    visited: {},
+    backtrack: {},
+    dry: {},
+    seedPool: {},
     lastPatch: ACCEPTED_PATCHES[0],
   }
+
+  for (const region of REGIONS) {
+    const rs = regionState.get(region)!
+    state.stacks[region] = rs.stack
+    state.visited[region] = Array.from(rs.visited).slice(-MAX_VISITED)
+    state.backtrack[region] = rs.backtrack
+    state.dry[region] = Array.from(rs.dry).slice(-MAX_DRY_PUUIDS)
+    state.seedPool[region] = Array.from(rs.seedPool).slice(-MAX_SEED_POOL)
+  }
+
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2))
 }
 
-// Cache file paths
-const MATCH_CACHE_FILE = path.join(__dirname, 'match-cache.json')
+function loadMatchCache(): void {
+  if (!existsSync(MATCH_CACHE_FILE)) {
+    console.log('[CRAWLER] No match cache file found')
+    return
+  }
 
-// Initialize match ID cache from file (much faster than DB)
-function loadMatchCache() {
-  if (existsSync(MATCH_CACHE_FILE)) {
-    try {
-      const data = readFileSync(MATCH_CACHE_FILE, 'utf-8')
-      const cache = JSON.parse(data)
-      cache.forEach((id: string) => knownMatchIds.add(id))
-      console.log(`[CRAWLER] Loaded ${knownMatchIds.size} known match IDs from cache file`)
-    } catch (error) {
-      console.error('[CRAWLER] Error loading match cache file:', error)
-    }
-  } else {
-    console.log('[CRAWLER] No match cache file found, starting fresh')
+  try {
+    const data = readFileSync(MATCH_CACHE_FILE, 'utf-8')
+    const cache = JSON.parse(data)
+    cache.forEach((id: string) => knownMatchIds.add(id))
+    console.log(`[CRAWLER] Loaded ${knownMatchIds.size} known match IDs from cache`)
+  } catch (error) {
+    console.error('[CRAWLER] Error loading match cache:', error)
   }
 }
 
-// Save match cache to file
-function saveMatchCache() {
+function saveMatchCache(): void {
   try {
-    const cache = Array.from(knownMatchIds)
+    // only save most recent matches
+    const cache = Array.from(knownMatchIds).slice(-MAX_KNOWN_MATCHES)
     writeFileSync(MATCH_CACHE_FILE, JSON.stringify(cache))
   } catch (error) {
     console.error('[CRAWLER] Error saving match cache:', error)
   }
 }
 
-async function main() {
-  console.log('[CRAWLER] Starting continuous scraper (current patch only)...')
+function restoreState(savedState: SavedState): void {
+  for (const region of REGIONS) {
+    const state = regionState.get(region)!
+
+    if (savedState.stacks[region]) {
+      state.stack = savedState.stacks[region]
+    }
+    if (savedState.visited[region]) {
+      savedState.visited[region].forEach(p => state.visited.add(p))
+    }
+    if (savedState.backtrack?.[region]) {
+      state.backtrack = savedState.backtrack[region]
+    }
+    if (savedState.dry?.[region]) {
+      savedState.dry[region].forEach(p => state.dry.add(p))
+    }
+    if (savedState.seedPool?.[region]) {
+      savedState.seedPool[region].forEach(p => state.seedPool.add(p))
+    }
+  }
+
+  // patch change detection - clear dry and visited when patch changes
+  if (savedState.lastPatch && savedState.lastPatch !== ACCEPTED_PATCHES[0]) {
+    console.log(`\n[CRAWLER] Patch change detected: ${savedState.lastPatch} -> ${ACCEPTED_PATCHES[0]}`)
+    console.log('[CRAWLER] Clearing dry and visited sets...')
+
+    for (const region of REGIONS) {
+      const state = regionState.get(region)!
+      state.dry.clear()
+      state.visited.clear()
+    }
+  }
+}
+
+
+// region crawler
+async function runRegionCrawler(region: RegionalCluster): Promise<void> {
+  const state = regionState.get(region)!
+  const stats = regionStats.get(region)!
+
+  let consecutiveDry = 0
+  let consecutiveBacktracks = 0
+  let lastBacktrackPuuid: string | null = null
+
+  while (true) {
+    try {
+      // handle empty stack
+      if (state.stack.length === 0) {
+        // try backtracking first
+        const validBacktracks = state.backtrack.filter(p => !state.dry.has(p))
+
+        if (validBacktracks.length > 0 && consecutiveBacktracks < 15) {
+          // pick random backtrack point
+          let backtrackPuuid: string
+          let attempts = 0
+          do {
+            const idx = Math.floor(Math.random() * validBacktracks.length)
+            backtrackPuuid = validBacktracks[idx]
+            attempts++
+          } while (backtrackPuuid === lastBacktrackPuuid && attempts < 5 && validBacktracks.length > 1)
+
+          console.log(`[${region}] Backtracking to ${backtrackPuuid.substring(0, 8)}...`)
+          state.stack.push(backtrackPuuid)
+          state.visited.delete(backtrackPuuid)
+          lastBacktrackPuuid = backtrackPuuid
+          consecutiveBacktracks++
+          continue
+        }
+
+        // backtrack exhausted, try seeding
+        consecutiveBacktracks = 0
+
+        if (await tryGetSeeds(region)) {
+          continue
+        }
+
+        // if no seeds, clear state and wait
+        console.log(`[${region}] No seeds available, clearing stale state and waiting...`)
+        clearStaleState(region)
+        await sleep(15000)
+        continue
+      }
+
+      consecutiveBacktracks = 0
+
+      // pop next puuid
+      const puuid = state.stack.pop()!
+
+      // skip if already visited or dry
+      if (state.visited.has(puuid) || state.dry.has(puuid)) {
+        continue
+      }
+
+      console.log(`[${region}] Crawling ${puuid.substring(0, 8)}... (stack: ${state.stack.length}, visited: ${state.visited.size}, dry: ${state.dry.size})`)
+
+      const { stored, discovered, isDry } = await crawlSummoner(puuid, region)
+
+      state.visited.add(puuid)
+
+      if (isDry) {
+        state.dry.add(puuid)
+        consecutiveDry++
+
+        // trim dry set
+        trimSet(state.dry, MAX_DRY_PUUIDS)
+
+        // clear backtrack if too many consecutive dry
+        if (consecutiveDry >= 15 && state.backtrack.length > 30) {
+          state.backtrack.length = 0
+          console.log(`[${region}] Cleared backtrack history due to consecutive dry`)
+          consecutiveDry = 0
+        }
+        continue
+      }
+
+      consecutiveDry = 0
+
+      // add to backtrack history
+      state.backtrack.push(puuid)
+      trimArray(state.backtrack, MAX_BACKTRACK_HISTORY)
+
+      // update stats
+      if (stored > 0) {
+        totalMatchesScraped += stored
+        stats.matches += stored
+        stats.lastUpdate = Date.now()
+        console.log(`[${region}] +${stored} matches | Region: ${stats.matches} | Total: ${totalMatchesScraped}`)
+      }
+
+      // push discovered puuids
+      if (discovered.length > 0) {
+        console.log(`  -> Discovered ${discovered.length} new summoners`)
+        for (let i = discovered.length - 1; i >= 0; i--) {
+          if (!state.visited.has(discovered[i]) && !state.dry.has(discovered[i])) {
+            state.stack.push(discovered[i])
+          }
+        }
+
+        // prune stack if too large
+        if (state.stack.length > MAX_STACK_SIZE * 1.5) {
+          const pruneCount = Math.floor(state.stack.length * 0.4)
+          state.stack.splice(0, pruneCount)
+          console.log(`  -> Pruned ${pruneCount} from stack`)
+        }
+      }
+
+      // trim visited set
+      trimSet(state.visited, MAX_VISITED)
+
+      // trim known matches cache
+      trimSet(knownMatchIds, MAX_KNOWN_MATCHES)
+
+    } catch (error: any) {
+      console.error(`[${region}] Crawler error:`, error?.message || error)
+    }
+  }
+}
+
+
+// stats logger
+async function runStatsLogger(): Promise<void> {
+  while (true) {
+    await sleep(300000) // every 5 minutes
+
+    const runtime = Date.now() - startTime
+    const avgRate = totalMatchesScraped / (runtime / 1000 / 60)
+
+    console.log(`\n=== Summary (${formatDuration(runtime)}) ===`)
+    console.log(`Patches: ${ACCEPTED_PATCHES.join(', ')} | Total: ${totalMatchesScraped} | Rate: ${avgRate.toFixed(1)}/min`)
+    console.log(`Stats buffer: ${getStatsBufferCount()} pending | Match cache: ${knownMatchIds.size}`)
+
+    let totalInStacks = 0
+    let totalVisited = 0
+    let totalDry = 0
+
+    for (const region of REGIONS) {
+      const state = regionState.get(region)!
+      const stats = regionStats.get(region)!
+
+      totalInStacks += state.stack.length
+      totalVisited += state.visited.size
+      totalDry += state.dry.size
+
+      if (state.stack.length > 0 || state.visited.size > 0) {
+        const regionRate = stats.matches / (runtime / 1000 / 60)
+        const hitRate = state.visited.size > 0 ? (((state.visited.size - state.dry.size) / state.visited.size) * 100).toFixed(0) : '0'
+        console.log(`[${region.toUpperCase()}] Stack: ${state.stack.length} | Visited: ${state.visited.size} | Dry: ${state.dry.size} (${hitRate}% productive) | Matches: ${stats.matches} (${regionRate.toFixed(1)}/min)`)
+      }
+    }
+
+    console.log(`Totals: ${totalInStacks} in stacks | ${totalVisited} visited | ${totalDry} dry`)
+    console.log()
+
+    maybeFlushStats()
+    await maybeRunCleanup()
+    saveState()
+  }
+}
+
+
+// main
+async function main(): Promise<void> {
+  console.log('[CRAWLER] Starting continuous scraper...')
   console.log('[CRAWLER] Press Ctrl+C to stop\n')
 
-  // idk why sometimes env.local just dont worky
   console.log('[CRAWLER] Environment check:')
   console.log('[CRAWLER] - RIOT_API_KEY:', process.env.RIOT_API_KEY ? 'loaded' : 'MISSING')
   console.log('[CRAWLER] - SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'loaded' : 'MISSING')
   console.log('[CRAWLER] - SUPABASE_KEY:', process.env.SUPABASE_SECRET_KEY ? 'loaded' : 'MISSING')
   console.log()
 
-  const acceptedPatches = await getCurrentPatch()
-  console.log(`[CRAWLER] Accepting patches: ${acceptedPatches.join(', ')}\n`)
+  console.log(`[CRAWLER] Accepting patches: ${ACCEPTED_PATCHES.join(', ')}\n`)
 
-  // Load match cache from file
   loadMatchCache()
 
-  // Load saved state first to check if we have existing crawl data
   const savedState = loadState()
 
-  // Restore stacks, visited sets, dry sets, seed pools, and backtrack history from saved state
-  for (const region of ['europe', 'americas', 'asia', 'sea'] as RegionalCluster[]) {
-    if (savedState.stacks[region]) {
-      crawlStackByRegion.set(region, savedState.stacks[region])
-    }
-    if (savedState.visited[region]) {
-      savedState.visited[region].forEach((p: string) => visitedPuuidsByRegion.get(region)!.add(p))
-    }
-    if (savedState.backtrackHistory[region]) {
-      backtrackHistoryByRegion.set(region, savedState.backtrackHistory[region])
-    }
-    if (savedState.dry && savedState.dry[region]) {
-      savedState.dry[region].forEach((p: string) => dryPuuidsByRegion.get(region)!.add(p))
-    }
-    if (savedState.seedPool && savedState.seedPool[region]) {
-      savedState.seedPool[region].forEach((p: string) => seedPoolByRegion.get(region)!.add(p))
-    }
-  }
+  if (savedState) {
+    restoreState(savedState)
 
-  // PATCH CHANGE DETECTION: Clear dry PUUIDs and visited when patch changes
-  // This is crucial because players marked "dry" on old patch may have new games on new patch
-  const currentPatch = ACCEPTED_PATCHES[0]
-  if (savedState.lastPatch && savedState.lastPatch !== currentPatch) {
-    console.log(`\n[CRAWLER] 🔄 PATCH CHANGE DETECTED: ${savedState.lastPatch} → ${currentPatch}`)
-    console.log('[CRAWLER] Clearing dry PUUIDs and visited sets (players may have new games now)...')
-    
-    let totalDryCleared = 0
-    let totalVisitedCleared = 0
-    for (const region of ['europe', 'americas', 'asia', 'sea'] as RegionalCluster[]) {
-      const drySet = dryPuuidsByRegion.get(region)!
-      const visitedSet = visitedPuuidsByRegion.get(region)!
-      totalDryCleared += drySet.size
-      totalVisitedCleared += visitedSet.size
-      drySet.clear()
-      visitedSet.clear()
+    // show restored state
+    let totalStack = 0
+    let totalVisited = 0
+    let totalDry = 0
+    let totalSeedPool = 0
+
+    for (const region of REGIONS) {
+      const state = regionState.get(region)!
+      totalStack += state.stack.length
+      totalVisited += state.visited.size
+      totalDry += state.dry.size
+      totalSeedPool += state.seedPool.size
     }
-    console.log(`[CRAWLER] Cleared ${totalDryCleared} dry PUUIDs and ${totalVisitedCleared} visited PUUIDs`)
-    console.log('[CRAWLER] Stack and seed pool preserved - will re-crawl with fresh state\n')
-  }
 
-  // Check if we have existing state to resume from
-  const existingStackSize = Array.from(crawlStackByRegion.values()).reduce((sum, stack) => sum + stack.length, 0)
-  const existingVisited = Array.from(visitedPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
-  const existingSeedPool = Array.from(seedPoolByRegion.values()).reduce((sum, set) => sum + set.size, 0)
-  const hasExistingState = existingStackSize > 0 || existingVisited > 0 || existingSeedPool > 0
+    console.log(`[CRAWLER] Resuming: ${totalStack} in stacks, ${totalVisited} visited, ${totalDry} dry, ${totalSeedPool} in seed pool`)
 
-  const seedPuuidsByRegion = new Map<RegionalCluster, Set<string>>([
-    ['europe', new Set()],
-    ['americas', new Set()],
-    ['asia', new Set()],
-    ['sea', new Set()],
-  ])
-
-  // Only ask for seed summoners if starting fresh (no existing state)
-  if (!hasExistingState) {
-    const clusterPlatforms: Array<{ cluster: RegionalCluster; platform: PlatformCode; default?: string }> = [
-      { cluster: 'europe', platform: 'euw1', default: 'TwTv Yikesu0#Yikes' },
-      { cluster: 'americas', platform: 'na1', default: 'Usni#Boba' },
-      { cluster: 'asia', platform: 'kr', default: 'DK Sharvel#KR1' },
-      { cluster: 'sea', platform: 'sg2', default: 'Miss Lys#Lys' },
-    ]
-
-    // Check if running in CI/non-interactive mode
+    for (const region of REGIONS) {
+      const state = regionState.get(region)!
+      if (state.stack.length > 0 || state.visited.size > 0) {
+        console.log(`  ${region}: stack=${state.stack.length}, visited=${state.visited.size}, dry=${state.dry.size}, seedPool=${state.seedPool.size}`)
+      }
+    }
+    console.log()
+  } else {
+    // need to seed
     const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true' || !process.stdin.isTTY
 
-    const summonerInputs: Array<{
-      cluster: RegionalCluster
-      platform: PlatformCode
-      gameName: string
-      tagLine: string
-    }> = []
-
     if (isCI) {
-      // Non-interactive mode: use all defaults automatically
-      console.log('[CRAWLER] No existing state found, using default seed summoners (CI mode)...\n')
-
-      for (const { cluster, platform, default: defaultSummoner } of clusterPlatforms) {
-        if (defaultSummoner) {
-          const parts = defaultSummoner.split('#')
-          if (parts.length === 2) {
-            summonerInputs.push({
-              cluster,
-              platform,
-              gameName: parts[0],
-              tagLine: parts[1],
-            })
-            console.log(`[CRAWLER] Using default for ${cluster}: ${defaultSummoner}`)
-          }
-        }
-      }
+      console.log('[CRAWLER] Using default seed summoners (CI mode)...\n')
     } else {
-      // Interactive mode: prompt for summoner names
-      console.log('[CRAWLER] No existing state found, need seed summoners.')
-      console.log('[CRAWLER] Please provide a seed summoner for each cluster (or press Enter to use default/skip):\n')
+      console.log('[CRAWLER] No existing state. Enter seed summoners (or press Enter for defaults):\n')
+    }
 
-      for (const { cluster, platform, default: defaultSummoner } of clusterPlatforms) {
-        const promptText = defaultSummoner
-          ? `Enter summoner for ${cluster.toUpperCase()} (${platform.toUpperCase()}) [default: ${defaultSummoner}]: `
-          : `Enter summoner for ${cluster.toUpperCase()} (${platform.toUpperCase()}) or press Enter to skip: `
+    for (const { cluster, platform, summoner: defaultSummoner } of DEFAULT_SEEDS) {
+      let summonerInput = defaultSummoner
 
-        const rl = readline.createInterface({
-          input: process.stdin,
-          output: process.stdout,
-        })
-
+      if (!isCI) {
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
         const answer = await new Promise<string>(resolve => {
-          rl.question(promptText, ans => {
+          rl.question(`${cluster.toUpperCase()} (${platform}) [${defaultSummoner}]: `, ans => {
             rl.close()
-            resolve(ans)
+            resolve(ans.trim())
           })
         })
-
-        let summonerInput = answer.trim()
-
-        // use default if available and no input provided
-        if (!summonerInput && defaultSummoner) {
-          summonerInput = defaultSummoner
-          console.log(`Using default: ${defaultSummoner}`)
-        }
-
-        if (summonerInput) {
-          const parts = summonerInput.split('#')
-          if (parts.length !== 2) {
-            console.log('[CRAWLER] Invalid format. Please use GameName#TAG\n')
-            continue
-          }
-
-          summonerInputs.push({
-            cluster,
-            platform,
-            gameName: parts[0],
-            tagLine: parts[1],
-          })
-        } else {
-          console.log(`Skipped ${cluster}\n`)
-        }
-      }
-    }
-
-    // sequential region scrape
-    if (summonerInputs.length > 0) {
-      console.log('\n[CRAWLER] Looking up summoners...\n')
-
-      for (const { cluster, platform, gameName, tagLine } of summonerInputs) {
-        try {
-          console.log(`[CRAWLER] Looking up ${gameName}#${tagLine} on ${platform}...`)
-          const summonerData = await getSummonerByRiotId(gameName, tagLine, platform)
-
-          if (summonerData) {
-            seedPuuidsByRegion.get(cluster)?.add(summonerData.summoner.puuid)
-            console.log(`[CRAWLER] Added ${gameName}#${tagLine} to ${cluster} pool`)
-          } else {
-            console.log(`[CRAWLER] ${gameName}#${tagLine} not found on ${platform}`)
-          }
-        } catch (error: any) {
-          console.error(`[CRAWLER] Error looking up ${gameName}#${tagLine}:`, error?.message || error)
-        }
+        if (answer) summonerInput = answer
       }
 
-      console.log()
-    }
-
-    // check for 1 puuid when starting fresh
-    const totalSeeds = Array.from(seedPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
-    if (totalSeeds === 0) {
-      console.log('[CRAWLER] No seed summoners provided. Exiting.')
-      process.exit(0)
-    }
-
-    console.log(`\n[CRAWLER] Starting scraper with ${totalSeeds} seed summoner(s)`)
-    console.log('[CRAWLER] Clusters configured:')
-    for (const [region, puuids] of seedPuuidsByRegion) {
-      if (puuids.size > 0) {
-        console.log(`  ${region}: ${puuids.size} seed(s)`)
+      const parts = summonerInput.split('#')
+      if (parts.length !== 2) {
+        console.log(`[CRAWLER] Invalid format for ${cluster}, using default`)
+        continue
       }
-    }
-    console.log()
 
-    // Push seed puuids onto stacks
-    for (const [region, seeds] of seedPuuidsByRegion) {
-      const stack = crawlStackByRegion.get(region)!
-      seeds.forEach(p => stack.push(p))
-      if (seeds.size > 0) {
-        console.log(`[${region}] Initialized stack with ${seeds.size} seed(s)`)
-      }
-    }
-  } else {
-    // Resuming from existing state
-    const totalDryRestored = Array.from(dryPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
-    console.log(
-      `[CRAWLER] Resuming from saved state: ${existingStackSize} in stacks, ${existingVisited} visited, ${totalDryRestored} dry, ${existingSeedPool} in seed pool`
-    )
-    for (const region of ['europe', 'americas', 'asia', 'sea'] as RegionalCluster[]) {
-      const stackSize = crawlStackByRegion.get(region)!.length
-      const visited = visitedPuuidsByRegion.get(region)!.size
-      const dry = dryPuuidsByRegion.get(region)!.size
-      const seedPool = seedPoolByRegion.get(region)!.size
-      if (stackSize > 0 || visited > 0 || dry > 0 || seedPool > 0) {
-        console.log(`  ${region}: stack=${stackSize}, visited=${visited}, dry=${dry}, seedPool=${seedPool}`)
-      }
-    }
-    console.log()
-  }
-
-  // Show final state summary
-  const totalStackSize = Array.from(crawlStackByRegion.values()).reduce((sum, stack) => sum + stack.length, 0)
-  const _totalVisited = Array.from(visitedPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
-  const _totalDryRestored = Array.from(dryPuuidsByRegion.values()).reduce((sum, set) => sum + set.size, 0)
-  if (totalStackSize === 0) {
-    console.log('[CRAWLER] Warning: No PUUIDs in stacks. Will attempt to seed from pool or DB.')
-  }
-
-  const regions: RegionalCluster[] = ['europe', 'americas', 'asia', 'sea']
-
-  let totalMatchesScraped = 0
-  const startTime = Date.now()
-
-  // Track per-region stats
-  const regionStats = new Map<RegionalCluster, { matches: number; lastUpdate: number }>()
-  regions.forEach(r => regionStats.set(r, { matches: 0, lastUpdate: Date.now() }))
-
-  // DFS crawler for each region (runs in parallel)
-  const regionCrawlers = regions.map(async region => {
-    const stack = crawlStackByRegion.get(region)!
-    const visited = visitedPuuidsByRegion.get(region)!
-    const dryPuuids = dryPuuidsByRegion.get(region)!
-    const backtrackHistory = backtrackHistoryByRegion.get(region)!
-    const stats = regionStats.get(region)!
-
-    let lastBacktrackPuuid: string | null = null
-    let consecutiveEmptyDiscoveries = 0
-    let consecutiveDryPuuids = 0
-    let consecutiveBacktracks = 0
-
-    while (true) {
       try {
-        // If stack is empty, try to backtrack
-        if (stack.length === 0) {
-          if (backtrackHistory.length === 0) {
-            // Try to get new seeds from the seed pool
-            console.log(`[${region}] Stack and backtrack history empty, checking seed pool...`)
-            const poolSeeds = getRandomSeedsFromPool(region)
-
-            if (poolSeeds.length > 0) {
-              // Push seeds onto stack
-              poolSeeds.forEach(p => stack.push(p))
-              console.log(`[${region}] Added ${poolSeeds.length} seeds from pool to stack`)
-              consecutiveBacktracks = 0
-              continue
-            }
-
-            // Try fetching from DB (existing matches)
-            const dbSeeds = await fetchSeedsFromDB(region)
-            if (dbSeeds.length > 0) {
-              dbSeeds.forEach(p => stack.push(p))
-              // Also add to seed pool for future use
-              dbSeeds.forEach(p => seedPoolByRegion.get(region)!.add(p))
-              console.log(`[${region}] Added ${dbSeeds.length} seeds from DB to stack`)
-              consecutiveBacktracks = 0
-              continue
-            }
-
-            // No seeds from pool or DB - region is exhausted
-            // Clear both dry AND visited entries to allow re-checking players
-            console.log(`[${region}] No seeds available, clearing dry + visited entries and waiting 10s...`)
-
-            // Aggressively clear dry entries to allow re-checking old players
-            if (dryPuuids.size > 0) {
-              const toDelete = Array.from(dryPuuids).slice(0, Math.floor(dryPuuids.size * 0.8))
-              toDelete.forEach(p => dryPuuids.delete(p))
-              console.log(`[${region}] Cleared ${toDelete.length} dry entries (${dryPuuids.size} remaining)`)
-            }
-
-            // Also clear visited set to allow re-crawling for new matches
-            // Keep seed pool intact - it has good players we want to check
-            if (visited.size > 50) {
-              const visitedArray = Array.from(visited)
-              const toDelete = visitedArray.slice(0, Math.floor(visited.size * 0.5))
-              toDelete.forEach(p => visited.delete(p))
-              console.log(`[${region}] Cleared ${toDelete.length} visited entries (${visited.size} remaining) - will re-check for new matches`)
-            }
-
-            // Push seed pool back onto stack for re-checking
-            const seedPool = seedPoolByRegion.get(region)!
-            if (seedPool.size > 0) {
-              const seedsToRecheck = Array.from(seedPool).slice(0, 20)
-              seedsToRecheck.forEach(p => stack.push(p))
-              console.log(`[${region}] Re-queued ${seedsToRecheck.length} seeds from pool for re-checking`)
-            }
-
-            await sleep(10000)
-            consecutiveBacktracks = 0
-            continue
-          }
-
-          consecutiveBacktracks++
-
-          // If we've been backtracking too much, the region is saturated
-          if (consecutiveBacktracks >= 20) {
-            console.log(
-              `[${region}] Region appears saturated (${consecutiveBacktracks} backtracks), trying seed pool...`
-            )
-
-            // Try to get new seeds from seed pool first
-            const poolSeeds = getRandomSeedsFromPool(region)
-            if (poolSeeds.length > 0) {
-              poolSeeds.forEach(p => stack.push(p))
-              console.log(`[${region}] Added ${poolSeeds.length} seeds from pool to stack`)
-              consecutiveBacktracks = 0
-              continue
-            }
-
-            // Try DB seeds
-            const dbSeeds = await fetchSeedsFromDB(region)
-            if (dbSeeds.length > 0) {
-              dbSeeds.forEach(p => stack.push(p))
-              dbSeeds.forEach(p => seedPoolByRegion.get(region)!.add(p))
-              console.log(`[${region}] Added ${dbSeeds.length} seeds from DB to stack`)
-              consecutiveBacktracks = 0
-              continue
-            }
-
-            // No pool or DB seeds - clear dry + visited to allow re-checking
-            console.log(`[${region}] Region saturated, clearing dry + visited entries and waiting 10s...`)
-            
-            await sleep(10000)
-            
-            if (dryPuuids.size > 50) {
-              const toDelete = Array.from(dryPuuids).slice(0, Math.floor(dryPuuids.size * 0.8))
-              toDelete.forEach(p => dryPuuids.delete(p))
-              console.log(`[${region}] Cleared ${toDelete.length} dry entries (${dryPuuids.size} remaining)`)
-            }
-            
-            // Clear visited set to allow re-crawling
-            if (visited.size > 50) {
-              const visitedArray = Array.from(visited)
-              const toDelete = visitedArray.slice(0, Math.floor(visited.size * 0.5))
-              toDelete.forEach(p => visited.delete(p))
-              console.log(`[${region}] Cleared ${toDelete.length} visited entries (${visited.size} remaining)`)
-            }
-            
-            // Re-queue seeds for checking
-            const seedPool = seedPoolByRegion.get(region)!
-            if (seedPool.size > 0) {
-              const seedsToRecheck = Array.from(seedPool).slice(0, 20)
-              seedsToRecheck.forEach(p => stack.push(p))
-              console.log(`[${region}] Re-queued ${seedsToRecheck.length} seeds from pool`)
-            }
-            
-            consecutiveBacktracks = 0
-            continue
-          }
-
-          // Random backtracking: pick a random previous summoner
-          // Filter out any that are in dryPuuids
-          const validBacktracks = backtrackHistory.filter(p => !dryPuuids.has(p))
-
-          if (validBacktracks.length === 0) {
-            console.log(`[${region}] All backtrack history is exhausted, trying seed pool...`)
-            backtrackHistory.length = 0
-
-            // try to get new seeds from seed pool
-            const poolSeeds = getRandomSeedsFromPool(region)
-            if (poolSeeds.length > 0) {
-              poolSeeds.forEach(p => stack.push(p))
-              console.log(`[${region}] Added ${poolSeeds.length} seeds from pool to stack`)
-              consecutiveBacktracks = 0
-              continue
-            }
-
-            // try DB seeds
-            const dbSeeds = await fetchSeedsFromDB(region)
-            if (dbSeeds.length > 0) {
-              dbSeeds.forEach(p => stack.push(p))
-              dbSeeds.forEach(p => seedPoolByRegion.get(region)!.add(p))
-              console.log(`[${region}] Added ${dbSeeds.length} seeds from DB to stack`)
-              consecutiveBacktracks = 0
-              continue
-            }
-
-            await sleep(10000)
-            consecutiveBacktracks = 0
-            continue
-          }
-
-          let backtrackPuuid: string
-          let attempts = 0
-          do {
-            const randomIndex = Math.floor(Math.random() * validBacktracks.length)
-            backtrackPuuid = validBacktracks[randomIndex]
-            attempts++
-          } while (backtrackPuuid === lastBacktrackPuuid && attempts < 5 && validBacktracks.length > 1)
-
-          console.log(
-            `[${region}] Backtracking to ${backtrackPuuid.substring(0, 8)}... (${validBacktracks.length} valid in history)`
-          )
-
-          // Push the backtrack point onto the stack
-          stack.push(backtrackPuuid)
-          // Remove from visited so we re-crawl it to extract more PUUIDs
-          visited.delete(backtrackPuuid)
-          lastBacktrackPuuid = backtrackPuuid
-        }
-
-        // Pop next summoner from stack (LIFO = depth-first)
-        const currentPuuid = stack.pop()!
-
-        // Skip if already visited or known dry
-        if (visited.has(currentPuuid) || dryPuuids.has(currentPuuid)) {
-          continue
-        }
-
-        // Reset backtrack counter on successful pop
-        consecutiveBacktracks = 0
-
-        console.log(
-          `[${region}] Crawling ${currentPuuid.substring(0, 8)}... (stack: ${stack.length}, visited: ${visited.size}, dry: ${dryPuuids.size})`
-        )
-
-        // Crawl the summoner
-        const { stored, discovered, isDry } = await crawlSummoner(currentPuuid, region)
-
-        // Mark as visited
-        visited.add(currentPuuid)
-
-        // If dry (no recent ARAM matches or all matches exhausted), add to dry set
-        if (isDry) {
-          dryPuuids.add(currentPuuid)
-          consecutiveDryPuuids++
-
-          // Limit dry set size to prevent memory bloat (keep most recent 10k)
-          if (dryPuuids.size > 10000) {
-            const toDelete = Array.from(dryPuuids).slice(0, 1000)
-            toDelete.forEach(p => dryPuuids.delete(p))
-          }
-
-          // Reset consecutive counter after a threshold to continue exploration
-          if (consecutiveDryPuuids >= 20 && backtrackHistory.length > 50) {
-            backtrackHistory.length = 0
-            console.log(`[${region}] Cleared backtrack history to force new exploration`)
-            consecutiveDryPuuids = 0
-          }
-          continue
-        }
-
-        consecutiveDryPuuids = 0
-
-        // Add to backtrack history (for potential future backtracking) - only productive players
-        backtrackHistory.push(currentPuuid)
-        // Limit backtrack history size to prevent memory bloat
-        if (backtrackHistory.length > 500) {
-          backtrackHistory.shift()
-        }
-
-        // Update stats
-        if (stored > 0) {
-          totalMatchesScraped += stored
-          stats.matches += stored
-          stats.lastUpdate = Date.now()
-          console.log(
-            `[${region}] +${stored} matches | Region total: ${stats.matches} | Global total: ${totalMatchesScraped}`
-          )
-        }
-
-        // Push discovered summoners onto the stack
-        if (discovered.length > 0) {
-          console.log(`  → Discovered ${discovered.length} new summoners, pushing onto stack`)
-          consecutiveEmptyDiscoveries = 0
-          // Push in reverse order so the first discovered is processed first (typical DFS)
-          for (let i = discovered.length - 1; i >= 0; i--) {
-            if (!visited.has(discovered[i]) && !dryPuuids.has(discovered[i])) {
-              stack.push(discovered[i])
-            }
-          }
-          
-          // Aggressively prune stack if it gets too large (focus on storage instead of exploration)
-          if (stack.length > 300) {
-            const pruneCount = Math.floor(stack.length * 0.4)
-            stack.splice(0, pruneCount)
-            console.log(`  → Pruned ${pruneCount} entries from stack (was ${stack.length + pruneCount}, now ${stack.length})`)  
-          }
+        console.log(`[CRAWLER] Looking up ${summonerInput} on ${platform}...`)
+        const data = await getSummonerByRiotId(parts[0], parts[1], platform)
+        if (data) {
+          regionState.get(cluster)!.stack.push(data.summoner.puuid)
+          console.log(`[CRAWLER] Added ${summonerInput} to ${cluster}`)
         } else {
-          consecutiveEmptyDiscoveries++
-          console.log(`  → No new summoners discovered (${consecutiveEmptyDiscoveries} consecutive)`)
-
-          // If we've had too many empty discoveries, clear part of backtrack history
-          // to force exploration of different branches
-          if (consecutiveEmptyDiscoveries >= 10 && backtrackHistory.length > 100) {
-            const toRemove = Math.floor(backtrackHistory.length * 0.3)
-            backtrackHistory.splice(0, toRemove)
-            console.log(`[${region}] Pruned ${toRemove} old entries from backtrack history to force new exploration`)
-            consecutiveEmptyDiscoveries = 0
-          }
+          console.log(`[CRAWLER] ${summonerInput} not found`)
         }
       } catch (error: any) {
-        console.error(`[${region}] Crawler error:`, error?.message || error)
+        console.error(`[CRAWLER] Error looking up ${summonerInput}:`, error?.message || error)
       }
-
-      // No sleep - rate limiter handles pacing
     }
-  })
 
-  // Periodic summary logger and state saver
-  const statsLogger = async () => {
-    while (true) {
-      await sleep(300000) // Report every 5 minutes to reduce I/O
-      const runtime = Date.now() - startTime
-      const avgRate = totalMatchesScraped / (runtime / 1000 / 60)
-      const acceptedPatches = await getCurrentPatch()
-
-      console.log(`\n━━━ Summary (${formatDuration(runtime)}) ━━━`)
-      console.log(
-        `Patches: ${acceptedPatches.join(', ')} | Total: ${totalMatchesScraped} matches | Rate: ${avgRate.toFixed(1)}/min`
-      )
-      console.log(`Stats buffer: ${getStatsBufferCount()} pending`)
-
-      let totalInStacks = 0
-      let totalVisited = 0
-      let totalDry = 0
-      for (const region of regions) {
-        const stackSize = crawlStackByRegion.get(region)!.length
-        const visited = visitedPuuidsByRegion.get(region)!.size
-        const dry = dryPuuidsByRegion.get(region)!.size
-        const stats = regionStats.get(region)!
-        totalInStacks += stackSize
-        totalVisited += visited
-        totalDry += dry
-
-        if (stackSize > 0 || visited > 0) {
-          const regionRate = stats.matches / (runtime / 1000 / 60)
-          const hitRate = visited > 0 ? (((visited - dry) / visited) * 100).toFixed(0) : '0'
-          console.log(
-            `[${region.toUpperCase()}] Stack: ${stackSize} | Visited: ${visited} | Dry: ${dry} (${hitRate}% productive) | Matches: ${stats.matches} (${regionRate.toFixed(1)}/min)`
-          )
-        }
-      }
-      console.log(`Active: ${totalInStacks} in stacks | ${totalVisited} visited | ${totalDry} dry`)
-      console.log()
-
-      // Flush stats buffer if needed
-      await maybeFlushStats()
-
-      // Run cleanup if needed
-      await maybeRunCleanup()
-
-      // Save state periodically (match cache only saved on shutdown)
-      saveState()
-    }
+    console.log()
   }
 
-  // Run all crawlers and stats logger in parallel
-  await Promise.all([...regionCrawlers, statsLogger()])
-}
-
-// helper to format duration
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-
-  if (hours > 0) {
-    return `${hours}h ${minutes % 60}m`
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds % 60}s`
-  } else {
-    return `${seconds}s`
+  // check we have something to crawl
+  const totalStack = Array.from(regionState.values()).reduce((sum, s) => sum + s.stack.length, 0)
+  if (totalStack === 0) {
+    console.log('[CRAWLER] No seeds available. Exiting.')
+    process.exit(0)
   }
+
+  startTime = Date.now()
+
+  // run crawlers in parallel
+  await Promise.all([
+    ...REGIONS.map(region => runRegionCrawler(region)),
+    runStatsLogger(),
+  ])
 }
 
-// helper to sleep
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+// ══════════════════════════════════════════════════════════════════════════════
+// shutdown handlers
+// ══════════════════════════════════════════════════════════════════════════════
 
-// Graceful shutdown handler
-process.on('SIGINT', async () => {
+async function shutdown(): Promise<void> {
   console.log('\n\n[CRAWLER] Shutting down gracefully...')
   console.log('[CRAWLER] Flushing stats buffer...')
   await flushStatsBatch()
   console.log('[CRAWLER] Flushing rate limits...')
   await flushRateLimits()
-  console.log('[CRAWLER] Saving state and caches...')
+  console.log('[CRAWLER] Saving state...')
   saveState()
   saveMatchCache()
-  console.log('[CRAWLER] State saved to scraper-state.json')
-  console.log('[CRAWLER] Match cache saved to match-cache.json')
+  console.log('[CRAWLER] Done.')
   process.exit(0)
-})
+}
 
-process.on('SIGTERM', async () => {
-  console.log('\n\n[CRAWLER] Shutting down gracefully...')
-  console.log('[CRAWLER] Flushing stats buffer...')
-  await flushStatsBatch()
-  console.log('[CRAWLER] Flushing rate limits...')
-  await flushRateLimits()
-  console.log('[CRAWLER] Saving state and caches...')
-  saveState()
-  saveMatchCache()
-  console.log('[CRAWLER] State saved to scraper-state.json')
-  console.log('[CRAWLER] Match cache saved to match-cache.json')
-  process.exit(0)
-})
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)
 
-// start the scraper
 main().catch(error => {
   console.error('[CRAWLER] Fatal error:', error)
   process.exit(1)

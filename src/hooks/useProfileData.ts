@@ -81,6 +81,13 @@ export function useProfileData({
 
       const data: ProfileData = await response.json()
 
+      // debug: check if PIG scores are being returned
+      const matchesWithPig = data.matches.filter(m => {
+        const p = m.info.participants.find(p => p.puuid === puuid)
+        return p?.pigScore != null
+      })
+      console.log(`[useProfileData] Refresh complete: ${data.matches.length} matches, ${matchesWithPig.length} with PIG scores`)
+
       setSummary(data.summary)
       setChampions(data.champions)
       setMatches(data.matches)

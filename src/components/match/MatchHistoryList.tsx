@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { MatchData } from '@/types/match'
 import MatchHistoryItem from '@/components/match/MatchHistoryItem'
 import ChampionFilter from '@/components/filters/ChampionFilter'
@@ -38,6 +38,27 @@ export default function MatchHistoryList({
     setMatches(initialMatches)
     setHasMore(initialMatches.length >= 20)
   }, [initialMatches])
+
+  // update match pig scores when enriched (from MatchDetails callback)
+  const handleMatchEnriched = useCallback((matchId: string, pigScores: Record<string, number | null>) => {
+    setMatches(prev => prev.map(match => {
+      if (match.metadata.matchId !== matchId) return match
+      
+      // update participants with new pig scores
+      const updatedParticipants = match.info.participants.map(p => ({
+        ...p,
+        pigScore: pigScores[p.puuid] ?? p.pigScore,
+      }))
+      
+      return {
+        ...match,
+        info: {
+          ...match.info,
+          participants: updatedParticipants,
+        },
+      }
+    }))
+  }, [])
 
   // filter out matches with no participants at all (shouldn't happen, but safety check)
   const validMatches = matches.filter(match => match.info.participants && match.info.participants.length > 0)
@@ -118,6 +139,7 @@ export default function MatchHistoryList({
                   region={region}
                   ddragonVersion={ddragonVersion}
                   championNames={championNames}
+                  onMatchEnriched={handleMatchEnriched}
                 />
               ))}
             </ul>

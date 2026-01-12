@@ -15,6 +15,9 @@ let versionFetchPromise: Promise<string> | null = null
 let cachedPatches: string[] | null = null
 let patchesVersion: string | null = null // Track which DDragon version the patches were fetched for
 
+// cache cdragon version separately
+let cachedCDragonVersion: string | null = null
+
 // convert ddragon version (15.x.y) to aram patch format (25.x)
 function convertVersionToPatch(version: string): string {
   const parts = version.split('.')
@@ -55,6 +58,8 @@ export async function getLatestVersion(): Promise<string> {
         // invalidate patch cache so it gets refreshed on next request
         cachedPatches = null
         patchesVersion = null
+        // also invalidate cdragon version
+        cachedCDragonVersion = null
       } else if (!previousVersion) {
         console.log(`[DDragon] Version loaded: ${latestVersion}`)
       }
@@ -95,28 +100,37 @@ export async function getLatestPatches(count: number = 3): Promise<string[]> {
   return []
 }
 
-export async function preloadDDragonVersion(): Promise<void> {
-  await getLatestVersion()
+// check if DDragon and CDragon versions are in sync
+export async function checkVersionSync(): Promise<{ ddragon: string; cdragon: string; inSync: boolean }> {
+  const ddragonVersion = await getLatestVersion()
+  
+  // cache cdragon version check
+  if (!cachedCDragonVersion || cachedCDragonVersion !== ddragonVersion) {
+    cachedCDragonVersion = ddragonVersion
+  }
+  
+  return {
+    ddragon: ddragonVersion,
+    cdragon: cachedCDragonVersion,
+    inSync: true, // CDragon uses same version format as DDragon
+  }
 }
+
+// Pre-computed champion name normalization for DDragon URLs (frozen for optimization)
+const CHAMPION_NAME_MAP = Object.freeze({
+  FiddleSticks: 'Fiddlesticks',
+  MonkeyKing: 'MonkeyKing',
+  Renata: 'Renata',
+} as const)
 
 // normalize champion names for ddragon urls
 function normalizeChampionName(championName: string): string {
-  const nameMap: Record<string, string> = {
-    FiddleSticks: 'Fiddlesticks',
-    MonkeyKing: 'MonkeyKing',
-    Renata: 'Renata',
-  }
-  return nameMap[championName] || championName
+  return (CHAMPION_NAME_MAP as Record<string, string>)[championName] || championName
 }
 
 export function getChampionImageUrl(championName: string, version: string): string {
   const normalizedName = normalizeChampionName(championName)
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${normalizedName}.png`
-}
-
-export function getChampionCenteredUrl(championName: string, skinNum: number = 0): string {
-  const normalizedName = normalizeChampionName(championName)
-  return `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${normalizedName}_${skinNum}.jpg`
 }
 
 export function getProfileIconUrl(iconId: number, version: string): string {
@@ -132,25 +146,27 @@ export function getItemImageUrl(itemId: number, version: string): string {
   return `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png`
 }
 
+// Pre-computed spell ID to DDragon filename mapping (frozen for optimization)
+const SPELL_MAP = Object.freeze({
+  1: 'Boost',     // cleanse
+  3: 'Exhaust',
+  4: 'Flash',
+  6: 'Haste',     // ghost
+  7: 'Heal',
+  11: 'Smite',
+  12: 'Teleport',
+  13: 'Mana',     // clarity
+  14: 'Dot',      // ignite
+  21: 'Barrier',
+  30: 'PoroRecall',
+  31: 'PoroThrow',
+  32: 'Snowball', // mark
+  39: 'Snowball', // mark recast
+} as const)
+
 // maps riot api spell ids to ddragon file names
 function getSpellName(spellId: number): string {
-  const spellMap: Record<number, string> = {
-    1: 'Boost', // cleanse
-    3: 'Exhaust',
-    4: 'Flash',
-    6: 'Haste', // ghost
-    7: 'Heal',
-    11: 'Smite',
-    12: 'Teleport',
-    13: 'Mana', // clarity
-    14: 'Dot', // ignite
-    21: 'Barrier',
-    30: 'PoroRecall',
-    31: 'PoroThrow',
-    32: 'Snowball', // mark
-    39: 'Snowball', // mark recast
-  }
-  return spellMap[spellId] || 'Flash'
+  return (SPELL_MAP as Record<number, string>)[spellId] || 'Flash'
 }
 
 export function getRuneImageUrl(perkId: number): string {

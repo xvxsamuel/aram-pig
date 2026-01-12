@@ -1,14 +1,14 @@
-name: Fetch Item Data
+name: Update Items Data
 
 on:
-  # schedule disabled until fetch-items script is implemented
-  # schedule:
-  #   - cron: '0 6 * * 4'
+  # run on new patch (weekly check)
+  schedule:
+    - cron: '0 8 * * 3' # Wednesday 8am UTC
   # allow manual trigger
   workflow_dispatch:
 
 jobs:
-  fetch-items:
+  update-items:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -25,27 +25,39 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Fetch latest item data
-        run: npm run fetch-items
+      - name: Update items from CDragon
+        id: update
+        run: |
+          npx tsx scripts/update-items.ts
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet src/data/; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
+          if [ "${{ steps.update.outputs.exit_code }}" = "0" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Pull Request
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
-          commit-message: 'chore: update static riot data'
-          title: 'Update static Riot data (items, runes, spells)'
+          commit-message: 'chore: update items.json from Community Dragon'
+          title: 'Update Items Data (CDragon)'
           body: |
-            Automated update of static data files from Riot Data Dragon.
-
-            This PR was created automatically by the weekly fetch-items workflow.
-          branch: update-static-data
+            Automated update of items.json from Community Dragon.
+            
+            This PR was created automatically when a new patch was detected.
+            
+            Changes may include:
+            - New items added
+            - Item stats/costs updated
+            - Removed/disabled items
+            
+            Please review the changes before merging.
+          branch: update-items-data
           delete-branch: true
+          labels: 'data, automated'

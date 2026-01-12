@@ -30,17 +30,19 @@ export async function getChampionStats(puuid: string, profileData?: Record<strin
   // use cached data if available
   const champData = profileData?.champions as Record<string, Record<string, number>> | undefined
   if (champData && Object.keys(champData).length > 0) {
-    return Object.entries(champData).map(([championName, stats]) => ({
-      championName,
-      games: stats.games,
-      wins: stats.wins,
-      losses: stats.games - stats.wins,
-      kills: Math.round(stats.avgKills * stats.games),
-      deaths: Math.round(stats.avgDeaths * stats.games),
-      assists: Math.round(stats.avgAssists * stats.games),
-      totalDamage: Math.round(stats.avgDamage * stats.games),
-      averagePigScore: stats.avgPigScore ?? null,
-    }))
+    return Object.entries(champData)
+      .filter(([, stats]) => stats.games > 0 && stats.avgKills !== undefined)
+      .map(([championName, stats]) => ({
+        championName,
+        games: stats.games || 0,
+        wins: stats.wins || 0,
+        losses: (stats.games || 0) - (stats.wins || 0),
+        kills: Math.round((stats.avgKills || 0) * (stats.games || 1)),
+        deaths: Math.round((stats.avgDeaths || 0) * (stats.games || 1)),
+        assists: Math.round((stats.avgAssists || 0) * (stats.games || 1)),
+        totalDamage: Math.round((stats.avgDamage || 0) * (stats.games || 1)),
+        averagePigScore: stats.avgPigScore ?? null,
+      }))
   }
 
   // fallback: aggregate from matches
@@ -95,18 +97,22 @@ export async function getChampionStats(puuid: string, profileData?: Record<strin
     }
   }
 
-  return Array.from(championMap.entries()).map(([championName, stats]) => ({
-    championName,
-    games: stats.games,
-    wins: stats.wins,
-    losses: stats.games - stats.wins,
-    kills: stats.kills,
-    deaths: stats.deaths,
-    assists: stats.assists,
-    totalDamage: stats.totalDamage,
-    averagePigScore:
-      stats.pigScores.length > 0 ? stats.pigScores.reduce((a, b) => a + b, 0) / stats.pigScores.length : null,
-  }))
+  // Convert map to array with pre-computed values
+  const result: ChampionStats[] = []
+  for (const [championName, stats] of championMap.entries()) {
+    result.push({
+      championName,
+      games: stats.games,
+      wins: stats.wins,
+      losses: stats.games - stats.wins,
+      kills: stats.kills,
+      deaths: stats.deaths,
+      assists: stats.assists,
+      totalDamage: stats.totalDamage,
+      averagePigScore: stats.pigScores.length > 0 ? stats.pigScores.reduce((a, b) => a + b, 0) / stats.pigScores.length : null,
+    })
+  }
+  return result
 }
 
 // calculate profile summary from champion stats
@@ -127,20 +133,31 @@ export function calculateSummary(champions: ChampionStats[], longestWinStreak: n
     }
   }
 
-  const totalGames = champions.reduce((sum, c) => sum + c.games, 0)
-  const wins = champions.reduce((sum, c) => sum + c.wins, 0)
-  const totalKills = champions.reduce((sum, c) => sum + c.kills, 0)
-  const totalDeaths = champions.reduce((sum, c) => sum + c.deaths, 0)
-  const totalAssists = champions.reduce((sum, c) => sum + c.assists, 0)
+  // Single pass to calculate all totals
+  let totalGames = 0, wins = 0, totalKills = 0, totalDeaths = 0, totalAssists = 0
+  let totalPigScoreWeight = 0, weightedPigScoreSum = 0
+  let mostPlayedChampion = ''
+  let maxGames = 0
 
-  const gamesWithPigScore = champions.filter(c => c.averagePigScore !== null)
-  const totalPigScoreWeight = gamesWithPigScore.reduce((sum, c) => sum + c.games, 0)
-  const averagePigScore =
-    totalPigScoreWeight > 0
-      ? gamesWithPigScore.reduce((sum, c) => sum + c.averagePigScore! * c.games, 0) / totalPigScoreWeight
-      : null
+  for (const champ of champions) {
+    totalGames += champ.games
+    wins += champ.wins
+    totalKills += champ.kills
+    totalDeaths += champ.deaths
+    totalAssists += champ.assists
+    
+    if (champ.averagePigScore !== null) {
+      totalPigScoreWeight += champ.games
+      weightedPigScoreSum += champ.averagePigScore * champ.games
+    }
+    
+    if (champ.games > maxGames) {
+      maxGames = champ.games
+      mostPlayedChampion = champ.championName
+    }
+  }
 
-  const mostPlayedChampion = [...champions].sort((a, b) => b.games - a.games)[0]?.championName || ''
+  const averagePigScore = totalPigScoreWeight > 0 ? weightedPigScoreSum / totalPigScoreWeight : null
 
   return {
     totalGames,
@@ -227,8 +244,8 @@ function transformToMatchDataParticipant(
     tripleKills: stats?.tripleKills || 0,
     quadraKills: stats?.quadraKills || 0,
     pentaKills: stats?.pentaKills || 0,
-    pigScore: (matchData?.pigScore as number) ?? undefined,
-    pigScoreBreakdown: (matchData?.pigScoreBreakdown as Record<string, unknown>) ?? undefined,
+    pigScore: matchData?.pigScore != null ? (matchData.pigScore as number) : undefined,
+    pigScoreBreakdown: matchData?.pigScoreBreakdown != null ? (matchData.pigScoreBreakdown as Record<string, unknown>) : undefined,
     // include timeline-derived data for build tab
     buildOrder: (matchData?.buildOrder as string) ?? undefined,
     firstBuy: (matchData?.firstBuy as string) ?? undefined,
@@ -246,9 +263,10 @@ export async function getMatchesAsMatchData(
 ): Promise<{ matches: MatchData[]; hasMore: boolean }> {
   const nameOverride = currentName ? { puuid, gameName: currentName.gameName, tagLine: currentName.tagLine } : undefined
 
+  // Single optimized query with JOIN - fetch player matches and associated match data in one call
   const { data: playerMatches } = await supabase
     .from('summoner_matches')
-    .select('match_id, game_creation')
+    .select('match_id, game_creation, matches!inner(game_duration)')
     .eq('puuid', puuid)
     .order('game_creation', { ascending: false })
     .range(offset, offset + limit - 1)
@@ -259,33 +277,37 @@ export async function getMatchesAsMatchData(
 
   const matchIds = playerMatches.map(m => m.match_id)
 
-  const { data: matchRecords } = await supabase
-    .from('matches')
-    .select('match_id, game_creation, game_duration')
+  // Select only columns used by transformToMatchDataParticipant
+  // match_data JSONB is large but needed for items, runes, spells, pigScore, timeline data
+  const { data: participants } = await supabase
+    .from('summoner_matches')
+    .select('puuid, match_id, champion_name, win, riot_id_game_name, riot_id_tagline, match_data')
     .in('match_id', matchIds)
 
-  const { data: participants } = await supabase.from('summoner_matches').select('*').in('match_id', matchIds)
-
-  if (!matchRecords || !participants) {
+  if (!participants) {
     return { matches: [], hasMore: false }
   }
 
+  // Build match objects - matchData already includes game_duration from JOIN
   const matches: MatchData[] = matchIds
     .map(matchId => {
-      const match = matchRecords.find(m => m.match_id === matchId)
+      const playerMatch = playerMatches.find(m => m.match_id === matchId)
       const matchParticipants = participants.filter(p => p.match_id === matchId)
 
-      if (!match || matchParticipants.length === 0) return null
+      if (!playerMatch || matchParticipants.length === 0) return null
+
+      // Extract game_duration from the joined matches table
+      const gameDuration = (playerMatch.matches as any)?.game_duration || 0
 
       return {
         metadata: {
-          matchId: match.match_id,
+          matchId: matchId,
           participants: matchParticipants.map(p => p.puuid),
         },
         info: {
-          gameCreation: match.game_creation,
-          gameDuration: match.game_duration,
-          gameEndTimestamp: match.game_creation + match.game_duration * 1000,
+          gameCreation: playerMatch.game_creation,
+          gameDuration,
+          gameEndTimestamp: playerMatch.game_creation + gameDuration * 1000,
           gameMode: 'ARAM',
           gameVersion: '',
           queueId: 450,
@@ -370,13 +392,18 @@ export function calculateRecentlyPlayedWith(
     }
   }
 
-  return Array.from(playerMap.values())
-    .filter(p => p.games >= 2)
-    .sort((a, b) => {
-      if (b.games !== a.games) return b.games - a.games
-      return b.wins / b.games - a.wins / a.games
-    })
-    .slice(0, 10)
+  // Filter and sort in one pass, limit early
+  const players: RecentPlayer[] = []
+  for (const player of playerMap.values()) {
+    if (player.games >= 2) players.push(player)
+  }
+  
+  players.sort((a, b) => {
+    if (b.games !== a.games) return b.games - a.games
+    return b.wins / b.games - a.wins / a.games
+  })
+  
+  return players.slice(0, 10)
 }
 
 /**
@@ -427,9 +454,10 @@ export async function getUpdateStatus(puuid: string): Promise<{ hasActiveJob: bo
  * Checks ALL matches to find the longest consecutive win streak (excluding remakes)
  */
 export async function getLongestWinStreak(puuid: string): Promise<number> {
+  // Only fetch win and isRemake from match_data to reduce I/O
   const { data } = await supabase
     .from('summoner_matches')
-    .select('win, match_data')
+    .select('win, match_data->isRemake')
     .eq('puuid', puuid)
     .order('game_creation', { ascending: true }) // oldest first to calculate streak chronologically
 
@@ -440,7 +468,8 @@ export async function getLongestWinStreak(puuid: string): Promise<number> {
 
   for (const match of data) {
     // skip remakes - they don't count for winstreak
-    if ((match.match_data as any)?.isRemake) continue
+    // match_data->isRemake returns the value directly as 'isRemake' column
+    if ((match as any).isRemake) continue
     
     if (match.win) {
       currentStreak++

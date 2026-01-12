@@ -2,20 +2,9 @@
 
 import Image from 'next/image'
 import clsx from 'clsx'
-import { getWinrateColor } from '@/lib/ui'
-import AugmentTooltip from '@/components/ui/AugmentTooltip'
+import { getPixelSize, withIconStats, type IconSizePreset } from '@/lib/ui'
+import Tooltip from '@/components/ui/Tooltip'
 import augments from '@/data/augments.json'
-
-// size presets in pixels
-const SIZE_MAP = {
-  xs: 20,
-  sm: 28,
-  md: 32,
-  lg: 40,
-  xl: 48,
-} as const
-
-type SizePreset = keyof typeof SIZE_MAP
 
 // tier border colors using our theme colors
 const TIER_BORDER_COLORS: Record<string, string> = {
@@ -28,7 +17,7 @@ interface AugmentIconProps {
   /** augment name from the game */
   augmentName: string
   /** size preset or custom pixel size */
-  size?: SizePreset | number
+  size?: IconSizePreset | number
   /** whether to show augment tooltip on hover (default: true) */
   showTooltip?: boolean
   /** optional winrate to display below icon */
@@ -54,8 +43,7 @@ export default function AugmentIcon({
   const tier = augmentData?.tier || 'Silver'
   const iconName = augmentData?.icon
 
-  const pixelSize = typeof size === 'number' ? size : SIZE_MAP[size]
-  const showStats = winrate !== undefined || games !== undefined
+  const pixelSize = getPixelSize(size)
 
   // handle missing icon
   if (!iconName) {
@@ -100,31 +88,14 @@ export default function AugmentIcon({
   )
 
   const content = showTooltip ? (
-    <AugmentTooltip augmentName={augmentName}>
+    <Tooltip id={augmentName} type="augment">
       {imageElement}
-    </AugmentTooltip>
+    </Tooltip>
   ) : (
     imageElement
   )
 
-  // wrap with stats if needed
-  if (showStats) {
-    return (
-      <div className="flex flex-col items-center">
-        {content}
-        {winrate !== undefined && (
-          <div className="text-xs font-bold mt-1" style={{ color: getWinrateColor(winrate) }}>
-            {winrate.toFixed(1)}%
-          </div>
-        )}
-        {games !== undefined && (
-          <div className="text-[10px] text-text-muted">{games.toLocaleString()}</div>
-        )}
-      </div>
-    )
-  }
-
-  return content
+  return withIconStats(content, { winrate, games })
 }
 
 /**
@@ -134,10 +105,10 @@ export function EmptyAugmentSlot({
   size = 'md',
   className = '',
 }: {
-  size?: SizePreset | number
+  size?: IconSizePreset | number
   className?: string
 }) {
-  const pixelSize = typeof size === 'number' ? size : SIZE_MAP[size]
+  const pixelSize = getPixelSize(size)
   return (
     <div
       className={clsx('rounded bg-abyss-800/50 border border-gold-dark/50', className)}

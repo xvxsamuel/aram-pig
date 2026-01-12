@@ -12,6 +12,10 @@ export {
 
 export { cleanWikiMarkup } from './wiki-markup'
 
+export { KEYWORD_ICON_MAP, getKeywordIcon, MARKER_REGEX, renderNestedMarkers } from './tooltip-renderer'
+
+export { ICON_SIZE_MAP, getPixelSize, IconStats, withIconStats, type IconSizePreset } from './icon-utils'
+
 export {
   getChampionTier,
   getTierConfig,

@@ -6,7 +6,7 @@ import clsx from 'clsx'
 import { motion } from 'motion/react'
 import { getItemImageUrl } from '@/lib/ddragon'
 import { getPigScoreColor } from '@/lib/ui'
-import ItemTooltip from '@/components/ui/ItemTooltip'
+import Tooltip from '@/components/ui/Tooltip'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import { RuneDisplay } from '@/components/game/RuneDisplay'
 import { SummonerSpellDisplay } from '@/components/game/SummonerSpellDisplay'
@@ -194,7 +194,7 @@ export function BuildTab({
                       {isFinished ? (
                         <ScoredItemGlow score={itemScore}>
                           <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 relative">
-                            <ItemTooltip itemId={itemId}>
+                            <Tooltip id={itemId} type="item">
                               <Image
                                 src={getItemImageUrl(itemId, ddragonVersion)}
                                 alt={`Item ${itemId}`}
@@ -203,12 +203,12 @@ export function BuildTab({
                                 className="w-full h-full object-cover"
                                 unoptimized
                               />
-                            </ItemTooltip>
+                            </Tooltip>
                           </div>
                         </ScoredItemGlow>
                       ) : (
                         <div className="w-8 h-8 rounded overflow-hidden bg-abyss-800 relative border border-gold-dark/50">
-                          <ItemTooltip itemId={itemId}>
+                          <Tooltip id={itemId} type="item">
                             <Image
                               src={getItemImageUrl(itemId, ddragonVersion)}
                               alt={`Item ${itemId}`}
@@ -217,7 +217,7 @@ export function BuildTab({
                               className="w-full h-full object-cover"
                               unoptimized
                             />
-                          </ItemTooltip>
+                          </Tooltip>
                         </div>
                       )}
                     </SimpleTooltip>
@@ -479,7 +479,7 @@ export function BuildTab({
                     {coreItemIds.map((itemId, idx) => (
                       <div key={idx} className="flex items-center gap-2">
                         {idx > 0 && <span className="text-gold-light/50 text-sm">→</span>}
-                        <ItemTooltip itemId={itemId}>
+                        <Tooltip id={itemId} type="item">
                           <div className="w-9 h-9 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
                             <Image
                               src={getItemImageUrl(itemId, ddragonVersion)}
@@ -490,7 +490,7 @@ export function BuildTab({
                               unoptimized
                             />
                           </div>
-                        </ItemTooltip>
+                        </Tooltip>
                       </div>
                     ))}
                   </div>
@@ -521,7 +521,7 @@ export function BuildTab({
                 <div className="flex flex-col gap-2 h-full">
                   <div className="flex gap-1.5 items-center">
                     {starterItems.map((item, idx) => (
-                      <ItemTooltip key={idx} itemId={item.itemId}>
+                      <Tooltip key={idx} id={item.itemId} type="item">
                         <div className="w-9 h-9 rounded overflow-hidden bg-abyss-800 border border-gold-dark/30">
                           <Image
                             src={getItemImageUrl(item.itemId, ddragonVersion)}
@@ -532,7 +532,7 @@ export function BuildTab({
                             unoptimized
                           />
                         </div>
-                      </ItemTooltip>
+                      </Tooltip>
                     ))}
                   </div>
                   {startingDetails?.playerWinrate !== undefined && (

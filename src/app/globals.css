@@ -196,3 +196,141 @@ input::placeholder {
   transition: opacity 0.2s ease;
   pointer-events: none;
 }
+
+@keyframes holographic-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes holographic-text-pan {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.animate-holographic {
+  transition: color 0.15s ease;
+  display: inline-block;
+}
+
+/* text animation */
+.group:not([data-active="true"]):hover .animate-holographic {
+  background-image: 
+    linear-gradient(to bottom, rgba(255,255,255,0.4), transparent 60%),
+    linear-gradient(
+      90deg,
+      #ff9ff3, #fd79a8, #a29bfe, #74b9ff, #ffeaa7,
+      #ff9ff3, #fd79a8, #a29bfe, #74b9ff, #ffeaa7
+    );
+  background-size: 100% 100%, 200% auto !important;
+  color: transparent !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  animation: holographic-text-pan 8s ease-in-out infinite !important;
+  filter: brightness(1.2) drop-shadow(0 0 5px rgba(255,159,243,0.3));
+}
+
+/* base style overrides */
+.bg-holographic-active, 
+.bg-holographic-hover,
+.bg-holographic-badge {
+  position: relative;
+  z-index: 0; 
+  /* the parent Link has overflow-hidden */
+}
+
+.bg-holographic-badge {
+  color: #1f2937;
+  font-weight: 800;
+  text-shadow: none;
+  overflow: hidden;
+}
+
+.bg-holographic-badge::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250%; 
+  padding-bottom: 250%; 
+  background-image: 
+    radial-gradient(circle at 70% 70%, rgba(255,255,255,0.5), transparent 50%),
+    conic-gradient(
+      from 0deg,
+      #ff9ff3, 
+      #fd79a8, 
+      #a29bfe, 
+      #74b9ff, 
+      #ffeaa7, 
+      #ff9ff3
+    );
+  transform-origin: center;
+  animation: holographic-spin 4s linear infinite;
+  filter: blur(8px) contrast(1.2) brightness(1.1);
+  z-index: -1;
+}
+
+/* active state */
+.bg-holographic-active {
+  background: transparent !important;
+  color: #1f2937 !important; 
+  text-shadow: none;
+  font-weight: 700;
+}
+
+.bg-holographic-active img {
+  filter: brightness(0) invert(0.2) !important;
+}
+
+.bg-holographic-active::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250%;
+  padding-bottom: 250%;
+  background-image: 
+    radial-gradient(circle at 70% 70%, rgba(255,255,255,0.4), transparent 50%),
+    conic-gradient(
+      from 0deg,
+      #ff9ff3, 
+      #fd79a8, 
+      #a29bfe, 
+      #74b9ff, 
+      #ffeaa7, 
+      #ff9ff3
+    );
+  transform-origin: center;
+  animation: holographic-spin 6s linear infinite;
+  filter: blur(20px) contrast(1.2) brightness(1.1);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* hover state */
+.bg-holographic-hover::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250%;
+  padding-bottom: 250%;
+  background-image: conic-gradient(
+    from 180deg,
+    rgba(255,159,243,0.3), 
+    rgba(162,155,254,0.3), 
+    rgba(116,185,255,0.3), 
+    rgba(255,234,167,0.3),
+    rgba(255,159,243,0.3)
+  );
+  transform-origin: center;
+  animation: holographic-spin 8s linear infinite reverse;
+  filter: blur(20px);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.bg-holographic-hover:hover::before {
+  opacity: 1;
+}

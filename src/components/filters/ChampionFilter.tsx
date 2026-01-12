@@ -95,8 +95,8 @@ export default function ChampionFilter({ value, onChange, championNames, ddragon
                 <button
                   key={champion}
                   onClick={() => handleSelect(champion)}
-                  className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gold-light/20 transition-colors flex items-center gap-2 ${
-                    value === champion ? ' bg-accent-light/20' : 'text-white'
+                  className={`w-full px-3 py-1.5 text-left text-xs transition-colors flex items-center gap-2 ${
+                    value === champion ? 'bg-accent-light/20 hover:brightness-150' : 'text-white hover:bg-gold-light/20'
                   }`}
                 >
                   <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 border border-gold-dark/30">

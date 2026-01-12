@@ -41,7 +41,7 @@ export async function fetchChampionNames(version: string): Promise<Record<string
 export function getChampionDisplayName(apiName: string, championNames: Record<string, string>): string {
   if (championNames[apiName]) return championNames[apiName]
 
-  // case-insensitive fallback for legacy ids (e.g. fiddlesticks -> fiddlesticks)
+  // case-insensitive fallback
   const lowerApiName = apiName.toLowerCase()
   const foundKey = Object.keys(championNames).find(k => k.toLowerCase() === lowerApiName)
   if (foundKey) return championNames[foundKey]

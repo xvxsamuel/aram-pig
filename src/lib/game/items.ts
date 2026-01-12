@@ -1,5 +1,4 @@
 // item utilities - re-exports from modular items/ directory
-// this file maintains backward compatibility with existing imports
 
 // re-export all from the modular items/ directory
 export {

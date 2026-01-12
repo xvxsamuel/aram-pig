@@ -3,19 +3,8 @@
 import Image from 'next/image'
 import clsx from 'clsx'
 import { getItemImageUrl } from '@/lib/ddragon'
-import { getWinrateColor } from '@/lib/ui'
-import ItemTooltip from '@/components/ui/ItemTooltip'
-
-// size presets in pixels
-const SIZE_MAP = {
-  xs: 20,
-  sm: 28,
-  md: 32,
-  lg: 40,
-  xl: 48,
-} as const
-
-type SizePreset = keyof typeof SIZE_MAP
+import { getPixelSize, withIconStats, type IconSizePreset } from '@/lib/ui'
+import Tooltip from '@/components/ui/Tooltip'
 
 interface ItemIconProps {
   /** item ID from Riot API */
@@ -23,14 +12,14 @@ interface ItemIconProps {
   /** DDragon version for image URL */
   ddragonVersion: string
   /** size preset or custom pixel size */
-  size?: SizePreset | number
+  size?: IconSizePreset | number
   /** whether to show item tooltip on hover (default: true) */
   showTooltip?: boolean
   /** optional winrate to display below icon */
   winrate?: number
   /** optional games count to display below icon */
   games?: number
-  /** additional classes for the container */
+  /** react classes */
   className?: string
   /** border style - 'default' has gold border, 'none' has no border */
   border?: 'default' | 'none'
@@ -48,7 +37,7 @@ export default function ItemIcon({
 }: ItemIconProps) {
   // handle invalid item IDs
   if (!itemId || itemId <= 0) {
-    const pixelSize = typeof size === 'number' ? size : SIZE_MAP[size]
+    const pixelSize = getPixelSize(size)
     return (
       <div
         className={clsx(
@@ -61,8 +50,7 @@ export default function ItemIcon({
     )
   }
 
-  const pixelSize = typeof size === 'number' ? size : SIZE_MAP[size]
-  const showStats = winrate !== undefined || games !== undefined
+  const pixelSize = getPixelSize(size)
 
   const imageElement = (
     <div
@@ -85,31 +73,14 @@ export default function ItemIcon({
   )
 
   const content = showTooltip ? (
-    <ItemTooltip itemId={itemId}>
+    <Tooltip id={itemId} type="item">
       {imageElement}
-    </ItemTooltip>
+    </Tooltip>
   ) : (
     imageElement
   )
 
-  // wrap with stats if needed
-  if (showStats) {
-    return (
-      <div className="flex flex-col items-center">
-        {content}
-        {winrate !== undefined && (
-          <div className="text-xs font-bold mt-1" style={{ color: getWinrateColor(winrate) }}>
-            {winrate.toFixed(1)}%
-          </div>
-        )}
-        {games !== undefined && (
-          <div className="text-[10px] text-text-muted">{games.toLocaleString()}</div>
-        )}
-      </div>
-    )
-  }
-
-  return content
+  return withIconStats(content, { winrate, games })
 }
 
 /**
@@ -119,10 +90,10 @@ export function EmptyItemSlot({
   size = 'md',
   className = '',
 }: {
-  size?: SizePreset | number
+  size?: IconSizePreset | number
   className?: string
 }) {
-  const pixelSize = typeof size === 'number' ? size : SIZE_MAP[size]
+  const pixelSize = getPixelSize(size)
   return (
     <div
       className={clsx('rounded bg-abyss-800/50 border border-gold-dark/50', className)}

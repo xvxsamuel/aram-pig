@@ -5,8 +5,7 @@ import clsx from 'clsx'
 import Image from 'next/image'
 import ItemIcon from '@/components/ui/ItemIcon'
 import Card from '@/components/ui/Card'
-import RuneTooltip from '@/components/ui/RuneTooltip'
-import SummonerSpellTooltip from '@/components/ui/SummonerSpellTooltip'
+import Tooltip from '@/components/ui/Tooltip'
 import ChampionAbility from '@/components/ui/ChampionAbility'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import DataWarning from '@/components/ui/DataWarning'
@@ -324,7 +323,7 @@ export function OverviewTab({
               const imgSize = isKeystone ? 36 : isSecondary ? 24 : 32
               
               return (
-                <RuneTooltip key={runeId} runeId={runeId}>
+                <Tooltip key={runeId} id={runeId} type="rune">
                   <div className={clsx(
                     size, "rounded-full overflow-hidden cursor-pointer flex-shrink-0",
                     isKeystone
@@ -342,7 +341,7 @@ export function OverviewTab({
                       />
                     )}
                   </div>
-                </RuneTooltip>
+                </Tooltip>
               )
             }
 
@@ -475,7 +474,7 @@ export function OverviewTab({
         </div>
 
         {/* starting Items, spells, skills Row */}
-        <div className="flex gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
           {/* starting Items */}
           <div className="flex-1">
           <Card title="Starting Items" headerRight={LowSampleWarning} className="h-full">
@@ -571,11 +570,11 @@ export function OverviewTab({
                       </div>
                       <div className="flex gap-2">
                         {[best.spell1_id, best.spell2_id].map((spellId, idx) => (
-                          <SummonerSpellTooltip key={idx} spellId={spellId}>
+                          <Tooltip key={idx} id={spellId} type="spell">
                             <div className="w-10 h-10 rounded bg-abyss-800 border border-gold-dark overflow-hidden cursor-pointer">
                               <Image src={getSummonerSpellUrl(spellId, ddragonVersion)} alt="" width={40} height={40} className="w-full h-full object-cover" unoptimized />
                             </div>
-                          </SummonerSpellTooltip>
+                          </Tooltip>
                         ))}
                       </div>
                     </div>
@@ -592,11 +591,11 @@ export function OverviewTab({
                     </div>
                     <div className="flex gap-2">
                       {[best.spell1_id, best.spell2_id].map((spellId, idx) => (
-                        <SummonerSpellTooltip key={idx} spellId={spellId}>
+                        <Tooltip key={idx} id={spellId} type="spell">
                           <div className="w-10 h-10 rounded bg-abyss-800 border border-gold-dark overflow-hidden cursor-pointer">
                             <Image src={getSummonerSpellUrl(spellId, ddragonVersion)} alt="" width={40} height={40} className="w-full h-full object-cover" unoptimized />
                           </div>
-                        </SummonerSpellTooltip>
+                        </Tooltip>
                       ))}
                     </div>
                   </div>

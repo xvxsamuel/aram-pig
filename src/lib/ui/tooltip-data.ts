@@ -22,56 +22,52 @@ export interface TooltipData {
   tier?: string // for augments
 }
 
-// preloaded item data
-const itemMap = new Map<number, TooltipData>(
-  Object.entries(itemsData).map(([id, item]: [string, unknown]) => [
-    parseInt(id),
-    {
-      name: (item as Record<string, unknown>).name as string,
-      description: (item as Record<string, unknown>).description as string,
-      totalCost: (item as Record<string, unknown>).totalCost as number | undefined,
-      itemType: (item as Record<string, unknown>).itemType as ItemType | undefined,
-      stats: (item as Record<string, unknown>).stats as ItemStats | undefined,
-    } as TooltipData,
-  ])
-)
+// preloaded item data - optimized initialization
+const itemMap = new Map<number, TooltipData>()
+for (const id in itemsData) {
+  const item = (itemsData as Record<string, any>)[id]
+  itemMap.set(parseInt(id), {
+    name: item.name,
+    description: item.description,
+    totalCost: item.totalCost,
+    itemType: item.itemType,
+    stats: item.stats,
+  })
+}
 
-// preloaded rune data
-const runeMap = new Map<number, TooltipData>(
-  Object.entries(runesData).map(([id, rune]: [string, unknown]) => [
-    parseInt(id),
-    {
-      name: (rune as Record<string, unknown>).name as string,
-      description: (rune as Record<string, unknown>).description as string,
-      icon: (rune as Record<string, unknown>).icon as string | undefined,
-      stats: {},
-    } as TooltipData,
-  ])
-)
+// preloaded rune data - optimized initialization
+const runeMap = new Map<number, TooltipData>()
+for (const id in runesData) {
+  const rune = (runesData as Record<string, any>)[id]
+  runeMap.set(parseInt(id), {
+    name: rune.name,
+    description: rune.description,
+    icon: rune.icon,
+    stats: {},
+  })
+}
 
-// preloaded summoner spell data
-const summonerSpellMap = new Map<number, TooltipData>(
-  Object.entries(summonerSpellsData).map(([id, spell]: [string, unknown]) => [
-    parseInt(id),
-    {
-      name: (spell as Record<string, unknown>).name as string,
-      description: (spell as Record<string, unknown>).description as string,
-      cooldown: (spell as Record<string, unknown>).cooldown as number | undefined,
-    } as TooltipData,
-  ])
-)
+// preloaded summoner spell data - optimized initialization
+const summonerSpellMap = new Map<number, TooltipData>()
+for (const id in summonerSpellsData) {
+  const spell = (summonerSpellsData as Record<string, any>)[id]
+  summonerSpellMap.set(parseInt(id), {
+    name: spell.name,
+    description: spell.description,
+    cooldown: spell.cooldown,
+  })
+}
 
-// preloaded augment data
-const augmentMap = new Map<string, TooltipData>(
-  Object.entries(augmentsData).map(([name, augment]: [string, unknown]) => [
+// preloaded augment data - optimized initialization
+const augmentMap = new Map<string, TooltipData>()
+for (const name in augmentsData) {
+  const augment = (augmentsData as Record<string, any>)[name]
+  augmentMap.set(name, {
     name,
-    {
-      name,
-      description: (augment as Record<string, unknown>).description as string,
-      tier: (augment as Record<string, unknown>).tier as string | undefined,
-    } as TooltipData,
-  ])
-)
+    description: augment.description,
+    tier: augment.tier,
+  })
+}
 
 // check if item is completed (legendary tier)
 export function isCompletedItem(itemId: number): boolean {

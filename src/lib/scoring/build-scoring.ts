@@ -374,25 +374,29 @@ export function rankChampionCores(
 }> {
   if (!coreData) return []
 
-  return Object.entries(coreData)
-    .map(([key, data]) => {
-      const winrate = data.games > 0 ? (data.wins / data.games) * 100 : 0
-      const wilsonScore = calculateWilsonScore(winrate, data.games)
-      // Check core has exactly 3 items
-      const itemCount = key.split('_').length
-      return {
-        key,
-        games: data.games,
-        wins: data.wins,
-        winrate,
-        wilsonScore,
-        itemCount,
-      }
+  const result: Array<{ key: string; games: number; wins: number; winrate: number; wilsonScore: number }> = []
+  const minWinrate = championWinrate - 5
+
+  for (const [key, data] of Object.entries(coreData)) {
+    // Check core has exactly 3 items
+    if (key.split('_').length !== 3) continue
+    
+    if (data.games < minGames) continue
+    
+    const winrate = data.games > 0 ? (data.wins / data.games) * 100 : 0
+    if (winrate < minWinrate) continue
+    
+    result.push({
+      key,
+      games: data.games,
+      wins: data.wins,
+      winrate,
+      wilsonScore: calculateWilsonScore(winrate, data.games),
     })
-    // Filter: exactly 3 items, minimum games, winrate at least (champion average - 5%)
-    .filter(c => c.itemCount === 3 && c.games >= minGames && c.winrate >= (championWinrate - 5))
-    .sort((a, b) => b.wilsonScore - a.wilsonScore)
-    .map(({ itemCount: _itemCount, ...rest }) => rest) // Remove itemCount from output
+  }
+
+  result.sort((a, b) => b.wilsonScore - a.wilsonScore)
+  return result
 }
 
 /**
@@ -637,24 +641,27 @@ export function calculateItemPenaltyFromCoreData(
     return { totalPenalty: 0, details }
   }
 
-  // Get final items from participant (what they ended the game with)
-  const finalItems = new Set([
-    participant.item0, participant.item1, participant.item2,
-    participant.item3, participant.item4, participant.item5
-  ].filter(id => id > 0))
+  // Get final items from participant (what they ended the game with) - use Set for O(1) lookup
+  const finalItems = new Set<number>()
+  if (participant.item0 > 0) finalItems.add(participant.item0)
+  if (participant.item1 > 0) finalItems.add(participant.item1)
+  if (participant.item2 > 0) finalItems.add(participant.item2)
+  if (participant.item3 > 0) finalItems.add(participant.item3)
+  if (participant.item4 > 0) finalItems.add(participant.item4)
+  if (participant.item5 > 0) finalItems.add(participant.item5)
 
   // Get completed items in BUILD ORDER that are ALSO in final inventory
-  const allPurchasedItems = participant.buildOrder
-    .split(',')
-    .map(id => parseInt(id, 10))
-    .filter(id => !isNaN(id) && id > 0)
+  // Combined: parse, validate, check completed, check final, exclude boots in single pass
+  const nonBootItemsInOrder: number[] = []
+  const buildOrderItems = participant.buildOrder.split(',')
   
-  const completedItemsInOrder = allPurchasedItems.filter(id => 
-    isCompletedItem(id) && finalItems.has(id)
-  )
-
-  // Only score non-boots - boots are game-dependent and excluded from scoring
-  const nonBootItemsInOrder = completedItemsInOrder.filter(id => !BOOT_IDS.has(id))
+  for (const idStr of buildOrderItems) {
+    const id = parseInt(idStr, 10)
+    if (isNaN(id) || id <= 0) continue
+    if (!isCompletedItem(id) || !finalItems.has(id)) continue
+    if (BOOT_IDS.has(id)) continue
+    nonBootItemsInOrder.push(id)
+  }
 
   // Convert core items to position format
   const coreItemsByPosition = coreData?.items ? convertCoreItemsToPositionFormat(coreData.items) : undefined

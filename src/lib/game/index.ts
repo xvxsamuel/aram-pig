@@ -16,6 +16,7 @@ export {
 
 export {
   PATCHES_TO_KEEP,
+  HIDDEN_PATCHES,
   getLatestPatches,
   isPatchAccepted,
   extractPatch,

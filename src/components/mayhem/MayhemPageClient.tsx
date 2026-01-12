@@ -60,7 +60,7 @@ export default function MayhemPageClient({ augments }: Props) {
   return (
     <main className="min-h-screen bg-accent-darker text-white">
       <div className="max-w-6xl mx-auto px-12 py-8">
-        {/* Header */}
+        {/* header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold mb-2">ARAM Mayhem Augment Tier List</h2>
@@ -71,7 +71,7 @@ export default function MayhemPageClient({ augments }: Props) {
           <TierFilter selectedTier={selectedTier} onTierChange={setSelectedTier} />
         </div>
 
-        {/* Tier list */}
+        {/* tier list */}
         <div className="space-y-3">
           {TIER_ORDER.map(tier => {
             const tierAugments = groupedAugments[tier]
@@ -87,7 +87,7 @@ export default function MayhemPageClient({ augments }: Props) {
                   background: `linear-gradient(to bottom, ${tierConfig.borderColors.from}, ${tierConfig.borderColors.to})`,
                 }}
               >
-                {/* Tier badge */}
+                {/* tier badge */}
                 <div 
                   className="flex items-center justify-center w-[80px] px-4"
                   style={{
@@ -104,20 +104,20 @@ export default function MayhemPageClient({ augments }: Props) {
                   </span>
                 </div>
 
-                {/* Augments container */}
+                {/* augments container */}
                 <div className="flex-1 bg-abyss-600 p-4">
                   <div className="flex flex-wrap gap-3">
                     {tierAugments.map(augment => (
                       <div
                         key={augment.name}
-                        className="flex flex-col items-center gap-1 h-[72px] w-[72px]"
+                        className="flex flex-col items-center gap-1 w-[72px]"
                       >
                         <AugmentIcon
                           augmentName={augment.name}
                           size="lg"
                           showTooltip={true}
                         />
-                        <span className="text-xs text-center text-subtitle line-clamp-2 leading-tight max-w-[72px]">
+                        <span className="text-center text-subtitle text-[11px] leading-tight max-w-[72px] line-clamp-2">
                           {augment.name}
                         </span>
                       </div>

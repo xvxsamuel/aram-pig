@@ -20,8 +20,8 @@ interface Props {
 }
 
 /**
- * Animated border wrapper component
- * Used for winstreak borders on profile icons and tier borders on champion portraits
+ * animated border wrapper component
+ * used for winstreak borders on profile icons and tier borders on champion portraits
  */
 export default function AnimatedBorder({
   children,

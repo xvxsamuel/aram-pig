@@ -19,14 +19,16 @@ export interface ProfileChampions {
 
 // recalculate champion stats for a single player from their summoner_matches
 // and store in profile_data.champions
+// optimized: single query, calculates champion stats + win streak in one pass
 export async function recalculateProfileChampionStats(puuid: string): Promise<void> {
   const supabase = createAdminClient()
 
-  // fetch all matches for this player (excluding remakes)
+  // single query: fetch all matches ordered by game_creation for win streak calc
   const { data: matches, error: fetchError } = await supabase
     .from('summoner_matches')
-    .select('match_id, champion_name, win, match_data')
+    .select('match_id, champion_name, win, match_data, game_creation')
     .eq('puuid', puuid)
+    .order('game_creation', { ascending: true })
 
   if (fetchError) {
     console.error(`[UpdateProfile] Error fetching matches for profile_data ${puuid}:`, fetchError)
@@ -40,7 +42,7 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
 
   console.log(`[UpdateProfile] Found ${matches.length} matches for ${puuid}, aggregating stats...`)
 
-  // aggregate stats by champion
+  // aggregate stats by champion AND calculate win streak in single pass
   const championStats: Record<
     string,
     {
@@ -55,10 +57,23 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
     }
   > = {}
 
+  // win streak tracking (matches are ordered by game_creation ascending)
+  let longestWinStreak = 0
+  let currentStreak = 0
+
   for (const match of matches) {
-    // skip remakes
+    // skip remakes for both champion stats and win streak
     if (match.match_data?.isRemake) continue
 
+    // win streak calculation
+    if (match.win) {
+      currentStreak++
+      longestWinStreak = Math.max(longestWinStreak, currentStreak)
+    } else {
+      currentStreak = 0
+    }
+
+    // champion stats aggregation
     const champ = match.champion_name
     if (!champ) continue
 
@@ -113,31 +128,6 @@ export async function recalculateProfileChampionStats(puuid: string): Promise<vo
 
   // count total matches (excluding remakes)
   const matchCount = Object.values(championStats).reduce((sum, s) => sum + s.games, 0)
-
-  // calculate longest win streak from match history (excluding remakes)
-  const { data: matchHistory } = await supabase
-    .from('summoner_matches')
-    .select('win, match_data')
-    .eq('puuid', puuid)
-    .order('game_creation', { ascending: true })
-
-  let longestWinStreak = 0
-  if (matchHistory && matchHistory.length > 0) {
-    let maxStreak = 0
-    let currentStreak = 0
-    for (const match of matchHistory) {
-      // skip remakes - they don't count for winstreak
-      if (match.match_data?.isRemake) continue
-      
-      if (match.win) {
-        currentStreak++
-        maxStreak = Math.max(maxStreak, currentStreak)
-      } else {
-        currentStreak = 0
-      }
-    }
-    longestWinStreak = maxStreak
-  }
 
   // log final stats for debugging
   console.log(`[UpdateProfile] Stats for ${puuid}: ${Object.keys(champions).length} champions, ${matchCount} games, ${longestWinStreak} winstreak`)

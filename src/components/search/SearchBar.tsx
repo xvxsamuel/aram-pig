@@ -8,10 +8,10 @@ import { getDefaultTag, PLATFORM_TO_LABEL, toLabel, type PlatformCode } from '@/
 import { getChampionImageUrl, getProfileIconUrl, getChampionUrlName } from '@/lib/ddragon'
 import Image from 'next/image'
 
-// Track if we've already prefetched to avoid duplicate work
+// track if we've already prefetched to avoid duplicate work
 let championIconsPrefetched = false
 
-// Prefetch all champion icons in batches to avoid overwhelming the browser
+// prefetch all champion icons in batches to avoid overwhelming the browser
 function prefetchChampionIcons(championIds: string[], version: string) {
   if (championIconsPrefetched) return
   championIconsPrefetched = true
@@ -30,7 +30,7 @@ function prefetchChampionIcons(championIds: string[], version: string) {
     
     currentBatch++
     if (currentBatch * batchSize < championIds.length) {
-      // Load next batch after a short delay to not block the main thread
+      // load next batch after a short delay to not block the main thread
       setTimeout(loadBatch, 100)
     }
   }
@@ -38,17 +38,17 @@ function prefetchChampionIcons(championIds: string[], version: string) {
   loadBatch()
 }
 
-// Cache of already-prefetched profile icon IDs to avoid duplicate requests
+// cache of already-prefetched profile icon IDs to avoid duplicate requests
 const prefetchedProfileIcons = new Set<number>()
 
-// Prefetch profile icons for summoners in history
+// prefetch profile icons for summoners in history
 function prefetchProfileIconsFromHistory(history: SearchHistoryItem[], version: string) {
   for (const item of history) {
     if (item.type === 'summoner' && item.profile_icon_id && !prefetchedProfileIcons.has(item.profile_icon_id)) {
       prefetchedProfileIcons.add(item.profile_icon_id)
       const url = `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${item.profile_icon_id}.png`
       
-      // Use link preload for higher priority and better caching
+      // use link preload for higher priority and better caching
       const link = document.createElement('link')
       link.rel = 'preload'
       link.as = 'image'
@@ -57,13 +57,13 @@ function prefetchProfileIconsFromHistory(history: SearchHistoryItem[], version: 
         document.head.appendChild(link)
       }
       
-      // Also create Image object as fallback/immediate fetch
+      // also create Image object as fallback/immediate fetch
       new window.Image().src = url
     }
   }
 }
 
-// Prefetch profile icons for summoner search results
+// prefetch profile icons for summoner search results
 function prefetchProfileIcons(summoners: RecentSummoner[], version: string) {
   for (const summoner of summoners) {
     if (summoner.profile_icon_id && !prefetchedProfileIcons.has(summoner.profile_icon_id)) {
@@ -82,23 +82,23 @@ interface RecentSummoner {
   summoner_level: number
 }
 
-// Unified search history item - can be either summoner or champion
+// unified search history item - can be either summoner or champion
 interface SearchHistoryItem {
   type: 'summoner' | 'champion'
-  // Summoner fields
+  // summoner fields
   game_name?: string
   tag_line?: string
   region?: string
   profile_icon_id?: number
   summoner_level?: number
-  // Champion fields
+  // champion fields
   champion_id?: string
   champion_name?: string
-  // Common
+  // common
   searched_at: number
 }
 
-const SEARCH_HISTORY_KEY = 'search-history-v2' // New key for unified format
+const SEARCH_HISTORY_KEY = 'search-history-v2'
 const MAX_HISTORY_ITEMS = 20
 
 // Load search history from localStorage
@@ -107,32 +107,25 @@ function loadSearchHistory(): SearchHistoryItem[] {
   try {
     const saved = localStorage.getItem(SEARCH_HISTORY_KEY)
     if (!saved) return []
-    const parsed = JSON.parse(saved)
-    // Handle migration from old format (items without 'type' field)
-    return parsed.map((item: SearchHistoryItem) => {
-      if (!item.type) {
-        return { ...item, type: 'summoner' as const }
-      }
-      return item
-    })
+    return JSON.parse(saved)
   } catch {
     return []
   }
 }
 
-// Save a summoner search to history
+// save a summoner search to history
 function saveSummonerToHistory(summoner: RecentSummoner): void {
   if (typeof window === 'undefined') return
   try {
     const history = loadSearchHistory()
-    // Remove existing entry for this summoner (if any)
+    // remove existing entry for this summoner (if any)
     const filtered = history.filter(
       h => !(h.type === 'summoner' &&
              h.game_name?.toLowerCase() === summoner.game_name.toLowerCase() && 
              h.tag_line?.toLowerCase() === summoner.tag_line.toLowerCase() &&
              h.region === summoner.region)
     )
-    // Add to front with timestamp
+    // add to front with timestamp
     const newItem: SearchHistoryItem = {
       type: 'summoner',
       game_name: summoner.game_name,
@@ -149,16 +142,16 @@ function saveSummonerToHistory(summoner: RecentSummoner): void {
   }
 }
 
-// Save a champion search to history
+// save a champion search to history
 function saveChampionToHistory(championId: string, championName: string): void {
   if (typeof window === 'undefined') return
   try {
     const history = loadSearchHistory()
-    // Remove existing entry for this champion (if any)
+    // remove existing entry for this champion (if any)
     const filtered = history.filter(
       h => !(h.type === 'champion' && h.champion_id === championId)
     )
-    // Add to front with timestamp
+    // add to front with timestamp
     const newItem: SearchHistoryItem = {
       type: 'champion',
       champion_id: championId,
@@ -172,11 +165,11 @@ function saveChampionToHistory(championId: string, championName: string): void {
   }
 }
 
-// Client-side DDragon version cache (shared across all SearchBar instances)
+// client-side DDragon version cache (shared across all SearchBar instances)
 let cachedDdragonVersion: string | null = null
 let versionPromise: Promise<string> | null = null
 
-// Simple LRU-ish cache for summoner search results
+// simple LRU-ish cache for summoner search results
 const summonerSearchCache = new Map<string, { data: RecentSummoner[]; timestamp: number }>()
 const SEARCH_CACHE_TTL = 30000 // 30 seconds
 const MAX_CACHE_ENTRIES = 50
@@ -190,7 +183,7 @@ function getCachedSearch(query: string): RecentSummoner[] | null {
 }
 
 function setCachedSearch(query: string, data: RecentSummoner[]): void {
-  // Evict old entries if cache is too large
+  // evict old entries if cache is too large
   if (summonerSearchCache.size >= MAX_CACHE_ENTRIES) {
     const oldestKey = summonerSearchCache.keys().next().value
     if (oldestKey) summonerSearchCache.delete(oldestKey)
@@ -201,7 +194,7 @@ function setCachedSearch(query: string, data: RecentSummoner[]): void {
 async function getClientDdragonVersion(): Promise<string> {
   if (cachedDdragonVersion) return cachedDdragonVersion
   
-  // Deduplicate concurrent requests
+  // deduplicate concurrent requests
   if (versionPromise) return versionPromise
   
   versionPromise = fetch('https://ddragon.leagueoflegends.com/api/versions.json')
@@ -222,24 +215,25 @@ async function getClientDdragonVersion(): Promise<string> {
   return versionPromise
 }
 
-type Props = { className?: string; ddragonVersion?: string }
+type Props = { className?: string; ddragonVersion?: string; inputRef?: React.RefObject<HTMLInputElement | null> }
 
-export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersion: propVersion }: Props) {
+export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersion: propVersion, inputRef: externalInputRef }: Props) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [region, setRegion] = useState('EUW')
   const [isHydrated, setIsHydrated] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
+  const internalInputRef = useRef<HTMLInputElement>(null)
+  const inputRef = externalInputRef || internalInputRef
   const [championNames, setChampionNames] = useState<Record<string, string>>({})
   const [recentSummoners, setRecentSummoners] = useState<RecentSummoner[]>([])
   const [isSearchingSummoners, setIsSearchingSummoners] = useState(false)
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [ddragonVersion, setDdragonVersion] = useState(propVersion || cachedDdragonVersion || '')
-  const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Fetch latest DDragon version if not provided (uses shared cache)
+  // fetch latest DDragon version if not provided (uses shared cache)
   useEffect(() => {
     if (propVersion) {
       setDdragonVersion(propVersion)
@@ -253,25 +247,25 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
     getClientDdragonVersion().then(setDdragonVersion)
   }, [propVersion])
 
-  // Load saved region and search history from localStorage after mount
+  // load saved region and search history from localStorage after mount
   useEffect(() => {
     const savedRegion = localStorage.getItem('selected-region')
     if (savedRegion) {
       setRegion(savedRegion)
     }
-    // Load search history
+    // load search history
     const history = loadSearchHistory()
     setSearchHistory(history)
-    // Prefetch profile icons for history items
+    // prefetch profile icons for history items
     if (ddragonVersion) {
       prefetchProfileIconsFromHistory(history, ddragonVersion)
     }
     setIsHydrated(true)
   }, [ddragonVersion])
 
-  // Fetch champion names on mount and prefetch all champion icons
+  // fetch champion names on mount and prefetch all champion icons
   useEffect(() => {
-    if (!ddragonVersion) return // Wait for version to be loaded
+    if (!ddragonVersion) return // wait for version to be loaded
     
     async function fetchChampions() {
       try {
@@ -287,14 +281,14 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
         }
         setChampionNames(names)
 
-        // Prefetch all champion icons in the background (low priority)
-        // This ensures they're cached for instant display throughout the app
+        // prefetch all champion icons in the background (low priority)
+        // this ensures they're cached for instant display throughout the app
         if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
           ;(window as any).requestIdleCallback(() => {
             prefetchChampionIcons(championIds, ddragonVersion)
           })
         } else {
-          // Fallback for browsers without requestIdleCallback
+          // fallback for browsers without requestIdleCallback
           setTimeout(() => prefetchChampionIcons(championIds, ddragonVersion), 1000)
         }
       } catch (err) {
@@ -304,17 +298,17 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
     fetchChampions()
   }, [ddragonVersion])
 
-  // Search summoners when typing (only when there's actual input)
+  // search summoners when typing (only when there's actual input)
   useEffect(() => {
     if (!name.trim()) {
-      setRecentSummoners([]) // Clear search results when input is empty
+      setRecentSummoners([]) // clear search results when input is empty
       setIsSearchingSummoners(false)
       return
     }
     
     const query = name.trim()
     
-    // Check cache first for instant results
+    // check cache first for instant results
     const cached = getCachedSearch(query)
     if (cached) {
       setRecentSummoners(cached)
@@ -322,7 +316,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
       return
     }
     
-    // Show loading state immediately
+    // show loading state immediately
     setIsSearchingSummoners(true)
     
     const timeout = setTimeout(async () => {
@@ -334,9 +328,9 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
         }
         const data = await res.json()
         const summoners = data.summoners || []
-        // Cache the result
+        // cache the result
         setCachedSearch(query, summoners)
-        // Prefetch profile icons immediately before setting state
+        // prefetch profile icons immediately before setting state
         prefetchProfileIcons(summoners, ddragonVersion)
         setRecentSummoners(summoners)
       } catch (err) {
@@ -344,12 +338,12 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
       } finally {
         setIsSearchingSummoners(false)
       }
-    }, 100) // Reduced debounce for snappier feel
+    }, 100)
 
     return () => clearTimeout(timeout)
   }, [name, ddragonVersion])
 
-  // Filter champions based on search query
+  // filter champions based on search query
   const filteredChampions = useMemo(() => {
     if (!name.trim()) return []
     const query = name.toLowerCase().trim()
@@ -359,22 +353,22 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
       .map(([id, displayName]) => ({ id, displayName }))
   }, [name, championNames])
 
-  // Only show champions when actively searching
+  // only show champions when actively searching
   const displayedChampions = useMemo(() => {
     if (name.trim()) return filteredChampions // Show filtered results when typing
     return [] // Don't show champions in default view
   }, [name, filteredChampions])
 
-  // Show search history when no query, otherwise show search results  
-  // When not searching, show unified history (both summoners and champions)
+  // show search history when no query, otherwise show search results  
+  // when not searching, show unified history (both summoners and champions)
   const displayedSummoners = useMemo((): (RecentSummoner | SearchHistoryItem)[] => {
     if (name.trim()) return recentSummoners // Show search results
-    // Filter to only summoner items from history for the summoners section
+    // filter to only summoner items from history for the summoners section
     return searchHistory
       .filter(h => h.type === 'summoner') as SearchHistoryItem[]
   }, [name, recentSummoners, searchHistory])
 
-  // Champion history items (when not searching)
+  // champion history items (when not searching)
   const displayedChampionHistory = useMemo((): SearchHistoryItem[] => {
     if (name.trim()) return [] // Don't show history when searching
     return searchHistory
@@ -384,14 +378,14 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
   const allItems = useMemo(() => {
     const items: { type: 'champion' | 'summoner' | 'champion-history'; data: any }[] = []
     
-    // When actively searching, show search results
+    // when actively searching, show search results
     if (name.trim()) {
       displayedChampions.forEach(c => items.push({ type: 'champion', data: c }))
       displayedSummoners.forEach(s => items.push({ type: 'summoner', data: s }))
       return items
     }
     
-    // When not searching, show only history items sorted by timestamp
+    // when not searching, show only history items sorted by timestamp
     displayedChampionHistory.forEach(c => items.push({ type: 'champion-history', data: c }))
     displayedSummoners.forEach(s => items.push({ type: 'summoner', data: s }))
     
@@ -401,11 +395,11 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
       return bTime - aTime
     })
     
-    // Limit to 8 total history items
+    // limit to 8 history items
     return items.slice(0, 8)
   }, [displayedChampions, displayedChampionHistory, displayedSummoners, name])
 
-  // Close dropdown when clicking outside
+  // close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -417,13 +411,12 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Reset selection when items change
+  // reset selection when items change
   useEffect(() => {
     setSelectedIndex(-1)
   }, [name])
 
   function navigateToSummoner(gameName: string, tagLine: string, summonerRegion: string, profileIconId?: number, summonerLevel?: number) {
-    // Save to search history (store the original region format)
     const historyItem: RecentSummoner = {
       game_name: gameName,
       tag_line: tagLine,
@@ -432,10 +425,8 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
       summoner_level: summonerLevel || 0,
     }
     saveSummonerToHistory(historyItem)
-    // Update local state immediately
     setSearchHistory(loadSearchHistory())
     
-    // Convert region to label format (e.g., euw1 -> EUW) for URL routing
     const regionLabel = toLabel(summonerRegion)
     const normalizedName = `${gameName}-${tagLine}`
     router.push(`/${regionLabel}/${encodeURIComponent(normalizedName)}`)
@@ -444,13 +435,11 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
   }
 
   function navigateToChampion(championId: string) {
-    // Save to search history
     const championName = championNames[championId] || championId
     saveChampionToHistory(championId, championName)
-    // Update local state immediately
     setSearchHistory(loadSearchHistory())
     
-    // Use display name for URL (e.g., "wukong" instead of "MonkeyKing")
+    // use display name for URL (e.g., "wukong" instead of "MonkeyKing")
     const urlName = getChampionUrlName(championId, championNames)
     router.push(`/champions/${urlName}`)
     setIsFocused(false)
@@ -495,7 +484,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
     const trimmed = name.trim()
     if (!trimmed || !isHydrated) return
 
-    // If an item is selected, navigate to it
+    // if an item is selected, navigate to it
     if (selectedIndex >= 0 && selectedIndex < allItems.length) {
       const item = allItems[selectedIndex]
       if (item.type === 'champion') {
@@ -508,7 +497,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
       return
     }
 
-    // Default: search for summoner
+    // default: search for summoner
     const nameWithTag = trimmed.includes('#') ? trimmed : `${trimmed}#${getDefaultTag(region)}`
     const [gameName, tagLine] = nameWithTag.split('#').map(part => part.trim())
     const normalizedName = `${gameName}-${tagLine}`
@@ -519,7 +508,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
   }
 
   const showDefaultTag = name && !name.includes('#') && isHydrated
-  // Keep dropdown open while focused - content updates inside without re-animating
+  // keep dropdown open while focused - content updates inside without re-animating
   const showDropdown = isFocused && isHydrated && Object.keys(championNames).length > 0
 
   function handleRegionSelect(regionLabel: string) {
@@ -531,7 +520,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
     setIsFocused(false)
   }
 
-  // Calculate current item index in allItems for highlighting
+  // calculate current item index in allItems for highlighting
   const getItemIndex = useCallback(
     (type: 'champion' | 'champion-history' | 'summoner', index: number) => {
       if (type === 'champion') return index
@@ -542,11 +531,11 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
   )
 
   return (
-    <div className={clsx('relative px-4', className)} ref={containerRef}>
-      {/* Single unified container with gradient border */}
+    <div className={clsx('relative', className)} ref={containerRef}>
+      {/* single unified container with gradient border */}
       <div className="relative p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-xl">
         <div className="bg-abyss-700 rounded-[11px]">
-          {/* Search input */}
+          {/* search input */}
           <form onSubmit={onSubmit} className="flex items-center gap-3 w-full h-full">
             <div className="relative flex-1 h-full flex items-center">
               <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 flex gap-1 pointer-events-none">
@@ -568,12 +557,12 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
                 onChange={e => setName(e.target.value)}
                 onFocus={() => {
                   setIsFocused(true)
-                  // Reload search history when focusing to ensure it's up to date
+                  // reload search history when focusing
                   setSearchHistory(loadSearchHistory())
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Search summoner or champion"
-                className="w-full h-full px-4 sm:px-6 text-white text-base placeholder:text-transparent md:placeholder:text-text-muted placeholder:text-sm bg-transparent outline-none relative z-10"
+                className="w-full h-full px-4 sm:px-6 text-white text-base placeholder:text-transparent sm:placeholder:text-text-muted placeholder:text-sm bg-transparent outline-none relative z-10"
                 style={{ fontFamily: 'var(--font-regular)', fontWeight: 400 }}
                 autoComplete="off"
               />
@@ -585,23 +574,23 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
               <button
                 type="submit"
                 aria-label="Search"
-                className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center text-gold-light cursor-pointer flex-shrink-0"
+                className="h-10 w-10 grid place-items-center text-gold-light cursor-pointer flex-shrink-0"
               >
-                <MagnifyingGlassIcon className="w-5 sm:w-6 h-auto" aria-hidden="true" />
+                <MagnifyingGlassIcon className="w-6 h-auto" aria-hidden="true" />
               </button>
             </div>
           </form>
 
-          {/* Dropdown content - no animation, just show/hide */}
+          {/* dropdown content */}
           {showDropdown && (
             <>
-              {/* Separator line - edge-to-edge */}
+
               <div className="h-px bg-gold-dark/30" />
               <div
                 className="max-h-80 overflow-y-auto"
                 onMouseLeave={() => setSelectedIndex(-1)}
               >
-                {/* Champions Section */}
+                {/* champions Section */}
                 {displayedChampions.length > 0 && (
                   <div>
                     <div className="px-4 py-2.5 text-xs font-bold text-gold-light uppercase tracking-wider bg-abyss-800/50">
@@ -638,7 +627,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
                   </div>
                 )}
 
-                {/* Summoners Section - show when searching OR when showing history */}
+                {/* summoners Section - show when searching OR when showing history */}
                 {(name.trim() || displayedSummoners.length > 0 || displayedChampionHistory.length > 0) && (
                   <div>
                     <div className="px-4 py-2.5 text-xs font-bold text-gold-light uppercase tracking-wider bg-abyss-800/50 flex items-center gap-2">
@@ -647,25 +636,25 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
                         <div className="w-3 h-3 border-2 border-gold-light/30 border-t-gold-light rounded-full animate-spin" />
                       )}
                     </div>
-                    {/* Loading state when searching */}
+                    {/* loading state when searching */}
                     {name.trim() && isSearchingSummoners && displayedSummoners.length === 0 && (
                       <div className="px-4 py-4 text-center">
                         <p className="text-text-muted text-sm">Searching summoners...</p>
                       </div>
                     )}
-                    {/* No results found state */}
+                    {/* no results found state */}
                     {name.trim() && !isSearchingSummoners && displayedSummoners.length === 0 && (
                       <div className="px-4 py-4 text-center">
                         <p className="text-text-muted text-sm">No summoners found</p>
                       </div>
                     )}
-                    {/* Empty state when no search history */}
+                    {/* empty state when no search history */}
                     {!name.trim() && allItems.length === 0 && (
                       <div className="px-4 py-5 text-center">
                         <p className="text-text-muted text-sm">Your recent searches will appear here</p>
                       </div>
                     )}
-                    {/* Render summoner search results when actively searching */}
+                    {/* render summoner search results when actively searching */}
                     {name.trim() && displayedSummoners.map((summoner, idx) => {
                       const s = summoner as SearchHistoryItem
                       const itemIdx = displayedChampions.length + idx // Continue index after champions

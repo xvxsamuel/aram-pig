@@ -89,7 +89,9 @@ export default function ChampionsPageClient({
   )
 
   const champions = data?.champions || []
-  const totalMatches = 1054230 + (data?.totalMatches ?? 0)
+  // hardcoded offset for 25.24 - matches were lost but stats data remains
+  const PATCH_25_24_LOST_MATCHES = 1054230
+  const totalMatches = (currentPatch === '25.24' ? PATCH_25_24_LOST_MATCHES : 0) + (data?.totalMatches ?? 0)
 
   // update fetch time when new data arrives from API
   useEffect(() => {

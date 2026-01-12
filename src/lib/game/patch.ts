@@ -5,6 +5,9 @@ import { getLatestPatches as getDDragonPatches } from '@/lib/ddragon/assets'
 // number of patches to keep detailed stats for
 export const PATCHES_TO_KEEP = 3
 
+// patches to hide from UI (insufficient data)
+export const HIDDEN_PATCHES = ['25.22', '25.23', '26.1']
+
 // fetches the latest patch versions from cached ddragon data
 // uses shared cache - only fetches from api when ddragon version changes
 // returns patches in aram pig format (25.x)

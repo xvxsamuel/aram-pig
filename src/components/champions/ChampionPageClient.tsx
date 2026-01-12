@@ -7,6 +7,7 @@ import Image from 'next/image'
 import clsx from 'clsx'
 import { motion } from 'motion/react'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import ErrorMessage from '@/components/ui/ErrorMessage'
 import { getChampionImageUrl } from '@/lib/ddragon'
 import { getWinrateColor, getTierBorderGradient } from '@/lib/ui'
 import ChampionDetailTabs from './ChampionDetailTabs'
@@ -162,8 +163,8 @@ export default function ChampionPageClient({
     return (
       <>
         <section className="relative overflow-hidden bg-abyss-700">
-          <div className="max-w-6xl mx-auto px-8 py-6 pb-8 relative z-10">
-            <div className="flex items-start gap-6">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 pb-8 relative z-10">
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
               <div className="rounded-xl p-px bg-gradient-to-b from-gold-light to-gold-dark flex-shrink-0">
                 <div className="relative w-24 h-24 rounded-[inherit] bg-abyss-800 overflow-hidden">
                   <Image
@@ -178,11 +179,11 @@ export default function ChampionPageClient({
                 </div>
               </div>
               
-              <div className="flex-1 flex flex-col justify-between h-28">
+              <div className="flex-1 flex flex-col justify-between h-auto md:h-28 w-full md:w-auto items-center md:items-start gap-4 md:gap-0">
                 <h1 className="text-3xl font-semibold text-white">{displayName}</h1>
-                <div className="flex items-end gap-12">
+                <div className="flex items-end gap-6 md:gap-12 flex-wrap justify-center md:justify-start">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="flex flex-col gap-1">
+                    <div key={i} className="flex flex-col gap-1 items-center md:items-start">
                       <div className="h-3 w-16 bg-abyss-500 rounded animate-pulse" />
                       <div className="h-8 w-24 bg-abyss-500 rounded animate-pulse" />
                     </div>
@@ -190,12 +191,12 @@ export default function ChampionPageClient({
                 </div>
               </div>
               
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 w-full md:w-auto flex justify-center md:block">
                 <PatchFilter availablePatches={availablePatches} currentPatch={currentPatch} />
               </div>
             </div>
 
-            <div className="flex gap-6 mt-4">
+            <div className="flex gap-6 mt-4 overflow-x-auto pb-2 md:pb-0 justify-center md:justify-start">
               {['Overview', 'Items', 'Runes', 'More Stats'].map((tab) => (
                 <div
                   key={tab}
@@ -220,10 +221,11 @@ export default function ChampionPageClient({
     return (
       <>
         <div className="max-w-6xl mx-auto px-8 py-8">
-          <div className="bg-red-900/50 rounded-lg p-6 text-center">
-            <p className="text-xl">Error loading champion data</p>
-            <p className="text-sm text-red-300 mt-2">{error.message}</p>
-          </div>
+          <ErrorMessage
+            title="Error loading champion data"
+            message={error.message}
+            onRetry={() => window.location.reload()}
+          />
         </div>
       </>
     )
@@ -575,8 +577,8 @@ export default function ChampionPageClient({
             <div className="absolute inset-0 bg-gradient-to-r from-abyss-700 from-30% via-transparent to-transparent" />
           </>
         )}
-        <div className="max-w-6xl mx-auto px-8 py-6 pb-8 relative z-10">
-          <div className="flex items-start gap-6">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 pb-8 relative z-10">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
             {/* champion icon with tier badge */}
             <div className="relative flex-shrink-0">
               {/* accent-light glow for S+ only (outside border) */}
@@ -735,10 +737,10 @@ export default function ChampionPageClient({
               )}
             </div>
             
-            <div className="flex-1 flex flex-col justify-between h-28">
+            <div className="flex-1 flex flex-col justify-between h-auto md:h-28 w-full md:w-auto items-center md:items-start gap-4 md:gap-0">
               <h1 className="text-3xl font-semibold text-white">{displayName}</h1>
-              <div className="flex items-end gap-12">
-                <div className="flex flex-col">
+              <div className="flex items-end gap-6 md:gap-12 flex-wrap justify-center md:justify-start">
+                <div className="flex flex-col items-center md:items-start">
                   <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Winrate</span>
                   <span className="text-2xl font-semibold" style={{ color: getWinrateColor(data.overview.winrate) }}>
                     {data.overview.winrate.toFixed(2)}%
@@ -746,7 +748,8 @@ export default function ChampionPageClient({
                 </div>
                 
                 {data.overview.pickrate !== undefined && (
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-center md:items-start">
+
                     <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Pickrate</span>
                     <span className="text-2xl font-semibold text-white">
                       {data.overview.pickrate.toFixed(1)}%
@@ -754,18 +757,18 @@ export default function ChampionPageClient({
                   </div>
                 )}
 
-                <div className="flex flex-col">
+                <div className="flex flex-col items-center md:items-start">
                   <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Games</span>
                   <span className="text-2xl font-semibold text-white">{data.overview.games.toLocaleString()}</span>
                 </div>
 
                 {data.perMinuteStats.damageToChampionsPerMin && (
                   <>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col items-center md:items-start">
                       <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Mean DPM</span>
                       <span className="text-2xl font-semibold text-white">{Math.round(data.perMinuteStats.damageToChampionsPerMin.mean).toLocaleString()}</span>
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col items-center md:items-start">
                       <span className="text-text-muted text-xs uppercase tracking-wider font-semibold mb-0.5">Std Dev</span>
                       <span className="text-2xl font-semibold text-white">±{Math.round(data.perMinuteStats.damageToChampionsPerMin.stdDev).toLocaleString()}</span>
                     </div>
@@ -775,13 +778,13 @@ export default function ChampionPageClient({
             </div>
             
             {/* patch filter */}
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 w-full md:w-auto flex justify-center md:block">
               <PatchFilter availablePatches={availablePatches} currentPatch={currentPatch} />
             </div>
           </div>
 
           {/* tab navigation */}
-          <div className="flex gap-6 mt-4">
+          <div className="flex gap-6 mt-4 overflow-x-auto pb-2 md:pb-0 justify-center md:justify-start">
             <button
               onClick={() => handleTabChange('overview')}
               className={clsx(
@@ -831,7 +834,7 @@ export default function ChampionPageClient({
       </section>
 
       {/* main content */}
-      <div className="max-w-6xl mx-auto px-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-8">
         <ChampionDetailTabs
           selectedTab={selectedTab}
           itemsBySlot={itemsBySlot}

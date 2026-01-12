@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Card from '@/components/ui/Card'
 import ChampionAbility from '@/components/ui/ChampionAbility'
-import SummonerSpellTooltip from '@/components/ui/SummonerSpellTooltip'
+import Tooltip from '@/components/ui/Tooltip'
 import { getSummonerSpellUrl } from '@/lib/ddragon'
 import { getWinrateColor } from '@/lib/ui'
 import { getAbilityMaxOrder } from './utils'
@@ -35,7 +35,7 @@ export function LevelingTab({ abilityLevelingStats, summonerSpellStats, ddragonV
                     <div className="flex flex-col gap-0.5">
                       <div className="flex gap-1 justify-center">
                         {[stat.spell1_id, stat.spell2_id].map((spellId, spellIdx) => (
-                          <SummonerSpellTooltip key={spellIdx} spellId={spellId}>
+                          <Tooltip key={spellIdx} id={spellId} type="spell">
                             <div className="w-10 h-10 rounded bg-abyss-800 border border-gold-dark overflow-hidden cursor-pointer">
                               <Image
                                 src={getSummonerSpellUrl(spellId, ddragonVersion)}
@@ -46,7 +46,7 @@ export function LevelingTab({ abilityLevelingStats, summonerSpellStats, ddragonV
                                 unoptimized
                               />
                             </div>
-                          </SummonerSpellTooltip>
+                          </Tooltip>
                         ))}
                       </div>
                       <div className="space-y-0.5">

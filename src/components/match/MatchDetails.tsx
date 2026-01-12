@@ -61,6 +61,7 @@ interface Props {
   region: string
   defaultTab?: 'overview' | 'build' | 'performance'
   onTabChange?: (tab: 'overview' | 'build' | 'performance') => void
+  onEnriched?: (pigScores: Record<string, number | null>) => void
 }
 
 export default function MatchDetails({
@@ -70,6 +71,7 @@ export default function MatchDetails({
   region,
   defaultTab = 'overview',
   onTabChange,
+  onEnriched,
 }: Props) {
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
 
@@ -163,6 +165,7 @@ export default function MatchDetails({
       .then(data => {
         if (data?.results) {
           setPigScores(data.results)
+          onEnriched?.(data.results) // notify parent to update match list
           if (data.cached) {
             console.log('Pig scores loaded from cache')
           } else {
@@ -173,8 +176,8 @@ export default function MatchDetails({
       .catch(err => {
         console.error('Failed to enrich match:', err)
         setEnrichError(err.message || 'Failed to load pig scores')
-        // fallback: try the old calculate-pig-score endpoint
-        fetch('/api/calculate-pig-score', {
+        // fallback: try pig-score-breakdown batch endpoint
+        fetch('/api/pig-score-breakdown', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ matchId: match.metadata.matchId }),
@@ -183,10 +186,11 @@ export default function MatchDetails({
           .then(data => {
             if (data?.results) {
               setPigScores(data.results)
-              setEnrichError(null) // clear error if fallback succeeds
+              onEnriched?.(data.results) // notify parent to update match list
+              setEnrichError(null)
             }
           })
-          .catch(() => {}) // ignore fallback errors
+          .catch(() => {})
       })
       .finally(() => setLoadingPigScores(false))
   }, [
@@ -197,6 +201,7 @@ export default function MatchDetails({
     isRemake,
     pigScoresFetched,
     region,
+    onEnriched,
   ])
 
   // Use pig score breakdown from match data (pre-calculated) or fetch if needed

@@ -6,6 +6,7 @@ import MatchHistoryList from '@/components/match/MatchHistoryList'
 import ChampionStatsList from './ChampionStatsList'
 import FetchMessage from './FetchMessage'
 import UpdateErrorMessage from './UpdateErrorMessage'
+import ErrorMessage from '@/components/ui/ErrorMessage'
 import SummonerSummaryCard from './SummonerSummaryCard'
 import SummonerTopChampions from './SummonerTopChampions'
 import SummonerLoadingSkeleton from './SummonerLoadingSkeleton'
@@ -139,9 +140,12 @@ export default function SummonerContentV2({
   const [jobProgress, setJobProgress] = useState<UpdateJobProgress | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [notifyEnabled, setNotifyEnabled] = useState(false)
-  const [updateError, setUpdateError] = useState<{ matchesFetched?: number; totalMatches?: number } | null>(null)
+  const [updateError, setUpdateError] = useState<{ matchesFetched?: number; totalMatches?: number; errorCode?: string } | null>(null)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const continuationInFlightRef = useRef(false) // prevent duplicate continuation requests
+  const continuationInFlightRef = useRef(false)
+  
+  // PIG score calculation - uses ref since UI feedback is via per-match loading spinners
+  const pigCalcAbortRef = useRef<AbortController | null>(null)
 
   // champion image for header
   const [championImageUrl, setChampionImageUrl] = useState<string | undefined>(undefined)
@@ -235,9 +239,15 @@ export default function SummonerContentV2({
             setCooldown(new Date(Date.now() + 5 * 60 * 1000).toISOString())
 
             if (isFailed) {
-              setUpdateError({ matchesFetched: fetchedMatches, totalMatches: totalMatches })
+              setUpdateError({ 
+                matchesFetched: fetchedMatches, 
+                totalMatches: totalMatches,
+                errorCode: data.job.errorMessage || undefined
+              })
             } else if (success) {
               setStatusMessage('Profile updated successfully!')
+              // start PIG calculation in background after successful update
+              startPigCalculation()
             } else {
               setStatusMessage('Failed to refresh data')
             }
@@ -311,6 +321,84 @@ export default function SummonerContentV2({
       }
     }
   }, [jobProgress, pollJobStatus])
+
+  // start PIG score calculation in background
+  const startPigCalculation = useCallback(async () => {
+    // abort any existing calculation
+    if (pigCalcAbortRef.current) {
+      pigCalcAbortRef.current.abort()
+    }
+    
+    const platformCode = LABEL_TO_PLATFORM[region.toUpperCase()]
+    const regionalCode = platformCode ? PLATFORM_TO_REGIONAL[platformCode] : 'americas'
+    pigCalcAbortRef.current = new AbortController()
+    
+    let currentPhase: 'user' | 'others' = 'user'
+    let currentOffset = 0
+    let lastRefreshTime = 0 // start at 0 so first batch triggers immediate refresh
+    
+    const runCalculation = async (): Promise<void> => {
+      try {
+        const response = await fetch('/api/calculate-pig-scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            puuid, 
+            region: regionalCode,
+            phase: currentPhase,
+            offset: currentOffset,
+          }),
+          signal: pigCalcAbortRef.current?.signal,
+        })
+        
+        if (!response.ok) {
+          console.error('PIG calculation failed:', await response.text())
+          return
+        }
+        
+        const result = await response.json()
+        console.log('[PigCalc:Client] Result:', result)
+        
+        // update phase tracking
+        if (result.status === 'user_complete') {
+          currentPhase = 'others'
+          currentOffset = 0
+        } else if (result.offset !== undefined) {
+          currentOffset = result.offset
+        }
+        
+        // refresh matches if any were calculated (throttled to 3s, but immediate on first batch)
+        if (result.calculated > 0) {
+          const now = Date.now()
+          if (now - lastRefreshTime > 3000) {
+            console.log('[PigCalc:Client] Refreshing after calculating', result.calculated, 'scores')
+            lastRefreshTime = now
+            await refresh()
+          }
+        }
+        
+        // continue calculation if not complete
+        if (result.hasMore && !pigCalcAbortRef.current?.signal.aborted) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          await runCalculation()
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') return
+        console.error('PIG calculation error:', err)
+      }
+    }
+    
+    await runCalculation()
+    console.log('[PigCalc:Client] Calculation complete, final refresh')
+    await refresh() // final refresh when done
+  }, [puuid, region, refresh])
+  
+  // cleanup PIG calculation on unmount
+  useEffect(() => {
+    return () => {
+      pigCalcAbortRef.current?.abort()
+    }
+  }, [])
 
   // handle manual update
   const handleManualUpdate = async () => {
@@ -396,6 +484,32 @@ export default function SummonerContentV2({
     }
   }, [shouldAutoUpdate, jobProgress])
 
+  // check for missing PIG scores on mount and after loading
+  const hasCheckedPigScores = useRef(false)
+  useEffect(() => {
+    if (loading || hasCheckedPigScores.current || matches.length === 0 || jobProgress) return
+    
+    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
+    const now = Date.now()
+    
+    // check if any recent (non-remake) matches are missing PIG scores
+    const hasMissingPigScores = matches.some(match => {
+      const participant = match.info.participants.find(p => p.puuid === puuid)
+      if (!participant) return false
+      
+      const isRemake = participant.gameEndedInEarlySurrender
+      const gameAge = now - match.info.gameCreation
+      const isPigScoreEligible = !isRemake && gameAge < ONE_YEAR_MS
+      
+      return isPigScoreEligible && participant.pigScore === null
+    })
+    
+    if (hasMissingPigScores) {
+      hasCheckedPigScores.current = true
+      startPigCalculation()
+    }
+  }, [loading, matches, puuid, jobProgress, startPigCalculation])
+
   // tab change handler
   const handleTabChange = useCallback((tab: 'overview' | 'champions' | 'performance') => {
     setSelectedTab(tab)
@@ -426,12 +540,8 @@ export default function SummonerContentV2({
     return [...champions].sort((a, b) => b.games - a.games).slice(0, 7)
   }, [champions])
 
-  // handle more matches loaded (for legacy component compatibility)
-  const handleMoreMatchesLoaded = useCallback(() => {
-    // this is handled by MatchHistoryList internally now
-  }, [])
-
-  const showSkeleton = loading && !jobProgress
+  // only show skeleton on initial load (no data yet), not during refreshes
+  const showSkeleton = loading && !jobProgress && matches.length === 0 && champions.length === 0
 
   // overview content
   const overviewContent = useMemo(
@@ -459,7 +569,6 @@ export default function SummonerContentV2({
           region={region}
           ddragonVersion={ddragonVersion}
           championNames={championNames}
-          onMatchesLoaded={handleMoreMatchesLoaded}
           initialLoading={loading}
           currentName={{ gameName: summonerData.account.gameName, tagLine: summonerData.account.tagLine }}
         />
@@ -476,7 +585,6 @@ export default function SummonerContentV2({
       summaryKda,
       topChampions,
       handleTabChange,
-      handleMoreMatchesLoaded,
       loading,
       recentlyPlayedWith,
       summonerData.account.gameName,
@@ -496,39 +604,6 @@ export default function SummonerContentV2({
     ),
     [puuid, ddragonVersion, championNames, profileIconUrl, champions]
   )
-
-  // calculate tier stats for all champions
-  const allChampionTierStats = useMemo(() => {
-    if (champions.length === 0) return []
-
-    return champions.map(c => ({
-      winrate: (c.wins / c.games) * 100,
-      games: c.games,
-      avgDamage: c.totalDamage / c.games,
-      kda: c.deaths > 0 ? (c.kills + c.assists) / c.deaths : c.kills + c.assists,
-    }))
-  }, [champions])
-
-  // calculate overall tier stats (weighted by games)
-  const overallTierStats = useMemo(() => {
-    if (champions.length === 0) return null
-
-    const totalGames = champions.reduce((sum, c) => sum + c.games, 0)
-    if (totalGames === 0) return null
-
-    const totalWins = champions.reduce((sum, c) => sum + c.wins, 0)
-    const totalKills = champions.reduce((sum, c) => sum + c.kills, 0)
-    const totalDeaths = champions.reduce((sum, c) => sum + c.deaths, 0)
-    const totalAssists = champions.reduce((sum, c) => sum + c.assists, 0)
-    const totalDamage = champions.reduce((sum, c) => sum + c.totalDamage, 0)
-
-    return {
-      winrate: (totalWins / totalGames) * 100,
-      games: totalGames,
-      avgDamage: totalDamage / totalGames,
-      kda: totalDeaths > 0 ? (totalKills + totalAssists) / totalDeaths : totalKills + totalAssists,
-    }
-  }, [champions])
 
   return (
     <>
@@ -588,6 +663,7 @@ export default function SummonerContentV2({
                 <UpdateErrorMessage
                   matchesFetched={updateError.matchesFetched}
                   totalMatches={updateError.totalMatches}
+                  errorCode={updateError.errorCode}
                   onDismiss={() => setUpdateError(null)}
                 />
               </div>
@@ -605,27 +681,15 @@ export default function SummonerContentV2({
             )}
 
             {profileError && !loading && (
-              <div className="mb-4 p-4 rounded-lg bg-red-900/30 border border-red-500/50">
-                <div className="flex items-center gap-3">
-                  <svg className="w-6 h-6 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <div>
-                    <p className="text-red-300 font-medium">Database temporarily unavailable</p>
-                    <p className="text-red-400/80 text-sm mt-1">
-                      {profileError.includes('timeout') || profileError.includes('fetch') 
-                        ? 'The database is currently under heavy load. Your data is safe - please try again in a few moments.'
-                        : profileError}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => refresh()}
-                  className="mt-3 px-4 py-2 text-sm bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-lg text-red-300 transition-colors"
-                >
-                  Try Again
-                </button>
-              </div>
+              <ErrorMessage
+                title="Database temporarily unavailable"
+                message={
+                  profileError.includes('timeout') || profileError.includes('fetch')
+                    ? 'The database is currently under heavy load. Your data is safe - please try again in a few moments.'
+                    : profileError
+                }
+                onRetry={() => refresh()}
+              />
             )}
 
             <div className={selectedTab === 'overview' ? '' : 'hidden'}>{overviewContent}</div>

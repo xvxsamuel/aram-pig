@@ -17,9 +17,9 @@ type SizePreset = keyof typeof SIZE_MAP
 type AbilityType = 'P' | 'Q' | 'W' | 'E' | 'R'
 
 interface ChampionAbilityProps {
-  /** Champion name (e.g., "Ahri", "MasterYi") */
+  /** champion name */
   championName: string
-  /** Ability type */
+  /** ability type */
   ability: AbilityType
   /** size preset or custom pixel size */
   size?: SizePreset | number
@@ -34,10 +34,10 @@ interface ChampionAbilityProps {
 function getDDragonAbilityIconUrl(championName: string, ability: AbilityType, patch: string): string {
   const icons = abilityIcons as Record<string, Record<string, string>>
   
-  // 1. Try direct lookup
+  // 1. try direct lookup
   let championData = icons[championName]
   
-  // 2. Try case-insensitive lookup
+  // 2. try case-insensitive lookup
   if (!championData) {
     const key = Object.keys(icons).find(k => k.toLowerCase() === championName.toLowerCase())
     if (key) {
@@ -45,20 +45,20 @@ function getDDragonAbilityIconUrl(championName: string, ability: AbilityType, pa
     }
   }
   
-  // 3. Try aliases
+  // 3. try aliases
   if (!championData) {
     if (championName.toLowerCase() === 'wukong') championData = icons['MonkeyKing']
   }
   
   if (!championData) {
-    // Fallback to community dragon if map lookup fails
+    // fallback to community dragon if map lookup fails
     const abilityKey = ability.toLowerCase()
     return `https://cdn.communitydragon.org/${patch === 'latest' ? 'latest' : patch}/champion/${championName}/ability-icon/${abilityKey}`
   }
   
   const filename = championData[ability]
   if (!filename) {
-     // Fallback
+     // fallback
      const abilityKey = ability.toLowerCase()
      return `https://cdn.communitydragon.org/${patch === 'latest' ? 'latest' : patch}/champion/${championName}/ability-icon/${abilityKey}`
   }

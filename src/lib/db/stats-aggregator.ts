@@ -236,7 +236,7 @@ export interface ChampionStatsData {
   games: number
   wins: number
   championStats: {
-    // legacy sum fields (kept for backwards compatibility)
+    // sum fields
     sumDamageToChampions: number
     sumTotalDamage: number
     sumHealing: number

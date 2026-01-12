@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { getLatestVersion, fetchChampionNames } from '@/lib/ddragon'
-import { getLatestPatches } from '@/lib/game'
+import { getLatestPatches, HIDDEN_PATCHES } from '@/lib/game'
 import { createAdminClient } from '@/lib/db'
 import ChampionsPageClient from '@/components/champions/ChampionsPageClient'
 import type { ChampionTier } from '@/lib/ui'
@@ -96,7 +96,6 @@ export default async function ChampionsPage() {
   ])
 
   // determine default patch (first non-hidden patch)
-  const HIDDEN_PATCHES = ['25.22', '25.23']
   const defaultPatch = availablePatches.find(p => !HIDDEN_PATCHES.includes(p)) || availablePatches[0]
 
   // prefetch champion data for default patch

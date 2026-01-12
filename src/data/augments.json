@@ -56,7 +56,7 @@
   "Fetch": {
     "description": "Gain {{as|40% '''bonus''' movement speed}} towards enemies marked by {{si|Mark}}. Additionally, nearby allied champions that use {{si|Mark}} will cause it to drop a snowball on the ground after reaching maximum range or hitting an enemy. You can pick up this snowball to refresh the cooldown of your {{si|Mark}}.<br><br>{{as|'''This augment is currently disabled.'''|buzzword3}}",
     "tier": "Silver",
-    "performanceTier": "COAL",
+    "performanceTier": "Disabled",
     "icon": "fetch"
   },
   "First-Aid Kit": {
@@ -398,7 +398,7 @@
   "Flashy": {
     "description": "Your {{si|Flash}} now has 3 charges with a 2-second cooldown between casts (180 seconds recharge time per {{si|Flash}}).",
     "tier": "Gold",
-    "performanceTier": "C",
+    "performanceTier": "A",
     "icon": "flashy"
   },
   "From Beginning to End": {
@@ -422,7 +422,7 @@
   "Impassable": {
     "description": "Gain the {{ri|Aftershock}} and {{ri|Glacial Augment}} keystone runes.",
     "tier": "Gold",
-    "performanceTier": "B",
+    "performanceTier": "C",
     "icon": "impassable"
   },
   "It's Critical": {
@@ -434,7 +434,7 @@
   "It's Killing Time": {
     "description": "Upon casting your ultimate ability, you apply {{cai|Death Mark|Zed}} to all enemy champions (8 second cooldown). The mark stores 40% of all {{tt|post-mitigation|Damage calculated before modifiers}} damage dealt to the affected target, detonating after 5 seconds to deal {{as|true damage}} equal to the damage stored against them.",
     "tier": "Gold",
-    "performanceTier": "S",
+    "performanceTier": "A",
     "icon": "itskillingtime"
   },
   "Keystone Conjurer": {
@@ -450,7 +450,7 @@
     "icon": "lightningstrikes"
   },
   "Magic Missile": {
-    "description": "Dealing damage to an enemy champion with an ability within 1000 units fires 3 missiles at them that each deal {{as|true damage}} equal to {{as|{{fd|0.33}}% of the target's '''maximum''' health}}, increased to up to {{as|1%|health}} based on distance travelled. This effect can only trigger once every 6 seconds from the same cast.",
+    "description": "Dealing damage to an enemy champion with an ability within 1000 units fires 3 missiles at them that each deal {{as|true damage|true damage}} equal to {{as|{{fd|0.33}}% of the target's '''maximum''' health}}, increased to up to {{as|1%|health}} based on distance travelled. This effect can only trigger once every 6 seconds from the same cast.",
     "tier": "Gold",
     "performanceTier": "S",
     "icon": "magicmissile"
@@ -614,7 +614,7 @@
   "Vulnerability": {
     "description": "Damage dealt by items and damage over time effects can now {{tip|critical strike|critically strike}} for (145% + '''bonus''' critical damage) damage. Additionally, gain {{as|25% critical strike chance}}.",
     "tier": "Gold",
-    "performanceTier": "C",
+    "performanceTier": "B",
     "icon": "vulnerability"
   },
   "With Haste": {
@@ -794,7 +794,7 @@
   "Master of Duality": {
     "description": "Basic attacks {{tip|on-hit}} grant {{as|{{pp|6 to 18}} ability power}} and damaging abilities once per {{tip|cast instance}} grant {{as|{{pp|3 to 9}} '''bonus''' attack damage}}, lasting for 5 seconds, with the duration of both refreshing on subsequent hits, and stacking infinitely.",
     "tier": "Prismatic",
-    "performanceTier": "B",
+    "performanceTier": "C",
     "icon": "masterofduality"
   },
   "Mystic Punch": {
@@ -830,7 +830,7 @@
   "Quest: Sneakerhead": {
     "description": "You have now been assigned with a number of quests to complete that each involve performing specific tasks while equipped with a particular [Boots item], which is granted to you for free during its respective quest. Finish the following quests, which are assigned to you in a random order:<br><ul><li>{{sbc|Quest - {{ii|Berserker's Greaves}}:}} Basic attack 25 times.</li><li>{{sbc|Quest - {{ii|Boots of Swiftness}}:}} Run 300 steps.<!--extremely vague, needs in-game testing--></li><li>{{sbc|Quest - {{ii|Ionian Boots of Lucidity}}:}} Cast 20 abilities.</li><li>{{sbc|Quest - {{ii|Mercury's Treads}}:}} Become afflicted by {{tip|crowd control}} 5 times.</li><li>{{sbc|Quest - {{ii|Plated Steelcaps}}:}} Reduce a total of 200 damage with {{nie|Plating}}.</li><li>{{sbc|Quest - {{ii|Sorcerer's Shoes}}:}} Deal a total of 1500 damage with abilities.</li></ul><br>{{sbc|Reward:}} Upon completing all of the above quests, you receive {{ii|Jarvan I's}}.<br><br>''You cannot purchase any Boots items while equipped with this augment. If you already have a Boots item, it is replaced by the Boots granted by this effect. Boots items gained from this effect cannot be sold.''<br><br>{{as|'''This augment is currently disabled.'''|buzzword3}}",
     "tier": "Prismatic",
-    "performanceTier": "COAL",
+    "performanceTier": "Disabled",
     "icon": "sneakerhead"
   },
   "Quest: Urf's Champion": {
@@ -859,9 +859,9 @@
   },
   "Snowball Roulette": {
     "description": "Hitting a target with {{si|Mark}} casts a random harmful summoner spell on them, and using {{si|Dash}} casts a random beneficial summoner spell on yourself upon arrival. Additionally, your {{sis|Mark}} cooldown is reduced equivalent to 100 ability haste.<br><br>''If {{si|Mark}} is not equipped, the summoner spell in the slot not occupied by {{si|Flash}} is replaced with {{si|Mark}}.''",
-    "tier": "Prismatic",
-    "performanceTier": "COAL",
-    "icon": "snowballroulette"
+    "tier": "Gold",
+    "performanceTier": "D",
+    "icon": "snowballupgrade"
   },
   "Symphony of War": {
     "description": "Gain the {{ri|Conqueror}} and {{ri|Lethal Tempo}} keystone runes.",
@@ -914,7 +914,7 @@
   "Earthwake": {
     "description": "{{tip|Dash|Dashing}} or {{tip|blink|blinking}} causes you to leave behind a trail {{tip|cr|icononly=true}} from the location you moved to your destination that detonates after {{fd|0.75}} seconds in a 300 radius, dealing {{as|{{pp|70 to 210}}|physical damage}} {{as|(+ 125% '''bonus''' AD)}} {{as|(+ 60% AP)}} {{as|physical damage}} per explosion to enemies hit, reduced to 70% against {{tip|minions}}. Enemies can only be affected once every second from all cast instances, and the maximum trigger range is 2000 units.<br><br>This augment is only offered to up to 2 players on each team for a given game.",
     "tier": "Prismatic",
-    "performanceTier": "B",
+    "performanceTier": "C",
     "icon": "earthwake"
   },
   "Orbital Laser": {

@@ -18,7 +18,7 @@ interface TabsProps {
   activeTabClassName?: string
   inactiveTabClassName?: string
   contentClassName?: string
-  /** keep rendered tabs in DOM (hidden) for instant switching */
+  /** keep rendered tabs in DOM for instant switching */
   keepMounted?: boolean
 }
 
@@ -103,7 +103,7 @@ export default function Tabs({
       {/* tab content */}
       <div className={contentClassName}>
         {keepMounted
-          ? // keep rendered tabs in DOM, hide with css
+          ? // keep rendered tabs in DOM to hide with css
             tabs.map(tab => {
               if (!renderedTabs.has(tab.id)) return null
               return (

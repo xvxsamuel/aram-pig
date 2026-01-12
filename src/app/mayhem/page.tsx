@@ -31,13 +31,15 @@ export const metadata: Metadata = {
 }
 
 export default function MayhemPage() {
-  // Load all augments from JSON
-  const augments = Object.entries(augmentsData).map(([name, data]) => ({
-    name,
-    tier: (data as { tier: string }).tier,
-    description: (data as { description: string }).description,
-    performanceTier: ((data as { performanceTier?: string }).performanceTier || 'COAL') as ChampionTier,
-  }))
+  // Load all augments from JSON, filtering out disabled ones
+  const augments = Object.entries(augmentsData)
+    .filter(([, data]) => (data as { performanceTier?: string }).performanceTier !== 'Disabled')
+    .map(([name, data]) => ({
+      name,
+      tier: (data as { tier: string }).tier,
+      description: (data as { description: string }).description,
+      performanceTier: ((data as { performanceTier?: string }).performanceTier || 'COAL') as ChampionTier,
+    }))
 
   return <MayhemPageClient augments={augments} />
 }

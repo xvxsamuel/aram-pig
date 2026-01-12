@@ -2,14 +2,12 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
+import { HIDDEN_PATCHES } from '@/lib/game'
 
 interface PatchFilterProps {
   availablePatches: string[]
   currentPatch: string
 }
-
-// patches with insufficient data
-const HIDDEN_PATCHES = ['25.22', '25.23']
 
 export default function PatchFilter({ availablePatches, currentPatch }: PatchFilterProps) {
   const router = useRouter()
@@ -66,8 +64,8 @@ export default function PatchFilter({ availablePatches, currentPatch }: PatchFil
                 <button
                   key={patch}
                   onClick={() => handlePatchChange(patch)}
-                  className={`w-full px-4 py-2 text-left hover:bg-gold-light/20 transition-colors text-sm text-white ${
-                    currentPatch === patch ? 'bg-accent-light/20' : ''
+                  className={`w-full px-4 py-2 text-left transition-colors text-sm text-white ${
+                    currentPatch === patch ? 'bg-accent-light/20 hover:brightness-150' : 'hover:bg-gold-light/20'
                   }`}
                 >
                   Patch {patch}

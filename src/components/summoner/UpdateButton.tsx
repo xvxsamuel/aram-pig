@@ -80,7 +80,7 @@ export default function UpdateButton({ hasActiveJob, onUpdateStarted, cooldownUn
   if (isOnCooldown) {
     return (
       <div className="relative">
-        <SimpleTooltip content={<span className="text-sm text-white">Please wait before updating again</span>}>
+        <SimpleTooltip content={<span className="text-sm text-white">You updated too recently, please wait before updating again</span>}>
           {buttonContent}
         </SimpleTooltip>
       </div>

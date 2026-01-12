@@ -98,6 +98,13 @@
       "Magic Resistance": 20
     }
   },
+  "1035": {
+    "name": "Emberknife",
+    "description": "<mainText><stats></stats><br><br> <passive>7%</passive> Omnivamp against jungle monsters<br><li><passive>Sear:</passive> Damaging jungle monsters burns them for <magicDamage> magic damage</magicDamage> over 5 seconds.<li><passive>Challenging Path:</passive> Smiting 5 times <status>consumes</status> this item and upgrades your Smite to <attention>Challenging Smite</attention>, increasing its damage to monsters to <trueDamage>900</trueDamage> and damage to minions to <trueDamage>500 +10% target max Health</trueDamage>. Challenging Smite marks champions for 4 seconds. Damaging a marked champion deals an additional <trueDamage> true damage</trueDamage> to them over 2.5 seconds. You take 10% reduced damage from marked champions.<li><passive>Huntsman:</passive> Killing large jungle monsters grants bonus experience.<li><passive>Recoup:</passive> Regen up to <scaleMana> Mana</scaleMana> (based on missing mana) per second when in the jungle or river. <br><br><rules><status>Consuming</status> this item grants all item effects permanently and increases Smite damage to monsters. If you have gained more gold from minions than jungle monsters, gold and experience from minions is heavily reduced. Healing is not reduced on AoE attacks. If two levels behind the average champion level of the game, monster kills grant bonus experience. </rules><br><rules>Only attacks and abilities apply Challenging Smite's burn</rules></mainText>",
+    "totalCost": 350,
+    "itemType": "component",
+    "stats": {}
+  },
   "1036": {
     "name": "Long Sword",
     "description": "",
@@ -124,6 +131,20 @@
     "stats": {
       "Attack Damage": 40
     }
+  },
+  "1039": {
+    "name": "Hailblade",
+    "description": "<mainText><stats></stats><br><br> <passive>7%</passive> Omnivamp against jungle monsters<br><li><passive>Sear:</passive> Damaging jungle monsters burns them for <magicDamage> magic damage</magicDamage> over 5 seconds.<li><passive>Chilling Path:</passive> Smiting 5 times <status>consumes</status> this item and upgrades your Smite to <attention>Chilling Smite</attention>, increasing its damage to monsters to <trueDamage>900</trueDamage> and damage to minions to <trueDamage>500 +10% target max Health</trueDamage>. Chilling Smite deals <trueDamage> true damage</trueDamage> to champions and steals <speed>20% of their Move Speed</speed> for 2 seconds.<li><passive>Huntsman:</passive> Killing large jungle monsters grants bonus experience.<li><passive>Recoup:</passive> Regen up to <scaleMana> Mana</scaleMana> (based on missing mana) per second when in the jungle or river. <br><br><rules><status>Consuming</status> this item grants all item effects permanently and increases Smite damage to monsters. If you have gained more gold from minions than jungle monsters, gold and experience from minions is heavily reduced. Healing is not reduced on AoE attacks. If two levels behind the average champion level of the game, monster kills grant bonus experience. </rules></mainText>",
+    "totalCost": 350,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1040": {
+    "name": "Obsidian Edge",
+    "description": "<mainText><stats></stats><br><br> <passive>8%</passive> Omnivamp against jungle monsters<br><li><passive>Sear:</passive> Damaging jungle monsters burns them for <magicDamage> magic damage</magicDamage> over 5 seconds.<li><passive>Auto Path:</passive> Smiting 5 times <status>consumes</status> this item and upgrades your Attack-Smite, increasing its damage to monsters to <trueDamage>900</trueDamage>.<li><passive>Huntsman:</passive> Killing large jungle monsters grants bonus experience.<li><passive>Recoup:</passive> Regen up to <scaleMana> Mana</scaleMana> (based on missing mana) per second when in the jungle or river. <br><br><rules><status>Consuming</status> this item grants all item effects permanently and increases Smite damage to monsters. If you have gained more gold from minions than jungle monsters, gold and experience from minions is heavily reduced. Healing is not reduced on AoE attacks. If two levels behind the average champion level of the game, monster kills grant bonus experience. </rules></mainText>",
+    "totalCost": 350,
+    "itemType": "component",
+    "stats": {}
   },
   "1042": {
     "name": "Dagger",
@@ -230,6 +251,41 @@
       "Attack Damage": 7
     }
   },
+  "1090": {
+    "name": "Quest: Top",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1091": {
+    "name": "Quest: Mid",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1092": {
+    "name": "Quest: Bot",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1093": {
+    "name": "Quest: Support",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1094": {
+    "name": "Quest: Jungle",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
   "1101": {
     "name": "Scorchclaw Pup",
     "description": "Jungle Companions: Summon a ''Scorchclaw Pup'' companion to assist you in combat against monsters.\nScorchclaw's Slash: Feed your companion enough treats to evolve it and upgrade your {{si|Smite}}. Upon the companion reaching its final evolution, this item is consumed, granting you the {{bi|Scorchclaw's Slash}} buff.",
@@ -251,16 +307,52 @@
     "itemType": "starter",
     "stats": {}
   },
+  "1104": {
+    "name": "Eye of the Herald",
+    "description": "<mainText><stats></stats><br><br><br><br> <active>Active - Consume:</active> Crush the Eye of the Herald, begining the ritual to summon Rift Herald. You may click the Rift Herald after it has summoned to control how it charges. This control effect can be done once when it is summoned, and once each time a nearby enemy structure dies.</mainText>",
+    "totalCost": 0,
+    "itemType": "trinket",
+    "stats": {}
+  },
+  "1105": {
+    "name": "Mosstomper Seedling",
+    "description": "<mainText><stats></stats><br><br><passive>Jungle Companions</passive><br>Summon a <font color='#1CA935'>Jungle Pet</font> that assists you against monsters.<br><br><passive>Mosstomper's Courage</passive><br>The companion grows as you hunt monsters, empowering your <spellName>Smite</spellName>. When fully grown, it completes your Jungle Quest. </mainText>",
+    "totalCost": 450,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1106": {
+    "name": "Gustwalker Hatchling",
+    "description": "<mainText><stats></stats><br><br><passive>Jungle Companions</passive><br>Summon a <font color='#38A8E8'>Gustwalker</font> that assists you against monsters.<br><br><passive>Gustwalker's Gait</passive><br>The companion grows as you hunt monsters, empowering your <spellName>Smite</spellName>. When fully grown, it grants <speed>Move Speed</speed> upon entering brush, increased when killing large monsters.</mainText>",
+    "totalCost": 450,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1107": {
+    "name": "Scorchclaw Pup",
+    "description": "<mainText><stats></stats><br><br><passive>Jungle Companions</passive><br>Summon a <font color='#DD2E2E'>Scorchclaw</font> that assists you against monsters.<br><br><passive>Scorchclaw's Slash</passive><br>The companion grows as you hunt monsters, empowering your <spellName>Smite</spellName>. When fully grown, it periodically imbues your next Attack or Ability to burn enemies and <status>Slow</status> them. Killing large monsters readies this immediately.</mainText>",
+    "totalCost": 450,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1111": {
+    "name": "Jarvan I's",
+    "description": "<mainText><stats><attention> 25%</attention> Attack Speed<br><attention> 100</attention> Move Speed<br><attention> 10</attention> Ability Haste<br><attention> 12</attention> Magic Penetration<br><attention> 25</attention> Armor<br><attention> 20</attention> Magic Resist<br><attention> 30%</attention> Tenacity</stats><br><br><passive>Jarvan One</passive><br>Give you stats and passives from all boots.<br><br><b>Requires Augment: <prismatic>Quest: SneakerHead</prismatic></b></mainText>",
+    "totalCost": 300,
+    "itemType": "boots",
+    "stats": {
+      "Attack Speed": 25,
+      "Move Speed": 100,
+      "Ability Haste": 10,
+      "Magic Penetration": 12,
+      "Armor": 25,
+      "Magic Resist": 20,
+      "Tenacity": 30
+    }
+  },
   "1500": {
     "name": "Ohmwrecker (Turret Item)",
     "description": "Dodge Piercing: Turret attacks cannot be dodged.\nWarming Up: Turrets gain a stack for 5 seconds each time they strike a champion. Each stack increases their damage dealt by 50%, up to 150%.",
-    "totalCost": 0,
-    "itemType": "other",
-    "stats": {}
-  },
-  "1501": {
-    "name": "Lane Swap Detector",
-    "description": ": Activates special rules in this lane if two non-Jungler enemies appear in it: Turret takes less damage, deals massively increased damage, and redirects kill {{g|gold}} to the nearest allied champion. Allied minions redirect kill {{g|gold}} to the nearest allied champion. Enemy champions gain reduced resources from minions. This item disappears shortly after the start of the game.",
     "totalCost": 0,
     "itemType": "other",
     "stats": {}
@@ -277,6 +369,20 @@
     "description": "True Sight: Can see {{tip|camouflage|camouflaged}} and {{tip|invisible}} units within 1100 units.",
     "totalCost": 0,
     "itemType": "other",
+    "stats": {}
+  },
+  "1504": {
+    "name": "Vanguard",
+    "description": "GeneratedTip_Item_1504_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1505": {
+    "name": "Reinforced Armor",
+    "description": "<mainText><stats></stats><br><br><mainText><unique>Reinforced</unique><br>Turrets take 80% reduced damage, including True Damage, when no enemy Lane Minions or Rift Herald are nearby.<br><br><unique>Melee Weakness</unique><br>Turrets take 20% increased damage from melee Champions.<br><br><unique>Regeneration</unique><br>Inhibitor turrets have health regeneration but cannot regenerate past their current segment at 30%, 75%, and 100% health.</mainText></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
     "stats": {}
   },
   "1506": {
@@ -335,11 +441,102 @@
     "itemType": "other",
     "stats": {}
   },
+  "1516": {
+    "name": "Structure Bounty",
+    "description": "GeneratedTip_Item_1516_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1517": {
+    "name": "Structure Bounty",
+    "description": "GeneratedTip_Item_1516_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1518": {
+    "name": "Structure Bounty",
+    "description": "GeneratedTip_Item_1516_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1519": {
+    "name": "Structure Bounty",
+    "description": "GeneratedTip_Item_1516_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1520": {
+    "name": "OvererchargedHA",
+    "description": "GeneratedTip_Item_1520_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1521": {
+    "name": "Fortification",
+    "description": "GeneratedTip_Item_1521_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1522": {
+    "name": "Tower Power-Up",
+    "description": "GeneratedTip_Item_1522_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1523": {
+    "name": "Overcharged",
+    "description": "GeneratedTip_Item_1523_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "1524": {
+    "name": "Overgrowth",
+    "description": "GeneratedTip_Item_1522_ExternalDescription",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "2001": {
+    "name": "Recall",
+    "description": "Teleports your champion to the Summoning Platform after 8 seconds. Any damage taken will cancel the teleport.",
+    "totalCost": 60,
+    "itemType": "component",
+    "stats": {}
+  },
+  "2002": {
+    "name": "Enhanced Recall",
+    "description": "",
+    "totalCost": 60,
+    "itemType": "component",
+    "stats": {}
+  },
   "2003": {
     "name": "Health Potion",
     "description": "",
     "totalCost": 50,
     "itemType": "consumable",
+    "stats": {}
+  },
+  "2007": {
+    "name": "Disabled Recall",
+    "description": "GeneratedTip_Item_2007_ExternalDescription",
+    "totalCost": 60,
+    "itemType": "component",
+    "stats": {}
+  },
+  "2008": {
+    "name": "",
+    "description": "GeneratedTip_Item_2008_ExternalDescription",
+    "totalCost": 60,
+    "itemType": "component",
     "stats": {}
   },
   "2010": {
@@ -348,6 +545,15 @@
     "totalCost": 0,
     "itemType": "other",
     "stats": {}
+  },
+  "2015": {
+    "name": "Kircheis Shard",
+    "description": "<mainText><stats><attention> 15</attention> Attack Damage</stats><br><br><passive>Jolt</passive><br><keyword>Energized Attacks</keyword> deal an additional <magicDamage>50 magic damage</magicDamage>.</mainText>",
+    "totalCost": 700,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 15
+    }
   },
   "2019": {
     "name": "Steel Sigil",
@@ -396,6 +602,13 @@
     "itemType": "consumable",
     "stats": {}
   },
+  "2033": {
+    "name": "Corrupting Potion",
+    "description": "<mainText><stats></stats><br><br> <active>Active - Consume:</active> Consumes a charge to restore <healing>100 Health</healing> and <scaleMana>75 Mana</scaleMana> over 12 seconds. During this time, damaging Abilities and Attacks burn enemy champions for <magicDamage>15 (20 if you cannot gain Mana) magic damage</magicDamage> over 3 seconds. Holds up to 3 charges and refills upon visiting the shop.<br><br><rules>Corrupting damage is reduced to 50% when triggered by area of effect or periodic damage.</rules></mainText>",
+    "totalCost": 500,
+    "itemType": "consumable",
+    "stats": {}
+  },
   "2049": {
     "name": "Guardian's Amulet",
     "description": "Recovery: Restore {{as|10 mana}} every 5 seconds. Manaless champions restore {{as|3 health}} instead.",
@@ -438,6 +651,13 @@
     "name": "Control Ward",
     "description": "",
     "totalCost": 75,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2056": {
+    "name": "Stealth Ward",
+    "description": "<mainText><stats></stats><br><br> <active>Active - Consume:</active> Places a Stealth Ward on the ground that lasts 60 seconds, is <keywordStealth>Invisible</keywordStealth> to enemies but grants your team vision of the surrounding area. </mainText>",
+    "totalCost": 40,
     "itemType": "consumable",
     "stats": {}
   },
@@ -537,6 +757,34 @@
     "itemType": "consumable",
     "stats": {}
   },
+  "2161": {
+    "name": "Bandle Juice of Power",
+    "description": "<mainText><stats></stats><br><br>Drink to permanently gain <scaleAP>20 + 3% bonus Ability Power</scaleAP> or <scaleAD>12 + 3% bonus Attack Damage</scaleAD>. And a hat!<br><br><flavorText>Made with 100% real cherries. Warning: May cause imbiber to deal tons of damage.</flavorText></mainText>",
+    "totalCost": 1000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2162": {
+    "name": "Bandle Juice of Vitality",
+    "description": "<mainText><stats></stats><br><br>Drink to permanently gain <healing>200 + 3% Health</healing>. And a hat!<br><br><flavorText>Our specially formulated veggie blend is proven to harden your skin to resist even the strongest attacks!</flavorText></mainText>",
+    "totalCost": 1000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2163": {
+    "name": "Bandle Juice of Haste",
+    "description": "<mainText><stats></stats><br><br>Drink to permanently gain <speed>10 + 5% Ability Haste</speed>. And a hat!<br><br><flavorText>For people who gotta go FAST. Made with lightning. REAL lightning!</flavorText></mainText>",
+    "totalCost": 1000,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "2403": {
+    "name": "Minion Dematerializer",
+    "description": "<mainText><stats></stats><br><br> <active>Active - Consume:</active> Kill target lane minion.  (0s)</mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
   "2420": {
     "name": "Seeker's Armguard",
     "description": "Time Stop: Put yourself in {{tip|stasis (buff)|stasis}} for {{fd|2.5}} seconds, rendering you {{tip|untargetable}} and {{tip|invulnerable}} for the duration but also unable to move, declare [[basic attack]]s, cast [[champion ability|abilities]], use [[summoner spell]]s, or [[active ability items|activate items]].",
@@ -619,6 +867,130 @@
       "Ability Power": 30
     }
   },
+  "2510": {
+    "name": "Dusk and Dawn",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 70</attention> Ability Power<br><attention> 20</attention> Ability Haste<br><attention> 25%</attention> Attack Speed</stats><br><br><passive>Spellblade</passive>  (0s)<br>After using an Ability, your next Attack deals <magicDamage> bonus magic damage</magicDamage>  <OnHit>On-Hit</OnHit> and applies  <OnHit>On-Hit</OnHit> effects an additional time.</mainText>",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 300,
+      "Ability Power": 70,
+      "Ability Haste": 20,
+      "Attack Speed": 25
+    }
+  },
+  "2512": {
+    "name": "Fiendhunter Bolts",
+    "description": "<mainText><stats><attention> 40%</attention> Attack Speed<br><attention> 25%</attention> Critical Strike Chance<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Night Vigil</passive><br>Gain 30 Ultimate Ability Haste.<br><br><passive>Opening Barrage</passive><br>After casting your Ultimate, your next 3 basic attacks gain <attackSpeed>50% Attack Speed</attackSpeed> and Critically Strike for 75% of your normal Critical Strike damage for 8 seconds. If an attack would already Critically Strike, instead it deals <trueDamage>10% bonus true damage</trueDamage>.</mainText>",
+    "totalCost": 2650,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Speed": 40,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4
+    }
+  },
+  "2517": {
+    "name": "Endless Hunger",
+    "description": "<mainText><stats><attention> 60</attention> Attack Damage<br><attention> 5%</attention> Omnivamp<br><attention> 20%</attention> Tenacity</stats><br><br><passive>Famine</passive><br>Gain  Ability Haste.<br><br><passive>Feast</passive><br>When a champion that you damaged within 3 seconds dies, gain <omnivamp>15% Omnivamp</omnivamp> for 8 seconds. </mainText>",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 60,
+      "Omnivamp": 5,
+      "Tenacity": 20
+    }
+  },
+  "2520": {
+    "name": "Bastionbreaker",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 22</attention> Lethality<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Shaped Charge</passive>  (0s)<br>Dealing Ability damage to a Champion or Epic Monster deals an additional <trueDamage> true damage</trueDamage>.<br><br><passive>Sabotage</passive><br>Taking down a champion within 3 seconds of damaging them grants Sabotage for 90 seconds. While you have Sabotage, your next Attack against an Epic Monster or Turret deals an additional <trueDamage> true damage</trueDamage> over 3 seconds. </mainText>",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 22,
+      "Ability Haste": 15
+    }
+  },
+  "2522": {
+    "name": "Actualizer",
+    "description": "<mainText><stats><attention> 90</attention> Ability Power<br><attention> 300</attention> Mana<br><attention> 10</attention> Ability Haste</stats><br><br> <active>Mana Made Real</active>  (0s)<br>For 8 seconds, your mana is Empowered. While Empowered, your spells cost 100% more Mana, you gain  increased Ability damage, Shielding, and Healing, and your basic ability cooldowns progress 30% faster.</mainText>",
+    "totalCost": 3100,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 90,
+      "Mana": 300,
+      "Ability Haste": 10
+    }
+  },
+  "2523": {
+    "name": "Hexoptics C44",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Magnification</passive><br>Deal up to 10% increased damage with Attacks, based on how far away the enemy is (max damage at 700 range).<br><br><passive>Arcane Aim</passive><br>When a champion that you damaged within 3 seconds dies, gain 100 additional attack range for 6 seconds. </mainText>",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Critical Strike Chance": 25
+    }
+  },
+  "2524": {
+    "name": "Bandlepipes",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 15</attention> Ability Haste<br><attention> 20</attention> Armor<br><attention> 20</attention> Magic Resist</stats><br><br><passive>Fanfare</passive><br><keyword>Slowing</keyword> or <keyword>Immobilizing</keyword> an enemy champion grants Fanfare for  seconds. Fanfare grants you <speed>20 Move Speed</speed>. While you have Fanfare, nearby allies, including yourself, gain <attackSpeed> Attack Speed</attackSpeed>.</mainText>",
+    "totalCost": 2000,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Ability Haste": 15,
+      "Armor": 20,
+      "Magic Resist": 20
+    }
+  },
+  "2525": {
+    "name": "Protoplasm Harness",
+    "description": "<mainText><stats><attention> 600</attention> Health<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Lifeline</passive>  (0s)<br>Taking damage that would reduce your Health below 30% causes you to gain <health> maximum Health</health> for 5 seconds, then heal <health> Health</health> over the duration. While regenerating Health, you gain 15% increased Size, 10% Move Speed, and 25% Tenacity. </mainText>",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 600,
+      "Ability Haste": 15
+    }
+  },
+  "2526": {
+    "name": "Whispering Circlet",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 8%</attention> Heal and Shield Power<br><attention> 75%</attention> Base Mana Regen<br><attention> 300</attention> Mana</stats><br><br><passive>Harmony</passive><br>Gain % Heal and Shield Power.<br><br><passive>Manaflow</passive>  (8s, max 5 charges)<br>Landing Abilities grants <scaleMana>4 max Mana</scaleMana> (doubled vs. champions).<br>Transforms into <rarityLegendary>Diadem of Songs</rarityLegendary> at <scaleMana>360 max Mana</scaleMana>.</mainText>",
+    "totalCost": 2250,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Heal and Shield Power": 8,
+      "Mana Regen": 75,
+      "Mana": 300
+    }
+  },
+  "2530": {
+    "name": "Diadem of Songs",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 8%</attention> Heal and Shield Power<br><attention> 1000</attention> Mana<br><attention> 100%</attention> Base Mana Regen</stats><br><br><passive>Harmony</passive><br>Gain % Heal and Shield Power.<br><br><passive>Consonance</passive><br>While you or any ally you've healed or shielded in the last 3 seconds is in combat with champions, each second, heal the lowest health nearby ally champion.</mainText>",
+    "totalCost": 2250,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Heal and Shield Power": 8,
+      "Mana": 1000,
+      "Mana Regen": 100
+    }
+  },
+  "3001": {
+    "name": "Evenshroud",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 30</attention> Armor<br><attention> 30</attention> Magic Resist<br><attention> 20</attention> Ability Haste</stats><br><br><br><li><passive>Coruscation:</passive> After <status>Immobilizing</status> champions or being <status>Immobilized</status>, cause that target and all nearby enemy champions to take 7% increased damage for 5 seconds. <br><br><rarityMythic>Mythic Passive:</rarityMythic> Grants all other <rarityLegendary>Legendary</rarityLegendary> items <attention>5</attention> <scaleArmor> Armor</scaleArmor> <attention>and</attention> <scaleMR> Magic Resist</scaleMR><attention>.</attention></mainText>",
+    "totalCost": 2300,
+    "itemType": "mythic",
+    "stats": {
+      "Health": 200,
+      "Armor": 30,
+      "Magic Resist": 30,
+      "Ability Haste": 20
+    }
+  },
   "3002": {
     "name": "Trailblazer",
     "description": "Lead the Way: While moving, generate 7 stacks of ''Momentum'' every {{fd|0.25}} seconds, granting up to {{as|20 '''bonus''' movement speed}} at 100 stacks after {{fd|3.75}} seconds of moving. At '''maximum''' stacks, you leave behind a path briefly that grants {{as|15% of your '''total''' movement speed}} as {{as|'''bonus''' movement speed}} to allied champions within. Basic attacks consume all stacks. If you are {{tip|melee}} and at '''maximum''' stacks, your next basic attack {{tip|slow|slows}} the target by 50% for 1 second.",
@@ -652,6 +1024,15 @@
       "Ability Haste": 15
     }
   },
+  "3005": {
+    "name": "Ghostcrawlers",
+    "description": "<mainText><stats><attention> 45</attention> Move Speed</stats><br><br> <active>Wall Walk</active>  (0s)<br>Gain the ability to walk through walls for 6 seconds. While inside walls, gain 125 move speed. Casting a spell or attacking will end this effect.</mainText>",
+    "totalCost": 1000,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 45
+    }
+  },
   "3006": {
     "name": "Berserker's Greaves",
     "description": "",
@@ -680,6 +1061,28 @@
       "Move Speed": 40
     }
   },
+  "3011": {
+    "name": "Chemtech Putrifier",
+    "description": "<mainText><stats><attention> 35</attention> Ability Power<br><attention> 10%</attention> Heal and Shield Power<br><attention> 75%</attention> Base Mana Regen<br><attention> 15</attention> Ability Haste</stats><br><br><br><li><passive>Puffcap Toxin:</passive> Dealing damage applies <status>40% Grievous Wounds</status> to champions for 3 seconds.<br><br><rules><status>Grievous Wounds</status> reduces the effectiveness of Healing and Regeneration effects.</rules></mainText>",
+    "totalCost": 1900,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 35,
+      "Heal and Shield Power": 10,
+      "Mana Regen": 75,
+      "Ability Haste": 15
+    }
+  },
+  "3012": {
+    "name": "Chalice of Blessing",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 50%</attention> Base Mana Regen</stats><br><br><br><li><passive>Harmony:</passive> Gain 25% Base Health Regen per <scalemana>25% Base Mana Regen</scalemana>.<br><br><flavorText>'These blessed waters still carry their power to the worthy.'</flavorText></mainText>",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Mana Regen": 50
+    }
+  },
   "3013": {
     "name": "Synchronized Souls",
     "description": "Voidborn: Gain {{si|Empowered Recall}}.\nSynchrony: Gain {{as|45 '''bonus''' movement speed}} while out-of-combat.",
@@ -697,6 +1100,17 @@
     "stats": {
       "Magic Penetration": 12,
       "Move Speed": 45
+    }
+  },
+  "3023": {
+    "name": "Lifewell Pendant",
+    "description": "<mainText><stats><attention> 150</attention> Health<br><attention> 25</attention> Armor<br><attention> 5</attention> Ability Haste</stats><br><br><br><br><flavorText>'Fashionable and functional.'</flavorText></mainText>",
+    "totalCost": 1050,
+    "itemType": "component",
+    "stats": {
+      "Health": 150,
+      "Armor": 25,
+      "Ability Haste": 5
     }
   },
   "3024": {
@@ -767,6 +1181,16 @@
     "stats": {
       "Attack Damage": 35,
       "Critical Strike Chance": 25
+    }
+  },
+  "3039": {
+    "name": "Atma's Reckoning",
+    "description": "<mainText><stats><attention> 700</attention> Health<br><attention> 20%</attention> Critical Strike Chance</stats><br><br><passive>Big Hands</passive><br>Gain  0-30% Critical Strike Chance, scaling with your <scaleHealth>bonus Health</scaleHealth>.</mainText>",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 700,
+      "Critical Strike Chance": 20
     }
   },
   "3040": {
@@ -1101,6 +1525,28 @@
       "Move Speed": 4
     }
   },
+  "3095": {
+    "name": "Stormrazor",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 20%</attention> Attack Speed<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Energized</passive><br>Moving and Attacking generates an <keyword>Energized Attack</keyword>.<br><br><passive>Bolt</passive><br>Your <keyword>Energized Attack</keyword> applies <magicDamage> bonus magic damage</magicDamage> and grants <speed>45% Move Speed</speed> for 1.5s.<br></mainText>",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Attack Speed": 20,
+      "Critical Strike Chance": 25
+    }
+  },
+  "3097": {
+    "name": "Stormrazor",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 20%</attention> Attack Speed<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Energized</passive><br>Moving and Attacking generates an <keyword>Energized Attack</keyword>.<br><br><passive>Bolt</passive><br>Your <keyword>Energized Attack</keyword> applies <magicDamage> bonus magic damage</magicDamage> and grants <speed>45% Move Speed</speed> for 1.5s.<br></mainText>",
+    "totalCost": 3200,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Attack Speed": 20,
+      "Critical Strike Chance": 25
+    }
+  },
   "3100": {
     "name": "Lich Bane",
     "description": "Spellblade: After using an [[Champion ability|ability]], your next basic attack within 10 seconds gains {{as|50% '''bonus''' attack speed}} and deals {{as|75% '''base''' AD}} {{as|(+ 40% AP)}} {{as|'''bonus''' magic damage}} [[on-hit]] ({{fd|1.5}} second cooldown, starts after using the empowered attack).",
@@ -1238,6 +1684,16 @@
       "Health": 400
     }
   },
+  "3117": {
+    "name": "Mobility Boots",
+    "description": "<mainText><stats></stats><br><br><attention> 25</attention> Move Speed <br>When out of combat for at least 5 seconds, increase this item's effect to <attention> 45</attention>.</mainText>",
+    "totalCost": 1000,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 25,
+      ".": 45
+    }
+  },
   "3118": {
     "name": "Malignance",
     "description": "Scorn: Gain 20 [[Haste#Ultimate haste|ultimate haste]].\nHatefog: Dealing [[ability damage]] to enemy champions with your [[champion ability|ultimate ability]] creates a {{pp|type=ultimate's damage instance|251;251.8;253.1;255.5;259.8;267.3;280.7;304.2;345.9;419.7;550|0 to 823|formula=250 + 2^(damage dealt/100)}} radius scorched zone beneath them for 3 seconds, applying a ''Curse'' to enemies within that deals {{ft|{{as|{{ap|60/4}}|magic damage}} {{as|(+ {{ap|5/4}}% AP)}} {{as|magic damage}} every {{fd|0.25}} seconds|{{as|{{ap|60*3}}|magic damage}} {{as|(+ {{ap|5*3}}% AP)}} {{as|'''total''' magic damage}} over the duration}} and reduces their {{as|magic resistance by 10}} (3 second cooldown per target, starts on zone creation).",
@@ -1289,6 +1745,27 @@
       "Ability Power": 30,
       "Attack Damage": 30,
       "Attack Speed": 25
+    }
+  },
+  "3128": {
+    "name": "Deathfire Grasp",
+    "description": "<mainText><stats><attention> 120</attention> Ability Power<br><attention> 10</attention> Ability Haste</stats><br><br><br><br> <active>Active -</active> <active>The Silence:</active> Deal magic damage equal to <magicDamage>15% of the Target's Max Health</magicDamage>, and then amplify damage they take by 15% for 4 seconds (90 (0s)).</mainText>",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 120,
+      "Ability Haste": 10
+    }
+  },
+  "3131": {
+    "name": "Sword of the Divine",
+    "description": "<mainText><stats><attention> 30</attention> Attack Damage<br><attention> 25%</attention> Attack Speed<br><attention> 18</attention> Lethality</stats><br><br><br><br> <active>Active -</active> <active>Divine Blessing:</active> Grants <attackSpeed>100% Attack Speed</attackSpeed> and 100% Critical Strike Chance for 3 seconds or 3 basic attacks (90 (0s)).</mainText>",
+    "totalCost": 2300,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 30,
+      "Attack Speed": 25,
+      "Lethality": 18
     }
   },
   "3133": {
@@ -1389,6 +1866,17 @@
     "itemType": "component",
     "stats": {
       "Ability Power": 45
+    }
+  },
+  "3146": {
+    "name": "Hextech Gunblade",
+    "description": "<mainText><stats><attention> 80</attention> Ability Power<br><attention> 40</attention> Attack Damage<br><attention> 10%</attention> Omnivamp</stats><br><br><br><br> <active>ACTIVE</active>  (0s)<br><active>Lightning Bolt</active><br>Shocks the target enemy champion, dealing  magic damage and slowing them by 25% for 1.5 seconds.</mainText>",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 80,
+      "Attack Damage": 40,
+      "Omnivamp": 10
     }
   },
   "3147": {
@@ -1612,6 +2100,17 @@
       "Ability Haste": 10
     }
   },
+  "3193": {
+    "name": "Gargoyle Stoneplate",
+    "description": "<mainText><stats><attention> 60</attention> Armor<br><attention> 60</attention> Magic Resist<br><attention> 15</attention> Ability Haste</stats><br><br><br><li><passive>Fortify:</passive> Taking damage from a champion grants a stack of <scaleArmor> Armor</scaleArmor> and <scaleMR> Magic Resist</scaleMR> for 6 seconds.<br><br><rules>Max 5 stacks; 1 per champion.</rules><br><br> <active>Active -</active> <active>Unbreakable:</active> Gain a Shield that decays and grow in size.</mainText>",
+    "totalCost": 3150,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 60,
+      "Magic Resist": 60,
+      "Ability Haste": 15
+    }
+  },
   "3211": {
     "name": "Spectre's Cowl",
     "description": "",
@@ -1644,13 +2143,6 @@
       "Attack Speed": 35
     }
   },
-  "3330": {
-    "name": "Scarecrow Effigy",
-    "description": "Trinket: Consume a charge to place a visible {{tip|Effigy}} at the target location, which grants {{tip|sight}} over the surrounding area for {{pp|130 to 280|type=level}} seconds. For enemies, it visually appears identical to {{ci|Fiddlesticks}} (including on the minimap) and has no visible [[health bar]] until it ''activates''. Enemy {{tip|champion|champions}} that approach it will activate it, causing it to automatically sound a Danger [[ping]] to its allies as well as fake a random action for up to 2 seconds. If not destroyed by that time, it will deal 1 damage to itself.",
-    "totalCost": 0,
-    "itemType": "other",
-    "stats": {}
-  },
   "3340": {
     "name": "Stealth Ward",
     "description": "Trinket: Consume a charge to place an invisible {{tip|Totem Ward}} at the target location, which grants {{tip|sight}} of the surrounding area for {{pp|90 to 120|type=average champion level}} seconds.",
@@ -1665,6 +2157,13 @@
     "itemType": "other",
     "stats": {}
   },
+  "3349": {
+    "name": "Lucent Singularity",
+    "description": "<mainText><stats></stats><br><br>Lucent Singularity</mainText>",
+    "totalCost": 0,
+    "itemType": "trinket",
+    "stats": {}
+  },
   "3363": {
     "name": "Farsight Alteration",
     "description": "Trinket: Places a visible {{tip|Farsight Ward}} at the target location that grants {{tip|sight}} of the surrounding area, including over [[terrain]] and through [[brush]] and lasting indefinitely. Also grants sight of the area in a 800 radius for 2 seconds. Upon detecting an enemy champion, the ward will increase its sight radius to 800 units and destroy itself after 3 seconds.",
@@ -1675,13 +2174,6 @@
   "3364": {
     "name": "Oracle Lens",
     "description": ": Consume one charge to summon a {{tip|Sweeper Drone}} that escorts you for the next 6 seconds, detecting nearby enemies that are not {{tip|sight|visible}}.",
-    "totalCost": 0,
-    "itemType": "other",
-    "stats": {}
-  },
-  "3400": {
-    "name": "Your Cut",
-    "description": "",
     "totalCost": 0,
     "itemType": "other",
     "stats": {}
@@ -1718,20 +2210,6 @@
       "Critical Strike Chance": 25,
       "Ability Haste": 15
     }
-  },
-  "3513": {
-    "name": "Eye of the Herald",
-    "description": "",
-    "totalCost": 0,
-    "itemType": "other",
-    "stats": {}
-  },
-  "3599": {
-    "name": "Black Spear",
-    "description": "Oathsworn Bond: Consumes this item to initiate a {{fd|3.5}}-second [[Channel#Casting Times|cast time]] and a 3-second {{tip|channel}} afterwards from the user and the target allied champion, both becoming bound allies. The target is unable to act for 6 seconds after the channel's duration. Afterwards, the target becomes an ''Oathsworn''.",
-    "totalCost": 0,
-    "itemType": "starter",
-    "stats": {}
   },
   "3742": {
     "name": "Dead Man's Plate",
@@ -1884,27 +2362,6 @@
       "Mana Regen": 75
     }
   },
-  "3901": {
-    "name": "Fire at Will",
-    "description": "Fire at Will: {{ai|Cannon Barrage|Gangplank}} fires 2 additional clusters of 3 waves over the duration at an increased rate of fire (1 cluster per {{fd|1.33}} seconds), for a total of 18 waves over the 8 seconds.",
-    "totalCost": 0,
-    "itemType": "other",
-    "stats": {}
-  },
-  "3902": {
-    "name": "Death's Daughter",
-    "description": "Death's Daughter: A massive cannonball lands after {{ais|Cannon Barrage|Gangplank}} first cluster of waves, dealing {{sti|true damage|{{as|{{ap|120 to 300 3}}|true damage}}}} {{as|(+ 30% AP)}} {{as|true damage}} to enemies struck and {{tip|slow|slowing}} them by 75% for 1 second.",
-    "totalCost": 0,
-    "itemType": "other",
-    "stats": {}
-  },
-  "3903": {
-    "name": "Raise Morale",
-    "description": "Raise Morale: {{ci|Gangplank}} and his allies within {{ai|Cannon Barrage|Gangplank}} gain {{as|40% '''bonus''' movement speed}}, which persists for 2 seconds after leaving the area.",
-    "totalCost": 0,
-    "itemType": "other",
-    "stats": {}
-  },
   "3916": {
     "name": "Oblivion Orb",
     "description": "Grievous Wounds: Dealing {{as|magic damage}} to enemy champions inflicts them with {{tip|Grievous Wounds}} for 3 seconds.",
@@ -1925,6 +2382,17 @@
       "Move Speed": 4
     }
   },
+  "4004": {
+    "name": "Spectral Cutlass",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 15</attention> Lethality<br><attention> 4%</attention> Move Speed</stats><br><br> <active>Active -</active> <active>Soul Anchor</active>  (0s)<br>Mark your current location. After 4 seconds, return to that location. You may recast at any point during <active>Soul Anchor's</active> duration to return to your marked location early.</mainText>",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Lethality": 15,
+      "Move Speed": 4
+    }
+  },
   "4005": {
     "name": "Imperial Mandate",
     "description": "Coordinated Fire: Abilities that {{tip|slow}} or {{tip|immobilize}} enemy champions mark them for 5 seconds. Allied champions that damage marked enemies consume the mark to deal {{as|10% of the target's '''current''' health}} {{as|'''bonus''' magic damage}} (9 second cooldown per target, starts upon mark application).",
@@ -1936,6 +2404,17 @@
       "Ability Haste": 20
     }
   },
+  "4010": {
+    "name": "Bloodletter's Curse",
+    "description": "<mainText><stats><attention> 60</attention> Ability Power<br><attention> 350</attention> Health<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Vile Decay</passive><br>Dealing <magicDamage>magic damage</magicDamage> with abilities or passives to champions reduces their <scaleMR>Magic Resist by 7.5%</scaleMR> for 6 seconds, up to 30%.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 60,
+      "Health": 350,
+      "Ability Haste": 15
+    }
+  },
   "4011": {
     "name": "Sword of Blossoming Dawn",
     "description": "Effervescence: Gain {{as|{{fd|1.2}}% '''bonus''' attack speed}} per 1% {{stil|heal and shield power}}.\nPeppermint: Basic attacks [[on-hit]] cause the most wounded and nearest allied champion to be {{tip|heal|healed}} for {{pp|15 to 45}} {{as|(+ 10% '''bonus''' AD)}} {{as|(+ 7% AP)}}.",
@@ -1945,6 +2424,30 @@
       "Ability Power": 45,
       "Health": 200,
       "Ability Haste": 15
+    }
+  },
+  "4012": {
+    "name": "Sin Eater",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 45</attention> Armor<br><attention> 45</attention> Magic Resist<br><attention> 30%</attention> Tenacity</stats><br><br><br><li><passive>The Feast:</passive> Whenever a nearby ally champion becomes affected by an immobilizing crowd control effect, instead you are stunned for that duration. (20 (0s)).</mainText>",
+    "totalCost": 3000,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Armor": 45,
+      "Magic Resist": 45,
+      "Tenacity": 30
+    }
+  },
+  "4013": {
+    "name": "Lightning Braid",
+    "description": "<mainText><stats><attention> 70</attention> Ability Power<br><attention> 30</attention> Armor<br><attention> 30</attention> Magic Resist<br><attention> 30%</attention> Tenacity</stats><br><br><br><li><passive>Chain Lightning:</passive> You deal 20% reduced ability damage. On a 1 second cadence, enemies you've damaged with abilities chain 66.6% of the ability damage you've dealt them to another nearby enemy, prioritizing champions.</mainText>",
+    "totalCost": 3000,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 70,
+      "Armor": 30,
+      "Magic Resist": 30,
+      "Tenacity": 30
     }
   },
   "4015": {
@@ -1987,6 +2490,39 @@
       "Health": 400,
       "Magic Resistance": 55,
       "Move Speed": 4
+    }
+  },
+  "4402": {
+    "name": "Innervating Locket",
+    "description": "<mainText><stats><attention> 30</attention> Attack Damage<br><attention> 400</attention> Health<br><attention> 300</attention> Mana<br><attention> 10</attention> Ability Haste</stats><br><br><br><li><passive>Eternity:</passive> Restore Mana equal to 15% of premitigation damage taken from champions, and Health equal to 25% of Mana spent, up to 20 Health per cast, per second.<li><passive>Innervate:</passive> After using an ability, restore <healing>3% missing Health</healing> and <scaleMana>3% missing Mana</scaleMana> over 3 seconds.<br><br><flavorText>\"Cast down the Noxians\" <br>– Bobdyr, Temple Guardsman</flavorText></mainText>",
+    "totalCost": 2950,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 30,
+      "Health": 400,
+      "Mana": 300,
+      "Ability Haste": 10
+    }
+  },
+  "4403": {
+    "name": "The Golden Spatula",
+    "description": "<mainText><stats><attention> 70</attention> Attack Damage<br><attention> 120</attention> Ability Power<br><attention> 50%</attention> Attack Speed<br><attention> 30%</attention> Critical Strike Chance<br><attention> 250</attention> Health<br><attention> 30</attention> Armor<br><attention> 30</attention> Magic Resist<br><attention> 250</attention> Mana<br><attention> 20</attention> Ability Haste<br><attention> 10%</attention> Move Speed<br><attention> 10%</attention> Life Steal<br><attention> 100%</attention> Base Health Regen<br><attention> 100%</attention> Base Mana Regen</stats><br><br><br><li><passive>Doing Something:</passive> You are permanently On Fire!<br><br><flavorText>\"It must do something...<br>Declined, it does EVERYTHING\"</flavorText></mainText>",
+    "totalCost": 7187,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 70,
+      "Ability Power": 120,
+      "Attack Speed": 50,
+      "Critical Strike Chance": 30,
+      "Health": 250,
+      "Armor": 30,
+      "Magic Resist": 30,
+      "Mana": 250,
+      "Ability Haste": 20,
+      "Move Speed": 10,
+      "Life Steal": 10,
+      "Health Regen": 100,
+      "Mana Regen": 100
     }
   },
   "4628": {
@@ -2042,6 +2578,25 @@
       "Ability Haste": 15
     }
   },
+  "4636": {
+    "name": "Night Harvester",
+    "description": "<mainText><stats><attention> 90</attention> Ability Power<br><attention> 300</attention> Health<br><attention> 25</attention> Ability Haste</stats><br><br><br><li><passive>Soulrend:</passive> Damaging a champion with Attacks or Abilities deals an additional <magicDamage> magic damage</magicDamage> and grants you <speed>25% Move Speed</speed> for 1.5 seconds (30 (0s) per champion).<br><br><rarityMythic>Mythic Passive:</rarityMythic> Grants all other <rarityLegendary>Legendary</rarityLegendary> items <attention> 5</attention> Ability Haste.<br><br><rules>Damaging a new champion will extend the duration of the Move Speed bonus.</rules></mainText>",
+    "totalCost": 2765,
+    "itemType": "mythic",
+    "stats": {
+      "Ability Power": 90,
+      "Health": 300,
+      "Ability Haste": 25,
+      "Ability Haste.": 5
+    }
+  },
+  "4637": {
+    "name": "Demonic Embrace",
+    "description": "GeneratedTip_Item_4637_ExternalDescription",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {}
+  },
   "4638": {
     "name": "Watchful Wardstone",
     "description": "Arcane Cache: Purchasing a {{ii|Control Ward}} [[ammunition|stocks]] it as a charge, up to maximum of 3.\n: Consumes a charge of ''Arcane Cache'' to place a visible {{tip|Control Ward}} at the target location (600 range).",
@@ -2077,6 +2632,19 @@
       "Ability Haste": 20
     }
   },
+  "4644": {
+    "name": "Crown of the Shattered Queen",
+    "description": "<mainText><stats><attention> 85</attention> Ability Power<br><attention> 250</attention> Health<br><attention> 600</attention> Mana<br><attention> 20</attention> Ability Haste</stats><br><br><br><li><passive>Safeguard:</passive> You are <keywordMajor>Safeguarded</keywordMajor>, reducing incoming champion damage by 40%. <keywordMajor>Safeguard</keywordMajor> persists for 2.5 seconds after taking champion damage. (40 (0s)). <br><br><rarityMythic>Mythic Passive:</rarityMythic> Grants all other <rarityLegendary>Legendary</rarityLegendary> items <attention> 1%</attention> Move Speed and  8 Ability Power.<br><br><rules>Item cooldown is restarted when damage is taken from champions.</rules></mainText>",
+    "totalCost": 2865,
+    "itemType": "mythic",
+    "stats": {
+      "Ability Power": 85,
+      "Health": 250,
+      "Mana": 600,
+      "Ability Haste": 20,
+      "Move Speed and  8 Ability Power.": 1
+    }
+  },
   "4645": {
     "name": "Shadowflame",
     "description": "Cinderbloom: Your {{as|magic|magic damage}} and {{as|true|true damage}} damage will {{tip|critical strike|critically strike}} for 120% damage against enemies {{as|below 40% '''maximum''' health}}.",
@@ -2096,6 +2664,33 @@
       "Ability Power": 90,
       "Magic Penetration": 15,
       "Move Speed": 6
+    }
+  },
+  "6029": {
+    "name": "Ironspike Whip",
+    "description": "<mainText><stats><attention> 30</attention> Attack Damage</stats><br><br><br><br> <active>Active -</active> <active>Crescent:</active> Deal damage to nearby enemies.</mainText>",
+    "totalCost": 1100,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 30
+    }
+  },
+  "6032": {
+    "name": "Stat Bonus",
+    "description": "<mainText><stats></stats><br><br> <active>Active - Consume:</active> Automatically open a semi-random selection for a permanent stat bonus. And a hat!</mainText>",
+    "totalCost": 750,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "6035": {
+    "name": "Silvermere Dawn",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 300</attention> Health<br><attention> 40</attention> Magic Resist</stats><br><br><br><br> <active>Active -</active> <active>Quicksilver:</active> Remove all crowd control debuffs and gain Tenacity and Slow Resistance.</mainText>",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 300,
+      "Magic Resist": 40
     }
   },
   "6333": {
@@ -2176,6 +2771,19 @@
       "Mana Regen": 100
     }
   },
+  "6630": {
+    "name": "Goredrinker",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 400</attention> Health<br><attention> 20</attention> Ability Haste<br><attention> 8%</attention> Omnivamp</stats><br><br><br><br><rarityMythic>Mythic Passive:</rarityMythic> Grants all other <rarityLegendary>Legendary</rarityLegendary> items <attention> 75 Health</attention> and <attention> 3</attention> Ability Haste.<br><br> <active>Active -</active> <active>Thirsting Slash:</active> Deal damage to nearby enemies. Restore Health for each champion hit.</mainText>",
+    "totalCost": 3200,
+    "itemType": "mythic",
+    "stats": {
+      "Attack Damage": 55,
+      "Health": 400,
+      "Ability Haste": 20,
+      "Omnivamp": 8,
+      "Ability Haste.": 3
+    }
+  },
   "6631": {
     "name": "Stridebreaker",
     "description": "Cleave: Basic attacks [[on-hit]] deal {{as|{{rd|40% AD|20% AD}}|ad}} {{as|physical damage}} to other enemies in a {{tip|cr|icononly = true}} 350 radius centered around the target.\nBreaking Shockwave: Deal {{as|80% AD}} {{as|physical damage}} to enemies in a {{tip|cr|icononly = true}} 450 radius centered around you and {{tip|slow}} them by 35% for 3 seconds. For each champion hit, gain {{as|35% '''bonus''' movement speed}} decaying over 3 seconds. Can move while casting.",
@@ -2186,6 +2794,13 @@
       "Attack Speed": 25,
       "Health": 450
     }
+  },
+  "6632": {
+    "name": "Divine Sunderer",
+    "description": "GeneratedTip_Item_6632_ExternalDescription",
+    "totalCost": 3450,
+    "itemType": "legendary",
+    "stats": {}
   },
   "6653": {
     "name": "Liandry's Torment",
@@ -2206,6 +2821,19 @@
       "Ability Power": 100,
       "Mana": 600,
       "Ability Haste": 10
+    }
+  },
+  "6656": {
+    "name": "Everfrost",
+    "description": "<mainText><stats><attention> 70</attention> Ability Power<br><attention> 250</attention> Health<br><attention> 600</attention> Mana<br><attention> 20</attention> Ability Haste</stats><br><br><br><br><rarityMythic>Mythic Passive:</rarityMythic> Grants all other <rarityLegendary>Legendary</rarityLegendary> items <attention> 10</attention> Ability Power. <br><br><br> <active>Active -</active> <active>Glaciate:</active> Deal damage in a cone, <status>Slowing</status> enemies hit. Enemies at the center of the cone are <status>Rooted</status> instead.</mainText>",
+    "totalCost": 2865,
+    "itemType": "mythic",
+    "stats": {
+      "Ability Power": 70,
+      "Health": 250,
+      "Mana": 600,
+      "Ability Haste": 20,
+      "Ability Power.": 10
     }
   },
   "6657": {
@@ -2263,6 +2891,19 @@
       "Magic Resistance": 45
     }
   },
+  "6667": {
+    "name": "Radiant Virtue",
+    "description": "<mainText><stats><attention> 350</attention> Health<br><attention> 30</attention> Armor<br><attention> 30</attention> Magic Resist<br><attention> 10</attention> Ability Haste</stats><br><br><br><li><passive>Guiding Light:</passive> Upon casting your Ultimate you Transcend, increasing your Max Health by 12.5% for 9s. While Transcended you and allies within 1200 range of you heal for 10% of your max Health over the duration (90 (0s)).<br><br><rarityMythic>Mythic Passive:</rarityMythic> Grants all other <rarityLegendary>Legendary</rarityLegendary> items <attention> 75</attention> Health.</mainText>",
+    "totalCost": 2600,
+    "itemType": "mythic",
+    "stats": {
+      "Health": 350,
+      "Armor": 30,
+      "Magic Resist": 30,
+      "Ability Haste": 10,
+      "Health.": 75
+    }
+  },
   "6670": {
     "name": "Noonquiver",
     "description": "",
@@ -2271,6 +2912,19 @@
     "stats": {
       "Attack Damage": 15,
       "Critical Strike Chance": 20
+    }
+  },
+  "6671": {
+    "name": "Galeforce",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 15%</attention> Attack Speed<br><attention> 20%</attention> Critical Strike Chance<br><attention> 7%</attention> Move Speed</stats><br><br><br><br><rarityMythic>Mythic Passive:</rarityMythic> Grants all other <rarityLegendary>Legendary</rarityLegendary> items <attention> 5</attention> Attack Damage.<br><br><rules>Maximum missile damage dealt when enemy Health is below 25%.<br>Cloudburst's dash cannot pass through terrain.</rules><br><br> <active>Active -</active> <active>Cloudburst:</active> Dash in target direction, firing three missiles at the lowest Health enemy near your destination. Deals physical damage, increased against low Health targets.</mainText>",
+    "totalCost": 3500,
+    "itemType": "mythic",
+    "stats": {
+      "Attack Damage": 50,
+      "Attack Speed": 15,
+      "Critical Strike Chance": 20,
+      "Move Speed": 7,
+      "Attack Damage.": 5
     }
   },
   "6672": {
@@ -2316,6 +2970,15 @@
       "Lethality": 10
     }
   },
+  "6677": {
+    "name": "Rageknife",
+    "description": "<mainText><stats><attention> 25%</attention> Attack Speed</stats><br><br><br><li><passive>Wrath:</passive> Attacks apply <magicDamage>20 magic damage</magicDamage>  <OnHit>On-Hit</OnHit>.<li><passive>Seething Strike:</passive> Basic attacks grant <attackSpeed>5% Attack Speed</attackSpeed>, stacking up to 3 times for a maximum of <attackSpeed> Attack Speed</attackSpeed>.</mainText>",
+    "totalCost": 1100,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 25
+    }
+  },
   "6690": {
     "name": "Rectrix",
     "description": "",
@@ -2326,6 +2989,19 @@
       "Move Speed": 4
     }
   },
+  "6691": {
+    "name": "Duskblade of Draktharr",
+    "description": "<mainText><stats><attention> 60</attention> Attack Damage<br><attention> 18</attention> Lethality<br><attention> 15</attention> Ability Haste</stats><br><br><br><li><passive>Nightstalker:</passive> Your Abilities deal up to an additional 16% damage based on the target's missing health. When a champion that you have damaged within the last 3 seconds dies, you become <keywordStealth>Untargetable</keywordStealth> from non-structures for 1.5 seconds (30 (0s)) until your next action.<br><br><rarityMythic>Mythic Passive:</rarityMythic> Grants all other <rarityLegendary>Legendary</rarityLegendary> items <attention> 5</attention> Ability Haste and <attention> 5</attention> Move Speed.<br></mainText>",
+    "totalCost": 2950,
+    "itemType": "mythic",
+    "stats": {
+      "Attack Damage": 60,
+      "Lethality": 18,
+      "Ability Haste": 15,
+      "Ability Haste and": 5,
+      "Move Speed.": 5
+    }
+  },
   "6692": {
     "name": "Eclipse",
     "description": "Ever Rising Moon: Damaging [[basic attack]]s, [[champion ability|abilities]], [[Named item effect|item effects]], and [[summoner spell]]s, as well as the application of {{tip|crowd control}} and [[damage over time]] effects, generate [[stack]]s against enemy champions, up to one per attack or cast per champion. Applying 2 stacks to a champion within a 2 second period deals {{as|'''bonus''' physical damage}} to them equal to {{as|{{rd|6%|4%}} of target's '''maximum''' health}} and grants you a {{tip|shield}} for {{rd|160|80}} {{as|(+ {{rd|40%|20%}} '''bonus''' AD)}} for 2 seconds.",
@@ -2333,6 +3009,17 @@
     "itemType": "legendary",
     "stats": {
       "Attack Damage": 60,
+      "Ability Haste": 15
+    }
+  },
+  "6693": {
+    "name": "Prowler's Claw",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 22</attention> Lethality<br><attention> 15</attention> Ability Haste</stats><br><br><br><li><passive>Ambush Predator:</passive> After entering a bush your next damaging Attack or Ability on enemy champions deals <physicalDamage>10% of their current health</physicalDamage> over 4 seconds, revealing them and reducing their vision radius for the duration. (5 (0s)).</mainText>",
+    "totalCost": 2850,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 22,
       "Ability Haste": 15
     }
   },
@@ -2400,6 +3087,17 @@
       "Ability Haste": 10
     }
   },
+  "6700": {
+    "name": "Shield of the Rakkor",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 30</attention> Armor<br><attention> 5%</attention> Move Speed</stats><br><br><br><li><passive>Aegis:</passive> Every 8 (0s),  block the first Attack that would hit you. While the shield is broken, your first attack against a champion refunds 50% of its current Cooldown and grants <MS> 20% Movement Speed</MS> for a short duration.<br><br><br><br></mainText>",
+    "totalCost": 2675,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Armor": 30,
+      "Move Speed": 5
+    }
+  },
   "6701": {
     "name": "Opportunity",
     "description": "Preparation: After being [[Combat status|out-of-combat]] with enemy champions for 8 seconds, gain {{as|{{rd|11|5}} lethality}}. This bonus remains for 3 seconds after dealing damage to an enemy champion.\nExtraction: Scoring a {{tip|takedown}} against an enemy champion within 3 seconds of damaging them grants you {{as|200 '''bonus''' movement speed}} that decays over {{fd|1.5}} seconds.",
@@ -2408,6 +3106,16 @@
     "stats": {
       "Attack Damage": 55,
       "Lethality": 18
+    }
+  },
+  "8001": {
+    "name": "Anathema's Chains",
+    "description": "<mainText><stats><attention> 650</attention> Health<br><attention> 20</attention> Ability Haste</stats><br><br><passive>Vendetta</passive><br>You gain Vendetta stacks over time Each stack of Vendetta grants you 1% reduced damage from your Nemesis.<br><br><passive>Vengeance</passive><br>At maximum stacks, your Nemesis has reduced Tenacity while near you.<br><br><br><br> <active>ACTIVE</active>  (0s)<br><active>Vow</active><br>Choose a <attention>Nemesis</attention>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 650,
+      "Ability Haste": 20
     }
   },
   "8010": {
@@ -2429,6 +3137,454 @@
     "stats": {
       "Health": 350,
       "Magic Resistance": 45,
+      "Ability Haste": 15
+    }
+  },
+  "9168": {
+    "name": "Locked Weapon Slot",
+    "description": "<mainText><stats></stats><br><br>Prove yourself, and Miss Fortune will approve an inventory upgrade.<br><br>[Unlocked by completing achievements.]</mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9171": {
+    "name": "Cyclonic Slicers",
+    "description": "<mainText><stats></stats><br><br>Orbiting projectiles damage and knock back enemies.<br><br><status>Evolve:</status> Health Regeneration<br><br><rules>Damage, Ability Haste, Area Size, Projectile Count, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9172": {
+    "name": "YuumiBot",
+    "description": "<mainText><stats></stats><br><br>Summons a Yuum.Ai drone. Yuum.Ai damages and knocks up enemies, and also gathers XP.<br><br><status>Evolve:</status> Pickup Radius<br><br><rules>Damage, Ability Haste, Area Size, Duration, Pickup Radius</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9173": {
+    "name": "Radiant Field",
+    "description": "<mainText><stats></stats><br><br>Damages nearby enemies, scaling with your Max Health.<br><br><status>Evolve:</status> Max Health<br><br><rules>Damage, Area Size, Max Health</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9174": {
+    "name": "Statikk Sword",
+    "description": "<mainText><stats></stats><br><br>Fires lightning that bounces between enemies with the highest health.<br><br><status>Evolve:</status> Max Health<br><br><rules>Damage, Ability Haste, Area Size, Crit Chance, Duration </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9175": {
+    "name": "Lioness's Lament",
+    "description": "<mainText><stats></stats><br><br>Fires a crescent shaped projectiles to the left and right of your character.<br><br><status>Evolve:</status> Ability Haste<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9176": {
+    "name": "Gatling Bunny-Guns",
+    "description": "<mainText><stats></stats><br><br>Deals area damage over time in a cone.<br><br><status>Evolve:</status> Duration<br><br><rules>Damage, Ability Haste, Duration, Area Size</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9177": {
+    "name": "Searing Shortbow",
+    "description": "<mainText><stats></stats><br><br>Fires projectiles that create lingering fire areas.<br><br><status>Evolve:</status> Area Size<br><br><rules>Damage, Ability Haste, Area Size, Projectile Count, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9178": {
+    "name": "The Annihilator",
+    "description": "<mainText><stats></stats><br><br>A massive explosion that kills all normal enemies and heavily damages Elites. Long cooldown.<br><br><status>Evolve:</status> EXP<br><br><rules>Damage, Ability Haste, Area Size</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9179": {
+    "name": "Battle Bunny Crossbow",
+    "description": "<mainText><stats></stats><br><br>Fires a cone of projectiles with bonus crit chance in a random direction. Projectiles pierce on crit.<br><br><status>Evolve:</status> Crit Chance<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9180": {
+    "name": "UwU Blaster",
+    "description": "<mainText><stats></stats><br><br>Rapidly fires projectiles at the nearest enemy, dealing damage to the first target hit.<br><br><status>Evolve:</status> Ability Haste<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9181": {
+    "name": "Vortex Glove",
+    "description": "<mainText><stats></stats><br><br>Fires a rotating stream of projectiles.<br><br><status>Evolve:</status> Health Regeneration<br><br><rules>Damage, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9183": {
+    "name": "Blade-o-rang",
+    "description": "<mainText><stats></stats><br><br>Fires returning projectiles at the closest enemy.<br><br><status>Evolve:</status> Movement Speed<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9184": {
+    "name": "Bunny Mega-Blast",
+    "description": "<mainText><stats></stats><br><br>Fires orbital strikes with bonus crit chance at random enemies, dealing high damage in a small area.<br><br><status>Evolve:</status> Crit Chance<br><br><rules>Damage, Ability Haste, Area Size, Crit Chance</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9185": {
+    "name": "Anti-Shark Sea Mine",
+    "description": "<mainText><stats></stats><br><br>Fires explosives that bounce between enemies. <br><br><status>Evolve:</status> Damage<br><br><rules>Damage, Ability Haste, Area Size</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9187": {
+    "name": "T.I.B.B.E.R.S",
+    "description": "<mainText><stats></stats><br><br>Summons Robo-Tibbers. Robo-Tibbers swipes, dealing area damage. Robo-Tibbers focuses on enemies with the most health.<br><br><status>Evolve:</status> Duration<br><br><rules>Damage, Ability Haste, Area Size, Duration, Movement Speed</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9188": {
+    "name": "Ani-Mines",
+    "description": "<mainText><stats></stats><br><br>Drops timed explosive projectiles in a ring that explode for large area damage.<br><br><status>Evolve:</status> Area Size<br><br><rules>Damage, Ability Haste, Area Size, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9189": {
+    "name": "Final City Transit",
+    "description": "<mainText><stats></stats><br><br>Fires a rotating stream of projectiles.<br><br><status>Evolve:</status> Health Regeneration<br><br><rules>Damage, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9190": {
+    "name": "Echoing Batblades",
+    "description": "<mainText><stats></stats><br><br>Fires piercing projectiles that bounce off walls.<br><br><status>Evolve:</status> Projectile Count<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9192": {
+    "name": "Paw Print Poisoner",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9193": {
+    "name": "Iceblast Armor",
+    "description": "<mainText><stats></stats><br><br>Blocks damage freezing enemies. Damage scales with Armor and Max Health.<br><br><status>Evolve:</status> Armor<br><br><rules>Damage, Ability Haste, Area Size, Duration, Armor</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9271": {
+    "name": "Unceasing Cyclone",
+    "description": "<mainText><stats></stats><br><br>Permanently orbiting projectiles damage and knock back enemies.<br><br><rules>Damage, Ability Haste, Projectile Count, Area Size, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9272": {
+    "name": "YuumiBot_Final_FINAL",
+    "description": "<mainText><stats></stats><br><br>Summons a Yuum.Ai drone. Yuum.Ai damages and knocks up enemies, and also gathers XP. After dealing enough damage it will drop a healing pickup.<br><br><rules>Damage, Ability Haste, Area Size, Duration, Pickup Radius</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9273": {
+    "name": "Explosive Embrace",
+    "description": "<mainText><stats></stats><br><br>Damages nearby enemies, scaling with your Max Health. Enemies killed within the burn zone explode.<br><br><rules>Damage, Area Size, Max Health</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9274": {
+    "name": "Prumbis's Electrocarver",
+    "description": "<mainText><stats></stats><br><br>Creates a storm around targeted enemies that deals damage for a duration.<br><br><rules>Damage, Ability Haste, Area Size, Crit Chance, Duration </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9275": {
+    "name": "Enveloping Light",
+    "description": "<mainText><stats></stats><br><br>Fires a beams of light across the screen.<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9276": {
+    "name": "Double Bun-Bun Barrage",
+    "description": "<mainText><stats></stats><br><br>Deals area damage over time in a cone. Enemies damaged are slowed and eventually stunned. Stunned enemies take extra damage.<br><br><rules>Damage, Ability Haste, Duration, Area Size</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9277": {
+    "name": "Evolved Embershot",
+    "description": "<mainText><stats></stats><br><br>Fires projectiles that create lingering fire areas. Areas of fire grow in size and deal increased damage over time.<br><br><rules>Damage, Ability Haste, Area Size, , Projectiles, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9278": {
+    "name": "Animapocalypse",
+    "description": "<mainText><stats></stats><br><br>A massive explosion that kills all normal enemies and heavily damages Elites. Enemies killed drop increased EXP and have a chance to drop gold. Long cooldown.<br><br><rules>Damage, Ability Haste, Area Size</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9279": {
+    "name": "Bunny Prime Ballista",
+    "description": "<mainText><stats></stats><br><br>Fires a cone of projectiles with bonus crit chance in a random direction. Projectiles pierce on crit.<br><br><status>Evolve:</status> Crit Chance<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9280": {
+    "name": "OwO Blaster",
+    "description": "<mainText><stats></stats><br><br>Fires projectiles extremely rapidly at the nearest enemy, dealing damage to the first target hit.<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9281": {
+    "name": "Tempest's Gauntlet",
+    "description": "<mainText><stats></stats><br><br>Fires two constant streams of missiles around you. The streams rotate in opposite directions.<br><br><rules>Damage, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9283": {
+    "name": "Quad-o-rang",
+    "description": "<mainText><stats></stats><br><br>Fires returning projectiles that explode into smaller projectiles at the closest enemy.<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9284": {
+    "name": "Rapid Rabbit Raindown",
+    "description": "<mainText><stats></stats><br><br>Fires orbital bombardments at random enemies, ending with a large strike.<br><br><rules>Damage, Ability Haste, Area Size, Crit Chance</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9285": {
+    "name": "Neverending Mobstomper",
+    "description": "<mainText><stats></stats><br><br>Fires explosives that bounce endlessly between enemies as long as it can find a target. <br><br><rules>Damage, Ability Haste, Area Size</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9287": {
+    "name": "T.I.B.B.E.R.S (B.E.E.G Edition)",
+    "description": "<mainText><stats></stats><br><br>Summons Enraged Robo-Tibbers. Robo-Tibbers swipes, dealing area damage. Enraged Robo-Tibbers focuses on enemies with the most health and grows larger, faster and deals more damage over the duration.<br><br><rules>Damage, Ability Haste, Area Size, Duration, Movement Speed</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9288": {
+    "name": "Jinx's Tri-Namite",
+    "description": "<mainText><stats></stats><br><br>Drops timed explosive projectiles in a ring that explode and release additional explosions for massive area damage.<br><br><rules>Damage, Ability Haste, Area Size, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9289": {
+    "name": "FC Limited Express",
+    "description": "<mainText><stats></stats><br><br>A train randomly drives through enemies. Trains generate explosions in their wake and knock up enemies. Enemies killed have a chance to drop gold.<br><br><rules>Damage, Ability Haste, Crit Chance, Armor</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9290": {
+    "name": "Vayne's Chromablades",
+    "description": "<mainText><stats></stats><br><br>Fires projectiles that bounce off walls, damaging all enemies they pass through. Arrows deal more damage each time they bounce.<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9292": {
+    "name": "Bearfoot Chem-Dispenser",
+    "description": "",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9293": {
+    "name": "Deep Freeze",
+    "description": "<mainText><stats></stats><br><br>Blocks damage freezing enemies and granting a shield. Damage scales with Armor and shield scales with Max health. When the shield expires it freezes all nearby enemies again.<br><br><rules>Damage, Ability Haste, Area Size, Duration, Max Health, Armor</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9300": {
+    "name": "Meow Meow",
+    "description": "<mainText><stats></stats><br><br>Jinx shoots out a barrage of bullets in a target direction.<br><br><status>Evolve: </status> Ability Haste<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9301": {
+    "name": "Shield Slam",
+    "description": "<mainText><stats></stats><br><br>Leona slams her shield, dealing damage in a cone that scales with her armor.<br><br><status>Evolve:</status> Armor<br><br><rules>Damage, Ability Haste, Area Size, Crit Chance, Armor</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9302": {
+    "name": "Sound Wave",
+    "description": "<mainText><stats></stats><br><br>Seraphine sends out a wave of sound, damaging and slowing enemies hit.<br><br><status>Evolve: </status> Projectile Count<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count, Duration </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9303": {
+    "name": "Pillory Swipe",
+    "description": "<mainText><stats></stats><br><br>Briar sweeps in front of her, dealing damage that scales with her Max Health.<br><br><status>Evolve: </status> Max Health<br><br><rules>Damage, Ability Haste, Area Size, Crit Chance, Max Health </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9304": {
+    "name": "Steel Tempest",
+    "description": "<mainText><stats></stats><br><br>Yasuo gains 25 Flow per second, and more when he moves and dashes.<br><br>At 100 Flow, he lets out a whirlwind. damaging all enemies in a line.<br><br><status> Evolve: </status> Crit Chance<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9305": {
+    "name": "Tentacle Slam",
+    "description": "<mainText><stats></stats><br><br>Illaoi slams the ground with her idol, dealing damage in an area around the impact and spawning a tentacle that will attack nearby enemies.<br><br><status>Evolve: </status> Duration<br><br><rules>Damage, Ability Haste, Area Size, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9306": {
+    "name": "Winged Dagger",
+    "description": "<mainText><stats></stats><br><br>Xayah throws out a dagger infront of her that pierces through enemies, dealing less damage to subsequent enemies and leaves a Dagger in the ground.<br><br><status>Evolve: </status> Pickup Radius<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9307": {
+    "name": "Guiding Hex",
+    "description": "<mainText><stats></stats><br><br>Aurora shoots a hex through the air, guiding it as it flies. Enemies hit take damage and are <keywordMajor> Hexed</keywordMajor>. Every 3rd cast, she purges <keywordMajor>Hexed</keywordMajor> targets, dealing bonus damage.<br><br><status>Evolve: </status> Exp Gain<br><br><rules>Damage, Ability Haste, Crit Chance, Projectiles, Exp</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9308": {
+    "name": "Bunny Hop",
+    "description": "<mainText><stats></stats><br><br>Riven passively gains Move Speed and gains charge as she moves. At max charge she jumps forward, dealing damage in an area. Every second cast knocks up.<br><br><status>Evolve: </status> Movement Speed<br><br><rules>Damage, Area Size, Crit Chance, Movement Speed </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9400": {
+    "name": "Battle Cat Barrage",
+    "description": "<mainText><stats></stats><br><br>Jinx shoots out a barrage of bullets in a target direction. Bullets now pierce, dealing less damage to targets hit after the first. Cooldown is heavily reduced.<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9401": {
+    "name": "Light of the Lion",
+    "description": "<mainText><stats></stats><br><br>Hits a larger area and applies Sunlight to enemies. Sunlight can be detonated by allies or other weapons for bonus damage.<br><br><rules>Damage, Ability Haste, Area Size, Crit Chance, Armor</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9402": {
+    "name": "Anima Echo",
+    "description": "<mainText><stats></stats><br><br>Waves now come back upon reaching their end point, dealing damage again and shooting past Seraphine<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count, Duration </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9403": {
+    "name": "Savage Slice",
+    "description": "<mainText><stats></stats><br><br>Briar sweeps in front of her, applying a stacking bleed and dealing damage that scales with her Max Health.<br><br><rules>Damage, Ability Haste, Area Size, Crit Chance, Max Health </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9404": {
+    "name": "Wandering Storms",
+    "description": "<mainText><stats></stats><br><br>Yasuo hones his energy, shooting fewer and larger tornadoes that curve through the air and leave damaging tempests at their end point.<br><br><rules>Damage, Abilty Haste, Crit Chance, Projectile Count, Area Size, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9405": {
+    "name": "Grizzly Smash",
+    "description": "<mainText><stats></stats><br><br>Illaoi slams the ground with her idol, dealing damage in an area around the impact and spawning a tentacle that will attack nearby enemies. There is a chance to summon a GIANT TENTACLE that deals increased damage.<br><br><rules>Damage, Ability Haste, Area Size, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9406": {
+    "name": "Lover's Ricochet",
+    "description": "<mainText><stats></stats><br><br>Xayah now also throws a familiar dagger behind her. This special dagger will bounce from enemy to enemy, dealing damage and then return to Xayah granting her a small shield.<br><br><rules>Damage, Ability Haste, Crit Chance, Projectile Count, Duration</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9407": {
+    "name": "Hopped-Up Hex",
+    "description": "<mainText><stats></stats><br><br>Aurora now shoots more hexes and her purge now deals damage in an area around <keywordMajor> Hexed</keywordMajor>target. <br><br><rules>Damage, Ability Haste, Crit Chance, Projectiles, Duration, Exp</rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "9408": {
+    "name": "Carrot Crash",
+    "description": "<mainText><stats></stats><br><br>Riven passively gains Move Speed and gains charge as she moves. At max charge she jumps forward, dealing damage in an area. Every second cast knocks up enemies and ruptures the area, causing a second detonation that damages and knocks up again.<br><br><rules>Damage, Area Size, Crit Chance, Movement Speed </rules></mainText>",
+    "totalCost": 0,
+    "itemType": "component",
+    "stats": {}
+  },
+  "123430": {
+    "name": "Rite of Ruin",
+    "description": "<mainText><stats><attention> 55</attention> Ability Power<br><attention> 10</attention> Ability Haste<br><attention> 25%</attention> Critical Strike Chance<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Wrath and Ruin</passive><br>On spell cast, gain  2.5% critical chance for 6 seconds, stacking up to  20%.<br><br><passive>Salvage the Wreckage</passive><br>Your spells have a chance equal to your crit chance to grant you or your targeted ally a <healing>shield</healing> for  for 3s.<br></mainText>",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 55,
+      "Ability Haste": 10,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4
+    }
+  },
+  "124011": {
+    "name": "Sword of Blossoming Dawn",
+    "description": "<mainText><stats><attention> 45</attention> Ability Power<br><attention> 200</attention> Health<br><attention> 12%</attention> Heal and Shield Power<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Effervescence</passive><br>Gain + 1.2% Attack Speed for every <healing> 1% Heal and Shield Power</healing> you have. <br><br><passive>Peppermint</passive><br> <OnHit>On-Hit</OnHit>, <healing>heal the lowest health</healing> ally champion near you for , prioritizing lower health allies.</mainText>",
+    "totalCost": 2350,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 45,
+      "Health": 200,
+      "Heal and Shield Power": 12,
+      "Ability Haste": 15
+    }
+  },
+  "126697": {
+    "name": "Hubris",
+    "description": "<mainText><stats><attention> 60</attention> Attack Damage<br><attention> 18</attention> Lethality<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Eminence</passive><br>Gain temporary AD based on champion kills on kill.</mainText>",
+    "totalCost": 2950,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 60,
+      "Lethality": 18,
       "Ability Haste": 15
     }
   },
@@ -2488,6 +3644,197 @@
     "itemType": "consumable",
     "stats": {}
   },
+  "221038": {
+    "name": "B. F. Sword",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage</stats><br><br></mainText>",
+    "totalCost": 1300,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40
+    }
+  },
+  "222051": {
+    "name": "Guardian's Horn",
+    "description": "<mainText><stats><attention> 300</attention> Health</stats><br><br><passive>Recovery</passive><br>Restores <healing>20 Health</healing> every 5 seconds.<br><br><passive>Undaunted</passive><br>Blocks 12 damage from attacks and spells from champions (25% effectiveness vs. damage over time abilities).</mainText>",
+    "totalCost": 500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300
+    }
+  },
+  "222065": {
+    "name": "Shurelya's Battlesong",
+    "description": "<mainText><stats><attention> 55</attention> Ability Power<br><attention> 15</attention> Ability Haste<br><attention> 6%</attention> Move Speed<br><attention> 150%</attention> Base Mana Regen</stats><br><br><active>Inspiring Speech</active><br>Grants nearby allies Move Speed for a few seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 55,
+      "Ability Haste": 15,
+      "Move Speed": 6,
+      "Mana Regen": 150
+    }
+  },
+  "222141": {
+    "name": "Cappa Juice",
+    "description": "<mainText><stats></stats><br><br><rules>Helps you get on a head.</rules> <active>Active - Consume:</active> This juice does nothing.<br></mainText>",
+    "totalCost": 500,
+    "itemType": "consumable",
+    "stats": {}
+  },
+  "222502": {
+    "name": "Unending Despair",
+    "description": "<mainText><stats><attention> 350</attention> Health<br><attention> 50</attention> Armor<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Anguish</passive><br>Every 4 seconds while in combat with champions, deal <magicDamage>magic damage</magicDamage> to nearby enemy champions and <healing>heal for 250%</healing> of the damage dealt.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 350,
+      "Armor": 50,
+      "Ability Haste": 10
+    }
+  },
+  "222503": {
+    "name": "Blackfire Torch",
+    "description": "<mainText><stats><attention> 60</attention> Ability Power<br><attention> 600</attention> Mana<br><attention> 20</attention> Ability Haste</stats><br><br><passive>Baleful Blaze</passive><br>Dealing damage with Abilities causes enemies to burn. This damage increases to Monsters.<br><br><passive>Blackfire</passive><br>For each enemy Champion, Epic Monster, and Large Monster affected by your <passive>Baleful Blaze</passive>, gain <scaleAP>Ability Power</scaleAP>. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 60,
+      "Mana": 600,
+      "Ability Haste": 20
+    }
+  },
+  "222504": {
+    "name": "Kaenic Rookern",
+    "description": "<mainText><stats><attention> 350</attention> Health<br><attention> 80</attention> Magic Resist</stats><br><br><passive>Magebane</passive><br>After not taking magic damage for 15 seconds, gain a <shield>magic shield</shield>. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 350,
+      "Magic Resist": 80
+    }
+  },
+  "222510": {
+    "name": "Dusk and Dawn",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 70</attention> Ability Power<br><attention> 20</attention> Ability Haste<br><attention> 25%</attention> Attack Speed</stats><br><br><passive>Spellblade</passive>  (0s)<br>After using an Ability, your next Attack deals <magicDamage> bonus magic damage</magicDamage>  <OnHit>On-Hit</OnHit> and applies  <OnHit>On-Hit</OnHit> effects an additional time.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Ability Power": 70,
+      "Ability Haste": 20,
+      "Attack Speed": 25
+    }
+  },
+  "222512": {
+    "name": "Fiendhunter Bolts",
+    "description": "<mainText><stats><attention> 40%</attention> Attack Speed<br><attention> 25%</attention> Critical Strike Chance<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Night Vigil</passive><br>Gain 30 Ultimate Ability Haste.<br><br><passive>Opening Barrage</passive><br>After casting your Ultimate, your next 3 basic attacks gain <attackSpeed>50% Attack Speed</attackSpeed> and Critically Strike for 75% of your normal Critical Strike damage for 8 seconds. If an attack would already Critically Strike, instead it deals <trueDamage>10% bonus true damage</trueDamage>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 40,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4
+    }
+  },
+  "222517": {
+    "name": "Endless Hunger",
+    "description": "<mainText><stats><attention> 60</attention> Attack Damage<br><attention> 5%</attention> Omnivamp<br><attention> 20%</attention> Tenacity</stats><br><br><passive>Famine</passive><br>Gain  Ability Haste.<br><br><passive>Feast</passive><br>When a champion that you damaged within 3 seconds dies, gain <omnivamp>15% Omnivamp</omnivamp> for 8 seconds. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 60,
+      "Omnivamp": 5,
+      "Tenacity": 20
+    }
+  },
+  "222522": {
+    "name": "Actualizer",
+    "description": "<mainText><stats><attention> 90</attention> Ability Power<br><attention> 300</attention> Mana<br><attention> 10</attention> Ability Haste</stats><br><br> <active>Mana Made Real</active>  (0s)<br>For 8 seconds, your mana is Empowered. While Empowered, your spells cost 100% more Mana, you gain  increased Ability damage, Shielding, and Healing, and your basic ability cooldowns progress 30% faster.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 90,
+      "Mana": 300,
+      "Ability Haste": 10
+    }
+  },
+  "222523": {
+    "name": "Hexoptics C44",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Magnification</passive><br>Deal up to 10% increased damage with Attacks, based on how far away the enemy is (max damage at 700 range).<br><br><passive>Arcane Aim</passive><br>When a champion that you damaged within 3 seconds dies, gain 100 additional attack range for 6 seconds. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 50,
+      "Critical Strike Chance": 25
+    }
+  },
+  "222524": {
+    "name": "Bandlepipes",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 10</attention> Ability Haste<br><attention> 25</attention> Armor<br><attention> 25</attention> Magic Resist</stats><br><br><passive>Fanfare</passive><br><keyword>Slowing</keyword> or <keyword>Immobilizing</keyword> an enemy champion grants Fanfare for  seconds. Fanfare grants you <speed>20 Move Speed</speed>. While you have Fanfare, nearby allies, including yourself, gain <attackSpeed> Attack Speed</attackSpeed>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Ability Haste": 10,
+      "Armor": 25,
+      "Magic Resist": 25
+    }
+  },
+  "222525": {
+    "name": "Protoplasm Harness",
+    "description": "<mainText><stats><attention> 600</attention> Health<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Lifeline</passive>  (0s)<br>Taking damage that would reduce your Health below 30% causes you to gain <health> maximum Health</health> for 5 seconds, then heal <health> Health</health> over the duration. While regenerating Health, you gain 15% increased Size, 10% Move Speed, and 25% Tenacity. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 600,
+      "Ability Haste": 15
+    }
+  },
+  "222526": {
+    "name": "Whispering Circlet",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 8%</attention> Heal and Shield Power<br><attention> 75%</attention> Base Mana Regen<br><attention> 300</attention> Mana</stats><br><br><passive>Holy</passive><br>Gain <scaleMana> Heal and Shield Power.</scaleMana><br><br><passive>Mana Charge</passive><br><buffedStat>After 2 combat rounds</buffedStat>, this item transforms into <rarityLegendary>Diadem of Songs</rarityLegendary>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Heal and Shield Power": 8,
+      "Mana Regen": 75,
+      "Mana": 300
+    }
+  },
+  "223002": {
+    "name": "Trailblazer",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 45</attention> Armor<br><attention> 6%</attention> Move Speed</stats><br><br><passive>Lead the Way</passive><br>While moving, build up to <speed>20 bonus Move Speed</speed>. <br>At max speed:<li>Create a trail that grants allied champions <speed>Move Speed equal to 15%</speed> of yours. <li>If you are Melee, your next Attack <keyword>Slows</keyword> the target by 50% for 1 second.<br><br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Armor": 45,
+      "Move Speed": 6
+    }
+  },
+  "223003": {
+    "name": "Archangel's Staff",
+    "description": "<mainText><stats><attention> 55</attention> Ability Power<br><attention> 600</attention> Mana<br><attention> 25</attention> Ability Haste</stats><br><br><passive>Awe</passive> <br>Gain Ability Power equal to <scaleMana>2% bonus Mana.</scaleMana><br><br><passive>Mana Charge</passive><br><buffedStat>After 2 combat rounds</buffedStat>, this item transforms into <rarityLegendary>Seraph's Embrace</rarityLegendary>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 55,
+      "Mana": 600,
+      "Ability Haste": 25
+    }
+  },
+  "223004": {
+    "name": "Manamune",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 600</attention> Mana<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Awe</passive><br>Gain bonus <scaleAD>Attack Damage equal to </scaleAD>. <br><br><passive>Mana Charge</passive><br><buffedStat>After 2 combat rounds</buffedStat>, this item transforms into <rarityLegendary>Muramana</rarityLegendary>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Mana": 600,
+      "Ability Haste": 15
+    }
+  },
   "223005": {
     "name": "Ghostcrawlers",
     "description": "Wall Walk: Become ghostly for 6 seconds, ignoring terrain collision until you basic attack or cast an ability. While inside terrain, gain {{as|300 '''bonus''' movement speed}}.",
@@ -2495,6 +3842,89 @@
     "itemType": "boots",
     "stats": {
       "Move Speed": 70
+    }
+  },
+  "223006": {
+    "name": "Berserker's Greaves",
+    "description": "<mainText><stats><attention> 35%</attention> Attack Speed<br><attention> 55</attention> Move Speed</stats><br><br></mainText>",
+    "totalCost": 500,
+    "itemType": "boots",
+    "stats": {
+      "Attack Speed": 35,
+      "Move Speed": 55
+    }
+  },
+  "223009": {
+    "name": "Boots of Swiftness",
+    "description": "<mainText><stats><attention> 70</attention> Move Speed</stats><br><br>The strength of movement slowing effects is reduced by <buffedStat>40%</buffedStat>.</mainText>",
+    "totalCost": 500,
+    "itemType": "boots",
+    "stats": {
+      "Move Speed": 70
+    }
+  },
+  "223020": {
+    "name": "Sorcerer's Shoes",
+    "description": "<mainText><stats><attention> 20</attention> Magic Penetration<br><attention> 55</attention> Move Speed</stats><br><br></mainText>",
+    "totalCost": 500,
+    "itemType": "boots",
+    "stats": {
+      "Magic Penetration": 20,
+      "Move Speed": 55
+    }
+  },
+  "223026": {
+    "name": "Guardian Angel",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 45</attention> Armor</stats><br><br><passive>Saving Grace:</passive><br>Upon taking lethal damage, restores <healing>50% base Health</healing> and <scaleMana>100% max Mana</scaleMana> after 4 seconds of stasis. This effect has a one round cooldown.<br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 55,
+      "Armor": 45
+    }
+  },
+  "223031": {
+    "name": "Infinity Edge",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 25%</attention> Critical Strike Chance<br><attention> 40%</attention> Critical Strike Damage</stats><br><br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 55,
+      "Critical Strike Chance": 25,
+      "Critical Strike Damage": 40
+    }
+  },
+  "223032": {
+    "name": "Yun Tal Wildarrows",
+    "description": "<mainText><stats><attention> 45</attention> Attack Damage<br><attention> 40%</attention> Attack Speed<br><attention> 0%</attention> Critical Strike Chance</stats><br><br><passive>Practice Makes Lethal</passive><br>On-Attack, gain Critical Strike Chance permanently up to 25%.<br><br><passive>Flurry</passive><br>On-Attacking an enemy champion, gain 30% Attack Speed for 6 seconds (30 second cooldown). <br>Attacks reduce this cooldown by 1 second, increased to 2 seconds for Critical Strikes.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 45,
+      "Attack Speed": 40,
+      "Critical Strike Chance": 0
+    }
+  },
+  "223033": {
+    "name": "Mortal Reminder",
+    "description": "<mainText><stats><attention> 30</attention> Attack Damage<br><attention> 30%</attention> Armor Penetration<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Sepsis</passive><br>Dealing physical damage applies <status>40% Grievous Wounds</status> to enemy champions for 3 seconds.<br><br><buffedStat>If an enemy heals for more than 60% of their maximum health while continously affected by <status>Grievous Wounds</status>, it is increased to <status>80% Grievous Wounds</status>.</buffedStat><br><br><rules><status>Grievous Wounds</status> reduces the effectiveness of Healing and Regeneration effects.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 30,
+      "Armor Penetration": 30,
+      "Critical Strike Chance": 25
+    }
+  },
+  "223036": {
+    "name": "Lord Dominik's Regards",
+    "description": "<mainText><stats><attention> 30</attention> Attack Damage<br><attention> 40%</attention> Armor Penetration<br><attention> 25%</attention> Critical Strike Chance</stats><br><br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 30,
+      "Armor Penetration": 40,
+      "Critical Strike Chance": 25
     }
   },
   "223039": {
@@ -2505,6 +3935,198 @@
     "stats": {
       "Critical Strike Chance": 20,
       "Health": 700
+    }
+  },
+  "223046": {
+    "name": "Phantom Dancer",
+    "description": "<mainText><stats><attention> 60%</attention> Attack Speed<br><attention> 8%</attention> Move Speed<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Spectral Waltz</passive><br>Become <keyword>Ghosted</keyword>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 60,
+      "Move Speed": 8,
+      "Critical Strike Chance": 25
+    }
+  },
+  "223047": {
+    "name": "Plated Steelcaps",
+    "description": "<mainText><stats><attention> 25</attention> Armor<br><attention> 30</attention> Move Speed</stats><br><br>Reduces incoming damage from Attacks by <buffedStat>14%</buffedStat>.</mainText>",
+    "totalCost": 500,
+    "itemType": "boots",
+    "stats": {
+      "Armor": 25,
+      "Move Speed": 30
+    }
+  },
+  "223050": {
+    "name": "Zeke's Convergence",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 25</attention> Armor<br><attention> 15</attention> Ability Haste<br><attention> 30</attention> Magic Resist</stats><br><br><passive>Frostfire Tempest</passive><br>Casting your Ultimate summons a storm around you for 5 seconds. The storm deals <magicDamage> magic damage</magicDamage> per second to enemy champions and <keyword>Slows</keyword> them by 30%.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Armor": 25,
+      "Ability Haste": 15,
+      "Magic Resist": 30
+    }
+  },
+  "223053": {
+    "name": "Sterak's Gage",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 20%</attention> Tenacity</stats><br><br><passive>The Claws that Catch</passive><br>Gain <scaleAD> bonus Attack Damage</scaleAD>.<br><br><passive>Lifeline</passive>  (0s)<br>Upon taking damage that would reduce your Health below 30%, gain a <shield> Shield</shield> decaying over 4.5 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Tenacity": 20
+    }
+  },
+  "223065": {
+    "name": "Spirit Visage",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 40</attention> Magic Resist<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Boundless Vitality</passive><br>Increases all Healing and Shielding effectiveness on you by 30%.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Magic Resist": 40,
+      "Ability Haste": 10
+    }
+  },
+  "223068": {
+    "name": "Sunfire Aegis",
+    "description": "<mainText><stats><attention> 350</attention> Health<br><attention> 40</attention> Armor<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Immolate</passive><br>After taking or dealing damage, deal <magicDamage> magic damage</magicDamage> per second to nearby enemies for 3 seconds. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 350,
+      "Armor": 40,
+      "Ability Haste": 10
+    }
+  },
+  "223071": {
+    "name": "Black Cleaver",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 350</attention> Health<br><attention> 20</attention> Ability Haste</stats><br><br><passive>Carve</passive><br>Dealing <physicalDamage>physical damage</physicalDamage> to champions applies a stack of <scaleArmor>6% Armor reduction</scaleArmor> for 6 seconds, up to <scaleArmor>30% Armor reduction</scaleArmor>.<br><br><passive>Fervor</passive><br>Dealing <physicalDamage>physical damage</physicalDamage> grants <speed>20 Move Speed</speed> for 2 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 350,
+      "Ability Haste": 20
+    }
+  },
+  "223072": {
+    "name": "Bloodthirster",
+    "description": "<mainText><stats><attention> 70</attention> Attack Damage<br><attention> 18%</attention> Life Steal</stats><br><br><passive>Ichorshield</passive><br>Convert excess healing from your Lifesteal to a Shield.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 70,
+      "Life Steal": 18
+    }
+  },
+  "223073": {
+    "name": "Experimental Hexplate",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 30%</attention> Attack Speed<br><attention> 450</attention> Health</stats><br><br><passive>Hexcharged</passive><br>Gain 30 Ultimate Ability Haste.<br><br><passive>Overdrive</passive><br>After casting your Ultimate, gain <attackSpeed>50% Attack Speed</attackSpeed> and <speed>20% Move Speed</speed> for 8 seconds. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Attack Speed": 30,
+      "Health": 450
+    }
+  },
+  "223074": {
+    "name": "Ravenous Hydra",
+    "description": "<mainText><stats><attention> 70</attention> Attack Damage<br><attention> 15</attention> Ability Haste<br><attention> 15%</attention> Life Steal</stats><br><br><passive>Cleave:</passive> Attacks and Abilities deal physical damage to other nearby enemies. Activate to hit nearby enemies.<br> <active>Ravenous Crescent</active><br>Deal <physicalDamage>physical damage</physicalDamage> to enemies around you. <br>Your Life Steal applies to this damage.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 70,
+      "Ability Haste": 15,
+      "Life Steal": 15
+    }
+  },
+  "223075": {
+    "name": "Thornmail",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 60</attention> Armor</stats><br><br><passive>Thorns:</passive><br>When struck by an Attack, deal damage to the attacker and apply 40% <status>Grievous Wounds</status> if they are a champion.<br><br><rules><status>Grievous Wounds</status> reduces the effectiveness of Healing and Regeneration effects.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Armor": 60
+    }
+  },
+  "223078": {
+    "name": "Trinity Force",
+    "description": "<mainText><stats><attention> 35</attention> Attack Damage<br><attention> 25%</attention> Attack Speed<br><attention> 333</attention> Health<br><attention> 20</attention> Ability Haste</stats><br><br><passive>Spellblade</passive><br>After using an Ability, your next Attack is enhanced with  additional physical damage.<br><br><passive>Quicken</passive><br>Basic attacks grant Move Speed.<br><br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 35,
+      "Attack Speed": 25,
+      "Health": 333,
+      "Ability Haste": 20
+    }
+  },
+  "223084": {
+    "name": "Heartsteel",
+    "description": "<mainText><stats><attention> 700</attention> Health</stats><br><br><passive>Colossal Consumption</passive>  (0s) per target<br>Charge up a powerful attack against a champion over time while near them. The charged attack deals bonus physical damage and grants permanent max Health.<br><br><passive>Goliath</passive><br>Gain increased size based on Total Health. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 700
+    }
+  },
+  "223085": {
+    "name": "Runaan's Hurricane",
+    "description": "<mainText><stats><attention> 45%</attention> Attack Speed<br><attention> 25%</attention> Critical Strike Chance<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Wind's Fury</passive><br>When Attacking, bolts are fired at up to 2 enemies near the target. Bolts apply On-Hit effects and can Critically Strike.<br><br><rules>Item is for  Ranged champions only.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 45,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4
+    }
+  },
+  "223087": {
+    "name": "Statikk Shiv",
+    "description": "<mainText><stats><attention> 45</attention> Attack Damage<br><attention> 40%</attention> Attack Speed<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Electrospark</passive><br>Attacks trigger chain lightning <OnHit>On-Hit</OnHit>, dealing <magicDamage>magic damage</magicDamage> with a cooldown.<br><br><passive>Electroshock</passive> <br>Takedowns within 3 seconds of damaging the target reset Electrospark's cooldown.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 45,
+      "Attack Speed": 40,
+      "Move Speed": 4
+    }
+  },
+  "223089": {
+    "name": "Rabadon's Deathcap",
+    "description": "<mainText><stats><attention> 65</attention> Ability Power</stats><br><br><passive>Magical Opus</passive><br>Increases your total <scaleAP>Ability Power by 30%</scaleAP>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 65
+    }
+  },
+  "223091": {
+    "name": "Wit's End",
+    "description": "<mainText><stats><attention> 50%</attention> Attack Speed<br><attention> 40</attention> Magic Resist<br><attention> 20%</attention> Tenacity</stats><br><br><br><li><passive>Fray:</passive> Attacks apply magic damage On-Hit and grant Move Speed.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 50,
+      "Magic Resist": 40,
+      "Tenacity": 20
+    }
+  },
+  "223094": {
+    "name": "Rapid Firecannon",
+    "description": "<mainText><stats><attention> 30%</attention> Attack Speed<br><attention> 25%</attention> Critical Strike Chance<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Energized</passive><br>Moving and Attacking generates an <keyword>Energized Attack</keyword>.<br><br><passive>Sharpshooter</passive><br>Your <keyword>Energized Attack</keyword> applies <magicDamage>200 bonus magic damage</magicDamage>. In addition, Energized attacks gain up to 35% bonus Attack Range.<br><br><buffedStat>Energized stacks twice as fast in Arena.</buffedStat><br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 30,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4
     }
   },
   "223095": {
@@ -2518,6 +4140,189 @@
       "Critical Strike Chance": 25
     }
   },
+  "223100": {
+    "name": "Lich Bane",
+    "description": "<mainText><stats><attention> 80</attention> Ability Power<br><attention> 10%</attention> Move Speed<br><attention> 20</attention> Ability Haste</stats><br><br><passive>Spellblade</passive>  (0s)<br>After using an Ability, your next Attack is enhanced with an additional <magicDamage> magic damage</magicDamage>  <OnHit>On-Hit</OnHit>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 80,
+      "Move Speed": 10,
+      "Ability Haste": 20
+    }
+  },
+  "223102": {
+    "name": "Banshee's Veil",
+    "description": "<mainText><stats><attention> 80</attention> Ability Power<br><attention> 40</attention> Magic Resist</stats><br><br><passive>Annul</passive><br>Grants a Spell Shield that blocks the next enemy Ability.<br><br><rules>Item cooldown is restarted if you take damage from champions before it is completed.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 80,
+      "Magic Resist": 40
+    }
+  },
+  "223107": {
+    "name": "Redemption",
+    "description": "<mainText><stats><attention> 0</attention> Health<br><attention> 15</attention> Ability Haste<br><attention> 100%</attention> Base Mana Regen<br><attention> 16%</attention> Heal and Shield Power</stats><br><br><br><br> <active>ACTIVE</active>  (0s)<br><active>Intervention</active><br>Target an area within. After 2.5 seconds, call down a beam of light to restore Health to allies and damage enemy champions.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 0,
+      "Ability Haste": 15,
+      "Mana Regen": 100,
+      "Heal and Shield Power": 16
+    }
+  },
+  "223109": {
+    "name": "Knight's Vow",
+    "description": "<mainText><stats><attention> 400</attention> Health<br><attention> 50</attention> Armor<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Sacrifice</passive><br>While near your <attention>Worthy</attention> ally, take 12% of the damage they receive and <healing>heal</healing> for 10% of the damage they deal to Champions.<br><br> <active>ACTIVE</active>  (0s)<br><active>Pledge</active><br>Designate an ally who is <attention>Worthy</attention>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 400,
+      "Armor": 50,
+      "Ability Haste": 15
+    }
+  },
+  "223110": {
+    "name": "Frozen Heart",
+    "description": "<mainText><stats><attention> 90</attention> Armor<br><attention> 450</attention> Mana<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Winter's Caress</passive><br>Reduces the <attackSpeed>Attack Speed</attackSpeed> of nearby enemies.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Armor": 90,
+      "Mana": 450,
+      "Ability Haste": 15
+    }
+  },
+  "223111": {
+    "name": "Mercury's Treads",
+    "description": "<mainText><stats><attention> 30</attention> Magic Resist<br><attention> 30</attention> Move Speed<br><attention> 30%</attention> Tenacity</stats><br><br></mainText>",
+    "totalCost": 500,
+    "itemType": "boots",
+    "stats": {
+      "Magic Resist": 30,
+      "Move Speed": 30,
+      "Tenacity": 30
+    }
+  },
+  "223112": {
+    "name": "Guardian's Orb",
+    "description": "<mainText><stats><attention> 55</attention> Ability Power<br><attention> 25</attention> Ability Haste</stats><br><br><passive>Recovery</passive><br>Restores <scaleMana>10 Mana</scaleMana> every 5 seconds. If you can't gain mana, restores <healing>15 Health</healing> instead.</mainText>",
+    "totalCost": 500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 55,
+      "Ability Haste": 25
+    }
+  },
+  "223115": {
+    "name": "Nashor's Tooth",
+    "description": "<mainText><stats><attention> 70</attention> Ability Power<br><attention> 45%</attention> Attack Speed<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Icathian Bite</passive><br>Attacks apply magic damage  <OnHit>On-Hit</OnHit>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 70,
+      "Attack Speed": 45,
+      "Ability Haste": 10
+    }
+  },
+  "223116": {
+    "name": "Rylai's Crystal Scepter",
+    "description": "<mainText><stats><attention> 60</attention> Ability Power<br><attention> 350</attention> Health</stats><br><br><passive>Rimefrost</passive><br>Damaging Abilities <status>Slow</status> enemies by 30% for 1 second.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 60,
+      "Health": 350
+    }
+  },
+  "223118": {
+    "name": "Malignance",
+    "description": "<mainText><stats><attention> 70</attention> Ability Power<br><attention> 600</attention> Mana<br><attention> 20</attention> Ability Haste</stats><br><br><passive>Scorn</passive><br>Your Ultimate spells gain Ability Haste.<br><br><passive>Hatefog</passive><br>Damaging a champion with your Ultimate <keywordMajor>Burns</keywordMajor> the ground beneath them, dealing damage and reducing their Magic Resist. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 70,
+      "Mana": 600,
+      "Ability Haste": 20
+    }
+  },
+  "223119": {
+    "name": "Winter's Approach",
+    "description": "<mainText><stats><attention> 400</attention> Health<br><attention> 600</attention> Mana<br><attention> 15</attention> Ability Haste</stats><br><br><li><passive>Awe:</passive> Gain bonus <scaleHealth>Health equal to Total Mana</scaleHealth>.<li><passive>Mana Charge:</passive> <buffedStat>After 2 combat rounds</buffedStat>, this item transforms into <rarityLegendary>Fimbulwinter</rarityLegendary>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 400,
+      "Mana": 600,
+      "Ability Haste": 15
+    }
+  },
+  "223124": {
+    "name": "Guinsoo's Rageblade",
+    "description": "<mainText><stats><attention> 20</attention> Attack Damage<br><attention> 25</attention> Ability Power<br><attention> 25%</attention> Attack Speed</stats><br><br>Attacks apply <magicDamage>30 magic damage  <OnHit>On-Hit</OnHit></magicDamage>.<br><br><passive>Seething Strike</passive><br>Basic attacks grant <attackSpeed>8% Attack Speed</attackSpeed>, stacking up to 4 times for a maximum of <attackSpeed> Attack Speed</attackSpeed>. While fully stacked, every third Attack applies your  <OnHit>On-Hit</OnHit> effects twice.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 20,
+      "Ability Power": 25,
+      "Attack Speed": 25
+    }
+  },
+  "223135": {
+    "name": "Void Staff",
+    "description": "<mainText><stats><attention> 65</attention> Ability Power<br><attention> 40%</attention> Magic Penetration</stats><br><br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 65,
+      "Magic Penetration": 40
+    }
+  },
+  "223137": {
+    "name": "Cryptbloom",
+    "description": "<mainText><stats><attention> 60</attention> Ability Power<br><attention> 30%</attention> Magic Penetration<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Life from Death</passive><br>When a champion that you damaged within 3 seconds dies, a nova spreads from their corpse that <healing>heals</healing>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 60,
+      "Magic Penetration": 30,
+      "Ability Haste": 15
+    }
+  },
+  "223139": {
+    "name": "Mercurial Scimitar",
+    "description": "<mainText><stats><attention> 45</attention> Attack Damage<br><attention> 40</attention> Magic Resist<br><attention> 10%</attention> Life Steal</stats><br><br><br><br> <active>Active -</active> <active>Quicksilver:</active> Remove all crowd control debuffs and gain Move Speed.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 45,
+      "Magic Resist": 40,
+      "Life Steal": 10
+    }
+  },
+  "223142": {
+    "name": "Youmuu's Ghostblade",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 22</attention> Lethality<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Haunt</passive> <br>Gain <speed> Move Speed</speed> while out of combat.<br><br><br> <active>ACTIVE</active>  (0s)<br><active>Wraith Step</active><br>Gain Move Speed and Ghosting.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 22,
+      "Move Speed": 4
+    }
+  },
+  "223143": {
+    "name": "Randuin's Omen",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 75</attention> Armor</stats><br><br><passive>Resilience</passive><br>Critical Strikes deal 30% less damage to you.<br><br><active>Humility</active><br><status>Slow</status> nearby enemies.<br><br> <active>ACTIVE</active>  (0s)<br><active>Humility</active><br>Briefly <keyword>Slow</keyword> nearby enemies by 70% for 2 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Armor": 75
+    }
+  },
   "223146": {
     "name": "Hextech Gunblade",
     "description": "Lightning Bolt: Shocks the target enemy champion with a bolt of lightning, dealing {{as|{{pp|175 to 253}}|magic damage}} {{as|(+ 30% '''bonus''' AD)}} {{as|(+ 30% AP)}} {{as|magic damage}} and {{tip|slow|slowing}} them by 40% for 2 seconds.",
@@ -2527,6 +4332,125 @@
       "Ability Power": 90,
       "Attack Damage": 45,
       "Omnivamp": 15
+    }
+  },
+  "223152": {
+    "name": "Hextech Rocketbelt",
+    "description": "<mainText><stats><attention> 95</attention> Ability Power<br><attention> 400</attention> Health<br><attention> 20</attention> Ability Haste</stats><br><br> <active>Active -</active> <active>Supersonic:</active> Dash in target direction, unleashing an arc of magic missiles that deal damage.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 95,
+      "Health": 400,
+      "Ability Haste": 20
+    }
+  },
+  "223153": {
+    "name": "Blade of The Ruined King",
+    "description": "<mainText><stats><attention> 30</attention> Attack Damage<br><attention> 20%</attention> Attack Speed<br><attention> 10%</attention> Life Steal</stats><br><br><passive>Mist's Edge</passive><br>Attacks apply an additional enemy current Health physical damage  <OnHit>On-Hit</OnHit>.<br><br><passive>Clawing Shadows</passive>  (0s)<br>Attacking a champion 3 times Slows them.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 30,
+      "Attack Speed": 20,
+      "Life Steal": 10
+    }
+  },
+  "223156": {
+    "name": "Maw of Malmortius",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 15</attention> Ability Haste<br><attention> 40</attention> Magic Resist</stats><br><br><passive>Lifeline</passive><br>Upon taking magic damage that would reduce Health below 30%, gain a magic damage Shield. When <passive>Lifeline</passive> triggers, gain Omnivamp until the end of combat.  </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 50,
+      "Ability Haste": 15,
+      "Magic Resist": 40
+    }
+  },
+  "223157": {
+    "name": "Zhonya's Hourglass",
+    "description": "<mainText><stats><attention> 80</attention> Ability Power<br><attention> 50</attention> Armor</stats><br><br> <active>Active -</active> <active>Stasis:</active> You become <status>Invulnerable</status> and <status>Untargetable</status> for 2.5 seconds, but are prevented from taking any other actions during this time <buffedStat>(120s)</buffedStat>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 80,
+      "Armor": 50
+    }
+  },
+  "223158": {
+    "name": "Ionian Boots of Lucidity",
+    "description": "<mainText><stats><attention> 40</attention> Ability Haste<br><attention> 45</attention> Move Speed</stats><br><br>Gain 10 Summoner Spell Haste.</mainText>",
+    "totalCost": 500,
+    "itemType": "boots",
+    "stats": {
+      "Ability Haste": 40,
+      "Move Speed": 45
+    }
+  },
+  "223161": {
+    "name": "Spear of Shojin",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 350</attention> Health</stats><br><br><passive>Dragonforce</passive> <br>Gain 25 Basic Ability Haste.<br><br><passive>Focused Will</passive> <br>Dealing damage with Abilities increases your Champion's Ability and Passive damage by 3% for 6 seconds. (stacks 4 times).</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 350
+    }
+  },
+  "223165": {
+    "name": "Morellonomicon",
+    "description": "<mainText><stats><attention> 90</attention> Ability Power<br><attention> 250</attention> Health<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Affliction</passive><br>Dealing magic damage applies <status>40% Grievous Wounds</status> to enemy champions for 3 seconds.<br><br><buffedStat>If an enemy heals for more than 60% of their maximum health while continously affected by <status>Grievous Wounds</status>, it is increased to <status>80% Grievous Wounds</status>.</buffedStat><br><br><rules><status>Grievous Wounds</status> reduces the effectiveness of Healing and Regeneration effects.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 90,
+      "Health": 250,
+      "Ability Haste": 15
+    }
+  },
+  "223172": {
+    "name": "Zephyr",
+    "description": "<mainText><stats><attention> 50%</attention> Attack Speed<br><attention> 10%</attention> Move Speed<br><attention> 30</attention> Ability Haste<br><attention> 20%</attention> Tenacity</stats><br><br><passive>Like the Wind</passive><br>Gain 5% Move Speed  <OnHit>On-Hit</OnHit> for 6 seconds, stacking up to 25% Move Speed.<br><br><rules>Tenacity reduces the duration of <status>Stun</status>, <status>Slow</status>, <status>Taunt</status>, <status>Fear</status>, <status>Silence</status>, <status>Blind</status>, <status>Polymorph</status> and <status>Immobilizing</status> effects. It has no effect on <status>Airborne</status> or <status>Suppression</status>.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 50,
+      "Move Speed": 10,
+      "Ability Haste": 30,
+      "Tenacity": 20
+    }
+  },
+  "223177": {
+    "name": "Guardian's Blade",
+    "description": "<mainText><stats><attention> 25</attention> Attack Damage<br><attention> 250</attention> Health<br><attention> 15</attention> Ability Haste</stats><br><br></mainText>",
+    "totalCost": 500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 25,
+      "Health": 250,
+      "Ability Haste": 15
+    }
+  },
+  "223181": {
+    "name": "Hullbreaker",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 500</attention> Health<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Skipper</passive><br>Every fifth Attack against champions and epic monsters deals <physicalDamage> bonus physical damage</physicalDamage>, increased to <physicalDamage></physicalDamage> against structures.<br><br><passive>Solo Party</passive><br>While no allied champions are within 1500 range, you gain  <scaleArmor>Armor</scaleArmor> and <scaleMR>Magic Resist</scaleMR>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 500,
+      "Move Speed": 4
+    }
+  },
+  "223184": {
+    "name": "Guardian's Hammer",
+    "description": "<mainText><stats><attention> 25</attention> Attack Damage<br><attention> 35%</attention> Attack Speed<br><attention> 5%</attention> Life Steal</stats><br><br></mainText>",
+    "totalCost": 500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 25,
+      "Attack Speed": 35,
+      "Life Steal": 5
     }
   },
   "223185": {
@@ -2540,6 +4464,94 @@
       "Ability Haste": 10
     }
   },
+  "223190": {
+    "name": "Locket of the Iron Solari",
+    "description": "<mainText><stats><attention> 400</attention> Health<br><attention> 25</attention> Armor<br><attention> 35</attention> Magic Resist<br><attention> 25</attention> Ability Haste</stats><br><br><active>Devotion</active><br>Grant nearby allies a <shield>Shield</shield>, decaying over time.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 400,
+      "Armor": 25,
+      "Magic Resist": 35,
+      "Ability Haste": 25
+    }
+  },
+  "223222": {
+    "name": "Mikael's Blessing",
+    "description": "<mainText><stats><attention> 400</attention> Health<br><attention> 100%</attention> Base Mana Regen<br><attention> 16%</attention> Heal and Shield Power</stats><br><br> <active>ACTIVE</active>  (0s)<br><active>Purify</active><br>Restore Health and Remove all crowd control debuffs (except <status>Knockups</status> and <status>Suppression</status>) from an ally champion.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 400,
+      "Mana Regen": 100,
+      "Heal and Shield Power": 16
+    }
+  },
+  "223302": {
+    "name": "Terminus",
+    "description": "<mainText><stats><attention> 30</attention> Attack Damage<br><attention> 25%</attention> Attack Speed</stats><br><br><passive>Shadow</passive><br>Attacks deal <magicDamage>30 bonus magic damage</magicDamage>  <OnHit>On-Hit</OnHit>.<br><br><passive>Juxtaposition</passive><br>Alternate between <keywordMajor>Light</keywordMajor> and <keywordMajor>Dark</keywordMajor> Attacks against champions: <li><keywordMajor>Light</keywordMajor> Attacks grant <scaleArmor>Armor</scaleArmor> and <scaleMR>Magic Resist</scaleMR> for 5s. <li><keywordMajor>Dark</keywordMajor> Attacks grant 8% <scaleArmor>Armor Penetration</scaleArmor> and <scaleMR>Magic Penetration</scaleMR> for 5s. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 30,
+      "Attack Speed": 25
+    }
+  },
+  "223504": {
+    "name": "Ardent Censer",
+    "description": "<mainText><stats><attention> 40</attention> Ability Power<br><attention> 12%</attention> Heal and Shield Power<br><attention> 150%</attention> Base Mana Regen<br><attention> 6%</attention> Move Speed</stats><br><br><passive>Sanctify</passive><br>Healing or Shielding another ally enhances you both for 6 seconds, granting your Attacks <attackSpeed>40%</attackSpeed> Attack Speed and <magicDamage>25 magic damage</magicDamage>  <OnHit>On-Hit</OnHit>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 40,
+      "Heal and Shield Power": 12,
+      "Mana Regen": 150,
+      "Move Speed": 6
+    }
+  },
+  "223508": {
+    "name": "Essence Reaver",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 20</attention> Ability Haste<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Spellblade</passive><br>After using an Ability, your next Attack deals <physicalDamage>bonus physical damage</physicalDamage> and grants <scaleMana>Mana</scaleMana>  <OnHit>On-Hit</OnHit>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 50,
+      "Ability Haste": 20,
+      "Critical Strike Chance": 25
+    }
+  },
+  "223742": {
+    "name": "Dead Man's Plate",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 40</attention> Armor<br><attention> 7%</attention> Move Speed</stats><br><br><passive>Shipwrecker</passive><br>While moving, build up  Move Speed. Your next Attack discharges built up Move Speed to deal damage. If dealt by a Melee champion at top speed, the Attack also <status>Slows</status> the target.<br><br><passive>Unsinkable</passive><br>The strength of movement slowing effects is reduced.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Armor": 40,
+      "Move Speed": 7
+    }
+  },
+  "223748": {
+    "name": "Titanic Hydra",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 400</attention> Health</stats><br><br><br><li><passive>Colossus:</passive> Gain bonus <scaleAD>Attack Damage based off of bonus Health</scaleAD>.<li><passive>Cleave:</passive> Attacks apply additional damage  <OnHit>On-Hit</OnHit>, creating a shockwave that deals damage to enemies behind the target. <active>Titanic Crescent</active><br>Empower your next <passive>Cleave</passive> to deal <physicalDamage>bonus physical damage</physicalDamage>  <OnHit>On-Hit</OnHit> and deal <physicalDamage>bonus physical damage</physicalDamage> to enemies behind the target.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 400
+    }
+  },
+  "223814": {
+    "name": "Edge of Night",
+    "description": "<mainText><stats><attention> 45</attention> Attack Damage<br><attention> 14</attention> Lethality<br><attention> 375</attention> Health</stats><br><br><passive>Annul</passive>  (0s)<br>Gain a Spell Shield that blocks the next enemy Ability.<br><br><rules>Item's cooldown is restarted if you take damage before it is completed.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 45,
+      "Lethality": 14,
+      "Health": 375
+    }
+  },
   "224004": {
     "name": "Spectral Cutlass",
     "description": "Soul Anchor: Mark your current location. After 4 seconds, you automatically {{tip|blink}} to the marked location after a {{fd|0.5}}-second delay. ''Soul Anchor'' may be recast within its duration to manually blink to the marked location after the same delay (45 second cooldown, starts after the blink).",
@@ -2548,6 +4560,28 @@
     "stats": {
       "Attack Damage": 50,
       "Lethality": 15,
+      "Move Speed": 4
+    }
+  },
+  "224005": {
+    "name": "Imperial Mandate",
+    "description": "<mainText><stats><attention> 60</attention> Ability Power<br><attention> 35</attention> Ability Haste<br><attention> 150%</attention> Base Mana Regen</stats><br><br><passive>Coordinated Fire</passive>  (0s) per target<br><keyword>Slowing</keyword> or <keyword>Immobilizing</keyword> an enemy champion marks them for 5 seconds. Ally champion damage detonates the mark, dealing <magicDamage>magic damage equal to 20% of current health</magicDamage>. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 60,
+      "Ability Haste": 35,
+      "Mana Regen": 150
+    }
+  },
+  "224401": {
+    "name": "Force of Nature",
+    "description": "<mainText><stats><attention> 400</attention> Health<br><attention> 50</attention> Magic Resist<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Absorb</passive><br>Taking <magicDamage>magic damage</magicDamage> from enemy Champions grants a stack of <attention>Steadfast</attention> (max 10) for 7 seconds. Enemy <status>Immobilizing</status> effects grant an additional 2 stacks.<br><br><passive>Dissipate</passive><br>While at 10 stacks of <attention>Steadfast</attention>, gain <scaleMR>50 Magic Resist</scaleMR> and 14% increased Move Speed.<br><br><rules>One spell can add a new stack of <attention>Steadfast</attention> every 1 second.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 400,
+      "Magic Resist": 50,
       "Move Speed": 4
     }
   },
@@ -2572,6 +4606,140 @@
       "Ability Haste": 20
     }
   },
+  "224628": {
+    "name": "Horizon Focus",
+    "description": "<mainText><stats><attention> 90</attention> Ability Power<br><attention> 25</attention> Ability Haste</stats><br><br><passive>Hypershot</passive><br>Dealing Ability damage to champions at 600 range or greater <keywordStealth>Reveals</keywordStealth> them for 6 seconds. <br><br><passive>Focus</passive><br>When <passive>Hypershot</passive> is triggered, <keywordStealth>Reveal</keywordStealth> all other enemy champions within 1400 range of them for 3 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 90,
+      "Ability Haste": 25
+    }
+  },
+  "224629": {
+    "name": "Cosmic Drive",
+    "description": "<mainText><stats><attention> 65</attention> Ability Power<br><attention> 350</attention> Health<br><attention> 35</attention> Ability Haste<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Spelldance</passive><br>Dealing <magicDamage>magic</magicDamage> or <trueDamage>true damage</trueDamage> to champions grants <speed> Move Speed</speed> for 4 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 65,
+      "Health": 350,
+      "Ability Haste": 35,
+      "Move Speed": 4
+    }
+  },
+  "224633": {
+    "name": "Riftmaker",
+    "description": "<mainText><stats><attention> 60</attention> Ability Power<br><attention> 350</attention> Health<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Void Corruption</passive><br>For each second in combat with enemy champions, deal 2% bonus damage, up to 8%. At maximum strength, gain <omnivamp>Omnivamp</omnivamp>.<br><br><passive>Void Infusion</passive><br>Gain 2% of your <scaleHealth>bonus Health</scaleHealth> as <scaleAP>Ability Power</scaleAP>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 60,
+      "Health": 350,
+      "Ability Haste": 15
+    }
+  },
+  "224645": {
+    "name": "Shadowflame",
+    "description": "<mainText><stats><attention> 90</attention> Ability Power<br><attention> 10</attention> Magic Penetration</stats><br><br><passive>Cinderbloom</passive><br><magicDamage>Magic</magicDamage> and <trueDamage>true damage</trueDamage> <attention>Critically Strikes</attention> enemies below 40% Health, dealing 15% increased damage. </mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 90,
+      "Magic Penetration": 10
+    }
+  },
+  "224646": {
+    "name": "Stormsurge",
+    "description": "<mainText><stats><attention> 90</attention> Ability Power<br><attention> 15</attention> Magic Penetration<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Stormraider</passive><br>Dealing 25% of a champion's maximum Health within 2.5s applies <passive>Squall</passive> to them and grants <speed>25% Move Speed</speed> for 1.5 seconds.<br><br><passive>Squall</passive><br>After 2 seconds, deal <magicDamage>magic damage</magicDamage>. If the target dies before <passive>Squall</passive> triggers, it damages nearby enemies and you gain <speed>25% Move Speed</speed> for 1.5 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 90,
+      "Magic Penetration": 15,
+      "Move Speed": 4
+    }
+  },
+  "226333": {
+    "name": "Death's Dance",
+    "description": "<mainText><stats><attention> 60</attention> Attack Damage<br><attention> 10</attention> Ability Haste<br><attention> 45</attention> Armor</stats><br><br><passive>Ignore Pain</passive><br>Damage taken is dealt to you over time instead.<br><br><passive>Defy</passive><br>Champion takedowns cleanse <passive>Ignore Pain's</passive> remaining damage pool and restore Health over time.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 60,
+      "Ability Haste": 10,
+      "Armor": 45
+    }
+  },
+  "226609": {
+    "name": "Chempunk Chainsword",
+    "description": "<mainText><stats><attention> 45</attention> Attack Damage<br><attention> 450</attention> Health<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Hackshorn</passive><br>Dealing physical damage applies 40% <status>Grievous Wounds</status> to enemy champions for 3 seconds.<br><br><buffedStat>If an enemy heals for more than 60% of their maximum health while continously affected by <status>Grievous Wounds</status>, it is increased to <status>80% Grievous Wounds</status>.</buffedStat><br><br><rules><status>Grievous Wounds</status> reduces the effectiveness of Healing and Regeneration effects.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 45,
+      "Health": 450,
+      "Ability Haste": 15
+    }
+  },
+  "226610": {
+    "name": "Sundered Sky",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 350</attention> Health<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Lightshield Strike</passive><br>Your first Attack against a champion <attention>Critically Strikes</attention> and <healing>restores Health</healing>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 350,
+      "Ability Haste": 10
+    }
+  },
+  "226616": {
+    "name": "Staff of Flowing Water",
+    "description": "<mainText><stats><attention> 65</attention> Ability Power<br><attention> 14%</attention> Heal and Shield Power<br><attention> 150%</attention> Base Mana Regen<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Rapids</passive><br>Healing or Shielding an ally grants you both <magicDamage> Ability Power</magicDamage> for 4 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 65,
+      "Heal and Shield Power": 14,
+      "Mana Regen": 150,
+      "Ability Haste": 15
+    }
+  },
+  "226617": {
+    "name": "Moonstone Renewer",
+    "description": "<mainText><stats><attention> 35</attention> Ability Power<br><attention> 200</attention> Health<br><attention> 30</attention> Ability Haste<br><attention> 125%</attention> Base Mana Regen</stats><br><br><passive>Starlit Grace</passive><br><healing>Healing or shielding</healing> yourself or an ally chains to the other champion, healing <healing>20%</healing> or shielding <shield>25%</shield> of the original amount.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 35,
+      "Health": 200,
+      "Ability Haste": 30,
+      "Mana Regen": 125
+    }
+  },
+  "226620": {
+    "name": "Echoes of Helia",
+    "description": "<mainText><stats><attention> 40</attention> Ability Power<br><attention> 300</attention> Health<br><attention> 30</attention> Ability Haste<br><attention> 150%</attention> Base Mana Regen</stats><br><br><br><li><passive>Soul Siphon:</passive> Damaging a champion grants a <passive>Soul Shard</passive>. Healing or Shielding an ally consumes all <passive>Soul Shards</passive> to restore Health and deals magic damage per Shard to the nearest enemy champion.<br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 40,
+      "Health": 300,
+      "Ability Haste": 30,
+      "Mana Regen": 150
+    }
+  },
+  "226621": {
+    "name": "Dawncore",
+    "description": "<mainText><stats><attention> 45</attention> Ability Power<br><attention> 16%</attention> Heal and Shield Power<br><attention> 200%</attention> Base Mana Regen</stats><br><br><passive>First Light</passive><br>Gain <healing>3% Heal and Shield Power</healing> and <scaleAP>10 Ability Power</scaleAP> per 100% Base Mana Regen.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 45,
+      "Heal and Shield Power": 16,
+      "Mana Regen": 200
+    }
+  },
   "226630": {
     "name": "Goredrinker",
     "description": "Thirsting Slash: Deal {{as|175% '''base''' AD}} {{as|physical damage}} to enemies in a {{tip|cr|icononly = true}} 450 radius centered around you. {{tip|Heal}} for {{as|20% AD}} {{as|(+ 8% of your '''missing''' health)}} for each enemy champion hit.",
@@ -2581,6 +4749,222 @@
       "Attack Damage": 55,
       "Health": 400,
       "Ability Haste": 20
+    }
+  },
+  "226631": {
+    "name": "Stridebreaker",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 15%</attention> Attack Speed<br><attention> 375</attention> Health</stats><br><br><passive>Cleave</passive><br>Attacks deal <physicalDamage>physical damage</physicalDamage> to nearby enemies.<br> <active>Breaking Shockwave</active><br>Deal <physicalDamage>physical damage</physicalDamage> and <status>Slow</status> nearby enemies by 40%.<br>Gain <speed>40% decaying Move Speed</speed> per champion hit for 3 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Attack Speed": 15,
+      "Health": 375
+    }
+  },
+  "226653": {
+    "name": "Liandry's Anguish",
+    "description": "<mainText><stats><attention> 50</attention> Ability Power<br><attention> 250</attention> Health</stats><br><br><passive>Torment</passive><br>Damaging Abilities <keywordMajor>Burn</keywordMajor> enemies for <magicDamage>2% max Health magic damage</magicDamage> per second for 3 seconds.<br><br><passive>Suffering</passive><br>For each second in combat with enemy champions, deal 2% bonus damage, up to 6%.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 50,
+      "Health": 250
+    }
+  },
+  "226655": {
+    "name": "Luden's Echo",
+    "description": "<mainText><stats><attention> 85</attention> Ability Power<br><attention> 600</attention> Mana<br><attention> 25</attention> Ability Haste</stats><br><br><passive>Echo</passive><br>Damaging Abilities consume all the charges to deal an additional magic damage to the target and one additional nearby target per charge. If there are insufficient targets in range, for each remaining shot, repeat the damage on the primary target.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 85,
+      "Mana": 600,
+      "Ability Haste": 25
+    }
+  },
+  "226657": {
+    "name": "Rod of Ages",
+    "description": "<mainText><stats><attention> 60</attention> Ability Power<br><attention> 350</attention> Health<br><attention> 300</attention> Mana</stats><br><br><passive>Timeless</passive><br><buffedStat>After 2 combat rounds</buffedStat>, this item gains an additional <magicDamage>50 Ability Power</magicDamage>, <scaleHealth>300 Health</scaleHealth>, and <scaleMana>400 Mana</scaleMana>, and you gain a level.<br><br><passive>Eternity</passive><br>Taking damage from champions restores 7% of premitigation damage as <scaleMana>Mana</scaleMana>. Casting an ability heals for 25% of <scaleMana>Mana</scaleMana> spent, up to <scaleHealth>20 Health</scaleHealth> per cast, per second.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 60,
+      "Health": 350,
+      "Mana": 300
+    }
+  },
+  "226662": {
+    "name": "Iceborn Gauntlet",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 45</attention> Armor<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Spellblade</passive><br>After using an Ability, your next Attack deals <physicalDamage>bonus physical damage</physicalDamage>  <OnHit>On-Hit</OnHit> and creates a frost field for 2s that <status>Slows</status>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 300,
+      "Armor": 45,
+      "Ability Haste": 10
+    }
+  },
+  "226664": {
+    "name": "Hollow Radiance",
+    "description": "<mainText><stats><attention> 450</attention> Health<br><attention> 40</attention> Magic Resist<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Immolate</passive><br>After taking or dealing damage, deal <magicDamage>magic damage</magicDamage> per second to nearby enemies for 3 seconds. <br><br><passive>Desolate</passive><br>Killing an enemy deals <magicDamage>magic damage</magicDamage> around them.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 450,
+      "Magic Resist": 40,
+      "Ability Haste": 10
+    }
+  },
+  "226665": {
+    "name": "Jak'Sho, The Protean",
+    "description": "<mainText><stats><attention> 350</attention> Health<br><attention> 35</attention> Armor<br><attention> 35</attention> Magic Resist</stats><br><br><passive>Voidborn Resilience</passive><br>After 5 seconds of champion combat, increase your bonus <scaleArmor>Armor</scaleArmor> and <scaleMR>Magic Resist</scaleMR> by 40% until end of combat.<br><br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 350,
+      "Armor": 35,
+      "Magic Resist": 35
+    }
+  },
+  "226672": {
+    "name": "Kraken Slayer",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 35%</attention> Attack Speed<br><attention> 7%</attention> Move Speed</stats><br><br><passive>Bring It Down</passive><br>Every third Attack deals <physicalDamage>bonus physical damage</physicalDamage>  <OnHit>On-Hit</OnHit>, increased based on their missing Health.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Attack Speed": 35,
+      "Move Speed": 7
+    }
+  },
+  "226673": {
+    "name": "Immortal Shieldbow",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Lifeline</passive><br>Taking damage that would reduce your Health below 30% grants a <shield>Shield</shield> for 3 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 55,
+      "Critical Strike Chance": 25
+    }
+  },
+  "226675": {
+    "name": "Navori Flickerblades",
+    "description": "<mainText><stats><attention> 35%</attention> Attack Speed<br><attention> 25%</attention> Critical Strike Chance<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Transcendence</passive><br>Your Attacks reduce your non-Ultimate Ability cooldowns by <attention>15%</attention> of their remaining cooldown.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 35,
+      "Critical Strike Chance": 25,
+      "Move Speed": 4,
+      "of their remaining cooldown.": 15
+    }
+  },
+  "226676": {
+    "name": "The Collector",
+    "description": "<mainText><stats><attention> 45</attention> Attack Damage<br><attention> 12</attention> Lethality<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Death</passive><br>Your damage executes champions that are below 5% Health.<br><br><passive>Taxes</passive><br>Champion kills grant <gold>125 bonus gold</gold>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 45,
+      "Lethality": 12,
+      "Critical Strike Chance": 25
+    }
+  },
+  "226692": {
+    "name": "Eclipse",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Ever Rising Moon</passive><br>Hitting a champion with 2 separate Attacks or Abilities within 2 seconds grants you a <shield>Shield</shield> for 2 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 50,
+      "Ability Haste": 10
+    }
+  },
+  "226693": {
+    "name": "Prowler's Claw",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 22</attention> Lethality<br><attention> 15</attention> Ability Haste</stats><br><br><active>Sandswipe</active><br>Dash through target enemy, dealing a part of the target's <scaleHealth>maximum Health</scaleHealth> as <physicalDamage>bonus Physical Damage</physicalDamage>. For the next 3 seconds, you deal increased damage to the target.</mainText>",
+    "totalCost": 1000,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 22,
+      "Ability Haste": 15
+    }
+  },
+  "226694": {
+    "name": "Serylda's Grudge",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 40%</attention> Armor Penetration<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Bitter Cold</passive><br>Damaging Abilities <status>Slow</status> enemies below 50% Health by 30% for 1 second.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Armor Penetration": 40,
+      "Ability Haste": 10
+    }
+  },
+  "226695": {
+    "name": "Serpent's Fang",
+    "description": "<mainText><stats><attention> 55</attention> Attack Damage<br><attention> 19</attention> Lethality</stats><br><br><passive>Shield Reaver</passive><br>Dealing damage to an enemy champion reduces any shields they gain. When you damage an enemy who is unaffected by Shield Reaver, reduce all shields on them.<br><br>Item performance differs for  melee and  ranged users.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 55,
+      "Lethality": 19
+    }
+  },
+  "226696": {
+    "name": "Axiom Arc",
+    "description": "<mainText><stats><attention> 45</attention> Attack Damage<br><attention> 18</attention> Lethality<br><attention> 20</attention> Ability Haste</stats><br><br><passive>Apophthegm</passive><br><buffedStat>Your Ultimate Abilities deal 20% increased damage</buffedStat>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 45,
+      "Lethality": 18,
+      "Ability Haste": 20
+    }
+  },
+  "226697": {
+    "name": "Hubris",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 18</attention> Lethality<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Eminence</passive><br>When a champion that you have damaged with the last 3 seconds dies, gain <physicalDamage>15 Attack Damage</physicalDamage> <buffedStat>for the rest of the round</buffedStat>, or until slain. Eminence's <physicalDamage>Attack Damage is permanently increased by 2</physicalDamage> each time this triggers.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 50,
+      "Lethality": 18,
+      "Ability Haste": 10
+    }
+  },
+  "226698": {
+    "name": "Profane Hydra",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 18</attention> Lethality<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Cleave</passive><br>Attacks deal <physicalDamage>physical damage</physicalDamage> to nearby enemies.<br> <active>Heretical Cleave</active>  (0s)<br>Deal <physicalDamage> physical damage</physicalDamage> around you.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 50,
+      "Lethality": 18,
+      "Ability Haste": 15
+    }
+  },
+  "226699": {
+    "name": "Voltaic Cyclosword",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 18</attention> Lethality<br><attention> 20</attention> Ability Haste</stats><br><br><passive>Galvanize</passive><br>Dashes and Stealth stack <keyword>Energized</keyword> 75% faster.<br><br><passive>Firmament</passive><br>Your <keyword>Energized Attack</keyword> deals <physicalDamage>bonus physical damage</physicalDamage> and <keyword>Slows</keyword> for 0.75 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 50,
+      "Lethality": 18,
+      "Ability Haste": 20
+    }
+  },
+  "226701": {
+    "name": "Opportunity",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 15</attention> Lethality</stats><br><br><passive>Preparation</passive><br>After being out of combat with Champions for 8 seconds gain <scaleLethality>Lethality</scaleLethality>. This Lethality lasts for 3 seconds after dealing damage to champions.<br><br><passive>Extraction</passive><br>When a champion that you damaged within 3 seconds dies, gain <speed>200 decaying Move Speed</speed> for 1.5 seconds.<br></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 50,
+      "Lethality": 15
     }
   },
   "228001": {
@@ -2602,6 +4986,319 @@
       "Ability Power": 300,
       "Armor": 50,
       "Ability Haste": 20
+    }
+  },
+  "228009": {
+    "name": "Multitool",
+    "description": "<mainText><stats></stats><br><br>Molds into another item each Shopping Phase.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {}
+  },
+  "228020": {
+    "name": "Abyssal Mask",
+    "description": "<mainText><stats><attention> 350</attention> Health<br><attention> 50</attention> Magic Resist<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Unmake</passive><br>Nearby enemy champions take 12% more <magicDamage>magic damage</magicDamage>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 350,
+      "Magic Resist": 50,
+      "Ability Haste": 15
+    }
+  },
+  "322065": {
+    "name": "Shurelya's Battlesong",
+    "description": "<mainText><stats><attention> 65</attention> Ability Power<br><attention> 15</attention> Ability Haste<br><attention> 6%</attention> Move Speed<br><attention> 150%</attention> Base Mana Regen</stats><br><br> <active>Inspiring Speech</active><br>Grant nearby allies <speed>30% Move Speed</speed> for 4 seconds.</mainText>",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 65,
+      "Ability Haste": 15,
+      "Move Speed": 6,
+      "Mana Regen": 150
+    }
+  },
+  "322526": {
+    "name": "Whispering Circlet",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 8%</attention> Heal and Shield Power<br><attention> 75%</attention> Base Mana Regen<br><attention> 300</attention> Mana</stats><br><br><passive>Harmony</passive><br>Gain % Heal and Shield Power.<br><br><passive>Manaflow</passive>  (8s, max 5 charges)<br>Landing Abilities grants <scaleMana>4 max Mana</scaleMana> (doubled vs. champions).<br>Transforms into <rarityLegendary>Diadem of Songs</rarityLegendary> at <scaleMana>360 max Mana</scaleMana>.</mainText>",
+    "totalCost": 2250,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Heal and Shield Power": 8,
+      "Mana Regen": 75,
+      "Mana": 300
+    }
+  },
+  "322530": {
+    "name": "Diadem of Songs",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 8%</attention> Heal and Shield Power<br><attention> 1000</attention> Mana<br><attention> 100%</attention> Base Mana Regen</stats><br><br><passive>Harmony</passive><br>Gain % Heal and Shield Power.<br><br><passive>Consonance</passive><br>While you or any ally you've healed or shielded in the last 3 seconds is in combat with champions, each second, heal the lowest health nearby ally champion.</mainText>",
+    "totalCost": 2250,
+    "itemType": "component",
+    "stats": {
+      "Health": 200,
+      "Heal and Shield Power": 8,
+      "Mana": 1000,
+      "Mana Regen": 100
+    }
+  },
+  "323002": {
+    "name": "Trailblazer",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 45</attention> Armor<br><attention> 6%</attention> Move Speed</stats><br><br><passive>Lead the Way</passive><br>While moving, build up to <speed>20 bonus Move Speed</speed>. <br>At max speed:<li>Create a trail that grants allied champions <speed>Move Speed equal to 15%</speed> of yours. <li>If you are Melee, your next Attack <keyword>Slows</keyword> the target by 50% for 1 second.<br><br></mainText>",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 300,
+      "Armor": 45,
+      "Move Speed": 6
+    }
+  },
+  "323003": {
+    "name": "Archangel's Staff",
+    "description": "<mainText><stats><attention> 70</attention> Ability Power<br><attention> 600</attention> Mana<br><attention> 25</attention> Ability Haste</stats><br><br><passive>Awe</passive><br>Gain Ability Power equal to <scaleMana>1% bonus Mana.</scaleMana><br><br><passive>Manaflow</passive>  (8s, max 5 charges)<br>Landing Abilities grants <scaleMana>9.5 max Mana</scaleMana> (doubled vs. champions).<br>Transforms into <rarityLegendary>Seraph's Embrace</rarityLegendary> at <scaleMana>360 max Mana</scaleMana>.</mainText>",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 70,
+      "Mana": 600,
+      "Ability Haste": 25
+    }
+  },
+  "323004": {
+    "name": "Manamune",
+    "description": "<mainText><stats><attention> 35</attention> Attack Damage<br><attention> 500</attention> Mana<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Awe</passive><br>Gain <scaleAD> bonus Attack Damage</scaleAD>.<br><br><passive>Manaflow</passive>  (8s, max 4 charges)<br>Landing Attacks and Abilities grants <scaleMana>6.5 max Mana</scaleMana> (doubled vs. champions).<br>Transforms into <rarityLegendary>Muramana</rarityLegendary> at <scaleMana>360 max Mana</scaleMana>.</mainText>",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 35,
+      "Mana": 500,
+      "Ability Haste": 15
+    }
+  },
+  "323040": {
+    "name": "Seraph's Embrace",
+    "description": "<mainText><stats><attention> 70</attention> Ability Power<br><attention> 1000</attention> Mana<br><attention> 25</attention> Ability Haste</stats><br><br><passive>Awe</passive><br>Gain <scaleAP> Ability Power</scaleAP>.<br><br><passive>Lifeline</passive>  (0s)<br>Taking damage that would reduce your Health below 30% grants a <shield> Shield</shield> for 3 seconds.</mainText>",
+    "totalCost": 2900,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 70,
+      "Mana": 1000,
+      "Ability Haste": 25
+    }
+  },
+  "323042": {
+    "name": "Muramana",
+    "description": "<mainText><stats><attention> 35</attention> Attack Damage<br><attention> 1000</attention> Mana<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Awe</passive><br>Gain <scaleAD>2% max Mana as bonus Attack Damage</scaleAD>.<br><br><passive>Shock</passive><br>Attacks against champions deal <physicalDamage>1.2% max Mana as bonus physical damage</physicalDamage>  <OnHit>On-Hit</OnHit>. <br>Damaging Abilities against champions deal <physicalDamage>3% - 4% max Mana as bonus physical damage</physicalDamage>.</mainText>",
+    "totalCost": 2900,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 35,
+      "Mana": 1000,
+      "Ability Haste": 15
+    }
+  },
+  "323050": {
+    "name": "Zeke's Convergence",
+    "description": "<mainText><stats><attention> 350</attention> Health<br><attention> 30</attention> Armor<br><attention> 30</attention> Magic Resist<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Frostfire Tempest</passive><br>Casting your Ultimate summons a storm around you for 5 seconds. The storm deals <magicDamage>30 magic damage</magicDamage> per second to enemy champions and <keyword>Slows</keyword> them by 30%.</mainText>",
+    "totalCost": 2300,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 350,
+      "Armor": 30,
+      "Magic Resist": 30,
+      "Ability Haste": 10
+    }
+  },
+  "323070": {
+    "name": "Tear of the Goddess",
+    "description": "<mainText><stats><attention> 240</attention> Mana</stats><br><br><passive>Manaflow</passive>  (8s, max 4 charges)<br>Landing Abilities grants <scaleMana>6.5 max Mana</scaleMana> (doubled vs. champions), up to <scaleMana>360</scaleMana>.<br><br><passive>Helping Hand</passive><br>Attacks deal an additional <physicalDamage>5 physical damage</physicalDamage> to minions.</mainText>",
+    "totalCost": 400,
+    "itemType": "component",
+    "stats": {
+      "Mana": 240
+    }
+  },
+  "323075": {
+    "name": "Thornmail",
+    "description": "<mainText><stats><attention> 200</attention> Health<br><attention> 85</attention> Armor</stats><br><br><passive>Thorns</passive><br>When struck by an Attack, deal <magicDamage>magic damage</magicDamage> to the attacker and apply 40% <keyword>Wounds</keyword> for 3 seconds if they are a champion.</mainText>",
+    "totalCost": 2650,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 200,
+      "Armor": 85
+    }
+  },
+  "323107": {
+    "name": "Redemption",
+    "description": "<mainText><stats><attention> 30</attention> Ability Power<br><attention> 15</attention> Ability Haste<br><attention> 100%</attention> Base Mana Regen<br><attention> 10%</attention> Heal and Shield Power</stats><br><br> <active>Intervention</active><br>Restore <healing>150 - 350 Health</healing> to allied units and deal <trueDamage>10% max Health true damage</trueDamage> to enemy champions after 2.5 seconds.</mainText>",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 30,
+      "Ability Haste": 15,
+      "Mana Regen": 100,
+      "Heal and Shield Power": 10
+    }
+  },
+  "323109": {
+    "name": "Knight's Vow",
+    "description": "<mainText><stats><attention> 300</attention> Health<br><attention> 50</attention> Armor<br><attention> 10</attention> Ability Haste<br><attention> 150%</attention> Base Health Regen</stats><br><br><passive>Sacrifice</passive><br>While near your <attention>Worthy</attention> ally, take 12% of the damage they receive and <healing>heal for 10%</healing> of the damage they deal to champions. <active>Pledge</active>  (0s)<br>Designate an ally as <attention>Worthy</attention>.</mainText>",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 300,
+      "Armor": 50,
+      "Ability Haste": 10,
+      "Health Regen": 150
+    }
+  },
+  "323110": {
+    "name": "Frozen Heart",
+    "description": "<mainText><stats><attention> 75</attention> Armor<br><attention> 500</attention> Mana<br><attention> 25</attention> Ability Haste</stats><br><br><passive>Winter's Caress</passive><br>Reduce the <attackSpeed>Attack Speed</attackSpeed> of nearby champions by <attackSpeed>20%</attackSpeed>.</mainText>",
+    "totalCost": 2700,
+    "itemType": "legendary",
+    "stats": {
+      "Armor": 75,
+      "Mana": 500,
+      "Ability Haste": 25
+    }
+  },
+  "323119": {
+    "name": "Winter's Approach",
+    "description": "<mainText><stats><attention> 550</attention> Health<br><attention> 500</attention> Mana<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Awe</passive><br>Gain <scaleHealth> Health</scaleHealth>.<br><br><passive>Manaflow</passive>  (8s, max 4 charges)<br>Landing Attacks and Abilities grant <scaleMana>6.5 max Mana</scaleMana> (doubled vs. champions).<br>Transforms into <rarityLegendary>Fimbulwinter</rarityLegendary> at <scaleMana>360 max Mana</scaleMana>.</mainText>",
+    "totalCost": 2400,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 550,
+      "Mana": 500,
+      "Ability Haste": 15
+    }
+  },
+  "323121": {
+    "name": "Fimbulwinter",
+    "description": "<mainText><stats><attention> 550</attention> Health<br><attention> 1000</attention> Mana<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Awe</passive><br>Gain <scaleHealth> Health</scaleHealth>.<br><br><passive>Everlasting</passive>  (0s)<br><keyword>Immobilizing</keyword> or <keyword>Slowing</keyword> ( Melee only) an enemy champion grants a <shield>Shield</shield> for 3 seconds. <br>The Shield is increased by 80% if more than one enemy is nearby.</mainText>",
+    "totalCost": 2400,
+    "itemType": "component",
+    "stats": {
+      "Health": 550,
+      "Mana": 1000,
+      "Ability Haste": 15
+    }
+  },
+  "323190": {
+    "name": "Locket of the Iron Solari",
+    "description": "<mainText><stats><attention> 250</attention> Health<br><attention> 30</attention> Armor<br><attention> 30</attention> Magic Resist<br><attention> 10</attention> Ability Haste</stats><br><br> <active>Devotion</active><br>Grant nearby allies a <shield>200 - 360 Shield</shield> that decays over 2.5 seconds.</mainText>",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 250,
+      "Armor": 30,
+      "Magic Resist": 30,
+      "Ability Haste": 10
+    }
+  },
+  "323222": {
+    "name": "Mikael's Blessing",
+    "description": "<mainText><stats><attention> 400</attention> Health<br><attention> 100%</attention> Base Mana Regen<br><attention> 15%</attention> Heal and Shield Power<br><attention> 15</attention> Ability Haste</stats><br><br> <active>Purify</active><br>Remove all crowd control debuffs (excluding <keyword>Airborne</keyword> and <keyword>Suppression</keyword>) from an ally champion and restore <healing>100 - 250 Health</healing>.</mainText>",
+    "totalCost": 2800,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 400,
+      "Mana Regen": 100,
+      "Heal and Shield Power": 15,
+      "Ability Haste": 15
+    }
+  },
+  "323504": {
+    "name": "Ardent Censer",
+    "description": "<mainText><stats><attention> 55</attention> Ability Power<br><attention> 10%</attention> Heal and Shield Power<br><attention> 150%</attention> Base Mana Regen<br><attention> 6%</attention> Move Speed</stats><br><br><passive>Sanctify</passive><br>Healing or Shielding an ally enhances you both for 6 seconds, granting <attackSpeed>25% Attack Speed</attackSpeed> and <magicDamage>20 magic damage</magicDamage>  <OnHit>On-Hit</OnHit>.</mainText>",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 55,
+      "Heal and Shield Power": 10,
+      "Mana Regen": 150,
+      "Move Speed": 6
+    }
+  },
+  "324005": {
+    "name": "Imperial Mandate",
+    "description": "<mainText><stats><attention> 65</attention> Ability Power<br><attention> 20</attention> Ability Haste<br><attention> 150%</attention> Base Mana Regen</stats><br><br><passive>Coordinated Fire</passive>  (0s) per target<br><keyword>Slowing</keyword> or <keyword>Immobilizing</keyword> an enemy champion marks them for 5 seconds. Ally champion damage detonates the mark, dealing <magicDamage>magic damage equal to 10% of current health</magicDamage>. </mainText>",
+    "totalCost": 2750,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 65,
+      "Ability Haste": 20,
+      "Mana Regen": 150
+    }
+  },
+  "326616": {
+    "name": "Staff of Flowing Water",
+    "description": "<mainText><stats><attention> 45</attention> Ability Power<br><attention> 10%</attention> Heal and Shield Power<br><attention> 150%</attention> Base Mana Regen<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Rapids</passive><br>Healing or Shielding an ally grants you both <magicDamage>45 Ability Power</magicDamage> for 6 seconds.</mainText>",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 45,
+      "Heal and Shield Power": 10,
+      "Mana Regen": 150,
+      "Ability Haste": 15
+    }
+  },
+  "326617": {
+    "name": "Moonstone Renewer",
+    "description": "<mainText><stats><attention> 35</attention> Ability Power<br><attention> 400</attention> Health<br><attention> 20</attention> Ability Haste<br><attention> 150%</attention> Base Mana Regen</stats><br><br><passive>Starlit Grace</passive><br>Healing or shielding an ally chains the effect to another ally (excluding yourself), <healing>healing 30%</healing> or <shield>shielding 35%</shield> of the original amount.</mainText>",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 35,
+      "Health": 400,
+      "Ability Haste": 20,
+      "Mana Regen": 150
+    }
+  },
+  "326620": {
+    "name": "Echoes of Helia",
+    "description": "<mainText><stats><attention> 35</attention> Ability Power<br><attention> 250</attention> Health<br><attention> 20</attention> Ability Haste<br><attention> 150%</attention> Base Mana Regen</stats><br><br><passive>Soul Siphon</passive><br>Gain 35% of pre-mitigation damage dealt to champions as Soul Charges. Healing or Shielding an ally consumes all <passive>Soul Charges</passive> to restore <healing>Health</healing>.</mainText>",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 35,
+      "Health": 250,
+      "Ability Haste": 20,
+      "Mana Regen": 150
+    }
+  },
+  "326621": {
+    "name": "Dawncore",
+    "description": "<mainText><stats><attention> 50</attention> Ability Power<br><attention> 20%</attention> Heal and Shield Power<br><attention> 150%</attention> Base Mana Regen</stats><br><br><passive>First Light</passive><br>Gain <healing>2% Heal and Shield Power</healing> and <scaleAP>10 Ability Power</scaleAP> per 100% Base Mana Regen.</mainText>",
+    "totalCost": 2900,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 50,
+      "Heal and Shield Power": 20,
+      "Mana Regen": 150
+    }
+  },
+  "326657": {
+    "name": "Rod of Ages",
+    "description": "<mainText><stats><attention> 45</attention> Ability Power<br><attention> 350</attention> Health<br><attention> 500</attention> Mana</stats><br><br><passive>Timeless</passive><br>This item gains <scaleHealth>10 Health</scaleHealth>, <scaleMana>30 Mana</scaleMana> and <scaleAP>3 Ability Power</scaleAP> every 60 seconds up to 10 times. Upon reaching max stacks, gain a level.<br><br><passive>Eternity</passive><br>Taking damage from champions restores <scaleMana>10%</scaleMana> of the damage as <scaleMana>Mana</scaleMana>. <br>Casting an ability <healing>heals for 25%</healing> of Mana spent.</mainText>",
+    "totalCost": 2600,
+    "itemType": "legendary",
+    "stats": {
+      "Ability Power": 45,
+      "Health": 350,
+      "Mana": 500
+    }
+  },
+  "328020": {
+    "name": "Abyssal Mask",
+    "description": "<mainText><stats><attention> 350</attention> Health<br><attention> 50</attention> Magic Resist<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Unmake</passive><br>Nearby enemy champions take 12% more <magicDamage>magic damage</magicDamage>.</mainText>",
+    "totalCost": 2850,
+    "itemType": "legendary",
+    "stats": {
+      "Health": 350,
+      "Magic Resist": 50,
+      "Ability Haste": 15
     }
   },
   "443054": {
@@ -2736,6 +5433,16 @@
     "stats": {
       "Attack Speed": 75,
       "Health": 500
+    }
+  },
+  "443083": {
+    "name": "Warmog's Armor",
+    "description": "<mainText><stats><attention> 1100</attention> Health<br><attention> 4%</attention> Move Speed</stats><br><br><passive>Warmog's Heart</passive><br>Requires 1350 <healing>bonus Health</healing>.<br><br>Restore <healing> Health</healing> per second. If you have not taken damage within 4 seconds, restore an additional <healing> Health</healing> per second.</mainText>",
+    "totalCost": 1000,
+    "itemType": "component",
+    "stats": {
+      "Health": 1100,
+      "Move Speed": 4
     }
   },
   "443090": {
@@ -2976,6 +5683,16 @@
       "Tenacity": 30
     }
   },
+  "447111": {
+    "name": "Overlord's Bloodmail",
+    "description": "<mainText><stats><attention> 40</attention> Attack Damage<br><attention> 400</attention> Health</stats><br><br><passive>Tyranny</passive><br>Gain <physicalDamage> AD</physicalDamage> equal to 3% <scaleHealth>Bonus HP</scaleHealth>.<br><br><passive>Retribution</passive><br>Gain up to <physicalDamage>17.5% increased AD</physicalDamage> based on your percent missing Health.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 40,
+      "Health": 400
+    }
+  },
   "447112": {
     "name": "Flesheater",
     "description": "Hack the Meat: Dealing damage reduces the target's {{as|armor}} and {{as|magic resistance}} by 3 for 5 seconds, stacking up to 10 times for a total resistances reduction of 30. Stacks can be applied to each enemy only once every second.\nCannibalize: If you or the allied champion on your team score a {{tip|takedown}} against an enemy champion, you are both {{tip|heal|healed}} for {{as|18% of the taken down target's '''maximum''' health}}.",
@@ -3091,6 +5808,185 @@
       "Attack Speed": 30,
       "Mana Regen": 150,
       "Ability Haste": 40
+    }
+  },
+  "663039": {
+    "name": "Atma's Reckoning",
+    "description": "<mainText><stats><attention> 500</attention> Health<br><attention> 20%</attention> Critical Strike Chance</stats><br><br><passive>Big Hands</passive><br>Gain  0-30% Critical Strike Chance, scaling with your <scaleHealth>bonus Health</scaleHealth>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 500,
+      "Critical Strike Chance": 20
+    }
+  },
+  "663056": {
+    "name": "Demon King's Crown",
+    "description": "<mainText><stats></stats><br><br><passive>Supremacy</passive><br>Increases your Health, Armor, Magic Resist, Attack Damage, Ability Power, Attack Speed, and Ability Haste by 20%, increased by 0% perTakedown and -3% per Death after acquiring this item.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {}
+  },
+  "663058": {
+    "name": "Shield of Molten Stone",
+    "description": "<mainText><stats><attention> 250</attention> Health<br><attention> 80</attention> Armor</stats><br><br><passive>Immovable as the Earth</passive><br>Increase your armor by 20%, and gain Block Chance based on your Armor.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 250,
+      "Armor": 80
+    }
+  },
+  "663059": {
+    "name": "Cloak of Starry Night",
+    "description": "<mainText><stats><attention> 250</attention> Health<br><attention> 60</attention> Magic Resist</stats><br><br><passive>Limitless as the Stars</passive><br>Increase your <scaleMR>Magic Resist</scaleMR> by 10%. Reduce all damage you take from non-Basic Attack sources by a percentage, scaling with your <scaleMR>Magic Resist</scaleMR> up to a cap of 25%.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Health": 250,
+      "Magic Resist": 60
+    }
+  },
+  "663060": {
+    "name": "Sword of the Divine",
+    "description": "<mainText><stats><attention> 90</attention> Adaptive Force<br><attention> 50%</attention> Critical Strike Chance</stats><br><br><passive>Excoriate</passive><br>Each Critical strike deals random <keyword>bonus Critical Strike Damage</keyword>, scaling up to 50% of your Critical Strike Chance.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Adaptive Force": 90,
+      "Critical Strike Chance": 50
+    }
+  },
+  "663064": {
+    "name": "Veigar's Talisman of Ascension",
+    "description": "<mainText><stats></stats><br><br>Gain 100% Extra Experience<br><br>Offers no stats, and cannot be sold...<br><br>...But will be worth it if you reach Level 30.</mainText>",
+    "totalCost": 900,
+    "itemType": "component",
+    "stats": {}
+  },
+  "663146": {
+    "name": "Hextech Gunblade",
+    "description": "<mainText><stats><attention> 90</attention> Ability Power<br><attention> 45</attention> Attack Damage<br><attention> 15%</attention> Omnivamp</stats><br><br><br><br> <active>ACTIVE</active>  (0s)<br><active>Lightning Bolt</active><br>Shocks the target enemy champion, dealing <magicDamage> magic damage</magicDamage> and slowing them by 40% for 2 seconds.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 90,
+      "Attack Damage": 45,
+      "Omnivamp": 15
+    }
+  },
+  "663172": {
+    "name": "Zephyr",
+    "description": "<mainText><stats><attention> 40%</attention> Attack Speed<br><attention> 8%</attention> Move Speed<br><attention> 25</attention> Ability Haste<br><attention> 20%</attention> Tenacity</stats><br><br><passive>Like the Wind</passive><br>Gain 5% Move Speed  <OnHit>On-Hit</OnHit> for 6 seconds, stacking up to 25% Move Speed.<br><br><rules>Tenacity reduces the duration of <status>Stun</status>, <status>Slow</status>, <status>Taunt</status>, <status>Fear</status>, <status>Silence</status>, <status>Blind</status>, <status>Polymorph</status> and <status>Immobilizing</status> effects. It has no effect on <status>Airborne</status> or <status>Suppression</status>.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Speed": 40,
+      "Move Speed": 8,
+      "Ability Haste": 25,
+      "Tenacity": 20
+    }
+  },
+  "663193": {
+    "name": "Gargoyle Stoneplate",
+    "description": "<mainText><stats><attention> 55</attention> Armor<br><attention> 55</attention> Magic Resist<br><attention> 10</attention> Ability Haste<br><attention> 8%</attention> Move Speed</stats><br><br> <active>Active -</active> <active>Unbreakable:</active> Gain a Shield that decays and grow in size.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Armor": 55,
+      "Magic Resist": 55,
+      "Ability Haste": 10,
+      "Move Speed": 8
+    }
+  },
+  "664011": {
+    "name": "Sword of Blossoming Dawn",
+    "description": "<mainText><stats><attention> 35</attention> Ability Power<br><attention> 150</attention> Health<br><attention> 10%</attention> Heal and Shield Power<br><attention> 10</attention> Ability Haste</stats><br><br><passive>Effervescence</passive><br>Gain + 1% Attack Speed for every <healing> 1% Heal and Shield Power</healing> you have. <br><br><passive>Peppermint</passive><br> <OnHit>On-Hit</OnHit>, <healing>heal the lowest health</healing> ally champion near you for , prioritizing lower health allies.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 35,
+      "Health": 150,
+      "Heal and Shield Power": 10,
+      "Ability Haste": 10
+    }
+  },
+  "664644": {
+    "name": "Crown of the Shattered Queen",
+    "description": "<mainText><stats><attention> 65</attention> Ability Power<br><attention> 250</attention> Health<br><attention> 600</attention> Mana<br><attention> 15</attention> Ability Haste</stats><br><br><passive>Safeguard</passive><br>You are <keywordMajor>Safeguarded</keywordMajor>, reducing incoming champion damage by 40%. <keywordMajor>Safeguard</keywordMajor> persists for 3 seconds after taking champion damage.  (0s). <br><br><rules>Item Cooldown is restarted when damage is taken from champions.</rules></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 65,
+      "Health": 250,
+      "Mana": 600,
+      "Ability Haste": 15
+    }
+  },
+  "667101": {
+    "name": "Gambler's Blade",
+    "description": "<mainText><stats><attention> 55</attention> Adaptive Force<br><attention> 10</attention> Ability Haste<br><attention> 15</attention> Lethality<br><attention> 15</attention> Magic Penetration<br><attention> 15%</attention> Move Speed</stats><br><br><passive>Playing for Time</passive><br>Champion takedowns while using Gambler's Blade delays Doom-boss Veigar's arrival by an additional 10 seconds. Deaths while carrying the Blade accelerate it by 10 seconds. (Will not lose time past the 14:30 minute mark)<br><br><passive>Double Down</passive><br>Champion takedowns grant a stack, each granting<gold> 10 bonus gold</gold> on kill. Also take 5% increased damage per stack. Lose all stacks on death.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Adaptive Force": 55,
+      "Ability Haste": 10,
+      "Lethality": 15,
+      "Magic Penetration": 15,
+      "Move Speed": 15
+    }
+  },
+  "667109": {
+    "name": "Cruelty",
+    "description": "<mainText><stats><attention> 60</attention> Ability Power<br><attention> 25</attention> Armor<br><attention> 25</attention> Magic Resist</stats><br><br><passive>Watch Them Fall</passive><br>On <status>Immobilize</status> or <status>Grounding</status> an enemy champion, summon a comet above them. The comet lands after 1 second, dealing additional <magicDamage> magic damage</magicDamage> in the area. This effect has a 6s cooldown per target per spell cast.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Ability Power": 60,
+      "Armor": 25,
+      "Magic Resist": 25
+    }
+  },
+  "667112": {
+    "name": "Flesheater",
+    "description": "<mainText><stats><attention> 55</attention> Adaptive Force<br><attention> 500</attention> Health</stats><br><br><passive>Hack the Meat</passive><br>Dealing damage shreds 3 <scaleArmor>Armor</scaleArmor> and <scaleMR>Magic Resist</scaleMR> for 5 seconds, stacking up to 10 times. Applying stacks has a 1 second cooldown per Ability.<br><br><passive>Cannibalize</passive><br>On Champion Takedown, Heal yourself and your ally for <healing>18% of the Target's Max Health</healing>.</mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Adaptive Force": 55,
+      "Health": 500
+    }
+  },
+  "667666": {
+    "name": "The Collector",
+    "description": "<mainText><stats><attention> 50</attention> Attack Damage<br><attention> 10</attention> Lethality<br><attention> 25%</attention> Critical Strike Chance</stats><br><br><passive>Death</passive><br>Your damage executes champions that are below 5% Health.<br><br><passive>Taxes</passive><br>Champion kills grant <gold>25 bonus gold</gold>.</mainText>",
+    "totalCost": 3000,
+    "itemType": "legendary",
+    "stats": {
+      "Attack Damage": 50,
+      "Lethality": 10,
+      "Critical Strike Chance": 25
+    }
+  },
+  "994403": {
+    "name": "Golden Spatula",
+    "description": "<mainText><stats><attention> 90</attention> Attack Damage<br><attention> 110</attention> Ability Power<br><attention> 40%</attention> Attack Speed<br><attention> 15%</attention> Critical Strike Chance<br><attention> 200</attention> Health<br><attention> 20</attention> Armor<br><attention> 20</attention> Magic Resist<br><attention> 200</attention> Mana<br><attention> 20</attention> Ability Haste<br><attention> 10%</attention> Move Speed<br><attention> 10%</attention> Life Steal<br><attention> 50%</attention> Base Health Regen<br><attention> 100%</attention> Base Mana Regen</stats><br><br><passive>Doing Something</passive><br>You are permanently On Fire!<br><br><flavorText>\"It must do something...<br>Declined, it does EVERYTHING\"</flavorText></mainText>",
+    "totalCost": 2500,
+    "itemType": "component",
+    "stats": {
+      "Attack Damage": 90,
+      "Ability Power": 110,
+      "Attack Speed": 40,
+      "Critical Strike Chance": 15,
+      "Health": 200,
+      "Armor": 20,
+      "Magic Resist": 20,
+      "Mana": 200,
+      "Ability Haste": 20,
+      "Move Speed": 10,
+      "Life Steal": 10,
+      "Health Regen": 50,
+      "Mana Regen": 100
     }
   }
 }

@@ -7,7 +7,7 @@ import {
   getChampionUrlName,
   getLatestVersion,
 } from '@/lib/ddragon'
-import { getLatestPatches } from '@/lib/game'
+import { getLatestPatches, HIDDEN_PATCHES } from '@/lib/game'
 import ChampionPageClient from '@/components/champions/ChampionPageClient'
 
 // isr: regenerate page every hour to refresh patches/stats
@@ -57,7 +57,6 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   // get available patches to determine default
   const availablePatches = await getLatestPatches()
-  const HIDDEN_PATCHES = ['25.22', '25.23']
   const defaultPatch = availablePatches.find(p => !HIDDEN_PATCHES.includes(p)) || availablePatches[0]
   const currentPatch = patch || defaultPatch
 

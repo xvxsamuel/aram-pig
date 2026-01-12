@@ -73,8 +73,8 @@ export default function TierFilter({ selectedTier, onTierChange }: TierFilterPro
             <button
               key={option.value}
               onClick={() => handleTierChange(option.value)}
-              className={`w-full px-4 py-2 text-left hover:bg-gold-light/20 transition-colors text-sm text-white flex items-center gap-2 ${
-                selectedTier === option.value ? 'bg-accent-light/20' : ''
+              className={`w-full px-4 py-2 text-left transition-colors text-sm text-white flex items-center gap-2 ${
+                selectedTier === option.value ? 'bg-accent-light/20 hover:brightness-150' : 'hover:bg-gold-light/20'
               }`}
             >
               {option.colorClass && (

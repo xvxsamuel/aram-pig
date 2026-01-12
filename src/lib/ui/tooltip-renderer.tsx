@@ -1,16 +1,11 @@
-'use client'
+// shared tooltip rendering utilities
+// used by ItemTooltip and AugmentTooltip to avoid duplication
 
-import { useMemo, memo } from 'react'
-import Image from 'next/image'
-import SimpleTooltip from '@/components/ui/SimpleTooltip'
-import { getTooltipData, cleanWikiMarkup } from '@/lib/ui'
-import augmentsData from '@/data/augments.json'
+import React from 'react'
 
-// Import the rendering logic from ItemTooltip
-const MARKER_REGEX =
-  /(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g
-
-const KEYWORD_ICON_MAP = new Map<string, string>([
+// keyword icon mapping for tooltip rendering
+export const KEYWORD_ICON_MAP = new Map<string, string>([
+  // status effects
   ['slow', '/icons/tooltips/slow_icon.png'],
   ['slowing', '/icons/tooltips/slow_icon.png'],
   ['slows', '/icons/tooltips/slow_icon.png'],
@@ -21,20 +16,54 @@ const KEYWORD_ICON_MAP = new Map<string, string>([
   ['immobilizing', '/icons/tooltips/stun_icon.png'],
   ['immobilized', '/icons/tooltips/stun_icon.png'],
   ['cripple', '/icons/tooltips/cripple_icon.png'],
-  ['shield', '/icons/tooltips/hybrid_resistances_icon.png'],
+  ['crippling', '/icons/tooltips/cripple_icon.png'],
+  ['crippled', '/icons/tooltips/cripple_icon.png'],
+  ['stasis', '/icons/tooltips/stasis_icon.png'],
+  ['stasis (buff)', '/icons/tooltips/stasis_icon.png'],
+  ['untargetable', '/icons/tooltips/untargetable_icon.png'],
+  ['invulnerable', '/icons/tooltips/taric_cosmic_radiance.png'],
+  // unit types
   ['melee', '/icons/tooltips/melee_role_icon.png'],
   ['ranged', '/icons/tooltips/ranged_role_icon.png'],
   ['minions', '/icons/tooltips/minion_icon.png'],
   ['minion', '/icons/tooltips/minion_icon.png'],
   ['monsters', '/icons/tooltips/monster_icon.png'],
+  ['monster', '/icons/tooltips/monster_icon.png'],
+  // attack/damage types
+  ['on-hit', '/icons/tooltips/on-hit_icon.png'],
+  ['on-attack', '/icons/tooltips/on-attack_icon.png'],
+  ['critical strike', '/icons/tooltips/critical_strike_icon.png'],
+  ['critically strikes', '/icons/tooltips/critical_strike_icon.png'],
+  ['takedown', '/icons/tooltips/damage_rating.png'],
+  ['takedowns', '/icons/tooltips/damage_rating.png'],
+  // healing/shielding
+  ['heal', '/icons/tooltips/heal_power_icon.png'],
+  ['healing', '/icons/tooltips/heal_power_icon.png'],
+  ['healed', '/icons/tooltips/heal_power_icon.png'],
+  ['shield', '/icons/tooltips/hybrid_resistances_icon.png'],
+  ['shielding', '/icons/tooltips/hybrid_resistances_icon.png'],
+  ['spell shield', '/icons/tooltips/sivir_spell_shield.png'],
+  ['life steal', '/icons/tooltips/lifesteal_icon.png'],
+  // vision
+  ['sight', '/icons/tooltips/sight_icon.png'],
+  ['stealth ward', '/icons/tooltips/stealth_ward_icon.png'],
+  // range indicator
   ['cr', '/icons/tooltips/range_center.png'],
+  ['er', '/icons/tooltips/range_center.png'],
 ])
 
-function getKeywordIcon(keyword: string): string | null {
+export function getKeywordIcon(keyword: string): string | null {
   return KEYWORD_ICON_MAP.get(keyword.toLowerCase().trim()) || null
 }
 
-function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
+// regex to match all custom markup tags
+export const MARKER_REGEX =
+  /(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<true>(?:(?!<\/true>).)*<\/true>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g
+
+/**
+ * recursively render nested markup tags in tooltip descriptions
+ */
+export function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
   const parts: React.ReactNode[] = []
   const segments = text.split(MARKER_REGEX)
 
@@ -129,6 +158,12 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
           {renderNestedMarkers(segment.slice(4, -5), baseKey * 1000)}
         </span>
       )
+    } else if (segment.startsWith('<true>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--color-augment-prismatic)' }}>
+          {renderNestedMarkers(segment.slice(6, -7), baseKey * 1000)}
+        </span>
+      )
     } else if (segment.startsWith('<tip>')) {
       const content = segment.slice(5, -6)
       const tipParts = content.split('|||')
@@ -183,103 +218,4 @@ function renderNestedMarkers(text: string, baseKey: number): React.ReactNode[] {
   }
 
   return parts
-}
-
-function formatDescription(desc: string): React.ReactNode {
-  if (!desc) return null
-
-  // Clean wiki markup first (this converts <br> to \n)
-  const cleanedDesc = cleanWikiMarkup(desc)
-  const lines = cleanedDesc.split('\n').filter(line => line.trim())
-
-  return lines.map((line, lineIdx) => {
-    const rendered = renderNestedMarkers(line, lineIdx * 10000)
-
-    return (
-      <div key={lineIdx} className="mb-2 last:mb-0">
-        {rendered}
-      </div>
-    )
-  })
-}
-
-// Tier label mapping
-const TIER_LABELS: Record<string, string> = {
-  Silver: 'Silver Augment',
-  Gold: 'Gold Augment',
-  Prismatic: 'Prismatic Augment',
-}
-
-interface AugmentTooltipProps {
-  augmentName: string
-  children: React.ReactNode
-}
-
-const AugmentTooltipContent = memo(({ tooltipData, augmentName }: { tooltipData: any; augmentName: string }) => {
-  const formattedDescription = useMemo(
-    () => formatDescription(tooltipData.description),
-    [tooltipData.description]
-  )
-
-  // Get augment icon from augments.json
-  const augmentEntry = (augmentsData as Record<string, { icon?: string; tier?: string }>)[augmentName]
-  const iconName = augmentEntry?.icon
-  const iconSrc = iconName ? `/icons/augments/${iconName}.png` : null
-
-  return (
-    <div className="text-left p-1 min-w-0 max-w-[320px]">
-      {/* Header with icon */}
-      <div className="flex items-center gap-2 mb-2">
-        {iconSrc && (
-          <div className="w-8 h-8 flex-shrink-0 rounded border border-gold-dark/40 overflow-hidden relative">
-            <Image
-              src={iconSrc}
-              alt={tooltipData.name}
-              width={32}
-              height={32}
-              className="w-full h-full object-cover"
-              unoptimized
-            />
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-gold-light break-words">{tooltipData.name}</div>
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div className="h-px bg-gradient-to-r from-gold-dark/40 to-transparent -mx-4 mb-2" />
-
-      {/* Description */}
-      {tooltipData.description && (
-        <div className="text-xs text-gray-300 leading-relaxed break-words overflow-wrap-anywhere mb-2">
-          {formattedDescription}
-        </div>
-      )}
-
-      {/* Tier label at bottom like item types */}
-      {tooltipData.tier && (
-        <>
-          <div className="h-px bg-gradient-to-r from-gold-dark/40 to-transparent -mx-4 mb-2" />
-          <div className="text-xs text-gold-dark italic">{TIER_LABELS[tooltipData.tier] || `${tooltipData.tier} Augment`}</div>
-        </>
-      )}
-    </div>
-  )
-})
-
-AugmentTooltipContent.displayName = 'AugmentTooltipContent'
-
-export default function AugmentTooltip({ augmentName, children }: AugmentTooltipProps) {
-  const tooltipData = useMemo(() => getTooltipData(augmentName, 'augment'), [augmentName])
-  
-  if (!tooltipData) {
-    return <>{children}</>
-  }
-
-  return (
-    <SimpleTooltip content={<AugmentTooltipContent tooltipData={tooltipData} augmentName={augmentName} />}>
-      {children}
-    </SimpleTooltip>
-  )
 }

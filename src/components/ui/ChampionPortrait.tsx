@@ -40,13 +40,13 @@ export default function ChampionPortrait({
     lg: 'rounded-xl',
   }
 
-  // Default gold border if no tier or low tier (C/D/COAL)
+  // no special border effect if no tier or low tier (C/D/COAL)
   const defaultBorder = 'linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark))'
   const tierBorder = config
     ? `linear-gradient(to bottom, ${config.borderColors.from}, ${config.borderColors.to})`
     : defaultBorder
 
-  // Only use tier border for S+, S, A tiers
+  // only use tier effect for S+, S, A tiers
   const shouldUseTierBorder = tier === 'S+' || tier === 'S' || tier === 'A'
   const borderStyle = shouldUseTierBorder ? tierBorder : defaultBorder
 
@@ -56,7 +56,7 @@ export default function ChampionPortrait({
       onMouseEnter={() => hasGlint && setGlintKey(k => k + 1)}
     >
       <div className={`${borderRadius[size]} p-px relative overflow-hidden`} style={{ background: borderStyle }}>
-        {/* glint effect for S+ and S tiers */}
+        {/* glint effect for S+, S, A tiers */}
         {hasGlint && animateColor && (
           <motion.div
             key={glintKey}

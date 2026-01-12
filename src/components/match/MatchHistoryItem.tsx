@@ -18,11 +18,11 @@ import { getChampionUrlName } from '@/lib/ddragon'
 import { getKdaColor, getPigScoreColor } from '@/lib/ui'
 import { calculateMatchLabels } from '@/lib/scoring/labels'
 import MatchDetails from '@/components/match/MatchDetails'
-// tooltip import removed - unused
-import ItemTooltip from '@/components/ui/ItemTooltip'
-import RuneTooltip from '@/components/ui/RuneTooltip'
-import SummonerSpellTooltip from '@/components/ui/SummonerSpellTooltip'
+import Tooltip from '@/components/ui/Tooltip'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
 
 // preload images for matchdetails on hover
 function preloadMatchImages(match: MatchData, ddragonVersion: string) {
@@ -69,9 +69,10 @@ interface Props {
   region: string
   ddragonVersion: string
   championNames: Record<string, string>
+  onMatchEnriched?: (matchId: string, pigScores: Record<string, number | null>) => void
 }
 
-export default function MatchHistoryItem({ match, puuid, region, ddragonVersion, championNames }: Props) {
+export default function MatchHistoryItem({ match, puuid, region, ddragonVersion, championNames, onMatchEnriched }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
@@ -108,6 +109,9 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
   const matchLabel = `Match ${match.metadata.matchId.split('_')[1]}, ${participant.championName}, ${isRemake ? 'Remake' : isWin ? 'Victory' : 'Defeat'}, ${participant.kills}/${participant.deaths}/${participant.assists}`
 
   const hasPigScore = participant.pigScore !== null && participant.pigScore !== undefined
+  // check if pig score should still be loading (match is recent enough + not a remake)
+  const gameAge = Date.now() - match.info.gameCreation
+  const isPigScoreLoading = !hasPigScore && !isRemake && gameAge < ONE_YEAR_MS
   const labels = calculateMatchLabels(match, participant)
   const hasLabels = hasPigScore && labels.length > 0
 
@@ -224,7 +228,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
 
                     <div className="flex gap-1 items-center">
                       <div className="flex flex-col gap-0.5">
-                        <SummonerSpellTooltip spellId={participant.summoner1Id}>
+                        <Tooltip id={participant.summoner1Id} type="spell">
                           <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
                             <Image
                               src={getSummonerSpellUrl(participant.summoner1Id, ddragonVersion)}
@@ -235,8 +239,8 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                               unoptimized
                             />
                           </div>
-                        </SummonerSpellTooltip>
-                        <SummonerSpellTooltip spellId={participant.summoner2Id}>
+                        </Tooltip>
+                        <Tooltip id={participant.summoner2Id} type="spell">
                           <div className="w-6 h-6 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
                             <Image
                               src={getSummonerSpellUrl(participant.summoner2Id, ddragonVersion)}
@@ -247,12 +251,12 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                               unoptimized
                             />
                           </div>
-                        </SummonerSpellTooltip>
+                        </Tooltip>
                       </div>
 
                       <div className="flex flex-col gap-0.5">
                         {participant.perks?.styles?.[0]?.selections?.[0]?.perk && (
-                          <RuneTooltip runeId={participant.perks.styles[0].selections[0].perk}>
+                          <Tooltip id={participant.perks.styles[0].selections[0].perk} type="rune">
                             <div className="w-6 h-6 rounded-full overflow-hidden bg-abyss-800 border border-gold-dark">
                               <Image
                                 src={getRuneImageUrl(participant.perks.styles[0].selections[0].perk)}
@@ -263,10 +267,10 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                                 unoptimized
                               />
                             </div>
-                          </RuneTooltip>
+                          </Tooltip>
                         )}
                         {participant.perks?.styles?.[1]?.style && (
-                          <RuneTooltip runeId={participant.perks.styles[1].style}>
+                          <Tooltip id={participant.perks.styles[1].style} type="rune">
                             <div className="w-6 h-6 rounded-full overflow-hidden bg-abyss-800 border border-gold-dark flex items-center justify-center">
                               <Image
                                 src={getRuneStyleImageUrl(participant.perks.styles[1].style)}
@@ -277,7 +281,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                                 unoptimized
                               />
                             </div>
-                          </RuneTooltip>
+                          </Tooltip>
                         )}
                       </div>
                     </div>
@@ -315,7 +319,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                         participant.item5,
                       ].map((itemId, idx) =>
                         itemId > 0 ? (
-                          <ItemTooltip key={idx} itemId={itemId}>
+                          <Tooltip key={idx} id={itemId} type="item">
                             <div className="w-7 h-7 rounded overflow-hidden bg-abyss-800 border border-gold-dark">
                               <Image
                                 src={getItemImageUrl(itemId, ddragonVersion)}
@@ -326,7 +330,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                                 unoptimized
                               />
                             </div>
-                          </ItemTooltip>
+                          </Tooltip>
                         ) : (
                           <div key={idx} className="w-7 h-7 rounded bg-abyss-800/50 border border-gold-dark/50" />
                         )
@@ -339,7 +343,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                 <div className="flex gap-2 items-center mt-0.5 w-full min-w-0">
                   {/* pig Score - aligned with Icon */}
                   <div className="w-[54px] flex justify-center flex-shrink-0">
-                    {hasPigScore && (
+                    {hasPigScore ? (
                       <SimpleTooltip content="Pig Score">
                         <button
                           onClick={e => {
@@ -357,7 +361,16 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                           </div>
                         </button>
                       </SimpleTooltip>
-                    )}
+                    ) : isPigScoreLoading ? (
+                      <SimpleTooltip content="Calculating PIG...">
+                        <div className="w-full p-px bg-gradient-to-b from-abyss-500 to-abyss-700 rounded-full flex">
+                          <div className="w-full bg-abyss-700 rounded-full px-2 py-1.5 text-[10px] font-bold leading-none flex items-center justify-center gap-1 whitespace-nowrap">
+                            <LoadingSpinner size={12} bgColor="bg-abyss-700" />
+                            <span className="text-abyss-400">PIG</span>
+                          </div>
+                        </div>
+                      </SimpleTooltip>
+                    ) : null}
                   </div>
 
                   {/*labels */}
@@ -509,6 +522,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
             region={region}
             defaultTab={selectedTab}
             onTabChange={setSelectedTab}
+            onEnriched={onMatchEnriched ? (pigScores) => onMatchEnriched(match.metadata.matchId, pigScores) : undefined}
           />
         )}
       </div>

@@ -108,3 +108,18 @@ export {
   type ChampionProfileStats,
   type ProfileChampions,
 } from './profile-stats'
+
+// PIG calculator - on-demand calculation utilities
+export {
+  ONE_YEAR_MS,
+  BATCH_SIZE as PIG_BATCH_SIZE,
+  MAX_TIME_MS as PIG_MAX_TIME_MS,
+  calculateTeamTotals,
+  extractTimelineData,
+  calculateParticipantPigScore,
+  filterNeedingCalculation,
+  calculateUserMatchesPigScores,
+  calculateOtherPlayersPigScores,
+  type PigCalcResult,
+  type MatchParticipantRecord,
+} from './pig-calculator'
