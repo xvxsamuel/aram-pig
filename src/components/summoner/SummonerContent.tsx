@@ -12,6 +12,8 @@ import SummonerTopChampions from './SummonerTopChampions'
 import SummonerLoadingSkeleton from './SummonerLoadingSkeleton'
 import RecentlyPlayedWithList from './RecentlyPlayedWithList'
 import { useProfileData } from '@/hooks/useProfileData'
+import { getChampionSplashUrl } from '@/lib/ddragon'
+import { ONE_YEAR_MS } from '@/lib/ui'
 import type { UpdateJobProgress } from '@/types/update-jobs'
 import { getDefaultTag, LABEL_TO_PLATFORM, PLATFORM_TO_REGIONAL } from '@/lib/game'
 
@@ -152,7 +154,7 @@ export default function SummonerContentV2({
 
   useEffect(() => {
     if (mostPlayedChampion) {
-      const imageUrl = `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${mostPlayedChampion}_0.jpg`
+      const imageUrl = getChampionSplashUrl(mostPlayedChampion)
       fetch(imageUrl)
         .then(res => {
           if (res.ok) {
@@ -244,6 +246,8 @@ export default function SummonerContentV2({
                 totalMatches: totalMatches,
                 errorCode: data.job.errorMessage || undefined
               })
+              // start PIG calculation even on failure - we still got some matches
+              startPigCalculation()
             } else if (success) {
               setStatusMessage('Profile updated successfully!')
               // start PIG calculation in background after successful update
@@ -357,7 +361,6 @@ export default function SummonerContentV2({
         }
         
         const result = await response.json()
-        console.log('[PigCalc:Client] Result:', result)
         
         // update phase tracking
         if (result.status === 'user_complete') {
@@ -371,7 +374,6 @@ export default function SummonerContentV2({
         if (result.calculated > 0) {
           const now = Date.now()
           if (now - lastRefreshTime > 3000) {
-            console.log('[PigCalc:Client] Refreshing after calculating', result.calculated, 'scores')
             lastRefreshTime = now
             await refresh()
           }
@@ -389,7 +391,6 @@ export default function SummonerContentV2({
     }
     
     await runCalculation()
-    console.log('[PigCalc:Client] Calculation complete, final refresh')
     await refresh() // final refresh when done
   }, [puuid, region, refresh])
   
@@ -485,11 +486,11 @@ export default function SummonerContentV2({
   }, [shouldAutoUpdate, jobProgress])
 
   // check for missing PIG scores on mount and after loading
-  const hasCheckedPigScores = useRef(false)
+  const isCalculatingPigScores = useRef(false)
   useEffect(() => {
-    if (loading || hasCheckedPigScores.current || matches.length === 0 || jobProgress) return
+    // Allow calculation even during job progress - calculate as matches come in
+    if (loading || isCalculatingPigScores.current || matches.length === 0) return
     
-    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
     const now = Date.now()
     
     // check if any recent (non-remake) matches are missing PIG scores
@@ -501,14 +502,17 @@ export default function SummonerContentV2({
       const gameAge = now - match.info.gameCreation
       const isPigScoreEligible = !isRemake && gameAge < ONE_YEAR_MS
       
-      return isPigScoreEligible && participant.pigScore === null
+      // Check for both null and undefined
+      return isPigScoreEligible && (participant.pigScore === null || participant.pigScore === undefined)
     })
     
     if (hasMissingPigScores) {
-      hasCheckedPigScores.current = true
-      startPigCalculation()
+      isCalculatingPigScores.current = true
+      startPigCalculation().finally(() => {
+        isCalculatingPigScores.current = false
+      })
     }
-  }, [loading, matches, puuid, jobProgress, startPigCalculation])
+  }, [loading, matches, puuid, startPigCalculation])
 
   // tab change handler
   const handleTabChange = useCallback((tab: 'overview' | 'champions' | 'performance') => {
@@ -553,6 +557,8 @@ export default function SummonerContentV2({
             aggregateStats={aggregateStats}
             summaryKda={summaryKda}
             onTabChange={handleTabChange}
+            matches={matches}
+            puuid={puuid}
           />
           <SummonerTopChampions
             championStats={champions}
@@ -569,7 +575,7 @@ export default function SummonerContentV2({
           region={region}
           ddragonVersion={ddragonVersion}
           championNames={championNames}
-          initialLoading={loading}
+          initialLoading={loading && matches.length === 0}
           currentName={{ gameName: summonerData.account.gameName, tagLine: summonerData.account.tagLine }}
         />
       </div>

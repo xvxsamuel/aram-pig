@@ -1,5 +1,7 @@
 // ui utilities barrel exports
-export { getWinrateColor, getKdaColor, getPigScoreColor, getPigScoreGradientColors } from './colors'
+export { getWinrateColor, getKdaColor, getPigScoreColor, getPigScoreGradientColors, GLOW_COLORS } from './colors'
+
+export { ONE_YEAR_MS, getTimeAgo, getTimeAgoLong, formatDuration, formatDurationMinutes, perMinute } from './time'
 
 export {
   getTooltipData,

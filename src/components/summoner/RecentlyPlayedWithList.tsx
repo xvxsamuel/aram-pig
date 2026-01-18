@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { RecentPlayer } from '@/types/profile'
 import { getWinrateColor } from '@/lib/ui'
+import { getProfileIconUrl } from '@/lib/ddragon'
 import Card from '@/components/ui/Card'
 
 interface Props {
@@ -33,7 +34,7 @@ export default function RecentlyPlayedWithList({ players, region, ddragonVersion
               {/* profile icon */}
               <div className="w-8 h-8 rounded-full overflow-hidden bg-abyss-700 flex-shrink-0">
                 <Image
-                  src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/profileicon/${player.profileIconId || 29}.png`}
+                  src={getProfileIconUrl(player.profileIconId || 29, ddragonVersion)}
                   alt={player.gameName}
                   width={40}
                   height={40}

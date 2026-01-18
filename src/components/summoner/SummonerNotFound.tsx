@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { PLATFORM_TO_LABEL } from '@/lib/game'
+import { getProfileIconUrl } from '@/lib/ddragon'
 
 interface SuggestedSummoner {
   puuid: string
@@ -66,7 +67,7 @@ export default function SummonerNotFound({
                   >
                     <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gold-light/50 group-hover:border-gold-light transition-colors flex-shrink-0">
                       <Image
-                        src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/profileicon/${summoner.profile_icon_id}.png`}
+                        src={getProfileIconUrl(summoner.profile_icon_id, ddragonVersion)}
                         alt={`${summoner.game_name} profile icon`}
                         fill
                         className="object-cover"

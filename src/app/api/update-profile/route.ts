@@ -396,6 +396,7 @@ async function continueProcessingJob(supabase: any, job: UpdateJob, region: stri
         game_creation: r.gameCreation,
         game_duration: r.match.info.gameDuration,
         patch: r.match.info.gameVersion ? extractPatch(r.match.info.gameVersion) : getPatchFromDate(r.gameCreation!),
+        timeline_data: r.timeline || null, // Store timeline if we fetched it
       }))
     
     if (newMatchInserts.length > 0) {

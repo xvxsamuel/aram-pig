@@ -77,13 +77,17 @@ export function extractTimelineData(
   let deathQualityScore: number | undefined = undefined
   const teamId = existingMatchData?.teamId || 100
 
+  // extract build/ability data if not already present
   if (timeline && !abilityOrderStr) {
     abilityOrderStr = extractAbilityOrder(timeline, participantId)
     const buildOrder = extractBuildOrder(timeline, participantId)
     const firstBuy = extractFirstBuy(timeline, participantId)
     buildOrderStr = buildOrder.length > 0 ? buildOrder.join(',') : null
     firstBuyStr = firstBuy.length > 0 ? formatFirstBuy(firstBuy) : null
-    
+  }
+
+  // always calculate death quality when timeline is available
+  if (timeline) {
     const killDeathSummary = getKillDeathSummary(timeline, participantId, teamId)
     deathQualityScore = killDeathSummary.deathScore
   }
@@ -174,12 +178,13 @@ export async function calculateUserMatchesPigScores(
   offset: number,
   startTime: number
 ): Promise<PigCalcResult> {
-  // fetch user's matches
+  // fetch user's matches that have timeline data (required for accurate PIG scores)
   const { data: matches } = await supabase
     .from('summoner_matches')
     .select('puuid, match_id, match_data, champion_name, game_creation, patch, matches!inner(game_duration, timeline_data)')
     .eq('puuid', puuid)
     .gte('game_creation', oneYearAgo)
+    .not('matches.timeline_data', 'is', null) // Only matches with timeline data
     .order('game_creation', { ascending: false })
     .range(offset, offset + BATCH_SIZE - 1)
 
@@ -278,13 +283,14 @@ export async function calculateOtherPlayersPigScores(
 
   const matchIds = userMatches.map(m => m.match_id)
 
-  // get other participants needing scores
+  // get other participants needing scores (only from matches with timeline data)
   const { data: participants } = await supabase
     .from('summoner_matches')
     .select('puuid, match_id, match_data, champion_name, patch, matches!inner(game_duration, timeline_data, game_creation)')
     .in('match_id', matchIds)
     .neq('puuid', puuid)
     .gte('matches.game_creation', oneYearAgo)
+    .not('matches.timeline_data', 'is', null) // Only matches with timeline data
     .range(offset, offset + OTHER_BATCH_SIZE - 1)
 
   if (!participants || participants.length === 0) {

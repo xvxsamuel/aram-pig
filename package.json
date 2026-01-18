@@ -11,7 +11,8 @@
     "format:check": "prettier --check .",
     "scraper": "tsx --import ./scripts/load-env.ts scripts/scraper/continuous-scraper.ts",
     "update-badges": "tsx --import ./scripts/load-env.ts scripts/generate-badge-data.ts",
-    "update-items": "tsx scripts/update-items.ts"
+    "update-items": "tsx scripts/update-items.ts",
+    "fetch-items": "tsx scripts/update-items.ts --fresh"
   },
   "dependencies": {
     "@fightmegg/riot-api": "^0.0.21",

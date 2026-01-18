@@ -95,8 +95,10 @@ export interface CoreBuildDetails {
 export interface PigScoreBreakdown {
   finalScore: number
   componentScores: {
-    performance: number
+    performance: number  // combined (stats + timeline + kda)
     build: number
+    // breakdown of performance
+    stats: number
     timeline: number
     kda: number
   }

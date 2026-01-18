@@ -6,30 +6,33 @@ import { getLatestPatches as getDDragonPatches } from '@/lib/ddragon/assets'
 export const PATCHES_TO_KEEP = 3
 
 // patches to hide from UI (insufficient data)
-export const HIDDEN_PATCHES = ['25.22', '25.23', '26.1']
+export const HIDDEN_PATCHES = ['25.23']
 
 // fetches the latest patch versions from cached ddragon data
 // uses shared cache - only fetches from api when ddragon version changes
-// returns patches in aram pig format (25.x)
 export async function getLatestPatches(count: number = PATCHES_TO_KEEP): Promise<string[]> {
   return getDDragonPatches(count)
 }
 
-// check if a patch is in the accepted list (latest patches)
+// check if a patch is in the accepted list
 export async function isPatchAccepted(patch: string): Promise<boolean> {
   const latestPatches = await getLatestPatches(PATCHES_TO_KEEP)
   return latestPatches.includes(patch)
 }
 
-// riot api gameVersion string returns version 15.x for s15, but actual patch names are 25.x
+// riot api gameVersion string returns version 15.x for s15, need 25.x
 
 export function extractPatch(gameVersion: string): string {
   if (!gameVersion) return 'unknown'
   const parts = gameVersion.split('.')
   const apiPatch = parts.slice(0, 2).join('.')
 
+  // API versions are offset: API 15.x = Patch 25.x, API 16.x = Patch 26.x, etc.
   if (apiPatch.startsWith('15.')) {
     return '25.' + apiPatch.split('.')[1]
+  }
+  if (apiPatch.startsWith('16.')) {
+    return '26.' + apiPatch.split('.')[1]
   }
 
   return apiPatch

@@ -125,3 +125,16 @@ export function getPigScoreGradientColors(score: number): { dark: string; light:
     }
   }
 }
+
+// animation glow colors for framer motion (rgb values for opacity interpolation)
+// these match the CSS variable --color-glow-splus
+export const GLOW_COLORS = {
+  splus: {
+    rgb: '74, 158, 255',
+    full: 'rgba(74, 158, 255, 1)',
+    medium: 'rgba(74, 158, 255, 0.7)',
+    light: 'rgba(74, 158, 255, 0.4)',
+    faint: 'rgba(74, 158, 255, 0.2)',
+    glow: 'rgba(74, 158, 255, 0.6)',
+  },
+} as const

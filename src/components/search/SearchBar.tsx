@@ -5,7 +5,13 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { clsx } from 'clsx'
 import { MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline'
 import { getDefaultTag, PLATFORM_TO_LABEL, toLabel, type PlatformCode } from '@/lib/game'
-import { getChampionImageUrl, getProfileIconUrl, getChampionUrlName } from '@/lib/ddragon'
+import { 
+  getChampionImageUrl, 
+  getProfileIconUrl, 
+  getChampionUrlName, 
+  getLatestVersion,
+  fetchChampionNames 
+} from '@/lib/ddragon'
 import Image from 'next/image'
 
 // track if we've already prefetched to avoid duplicate work
@@ -25,7 +31,7 @@ function prefetchChampionIcons(championIds: string[], version: string) {
     
     for (let i = start; i < end; i++) {
       const img = new window.Image()
-      img.src = `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${championIds[i]}.png`
+      img.src = getChampionImageUrl(championIds[i], version)
     }
     
     currentBatch++
@@ -46,7 +52,7 @@ function prefetchProfileIconsFromHistory(history: SearchHistoryItem[], version: 
   for (const item of history) {
     if (item.type === 'summoner' && item.profile_icon_id && !prefetchedProfileIcons.has(item.profile_icon_id)) {
       prefetchedProfileIcons.add(item.profile_icon_id)
-      const url = `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${item.profile_icon_id}.png`
+      const url = getProfileIconUrl(item.profile_icon_id, version)
       
       // use link preload for higher priority and better caching
       const link = document.createElement('link')
@@ -69,7 +75,7 @@ function prefetchProfileIcons(summoners: RecentSummoner[], version: string) {
     if (summoner.profile_icon_id && !prefetchedProfileIcons.has(summoner.profile_icon_id)) {
       prefetchedProfileIcons.add(summoner.profile_icon_id)
       const img = new window.Image()
-      img.src = `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${summoner.profile_icon_id}.png`
+      img.src = getProfileIconUrl(summoner.profile_icon_id, version)
     }
   }
 }
@@ -82,7 +88,7 @@ interface RecentSummoner {
   summoner_level: number
 }
 
-// unified search history item - can be either summoner or champion
+// search history item - can be either summoner or champion
 interface SearchHistoryItem {
   type: 'summoner' | 'champion'
   // summoner fields
@@ -101,7 +107,7 @@ interface SearchHistoryItem {
 const SEARCH_HISTORY_KEY = 'search-history-v2'
 const MAX_HISTORY_ITEMS = 20
 
-// Load search history from localStorage
+// load search history from localStorage
 function loadSearchHistory(): SearchHistoryItem[] {
   if (typeof window === 'undefined') return []
   try {
@@ -118,7 +124,7 @@ function saveSummonerToHistory(summoner: RecentSummoner): void {
   if (typeof window === 'undefined') return
   try {
     const history = loadSearchHistory()
-    // remove existing entry for this summoner (if any)
+    // remove existing entry for this summoner
     const filtered = history.filter(
       h => !(h.type === 'summoner' &&
              h.game_name?.toLowerCase() === summoner.game_name.toLowerCase() && 
@@ -147,7 +153,7 @@ function saveChampionToHistory(championId: string, championName: string): void {
   if (typeof window === 'undefined') return
   try {
     const history = loadSearchHistory()
-    // remove existing entry for this champion (if any)
+    // remove existing entry for this champion
     const filtered = history.filter(
       h => !(h.type === 'champion' && h.champion_id === championId)
     )
@@ -165,13 +171,12 @@ function saveChampionToHistory(championId: string, championName: string): void {
   }
 }
 
-// client-side DDragon version cache (shared across all SearchBar instances)
+// client-side DDragon version cache
 let cachedDdragonVersion: string | null = null
-let versionPromise: Promise<string> | null = null
 
 // simple LRU-ish cache for summoner search results
 const summonerSearchCache = new Map<string, { data: RecentSummoner[]; timestamp: number }>()
-const SEARCH_CACHE_TTL = 30000 // 30 seconds
+const SEARCH_CACHE_TTL = 30000
 const MAX_CACHE_ENTRIES = 50
 
 function getCachedSearch(query: string): RecentSummoner[] | null {
@@ -189,30 +194,6 @@ function setCachedSearch(query: string, data: RecentSummoner[]): void {
     if (oldestKey) summonerSearchCache.delete(oldestKey)
   }
   summonerSearchCache.set(query.toLowerCase(), { data, timestamp: Date.now() })
-}
-
-async function getClientDdragonVersion(): Promise<string> {
-  if (cachedDdragonVersion) return cachedDdragonVersion
-  
-  // deduplicate concurrent requests
-  if (versionPromise) return versionPromise
-  
-  versionPromise = fetch('https://ddragon.leagueoflegends.com/api/versions.json')
-    .then(res => res.json())
-    .then(versions => {
-      cachedDdragonVersion = versions[0]
-      return cachedDdragonVersion!
-    })
-    .catch(err => {
-      console.error('Failed to fetch DDragon version:', err)
-      cachedDdragonVersion = '15.11.1'
-      return cachedDdragonVersion
-    })
-    .finally(() => {
-      versionPromise = null
-    })
-  
-  return versionPromise
 }
 
 type Props = { className?: string; ddragonVersion?: string; inputRef?: React.RefObject<HTMLInputElement | null> }
@@ -233,18 +214,21 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
   const [ddragonVersion, setDdragonVersion] = useState(propVersion || cachedDdragonVersion || '')
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // fetch latest DDragon version if not provided (uses shared cache)
+  // fetch latest DDragon version if not provided (uses shared utility)
   useEffect(() => {
     if (propVersion) {
       setDdragonVersion(propVersion)
-      cachedDdragonVersion = propVersion // Also update cache
+      cachedDdragonVersion = propVersion // also update cache
       return
     }
     if (cachedDdragonVersion) {
       setDdragonVersion(cachedDdragonVersion)
       return
     }
-    getClientDdragonVersion().then(setDdragonVersion)
+    getLatestVersion().then(version => {
+      cachedDdragonVersion = version
+      setDdragonVersion(version)
+    })
   }, [propVersion])
 
   // load saved region and search history from localStorage after mount
@@ -267,22 +251,14 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
   useEffect(() => {
     if (!ddragonVersion) return // wait for version to be loaded
     
-    async function fetchChampions() {
+    async function loadChampions() {
       try {
-        const res = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/data/en_US/champion.json`)
-        if (!res.ok) return
-        const data = await res.json()
-        const names: Record<string, string> = {}
-        const championIds: string[] = []
-        for (const [, champ] of Object.entries(data.data)) {
-          const c = champ as { id: string; name: string }
-          names[c.id] = c.name
-          championIds.push(c.id)
-        }
+        const names = await fetchChampionNames(ddragonVersion)
         setChampionNames(names)
 
         // prefetch all champion icons in the background (low priority)
         // this ensures they're cached for instant display throughout the app
+        const championIds = Object.keys(names)
         if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
           ;(window as any).requestIdleCallback(() => {
             prefetchChampionIcons(championIds, ddragonVersion)
@@ -295,7 +271,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
         console.error('Failed to fetch champions:', err)
       }
     }
-    fetchChampions()
+    loadChampions()
   }, [ddragonVersion])
 
   // search summoners when typing (only when there's actual input)
@@ -627,7 +603,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
                   </div>
                 )}
 
-                {/* summoners Section - show when searching OR when showing history */}
+                {/* summoners section, show when searching or as a part of history */}
                 {(name.trim() || displayedSummoners.length > 0 || displayedChampionHistory.length > 0) && (
                   <div>
                     <div className="px-4 py-2.5 text-xs font-bold text-gold-light uppercase tracking-wider bg-abyss-800/50 flex items-center gap-2">
@@ -654,10 +630,10 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
                         <p className="text-text-muted text-sm">Your recent searches will appear here</p>
                       </div>
                     )}
-                    {/* render summoner search results when actively searching */}
+                    {/* render summoner search results during search */}
                     {name.trim() && displayedSummoners.map((summoner, idx) => {
                       const s = summoner as SearchHistoryItem
-                      const itemIdx = displayedChampions.length + idx // Continue index after champions
+                      const itemIdx = displayedChampions.length + idx // continue index after champions
                       return (
                         <button
                           key={`${s.game_name}-${s.tag_line}-${s.region}`}
@@ -703,7 +679,7 @@ export default function SearchBar({ className = 'w-full max-w-3xl', ddragonVersi
                         </button>
                       )
                     })}
-                    {/* Render items in timestamp order when not searching */}
+                    {/* render items in timestamp order */}
                     {!name.trim() && allItems.map((item, idx) => {
                       if (item.type === 'champion-history') {
                         const champ = item.data as SearchHistoryItem

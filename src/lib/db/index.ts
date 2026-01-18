@@ -41,3 +41,8 @@ export {
   processParticipants,
   calculateTeamKills,
 } from './participant-processor'
+
+export {
+  syncAcceptedPatches,
+  getAcceptedPatches,
+} from './app-config'

@@ -1,5 +1,6 @@
 // ddragon (data dragon) asset url helpers
 import runesDataImport from '@/data/runes.json'
+import { DDRAGON_API, DDRAGON_CDN, DDRAGON_IMG } from './constants'
 
 const runesDataObj = runesDataImport as Record<string, { icon?: string }>
 
@@ -45,7 +46,7 @@ export async function getLatestVersion(): Promise<string> {
   // create new fetch promise
   versionFetchPromise = (async () => {
     try {
-      const response = await fetch('https://ddragon.leagueoflegends.com/api/versions.json', {
+      const response = await fetch(`${DDRAGON_API}/versions.json`, {
         next: { revalidate: 3600 }, // next.js cache for 1 hour
       })
       const versions: string[] = await response.json()
@@ -130,20 +131,20 @@ function normalizeChampionName(championName: string): string {
 
 export function getChampionImageUrl(championName: string, version: string): string {
   const normalizedName = normalizeChampionName(championName)
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${normalizedName}.png`
+  return `${DDRAGON_CDN}/${version}/img/champion/${normalizedName}.png`
 }
 
 export function getProfileIconUrl(iconId: number, version: string): string {
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${iconId}.png`
+  return `${DDRAGON_CDN}/${version}/img/profileicon/${iconId}.png`
 }
 
 export function getSummonerSpellUrl(spellId: number, version: string): string {
   const spellName = getSpellName(spellId)
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/spell/Summoner${spellName}.png`
+  return `${DDRAGON_CDN}/${version}/img/spell/Summoner${spellName}.png`
 }
 
 export function getItemImageUrl(itemId: number, version: string): string {
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png`
+  return `${DDRAGON_CDN}/${version}/img/item/${itemId}.png`
 }
 
 // Pre-computed spell ID to DDragon filename mapping (frozen for optimization)
@@ -174,7 +175,7 @@ export function getRuneImageUrl(perkId: number): string {
   if (!rune || !rune.icon) {
     return ''
   }
-  return `https://ddragon.leagueoflegends.com/cdn/img/${rune.icon}`
+  return `${DDRAGON_IMG}/${rune.icon}`
 }
 
 export function getRuneStyleImageUrl(styleId: number): string {
@@ -182,5 +183,21 @@ export function getRuneStyleImageUrl(styleId: number): string {
   if (!style || !style.icon) {
     return ''
   }
-  return `https://ddragon.leagueoflegends.com/cdn/img/${style.icon}`
+  return `${DDRAGON_IMG}/${style.icon}`
+}
+
+// get centered champion splash art (no version needed)
+export function getChampionSplashUrl(championName: string): string {
+  return `${DDRAGON_IMG}/champion/centered/${championName}_0.jpg`
+}
+
+// get rune/shard icon url from icon path (e.g. "perk-images/Styles/...")
+export function getRuneIconUrl(iconPath: string): string {
+  return `${DDRAGON_IMG}/${iconPath}`
+}
+
+// get ability icon url (passive or spell)
+export function getAbilityIconUrl(filename: string, isPassive: boolean, version: string): string {
+  const type = isPassive ? 'passive' : 'spell'
+  return `${DDRAGON_CDN}/${version}/img/${type}/${filename}`
 }

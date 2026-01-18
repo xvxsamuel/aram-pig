@@ -5,6 +5,7 @@ import clsx from 'clsx'
 import Card from '@/components/ui/Card'
 import Tooltip from '@/components/ui/Tooltip'
 import { getWinrateColor } from '@/lib/ui'
+import { getRuneIconUrl } from '@/lib/ddragon'
 import { RUNE_TREES, STAT_PERKS } from '@/lib/game/runes'
 import type { RuneStat, StatPerkStat } from '@/types/champion-stats'
 import runesData from '@/data/runes.json'
@@ -63,7 +64,7 @@ export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
           <div className={clsx(sizeClass, 'rounded-full overflow-hidden', shouldGrey && 'opacity-40')}>
             {runeInfo?.icon && (
               <Image
-                src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
+                src={getRuneIconUrl(runeInfo.icon)}
                 alt=""
                 width={imgSize}
                 height={imgSize}
@@ -112,7 +113,7 @@ export function RunesTab({ runeStats, statPerks, totalGames }: RunesTabProps) {
       <div key={`${category}-${idx}`} className="flex flex-col items-center">
         <div className={clsx('w-8 h-8 rounded-full overflow-hidden', shouldGrey && 'opacity-40')}>
           <Image
-            src={`https://ddragon.leagueoflegends.com/cdn/img/${perk.icon}`}
+            src={getRuneIconUrl(perk.icon)}
             alt={perk.name}
             width={32}
             height={32}

@@ -1,4 +1,5 @@
 // champion name utilities - fetching and converting
+import { DDRAGON_CDN } from './constants'
 
 interface ChampionData {
   id: string
@@ -17,7 +18,7 @@ export async function fetchChampionNames(version: string): Promise<Record<string
     return championDataCache
   }
   try {
-    const response = await fetch(`https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/champion.json`, {
+    const response = await fetch(`${DDRAGON_CDN}/${version}/data/en_US/champion.json`, {
       next: { revalidate: 86400 },
     })
 

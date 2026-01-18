@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import clsx from 'clsx'
 import abilityIcons from '@/data/ability-icons.json'
+import { getAbilityIconUrl } from '@/lib/ddragon'
 
 // size presets in pixels
 const SIZE_MAP = {
@@ -63,11 +64,9 @@ function getDDragonAbilityIconUrl(championName: string, ability: AbilityType, pa
      return `https://cdn.communitydragon.org/${patch === 'latest' ? 'latest' : patch}/champion/${championName}/ability-icon/${abilityKey}`
   }
 
-  const type = ability === 'P' ? 'passive' : 'spell'
   // use a fixed recent version if 'latest' is passed, as DDragon requires specific version
-  // ideally this should come from a context or prop, but for now we default to a known working version
   const version = patch === 'latest' ? '15.24.1' : patch
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/${type}/${filename}`
+  return getAbilityIconUrl(filename, ability === 'P', version)
 }
 
 export default function ChampionAbility({

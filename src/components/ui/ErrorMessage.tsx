@@ -9,6 +9,10 @@ interface Props {
 }
 
 export default function ErrorMessage({ title, message, errorCode, onDismiss, onRetry }: Props) {
+  const capitalizedError = errorCode 
+    ? errorCode.charAt(0).toUpperCase() + errorCode.slice(1)
+    : undefined
+
   return (
     <div className="mb-6 rounded-lg p-px bg-gradient-to-b from-gold-light to-gold-dark" style={{ minHeight: '60px' }}>
       <div className="bg-abyss-800 rounded-[inherit] p-4">
@@ -26,9 +30,9 @@ export default function ErrorMessage({ title, message, errorCode, onDismiss, onR
             <p className="text-sm text-text-white">
               {message}
             </p>
-            {errorCode && (
-              <p className="text-subtitle text-xs mt-1">
-                {errorCode}
+            {capitalizedError && (
+              <p className="text-text-muted text-xs mt-1">
+                {capitalizedError}
               </p>
             )}
           </div>

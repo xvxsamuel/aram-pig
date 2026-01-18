@@ -64,8 +64,10 @@ export interface PigScoreBreakdown {
     ccTimePerMin: number
   }
   componentScores: {
-    performance: number
+    performance: number  // combined (stats + timeline + kda)
     build: number
+    // breakdown of performance
+    stats: number
     timeline: number
     kda: number
   }
@@ -405,19 +407,56 @@ export async function calculatePigScoreWithBreakdown(
     metrics.push({ name: 'Deaths/Min', score: deathScore, weight: 0.4, playerValue: playerStats.deathsPerMin })
   }
 
-  // FINAL SCORE: Performance 50% (stats 60% + timeline 25% + kda 15%), Build 50%
-  const combinedPerformance = performanceScore * 0.6 + timelineScore * 0.25 + kdaScore * 0.15
-  const finalScore = Math.round(Math.max(0, Math.min(100, combinedPerformance * 0.5 + buildScore * 0.5)))
+  // FINAL SCORE: Dynamic weighting based on stats performance
+  // When stats are HIGH: stats dominate, build matters less
+  // When stats are LOW: timeline, KDA, and build matter more
+  
+  // Dynamic stats weight: 40% at low performance, 70% at high performance
+  // Timeline/KDA pick up the slack when stats are poor
+  const statsWeight = 0.40 + Math.min(0.30, Math.max(0, (performanceScore - 50) / 100) * 0.60)
+  const timelineWeight = (1 - statsWeight) * 0.65  // timeline gets 65% of remainder
+  const kdaWeight = (1 - statsWeight) * 0.35       // kda gets 35% of remainder
+  
+  const combinedPerformance = performanceScore * statsWeight + timelineScore * timelineWeight + kdaScore * kdaWeight
+  
+  // Dynamic perf/build split: high performance = build matters less
+  // Low perf (combined=50): 50/50 split
+  // High perf (combined=100): 85/15 split
+  const perfWeight = 0.50 + Math.max(0, Math.min((combinedPerformance - 50) * 0.007, 0.35))
+  const buildWeight = 1 - perfWeight
+  
+  // Examples:
+  // LOW STATS: Stats=40, Timeline=50, KDA=50, Build=80
+  //   statsWeight = 0.40 (capped at minimum)
+  //   combined = 40*0.40 + 50*0.39 + 50*0.21 = 16 + 19.5 + 10.5 = 46
+  //   perfWeight = 0.50 (low performance)
+  //   final = 46*0.50 + 80*0.50 = 23 + 40 = 63
+  //
+  // HIGH STATS: Stats=100, Timeline=50, KDA=50, Build=69
+  //   statsWeight = 0.40 + (50/100)*0.60 = 0.70
+  //   combined = 100*0.70 + 50*0.195 + 50*0.105 = 70 + 9.75 + 5.25 = 85
+  //   perfWeight = 0.50 + (85-50)*0.007 = 0.50 + 0.245 = 0.745
+  //   final = 85*0.745 + 69*0.255 = 63.3 + 17.6 = 80.9 → 81
+  //
+  // EXCEPTIONAL STATS: Stats=120 (internal), Timeline=50, KDA=50, Build=69
+  //   statsWeight = 0.70 (capped at max)
+  //   combined = 120*0.70 + 50*0.195 + 50*0.105 = 84 + 9.75 + 5.25 = 99
+  //   perfWeight = 0.50 + (99-50)*0.007 = 0.50 + 0.343 = 0.843 (capped at 0.85)
+  //   final = 99*0.85 + 69*0.15 = 84.15 + 10.35 = 94.5 → 95
+  const finalScore = Math.round(Math.max(0, Math.min(100, combinedPerformance * perfWeight + buildScore * buildWeight)))
 
   return {
     finalScore,
     playerStats: { ...playerStats, killParticipation },
     championAvgStats: championAvgPerMin,
     componentScores: {
-      performance: Math.round(performanceScore),
-      build: Math.round(buildScore),
-      timeline: Math.round(timelineScore),
-      kda: Math.round(kdaScore),
+      // Performance is the combined score (stats + timeline + KDA)
+      performance: Math.round(Math.min(100, combinedPerformance)),
+      build: Math.round(Math.min(100, buildScore)),
+      // Breakdown of performance components
+      stats: Math.round(Math.min(100, performanceScore)),
+      timeline: Math.round(Math.min(100, timelineScore)),
+      kda: Math.round(Math.min(100, kdaScore)),
     },
     buildSubScores: {
       items: Math.round(itemScore),

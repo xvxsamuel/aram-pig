@@ -106,3 +106,43 @@ export function calculateMatchLabels(
 
   return labels.sort((a, b) => b.priority - a.priority)
 }
+
+// calculate profile-wide badges based on frequency in recent matches
+export interface ProfileBadge extends MatchLabel {
+  count: number
+}
+
+export function calculateProfileBadges(
+  matches: { match: MatchData; participant: ParticipantData }[],
+  minOccurrences: number = 3,
+  maxMatches: number = 20
+): ProfileBadge[] {
+  const recentMatches = matches.slice(0, maxMatches)
+  const badgeCounts = new Map<string, { label: MatchLabel; count: number }>()
+
+  for (const { match, participant } of recentMatches) {
+    const labels = calculateMatchLabels(match, participant)
+    for (const label of labels) {
+      const existing = badgeCounts.get(label.id)
+      if (existing) {
+        existing.count++
+      } else {
+        badgeCounts.set(label.id, { label, count: 1 })
+      }
+    }
+  }
+
+  // filter to badges that appear at least minOccurrences times
+  const frequentBadges: ProfileBadge[] = []
+  for (const { label, count } of badgeCounts.values()) {
+    if (count >= minOccurrences) {
+      frequentBadges.push({ ...label, count })
+    }
+  }
+
+  // sort by priority (highest first), then by count
+  return frequentBadges.sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority
+    return b.count - a.count
+  })
+}

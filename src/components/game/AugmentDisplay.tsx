@@ -3,7 +3,6 @@
 import AugmentIcon from '@/components/ui/AugmentIcon'
 import { getWinrateColor } from '@/lib/ui'
 
-// Stats display component (reusable)
 function StatsDisplay({ pickrate, winrate }: { pickrate: number; winrate: number }) {
   return (
     <div className="flex-1 min-w-0">
@@ -34,9 +33,6 @@ interface AugmentWithStatsProps {
   showStats?: boolean
 }
 
-/**
- * Augment icon with stats display (similar to ItemWithStats)
- */
 export function AugmentWithStats({ augment, size = 'xl', showStats = true }: AugmentWithStatsProps) {
   return (
     <div className="bg-abyss-700 rounded-lg border border-gold-dark/20 p-3">
@@ -48,31 +44,6 @@ export function AugmentWithStats({ augment, size = 'xl', showStats = true }: Aug
         />
         {showStats && <StatsDisplay pickrate={augment.pickrate} winrate={augment.winrate} />}
       </div>
-    </div>
-  )
-}
-
-interface AugmentGridProps {
-  augments: AugmentStat[]
-  columns?: 2 | 3 | 4
-  maxAugments?: number
-}
-
-/**
- * Grid of augments with stats (similar to ItemGrid)
- */
-export function AugmentGrid({ augments: augmentList, columns = 4, maxAugments = 8 }: AugmentGridProps) {
-  const gridCols = {
-    2: 'grid-cols-2',
-    3: 'grid-cols-2 md:grid-cols-3',
-    4: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
-  } as const
-
-  return (
-    <div className={`grid ${gridCols[columns]} gap-3`}>
-      {augmentList.slice(0, maxAugments).map((augment, idx) => (
-        <AugmentWithStats key={`${augment.augment_name}-${idx}`} augment={augment} />
-      ))}
     </div>
   )
 }

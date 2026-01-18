@@ -12,7 +12,7 @@ import {
   PigScoreBreakdown,
   ItemTimelineEvent,
 } from './tabs'
-import { getPigScoreColor } from '@/lib/ui'
+import { getPigScoreColor, ONE_YEAR_MS } from '@/lib/ui'
 import itemsData from '@/data/items.json'
 
 // helper to check if an item is a completed item (legendary, boots, mythic)
@@ -76,7 +76,7 @@ export default function MatchDetails({
   const currentPlayer = match.info.participants.find(p => p.puuid === currentPuuid)
 
   // check if match is within 1 year (timeline data availability from riot api)
-  const isWithin1Year = Date.now() - match.info.gameCreation < 365 * 24 * 60 * 60 * 1000
+  const isWithin1Year = Date.now() - match.info.gameCreation < ONE_YEAR_MS
 
   // check if current player already has a pig score (from previous calculation)
   const hasExistingPigScore = currentPlayer?.pigScore !== null && currentPlayer?.pigScore !== undefined
@@ -166,11 +166,6 @@ export default function MatchDetails({
         if (data?.results) {
           setPigScores(data.results)
           onEnriched?.(data.results) // notify parent to update match list
-          if (data.cached) {
-            console.log('Pig scores loaded from cache')
-          } else {
-            console.log(`Match enriched: ${data.enriched} participants, ${data.statsUpdated} stats updated`)
-          }
         }
       })
       .catch(err => {

@@ -210,9 +210,11 @@ export async function getSummonerByRiotId(gameName: string, tagLine: string, pla
 }
 
 // async versions for server components
+import { getProfileIconUrl as getProfileIconUrlSync } from '@/lib/ddragon'
+
 export async function getProfileIconUrl(iconId: number): Promise<string> {
   const version = await getLatestVersion()
-  return `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${iconId}.png`
+  return getProfileIconUrlSync(iconId, version)
 }
 
 export { ddragon }

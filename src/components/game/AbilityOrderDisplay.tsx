@@ -15,14 +15,12 @@ const getAbilityColor = (ability: string, position: number): string => {
 interface AbilityOrderDisplayProps {
   abilityOrder: string
   showFullSequence?: boolean
-  compact?: boolean
   championName?: string
 }
 
 export function AbilityOrderDisplay({
   abilityOrder,
   showFullSequence = true,
-  compact: _compact = false,
   championName,
 }: AbilityOrderDisplayProps) {
   const abilities = abilityOrder.split('.')

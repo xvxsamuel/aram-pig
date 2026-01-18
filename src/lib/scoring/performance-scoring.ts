@@ -16,25 +16,27 @@ import type { WelfordState } from '../db/stats-aggregator'
 import { getStdDev, getZScore } from '../db/stats-aggregator'
 
 /*
- * SIGMOID-BASED SCORING SYSTEM
- * ============================
+ * PIECEWISE SCORING SYSTEM
+ * ========================
  *
- * Uses a sigmoid function for smooth, natural scoring with no hard clamps.
- * Average performance gives 50, excellence approaches 100 asymptotically.
+ * Uses sigmoid for normal performance, linear extension for top 1%.
+ * Average performance gives 50, top 1% can reach 100.
  *
- * SCORE MAPPING (with k=1.6):
- * | Z-Score | True CDF% | Score  | % of Avg  |
- * |---------|-----------|--------|-----------|
- * | +2.0    | 97.72%    | ~96    | ~150%     |
- * | +1.5    | 93.32%    | ~92    | ~130%     |
- * | +1.0    | 84.13%    | ~86    | ~115%     |
- * | 0.0     | 50.00%    | 50     | 100% AVG  |
- * | -1.0    | 15.87%    | ~14    | ~85%      |
- * | -1.5    | 6.68%     | ~8     | ~75%      |
- * | -2.0    | 2.28%     | ~4     | ~70%      |
+ * SCORE MAPPING (with k=1.7, linear above z=2.33):
+ * | Z-Score | Percentile | Score  | Notes                    |
+ * |---------|------------|--------|--------------------------|
+ * | +3.0    | 99.87%     | 100    | Top 0.1%, perfect score  |
+ * | +2.33   | 99.01%     | ~98    | Top 1%, linear starts    |
+ * | +2.0    | 97.72%     | ~96    | Excellent                |
+ * | +1.5    | 93.32%     | ~92    | Great                    |
+ * | +1.0    | 84.13%     | ~86    | Good                     |
+ * | 0.0     | 50.00%     | 50     | Average                  |
+ * | -1.0    | 15.87%     | ~14    | Below average            |
+ * | -2.0    | 2.28%      | ~4     | Poor                     |
  *
- * Formula: score = 100 / (1 + e^(-k * z)), where k ≈ 1.6
- * Higher k = more generous scoring for above-average performance
+ * Formula:
+ * - z < 2.33: score = 100 / (1 + e^(-k * z))
+ * - z >= 2.33: linear interpolation from ~98 at z=2.33 to 100 at z=3.0
  */
 
 // Sigmoid scaling constant - determines steepness of the S-curve
@@ -42,20 +44,53 @@ import { getStdDev, getZScore } from '../db/stats-aggregator'
 // This makes high scores achievable but keeps the 0-100 range meaningful
 const SIGMOID_K = 1.7
 
+// z-score thresholds for piecewise scoring
+// z=2.33 ≈ 99th percentile (top 1%), where sigmoid gives ~98
+// z=3.0 → 100 (displayed max)
+// z=4.0+ → up to 130 (internal only, allows exceptional performance to "carry")
+const Z_LINEAR_START = 2.33
+const Z_DISPLAY_CAP = 3.0
+const Z_INTERNAL_CAP = 5.0
+const SCORE_AT_LINEAR_START = 100 / (1 + Math.exp(-SIGMOID_K * Z_LINEAR_START)) // ~98
+const SCORE_AT_DISPLAY_CAP = 100
+const SCORE_AT_INTERNAL_CAP = 140 // exceptional stats can internally score up to 140
+
 // Pre-computed constants for optimization
 const INV_SQRT2 = 1 / Math.SQRT2
 const LOG_1P_CV_CAP_SQUARED = Math.log1p(0.22 * 0.22) // Pre-compute for CV cap of 0.22
 
 /**
- * Convert z-score to a 0-100 score using sigmoid function
- * No hard clamps - smooth S-curve with diminishing returns at extremes
+ * Convert z-score to a score using piecewise function:
+ * - Below z=2.33 (99th percentile): standard sigmoid
+ * - z=2.33 to z=3.0: linear interpolation to 100
+ * - z=3.0 to z=5.0: continues to 140 (internal only, for exceptional performance)
+ * 
+ * Internal scores above 100 allow truly exceptional stats to "carry" mediocre builds.
+ * Display should clamp at 100.
+ * 
+ * @param zScore - The z-score to convert
+ * @param clampAt100 - If true, cap output at 100 (for display). Default false (internal use).
  */
-export function zScoreToScore(zScore: number): number {
-  // Sigmoid: score = 100 / (1 + e^(-k * z))
-  // - At z=0: 100 / (1 + 1) = 50
-  // - At z→+∞: approaches 100
-  // - At z→-∞: approaches 0 (but never reaches it)
-  return 100 / (1 + Math.exp(-SIGMOID_K * zScore))
+export function zScoreToScore(zScore: number, clampAt100: boolean = false): number {
+  let score: number
+  
+  if (zScore >= Z_DISPLAY_CAP) {
+    // Exceptional performance: linear from 100 at z=3.0 to 140 at z=5.0
+    const progress = Math.min(1, (zScore - Z_DISPLAY_CAP) / (Z_INTERNAL_CAP - Z_DISPLAY_CAP))
+    score = SCORE_AT_DISPLAY_CAP + progress * (SCORE_AT_INTERNAL_CAP - SCORE_AT_DISPLAY_CAP)
+  } else if (zScore >= Z_LINEAR_START) {
+    // Top 1%: linear from ~98 at z=2.33 to 100 at z=3.0
+    const progress = (zScore - Z_LINEAR_START) / (Z_DISPLAY_CAP - Z_LINEAR_START)
+    score = SCORE_AT_LINEAR_START + progress * (SCORE_AT_DISPLAY_CAP - SCORE_AT_LINEAR_START)
+  } else {
+    // Standard sigmoid for normal range
+    // - At z=0: 100 / (1 + 1) = 50
+    // - At z→+∞: approaches 100
+    // - At z→-∞: approaches 0 (but never reaches it)
+    score = 100 / (1 + Math.exp(-SIGMOID_K * zScore))
+  }
+  
+  return clampAt100 ? Math.min(100, score) : score
 }
 
 /**
@@ -328,23 +363,31 @@ export function calculateKillParticipationScore(killParticipation: number): numb
  * If your choice has nearly the same Bayesian score as the best, you score nearly 100.
  * Score drops based on how far behind the best your choice is.
  * 
- * Formula: score = 100 - (distance * scaleFactor)
- * where distance = bestBayesian - playerBayesian
+ * @param playerBayesian - The player's item/rune Bayesian score
+ * @param bestBayesian - The best available item/rune Bayesian score
+ * @param scaleFactor - How harsh to penalize distance (lower = more lenient)
+ *   - 5 = strict (5% gap = 25 point drop, for cores/summoners)
+ *   - 3 = lenient (5% gap = 15 point drop, for items/runes)
  * 
- * A 5% winrate gap from best = ~75 score
- * A 10% winrate gap from best = ~50 score
+ * Examples with scaleFactor=5 (strict):
+ *   5% winrate gap from best = ~75 score
+ *   10% winrate gap from best = ~50 score
+ * 
+ * Examples with scaleFactor=3 (lenient):
+ *   5% winrate gap from best = ~85 score
+ *   10% winrate gap from best = ~70 score
  */
 export function calculateDistanceBasedScore(
   playerBayesian: number,
-  bestBayesian: number
+  bestBayesian: number,
+  scaleFactor: number = 5
 ): number {
   if (bestBayesian <= 0) return 50 // No data
   
   const distance = Math.max(0, bestBayesian - playerBayesian)
   
-  // Scale: 5% gap = 25 point drop, 10% gap = 50 point drop
-  // score = 100 - (distance * 5)
-  const score = 100 - (distance * 5)
+  // Scale: distance * scaleFactor determines point drop
+  const score = 100 - (distance * scaleFactor)
   
   return Math.max(20, Math.min(100, Math.round(score)))
 }

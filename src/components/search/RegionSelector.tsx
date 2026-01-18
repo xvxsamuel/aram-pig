@@ -26,7 +26,7 @@ export default function RegionSelector({ value = 'EUW', onChange, onOpen, classN
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside)
       // scroll to selected region when dropdown opens
-      // we use manual scrollTop instead of scrollIntoView to prevent the whole page from scrolling
+      // manual scrollTop instead of scrollIntoView to prevent the whole page from scrolling
       if (selectedButtonRef.current && listRef.current) {
         const list = listRef.current
         const selected = selectedButtonRef.current

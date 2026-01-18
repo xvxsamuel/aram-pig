@@ -16,22 +16,16 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient()
 
   try {
-    // parallel fetch: champion stats and match count
+    // fetch champion stats only - match count derived from stats
     // order by computed winrate at db level for correct sorting
-    const [statsResult, matchCountResult] = await Promise.all([
-      supabase
-        .from('champion_stats')
-        .select('champion_name, games, wins, last_updated, winrate, tier')
-        .eq('patch', patch)
-        .gte('games', 1)
-        .order('winrate', { ascending: false })
-        .order('games', { ascending: false })
-        .limit(200),
-      supabase
-        .from('matches')
-        .select('*', { count: 'exact', head: true })
-        .eq('patch', patch),
-    ])
+    const statsResult = await supabase
+      .from('champion_stats')
+      .select('champion_name, games, wins, last_updated, winrate, tier')
+      .eq('patch', patch)
+      .gte('games', 1)
+      .order('winrate', { ascending: false })
+      .order('games', { ascending: false })
+      .limit(200)
 
     if (statsResult.error) {
       console.error('[Champions API] Database error:', {
@@ -52,6 +46,10 @@ export async function GET(request: NextRequest) {
       tier: row.tier || 'COAL',
     }))
 
+    // calculate total matches from champion stats (sum of games / 10 participants per match)
+    const totalGames = champions.reduce((sum, champ) => sum + champ.games_analyzed, 0)
+    const totalMatches = Math.floor(totalGames / 10)
+
     // find most recent update timestamp from all champions
     const lastFetched = champions.reduce((latest, champ) => {
       if (!champ.last_updated) return latest
@@ -63,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json({
       champions,
-      totalMatches: matchCountResult.count || 0,
+      totalMatches,
       patch,
       lastFetched: lastFetched > 0 ? new Date(lastFetched).toISOString() : new Date().toISOString(),
     })

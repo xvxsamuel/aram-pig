@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, memo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -15,14 +15,12 @@ import {
   getRuneStyleImageUrl,
 } from '@/lib/ddragon'
 import { getChampionUrlName } from '@/lib/ddragon'
-import { getKdaColor, getPigScoreColor } from '@/lib/ui'
+import { getKdaColor, getPigScoreColor, ONE_YEAR_MS, getTimeAgo, formatDuration, perMinute } from '@/lib/ui'
 import { calculateMatchLabels } from '@/lib/scoring/labels'
 import MatchDetails from '@/components/match/MatchDetails'
 import Tooltip from '@/components/ui/Tooltip'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-
-const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000
 
 // preload images for matchdetails on hover
 function preloadMatchImages(match: MatchData, ddragonVersion: string) {
@@ -72,7 +70,9 @@ interface Props {
   onMatchEnriched?: (matchId: string, pigScores: Record<string, number | null>) => void
 }
 
-export default function MatchHistoryItem({ match, puuid, region, ddragonVersion, championNames, onMatchEnriched }: Props) {
+// memoize to prevent re-renders when sibling matches update
+// only re-renders when this specific match's data changes
+function MatchHistoryItemComponent({ match, puuid, region, ddragonVersion, championNames, onMatchEnriched }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
@@ -96,8 +96,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
   const kda =
     participant.deaths === 0 ? 'Perfect' : ((participant.kills + participant.assists) / participant.deaths).toFixed(2)
 
-  const gameDurationMinutes = Math.floor(match.info.gameDuration / 60)
-  const gameDurationSeconds = match.info.gameDuration % 60
+  const gameDuration = formatDuration(match.info.gameDuration)
   const gameDate = new Date(match.info.gameCreation)
   const timeAgo = getTimeAgo(gameDate)
 
@@ -114,32 +113,6 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
   const isPigScoreLoading = !hasPigScore && !isRemake && gameAge < ONE_YEAR_MS
   const labels = calculateMatchLabels(match, participant)
   const hasLabels = hasPigScore && labels.length > 0
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container) return
-
-    const handleWheel = (e: WheelEvent) => {
-      // only intercept scroll if content is actually scrollable (overflowing)
-      if (container.scrollWidth <= container.clientWidth) return
-
-      if (e.deltaY !== 0) {
-        e.preventDefault()
-        container.scrollBy({
-          left: e.deltaY,
-          behavior: 'smooth',
-        })
-      }
-    }
-
-    container.addEventListener('wheel', handleWheel, { passive: false })
-
-    return () => {
-      container.removeEventListener('wheel', handleWheel)
-    }
-  }, [hasLabels])
 
   return (
     <li role="listitem" aria-label={matchLabel} className="relative rounded-lg p-px">
@@ -192,7 +165,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                   <div className="text-xs text-text-muted">{timeAgo}</div>
                 </div>
                 <div className="text-xs text-text-muted">
-                  {gameDurationMinutes}:{gameDurationSeconds.toString().padStart(2, '0')}
+                  {gameDuration}
                 </div>
               </div>
 
@@ -303,7 +276,7 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                       {kda} KDA
                     </div>
                     <div className="text-xs text-text-muted">
-                      {(participant.totalDamageDealtToChampions / (match.info.gameDuration / 60)).toFixed(0)} DPM
+                      {perMinute(participant.totalDamageDealtToChampions, match.info.gameDuration).toFixed(0)} DPM
                     </div>
                   </div>
 
@@ -375,12 +348,9 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
 
                   {/*labels */}
                   {hasLabels && (
-                    <div className="relative flex-1 w-0 group/labels self-center">
-                      <div
-                        ref={scrollContainerRef}
-                        className="flex gap-1 overflow-x-auto items-center py-0.5 [&::-webkit-scrollbar]:hidden after:content-[''] after:block after:w-3 after:h-px after:flex-shrink-0"
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                      >
+                    <div className="relative w-0 flex-1 self-center group/labels overflow-hidden">
+                      {/* Labels container - no scroll, clips overflow */}
+                      <div className="flex items-center gap-1">
                         {labels.map(label => {
                           const isBad = label.type === 'bad'
                           return (
@@ -399,12 +369,35 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
                           )
                         })}
                       </div>
-                      <div
-                        className={clsx(
-                          'absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l to-transparent pointer-events-none',
-                          isRemake ? 'from-remake' : isWin ? 'from-win' : 'from-loss'
-                        )}
-                      />
+                      {/* Gradient fade + arrow on hover - only show when 4+ labels */}
+                      {labels.length > 3 && (
+                        <div className="absolute right-0 top-0 bottom-0 w-14 flex items-center justify-end pointer-events-none">
+                          {/* Gradient background - matches win/loss bg */}
+                          <div
+                            className={clsx(
+                              'absolute inset-0 bg-gradient-to-l to-transparent',
+                              isRemake ? 'from-remake via-remake/90' : isWin ? 'from-win via-win/90' : 'from-loss via-loss/90'
+                            )}
+                          />
+                          {/* Arrow button - fades in on hover, toggles expansion */}
+                          <button
+                            onClick={e => {
+                              e.stopPropagation()
+                              if (isExpanded && selectedTab === 'performance') {
+                                setIsExpanded(false)
+                              } else {
+                                setSelectedTab('performance')
+                                setIsExpanded(true)
+                              }
+                            }}
+                            className="relative z-10 pointer-events-auto p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full opacity-0 group-hover/labels:opacity-100 transition-opacity duration-200 mr-1"
+                          >
+                            <div className="w-5 h-5 rounded-full bg-abyss-700 flex items-center justify-center">
+                              <ChevronDownIcon className="w-3 h-3 text-gold-light -rotate-90" />
+                            </div>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -530,15 +523,24 @@ export default function MatchHistoryItem({ match, puuid, region, ddragonVersion,
   )
 }
 
-function getTimeAgo(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffDays > 0) return `${diffDays}d ago`
-  if (diffHours > 0) return `${diffHours}h ago`
-  if (diffMins > 0) return `${diffMins}m ago`
-  return 'Just now'
+// custom comparison: only re-render if match data actually changed
+function arePropsEqual(prev: Props, next: Props): boolean {
+  // different match entirely
+  if (prev.match.metadata.matchId !== next.match.metadata.matchId) return false
+  
+  // check if pig score changed for current user
+  const prevParticipant = prev.match.info.participants.find(p => p.puuid === prev.puuid)
+  const nextParticipant = next.match.info.participants.find(p => p.puuid === next.puuid)
+  if (prevParticipant?.pigScore !== nextParticipant?.pigScore) return false
+  
+  // check other props that might change
+  if (prev.puuid !== next.puuid) return false
+  if (prev.region !== next.region) return false
+  if (prev.ddragonVersion !== next.ddragonVersion) return false
+  
+  // callback identity doesn't matter for rendering
+  return true
 }
+
+const MatchHistoryItem = memo(MatchHistoryItemComponent, arePropsEqual)
+export default MatchHistoryItem

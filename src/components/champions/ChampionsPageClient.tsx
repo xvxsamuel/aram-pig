@@ -7,6 +7,7 @@ import PatchFilter from '@/components/filters/PatchFilter'
 import ChampionTable from '@/components/champions/ChampionTable'
 import ErrorMessage from '@/components/ui/ErrorMessage'
 import type { ChampionTier } from '@/lib/ui'
+import { getTimeAgoLong } from '@/lib/ui'
 
 const fetcher = (url: string) =>
   fetch(url).then(res => {
@@ -101,19 +102,7 @@ export default function ChampionsPageClient({
   }, [data?.lastFetched])
 
   // time since last DB fetch
-  const timeAgo = useMemo(() => {
-    if (!lastFetchTime) return 'Unknown'
-    
-    const diffMs = Date.now() - lastFetchTime
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMins / 60)
-    const diffDays = Math.floor(diffHours / 24)
-
-    if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-    if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-    if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
-    return 'just now'
-  }, [lastFetchTime])
+  const timeAgo = useMemo(() => getTimeAgoLong(lastFetchTime), [lastFetchTime])
 
   // show skeleton only when loading with no data
   const showSkeleton = isLoading && champions.length === 0

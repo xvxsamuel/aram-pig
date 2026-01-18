@@ -32,6 +32,7 @@ export const KEYWORD_ICON_MAP = new Map<string, string>([
   // attack/damage types
   ['on-hit', '/icons/tooltips/on-hit_icon.png'],
   ['on-attack', '/icons/tooltips/on-attack_icon.png'],
+  ['on-attacking', '/icons/tooltips/on-attack_icon.png'],
   ['critical strike', '/icons/tooltips/critical_strike_icon.png'],
   ['critically strikes', '/icons/tooltips/critical_strike_icon.png'],
   ['takedown', '/icons/tooltips/damage_rating.png'],
@@ -58,7 +59,7 @@ export function getKeywordIcon(keyword: string): string | null {
 
 // regex to match all custom markup tags
 export const MARKER_REGEX =
-  /(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<true>(?:(?!<\/true>).)*<\/true>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g
+  /(<ap>(?:(?!<\/ap>).)*<\/ap>|<rd>(?:(?!<\/rd>).)*<\/rd>|<gold>(?:(?!<\/gold>).)*<\/gold>|<vamp>(?:(?!<\/vamp>).)*<\/vamp>|<tip>(?:(?!<\/tip>).)*<\/tip>|<keyword>(?:(?!<\/keyword>).)*<\/keyword>|<ad>(?:(?!<\/ad>).)*<\/ad>|<ad-bonus>(?:(?!<\/ad-bonus>).)*<\/ad-bonus>|<health>(?:(?!<\/health>).)*<\/health>|<mana>(?:(?!<\/mana>).)*<\/mana>|<armor>(?:(?!<\/armor>).)*<\/armor>|<mr>(?:(?!<\/mr>).)*<\/mr>|<heal>(?:(?!<\/heal>).)*<\/heal>|<shield>(?:(?!<\/shield>).)*<\/shield>|<crit>(?:(?!<\/crit>).)*<\/crit>|<ms>(?:(?!<\/ms>).)*<\/ms>|<magic>(?:(?!<\/magic>).)*<\/magic>|<true>(?:(?!<\/true>).)*<\/true>|<bold>(?:(?!<\/bold>).)*<\/bold>|<italic>(?:(?!<\/italic>).)*<\/italic>)/g
 
 /**
  * recursively render nested markup tags in tooltip descriptions
@@ -146,6 +147,23 @@ export function renderNestedMarkers(text: string, baseKey: number): React.ReactN
           {renderNestedMarkers(segment.slice(6, -7), baseKey * 1000)}
         </span>
       )
+    } else if (segment.startsWith('<shield>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-heal)' }}>
+          {renderNestedMarkers(segment.slice(8, -9), baseKey * 1000)}
+        </span>
+      )
+    } else if (segment.startsWith('<crit>')) {
+      parts.push(
+        <span key={keyStr} style={{ color: 'var(--tooltip-ad)' }}>
+          <img
+            src="/icons/tooltips/critical_strike_icon.png"
+            alt=""
+            className="inline h-[1em] w-auto align-text-bottom mr-0.5"
+          />
+          {renderNestedMarkers(segment.slice(6, -7), baseKey * 1000)}
+        </span>
+      )
     } else if (segment.startsWith('<vamp>')) {
       parts.push(
         <span key={keyStr} style={{ color: 'var(--tooltip-vamp)' }}>
@@ -198,13 +216,13 @@ export function renderNestedMarkers(text: string, baseKey: number): React.ReactN
         parts.push(
           <span key={keyStr} style={{ whiteSpace: 'nowrap' }}>
             <img src={icon} alt="" className="inline h-[1em] w-auto align-text-bottom mr-0.5" />
-            {content}
+            {renderNestedMarkers(content, baseKey * 1000)}
           </span>
         )
       } else {
         parts.push(
           <span key={keyStr} className="text-gold-light">
-            {content}
+            {renderNestedMarkers(content, baseKey * 1000)}
           </span>
         )
       }

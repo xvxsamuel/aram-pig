@@ -7,6 +7,9 @@ export {
   getItemImageUrl,
   getRuneImageUrl,
   getRuneStyleImageUrl,
+  getChampionSplashUrl,
+  getRuneIconUrl,
+  getAbilityIconUrl,
 } from './assets'
 
 export {

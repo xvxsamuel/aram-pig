@@ -1,5 +1,7 @@
 'use client'
 
+import { memo } from 'react'
+
 interface Props {
   /** size in pixels or preset */
   size?: number | 'sm' | 'md' | 'lg'
@@ -8,7 +10,7 @@ interface Props {
   className?: string
 }
 
-export default function LoadingSpinner({ size = 'md', bgColor = 'bg-abyss-600', className = '' }: Props) {
+function LoadingSpinnerComponent({ size = 'md', bgColor = 'bg-abyss-600', className = '' }: Props) {
   // convert preset sizes to pixels
   const sizeMap = { sm: 20, md: 40, lg: 80 }
   const pixels = typeof size === 'number' ? size : sizeMap[size]
@@ -30,3 +32,6 @@ export default function LoadingSpinner({ size = 'md', bgColor = 'bg-abyss-600', 
     </div>
   )
 }
+
+const LoadingSpinner = memo(LoadingSpinnerComponent)
+export default LoadingSpinner

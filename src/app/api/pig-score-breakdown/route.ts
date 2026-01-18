@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/db'
 import { calculatePigScoreWithBreakdown, extractSkillOrderAbbreviation } from '@/lib/scoring'
+import { getKillDeathSummary } from '@/lib/game/kill-timeline'
 
 // buildorder is already stored as a comma-separated string in match_data
 // just pass it through, ensuring it's a string or undefined
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
         .from('summoner_matches')
         .select('puuid, match_data, patch, champion_name')
         .eq('match_id', matchId),
-      supabase.from('matches').select('game_duration, patch, game_creation').eq('match_id', matchId).single(),
+      supabase.from('matches').select('game_duration, patch, game_creation, timeline_data').eq('match_id', matchId).single(),
     ])
 
     if (participantsResult.error || !participantsResult.data) {
@@ -99,6 +100,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'No timeline data available' }, { status: 404 })
     }
 
+    // calculate death quality from timeline if available
+    let deathQualityScore: number | undefined
+    const timelineData = (matchRecord as any).timeline_data
+    if (timelineData && matchData.participantId) {
+      const teamId = matchData.teamId || 100
+      const killDeathSummary = getKillDeathSummary(timelineData, matchData.participantId, teamId)
+      deathQualityScore = killDeathSummary.deathScore
+    }
+
     // calculate pig score with breakdown
     const breakdown = await calculatePigScoreWithBreakdown({
       championName: participantData.champion_name,
@@ -125,6 +135,7 @@ export async function GET(request: Request) {
       skillOrder: extractSkillOrderAbbreviation(matchData.abilityOrder || '') || undefined,
       buildOrder: formatBuildOrderForScoring(matchData.buildOrder),
       firstBuy: matchData.firstBuy,
+      deathQualityScore,
     })
 
     if (!breakdown) {
@@ -163,7 +174,7 @@ export async function POST(request: Request) {
         .from('summoner_matches')
         .select('puuid, match_data, patch, champion_name')
         .eq('match_id', matchId),
-      supabase.from('matches').select('game_duration, patch, game_creation').eq('match_id', matchId).single(),
+      supabase.from('matches').select('game_duration, patch, game_creation, timeline_data').eq('match_id', matchId).single(),
     ])
 
     if (participantsResult.error || !participantsResult.data) {
@@ -203,6 +214,15 @@ export async function POST(request: Request) {
 
     const matchData = participant.match_data
 
+    // calculate death quality from timeline if available
+    let deathQualityScore: number | undefined
+    const timelineData = (matchRecord as any).timeline_data
+    if (timelineData && matchData?.participantId) {
+      const teamId = matchData.teamId || 100
+      const killDeathSummary = getKillDeathSummary(timelineData, matchData.participantId, teamId)
+      deathQualityScore = killDeathSummary.deathScore
+    }
+
     const breakdown = await calculatePigScoreWithBreakdown({
       championName: participant.champion_name,
       damage_dealt_to_champions: matchData?.stats?.damage || 0,
@@ -228,6 +248,7 @@ export async function POST(request: Request) {
       skillOrder: extractSkillOrderAbbreviation(matchData?.abilityOrder || '') || undefined,
       buildOrder: formatBuildOrderForScoring(matchData?.buildOrder),
       firstBuy: matchData?.firstBuy,
+      deathQualityScore,
     })
 
     if (!breakdown) {
@@ -264,7 +285,7 @@ export async function PUT(request: Request) {
         .from('summoner_matches')
         .select('puuid, match_data, patch, champion_name')
         .eq('match_id', matchId),
-      supabase.from('matches').select('game_duration, patch, game_creation').eq('match_id', matchId).single(),
+      supabase.from('matches').select('game_duration, patch, game_creation, timeline_data').eq('match_id', matchId).single(),
     ])
 
     if (participantsResult.error || !participantsResult.data) {
@@ -302,6 +323,15 @@ export async function PUT(request: Request) {
 
       const matchData = participant.match_data
 
+      // calculate death quality from timeline if available
+      let deathQualityScore: number | undefined
+      const timelineData = (matchRecord as any).timeline_data
+      if (timelineData && matchData?.participantId) {
+        const teamId = matchData.teamId || 100
+        const killDeathSummary = getKillDeathSummary(timelineData, matchData.participantId, teamId)
+        deathQualityScore = killDeathSummary.deathScore
+      }
+
       const breakdown = await calculatePigScoreWithBreakdown({
         championName: participant.champion_name,
         damage_dealt_to_champions: matchData?.stats?.damage || 0,
@@ -327,6 +357,7 @@ export async function PUT(request: Request) {
         skillOrder: extractSkillOrderAbbreviation(matchData?.abilityOrder || '') || undefined,
         buildOrder: formatBuildOrderForScoring(matchData?.buildOrder),
         firstBuy: matchData?.firstBuy,
+        deathQualityScore,
       })
 
       if (breakdown) {

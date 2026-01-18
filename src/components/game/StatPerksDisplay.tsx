@@ -3,15 +3,15 @@
 import Image from 'next/image'
 import clsx from 'clsx'
 import { STAT_PERKS } from '@/lib/game/runes'
+import { getRuneIconUrl } from '@/lib/ddragon'
 
 interface StatPerksDisplayProps {
   offense: number
   flex: number
   defense: number
-  compact?: boolean
 }
 
-export function StatPerksDisplay({ offense, flex, defense, compact: _compact = false }: StatPerksDisplayProps) {
+export function StatPerksDisplay({ offense, flex, defense }: StatPerksDisplayProps) {
   const renderStatShard = (
     shardOptions: ReadonlyArray<{ readonly id: number; readonly name: string; readonly icon: string }>,
     selectedId: number | undefined
@@ -29,7 +29,7 @@ export function StatPerksDisplay({ offense, flex, defense, compact: _compact = f
               )}
             >
               <Image
-                src={`https://ddragon.leagueoflegends.com/cdn/img/${shard.icon}`}
+                src={getRuneIconUrl(shard.icon)}
                 alt={shard.name}
                 width={20}
                 height={20}

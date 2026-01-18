@@ -1,8 +1,11 @@
 'use client'
 
-import { useId } from 'react'
+import { useMemo, useId } from 'react'
 import { getKdaColor, getPigScoreColor, getPigScoreGradientColors } from '@/lib/ui'
+import { calculateProfileBadges, type ProfileBadge } from '@/lib/scoring/labels'
+import type { MatchData } from '@/types/match'
 import Card from '@/components/ui/Card'
+import SimpleTooltip from '@/components/ui/SimpleTooltip'
 
 interface AggregateStats {
   games: number
@@ -19,6 +22,8 @@ interface Props {
   aggregateStats: AggregateStats | null
   summaryKda: string
   onTabChange: (tab: 'overview' | 'champions' | 'performance') => void
+  matches: MatchData[]
+  puuid: string
 }
 
 // arc progress component for PIG score with bottom cutout
@@ -109,12 +114,27 @@ function PigScoreArc({ score, loading }: { score: number | null | undefined; loa
   )
 }
 
-export default function SummonerSummaryCard({ championStatsLoading, aggregateStats, summaryKda, onTabChange }: Props) {
+export default function SummonerSummaryCard({ championStatsLoading, aggregateStats, summaryKda, onTabChange, matches, puuid }: Props) {
   const formatStat = (num: number, decimals: number = 1): string => {
     if (!isFinite(num) || isNaN(num)) return '0'
     const rounded = Number(num.toFixed(decimals))
     return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(decimals)
   }
+
+  // calculate profile badges (badges that appear 3+ times in last 20 matches)
+  const profileBadges = useMemo(() => {
+    if (matches.length === 0) return []
+    
+    const matchesWithParticipants = matches
+      .map(match => {
+        const participant = match.info.participants.find(p => p.puuid === puuid)
+        if (!participant) return null
+        return { match, participant }
+      })
+      .filter((m): m is { match: MatchData; participant: MatchData['info']['participants'][0] } => m !== null)
+    
+    return calculateProfileBadges(matchesWithParticipants, 3, 20)
+  }, [matches, puuid])
 
   // check if we have actual data (games > 0)
   const hasData = aggregateStats && aggregateStats.games > 0
@@ -179,6 +199,36 @@ export default function SummonerSummaryCard({ championStatsLoading, aggregateSta
           ) : null}
         </div>
       </div>
+
+      {/* Profile badges - badges that appear frequently in recent matches */}
+      {profileBadges.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-abyss-700">
+          <div className="flex flex-wrap gap-2 items-center justify-center">
+            {profileBadges.map(badge => {
+              const isBad = badge.type === 'bad'
+              return (
+                <SimpleTooltip 
+                  key={badge.id} 
+                  content={`${badge.description} (${badge.count}x in last 20 games)`}
+                >
+                  <div className="flex items-center gap-1">
+                    <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
+                      <div
+                        className={`rounded-full px-3 py-1.5 text-[10px] font-normal leading-none flex items-center whitespace-nowrap ${
+                          isBad ? 'bg-worst-dark' : 'bg-abyss-700'
+                        }`}
+                      >
+                        <span className="text-white">{badge.label}</span>
+                      </div>
+                    </div>
+                    <span className="text-text-muted text-[10px]">×{badge.count}</span>
+                  </div>
+                </SimpleTooltip>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

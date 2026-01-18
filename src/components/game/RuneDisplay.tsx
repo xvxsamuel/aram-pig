@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import clsx from 'clsx'
 import { STAT_PERKS, getRuneTreeById } from '@/lib/game/runes'
+import { getRuneIconUrl } from '@/lib/ddragon'
 import Tooltip from '@/components/ui/Tooltip'
 import runesData from '@/data/runes.json'
 
@@ -15,7 +16,6 @@ interface RuneDisplayProps {
     flex?: number
     defense?: number
   }
-  compact?: boolean
   variant?: 'default' | 'minimal'
   hideHeader?: boolean
 }
@@ -25,7 +25,6 @@ export function RuneDisplay({
   secondaryTreeId,
   selectedRuneIds,
   statPerks,
-  compact: _compact = false,
   variant = 'default',
   hideHeader = false,
 }: RuneDisplayProps) {
@@ -50,7 +49,7 @@ export function RuneDisplay({
         >
           {runeInfo?.icon && (
             <Image
-              src={`https://ddragon.leagueoflegends.com/cdn/img/${runeInfo.icon}`}
+              src={getRuneIconUrl(runeInfo.icon)}
               alt={runeInfo.name || ''}
               width={imgSize}
               height={imgSize}
@@ -81,7 +80,7 @@ export function RuneDisplay({
               )}
             >
               <Image
-                src={`https://ddragon.leagueoflegends.com/cdn/img/${shard.icon}`}
+                src={getRuneIconUrl(shard.icon)}
                 alt={shard.name}
                 width={20}
                 height={20}
@@ -123,7 +122,7 @@ export function RuneDisplay({
                     {treeInfo?.icon && (
                       <div className="w-5 h-5 rounded-full overflow-hidden">
                         <Image
-                          src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
+                          src={getRuneIconUrl(treeInfo.icon)}
                           alt={primaryTree.name}
                           width={20}
                           height={20}
@@ -173,7 +172,7 @@ export function RuneDisplay({
                     {treeInfo?.icon && (
                       <div className="w-5 h-5 rounded-full overflow-hidden">
                         <Image
-                          src={`https://ddragon.leagueoflegends.com/cdn/img/${treeInfo.icon}`}
+                          src={getRuneIconUrl(treeInfo.icon)}
                           alt={secondaryTree.name}
                           width={20}
                           height={20}

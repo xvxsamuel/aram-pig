@@ -8,8 +8,8 @@ import clsx from 'clsx'
 import { motion } from 'motion/react'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ErrorMessage from '@/components/ui/ErrorMessage'
-import { getChampionImageUrl } from '@/lib/ddragon'
-import { getWinrateColor, getTierBorderGradient } from '@/lib/ui'
+import { getChampionImageUrl, getChampionSplashUrl } from '@/lib/ddragon'
+import { getWinrateColor, getTierBorderGradient, GLOW_COLORS } from '@/lib/ui'
 import ChampionDetailTabs from './ChampionDetailTabs'
 import PatchFilter from '@/components/filters/PatchFilter'
 import { HIDDEN_PATCHES } from '@/lib/game'
@@ -140,7 +140,7 @@ export default function ChampionPageClient({
 
   useEffect(() => {
     if (apiName) {
-      const url = `https://ddragon.leagueoflegends.com/cdn/img/champion/centered/${apiName}_0.jpg`
+      const url = getChampionSplashUrl(apiName)
       fetch(url)
         .then(res => (res.ok ? setChampionImageUrl(res.url) : null))
         .catch(() => {})
@@ -598,7 +598,7 @@ export default function ChampionPageClient({
                       ease: 'easeInOut',
                     }}
                     style={{
-                      background: 'radial-gradient(ellipse at center, rgba(74, 158, 255, 0.4) 0%, rgba(74, 158, 255, 0.2) 50%, transparent 80%)',
+                      background: `radial-gradient(ellipse at center, ${GLOW_COLORS.splus.light} 0%, ${GLOW_COLORS.splus.faint} 50%, transparent 80%)`,
                       filter: 'blur(16px)',
                     }}
                   />
@@ -607,11 +607,11 @@ export default function ChampionPageClient({
                     className="absolute -inset-1 rounded-xl pointer-events-none"
                     animate={{
                       background: [
-                        'conic-gradient(from 0deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
-                        'conic-gradient(from 90deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
-                        'conic-gradient(from 180deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
-                        'conic-gradient(from 270deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
-                        'conic-gradient(from 360deg at 50% 50%, rgba(74, 158, 255, 1) 0deg, rgba(74, 158, 255, 1) 3deg, rgba(74, 158, 255, 0.7) 6deg, transparent 10deg, transparent 360deg)',
+                        `conic-gradient(from 0deg at 50% 50%, ${GLOW_COLORS.splus.full} 0deg, ${GLOW_COLORS.splus.full} 3deg, ${GLOW_COLORS.splus.medium} 6deg, transparent 10deg, transparent 360deg)`,
+                        `conic-gradient(from 90deg at 50% 50%, ${GLOW_COLORS.splus.full} 0deg, ${GLOW_COLORS.splus.full} 3deg, ${GLOW_COLORS.splus.medium} 6deg, transparent 10deg, transparent 360deg)`,
+                        `conic-gradient(from 180deg at 50% 50%, ${GLOW_COLORS.splus.full} 0deg, ${GLOW_COLORS.splus.full} 3deg, ${GLOW_COLORS.splus.medium} 6deg, transparent 10deg, transparent 360deg)`,
+                        `conic-gradient(from 270deg at 50% 50%, ${GLOW_COLORS.splus.full} 0deg, ${GLOW_COLORS.splus.full} 3deg, ${GLOW_COLORS.splus.medium} 6deg, transparent 10deg, transparent 360deg)`,
+                        `conic-gradient(from 360deg at 50% 50%, ${GLOW_COLORS.splus.full} 0deg, ${GLOW_COLORS.splus.full} 3deg, ${GLOW_COLORS.splus.medium} 6deg, transparent 10deg, transparent 360deg)`,
                       ],
                     }}
                     transition={{
@@ -627,7 +627,7 @@ export default function ChampionPageClient({
                   <div
                     className="absolute inset-0 rounded-xl pointer-events-none"
                     style={{
-                      boxShadow: '0 0 8px 2px rgba(74, 158, 255, 0.4), 0 0 16px 4px rgba(74, 158, 255, 0.2)',
+                      boxShadow: `0 0 8px 2px ${GLOW_COLORS.splus.light}, 0 0 16px 4px ${GLOW_COLORS.splus.faint}`,
                     }}
                   />
                   {/* animated glow variation */}
@@ -635,9 +635,9 @@ export default function ChampionPageClient({
                     className="absolute inset-0 rounded-xl pointer-events-none"
                     animate={{
                       boxShadow: [
-                        '0 0 6px 1px rgba(74, 158, 255, 0.3), 0 0 12px 2px rgba(74, 158, 255, 0.15)',
-                        '0 0 10px 2px rgba(74, 158, 255, 0.45), 0 0 18px 4px rgba(74, 158, 255, 0.25)',
-                        '0 0 6px 1px rgba(74, 158, 255, 0.3), 0 0 12px 2px rgba(74, 158, 255, 0.15)',
+                        `0 0 6px 1px rgba(${GLOW_COLORS.splus.rgb}, 0.3), 0 0 12px 2px rgba(${GLOW_COLORS.splus.rgb}, 0.15)`,
+                        `0 0 10px 2px rgba(${GLOW_COLORS.splus.rgb}, 0.45), 0 0 18px 4px rgba(${GLOW_COLORS.splus.rgb}, 0.25)`,
+                        `0 0 6px 1px rgba(${GLOW_COLORS.splus.rgb}, 0.3), 0 0 12px 2px rgba(${GLOW_COLORS.splus.rgb}, 0.15)`,
                       ],
                     }}
                     transition={{
@@ -654,7 +654,7 @@ export default function ChampionPageClient({
                         className="absolute top-1/2 left-1/2 w-0.5 origin-left pointer-events-none"
                         style={{
                           transform: `translate(-50%, -50%) rotate(${angle}deg)`,
-                          background: 'linear-gradient(90deg, rgba(74, 158, 255, 0.6), rgba(74, 158, 255, 0))',
+                          background: `linear-gradient(90deg, ${GLOW_COLORS.splus.glow}, rgba(${GLOW_COLORS.splus.rgb}, 0))`,
                         }}
                         animate={{
                           height: ['8px', '16px', '8px'],

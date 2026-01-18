@@ -1,8 +1,12 @@
 // fetch and update items.json from Community Dragon when new patches are detected
+// usage: npx tsx scripts/update-items.ts [--fresh]
+//   --fresh: wipe items.json and reimport all items from CDragon (discards wiki data)
 import fs from 'fs/promises'
 import path from 'path'
+import { convertCDragonToTags } from './convert-items-to-tags.js'
 
 const ITEMS_JSON_PATH = path.join(process.cwd(), 'src', 'data', 'items.json')
+const FRESH_MODE = process.argv.includes('--fresh')
 
 interface CDragonItem {
   id: number
@@ -78,11 +82,17 @@ function determineItemType(item: CDragonItem): LocalItem['itemType'] {
   return 'component'
 }
 
+// check if description is a CDragon placeholder (not actual content)
+function isPlaceholderDescription(desc: string): boolean {
+  return desc.startsWith('GeneratedTip_') || desc === ''
+}
+
 // convert CDragon item to local format
 function convertItem(cdItem: CDragonItem): LocalItem {
+  const description = convertCDragonToTags(cdItem.description)
   return {
     name: cdItem.name,
-    description: cdItem.description, // keep full HTML description for tooltips
+    description: isPlaceholderDescription(description) ? '' : description,
     totalCost: cdItem.priceTotal,
     itemType: determineItemType(cdItem),
     stats: parseStats(cdItem.description),
@@ -113,7 +123,7 @@ async function fetchCDragonItems(version: string): Promise<CDragonItem[]> {
 
 async function main() {
   try {
-    console.log('Starting items update check...')
+    console.log(FRESH_MODE ? 'Starting FRESH items import from CDragon...' : 'Starting items update check...')
     
     // get latest ddragon version
     const version = await getLatestDDragonVersion()
@@ -131,27 +141,80 @@ async function main() {
     )
     console.log(`Filtered to ${relevantItems.length} relevant items`)
     
-    // load current items.json
-    const currentDataRaw = await fs.readFile(ITEMS_JSON_PATH, 'utf-8')
-    const currentData: Record<string, LocalItem> = JSON.parse(currentDataRaw)
+    // FRESH MODE: start with empty object, ignore existing data
+    // NORMAL MODE: load current items.json and diff against it
+    let currentData: Record<string, LocalItem> = {}
+    if (!FRESH_MODE) {
+      const currentDataRaw = await fs.readFile(ITEMS_JSON_PATH, 'utf-8')
+      currentData = JSON.parse(currentDataRaw)
+    }
     
-    // only check for new/removed items - preserve existing item data
+    // track changes
     const addedItems: string[] = []
+    const updatedItems: string[] = []
     const removedItems: string[] = []
     
     for (const cdItem of relevantItems) {
       const itemId = String(cdItem.id)
+      const converted = convertItem(cdItem)
       
-      if (!currentData[itemId]) {
-        // new item - add with converted data
+      if (FRESH_MODE) {
+        // fresh mode: just add all items
         addedItems.push(itemId)
-        currentData[itemId] = convertItem(cdItem)
+        currentData[itemId] = converted
+      } else if (!currentData[itemId]) {
+        // new item
+        addedItems.push(itemId)
+        currentData[itemId] = converted
+      } else {
+        // check if existing item has changed
+        const existing = currentData[itemId]
+        const changes: string[] = []
+        
+        // check name change
+        if (existing.name !== converted.name) {
+          changes.push(`name: "${existing.name}" -> "${converted.name}"`)
+        }
+        
+        // check description change - only update if CDragon has real content
+        // prefer existing description over empty/placeholder
+        const shouldUpdateDesc = converted.description !== '' && 
+          existing.description !== converted.description
+        if (shouldUpdateDesc) {
+          changes.push('description updated')
+        }
+        
+        // check cost change
+        if (existing.totalCost !== converted.totalCost) {
+          changes.push(`cost: ${existing.totalCost} -> ${converted.totalCost}`)
+        }
+        
+        // check stats changes
+        const existingStats = JSON.stringify(existing.stats)
+        const convertedStats = JSON.stringify(converted.stats)
+        if (existingStats !== convertedStats) {
+          changes.push('stats updated')
+        }
+        
+        // check item type change
+        if (existing.itemType !== converted.itemType) {
+          changes.push(`type: ${existing.itemType} -> ${converted.itemType}`)
+        }
+        
+        if (changes.length > 0) {
+          // preserve existing description if CDragon has placeholder
+          const newItem = { ...converted }
+          if (!shouldUpdateDesc && existing.description) {
+            newItem.description = existing.description
+          }
+          updatedItems.push(`${itemId} (${converted.name}): ${changes.join(', ')}`)
+          currentData[itemId] = newItem
+        }
       }
-      // if item exists, keep the existing data (don't update)
     }
     
-    // check for removed items
-    const currentItemIds = Object.keys(currentData)
+    // check for removed items (skip in fresh mode)
+    const currentItemIds = FRESH_MODE ? [] : Object.keys(currentData)
     const cdItemIds = new Set(relevantItems.map(item => String(item.id)))
     
     for (const itemId of currentItemIds) {
@@ -163,29 +226,43 @@ async function main() {
     
     // log changes
     console.log('\n=== UPDATE SUMMARY ===')
-    console.log(`Added items: ${addedItems.length}`)
-    if (addedItems.length > 0) {
-      for (const itemId of addedItems.slice(0, 10)) {
-        console.log(`  ${itemId} (${currentData[itemId].name})`)
+    if (FRESH_MODE) {
+      console.log(`Fresh import: ${addedItems.length} items from CDragon`)
+    } else {
+      console.log(`Added items: ${addedItems.length}`)
+      if (addedItems.length > 0) {
+        for (const itemId of addedItems.slice(0, 10)) {
+          console.log(`  + ${itemId} (${currentData[itemId].name})`)
+        }
+        if (addedItems.length > 10) {
+          console.log(`  ...and ${addedItems.length - 10} more`)
+        }
       }
-      if (addedItems.length > 10) {
-        console.log(`  ...and ${addedItems.length - 10} more`)
+      
+      console.log(`Updated items: ${updatedItems.length}`)
+      if (updatedItems.length > 0) {
+        for (const change of updatedItems.slice(0, 15)) {
+          console.log(`  ~ ${change}`)
+        }
+        if (updatedItems.length > 15) {
+          console.log(`  ...and ${updatedItems.length - 15} more`)
+        }
       }
-    }
-    
-    console.log(`Removed items: ${removedItems.length}`)
-    if (removedItems.length > 0) {
-      console.log(`  ${removedItems.slice(0, 10).join(', ')}${removedItems.length > 10 ? '...' : ''}`)
+      
+      console.log(`Removed items: ${removedItems.length}`)
+      if (removedItems.length > 0) {
+        console.log(`  - ${removedItems.slice(0, 10).join(', ')}${removedItems.length > 10 ? '...' : ''}`)
+      }
     }
     
     // only update if there are changes
-    if (addedItems.length > 0 || removedItems.length > 0) {
+    if (addedItems.length > 0 || updatedItems.length > 0 || removedItems.length > 0) {
       console.log('\nWriting updated items.json...')
       await fs.writeFile(ITEMS_JSON_PATH, JSON.stringify(currentData, null, 2), 'utf-8')
-      console.log('✓ Items updated successfully')
+      console.log('Done')
       process.exit(0) // exit code 0 = changes made
     } else {
-      console.log('\n✓ No changes detected - items.json is up to date')
+      console.log('\nNo changes detected - items.json is up to date')
       process.exit(1) // exit code 1 = no changes
     }
     

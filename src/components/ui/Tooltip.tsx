@@ -50,21 +50,24 @@ function formatStatValue(statName: string, statValue: number): string {
 }
 
 // format description with passive name detection
-function formatDescription(desc: string, cleanHtml = false): React.ReactNode {
+// skipWikiClean: true if description already has internal tags (items.json is pre-converted)
+function formatDescription(desc: string, skipWikiClean = false): React.ReactNode {
   if (!desc) return null
 
-  let processedDesc = desc
-  if (cleanHtml) {
-    processedDesc = desc
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-  }
-
-  const lines = processedDesc.split('\n').filter(line => line.trim())
+  const lines = desc.split('\n').filter(line => line.trim())
 
   return lines.map((line, lineIdx) => {
+    // if pre-converted (items), just render the internal tags directly - no passive detection needed
+    if (skipWikiClean) {
+      const rendered = renderNestedMarkers(line, lineIdx * 10000)
+      return (
+        <div key={lineIdx} className="mb-1 last:mb-0">
+          {rendered}
+        </div>
+      )
+    }
+
+    // for non-pre-converted text, do passive name detection and wiki cleanup
     const elements: React.ReactNode[] = []
     let key = 0
 
@@ -83,8 +86,8 @@ function formatDescription(desc: string, cleanHtml = false): React.ReactNode {
       currentText = line.slice(passiveNameMatch[0].length)
     }
 
-    const cleanedText = cleanWikiMarkup(currentText)
-    const rendered = renderNestedMarkers(cleanedText, lineIdx * 10000)
+    const processedText = cleanWikiMarkup(currentText)
+    const rendered = renderNestedMarkers(processedText, lineIdx * 10000)
     elements.push(...rendered)
 
     return (
@@ -201,7 +204,8 @@ const ItemTooltipContent = memo(({ tooltipData, itemId }: { tooltipData: any; it
     getLatestVersion().then(setDdragonVersion)
   }, [])
 
-  const formattedDescription = useMemo(() => formatDescription(tooltipData.description), [tooltipData.description])
+  // items.json is pre-converted to internal tags, skip wiki markup cleaning
+  const formattedDescription = useMemo(() => formatDescription(tooltipData.description, true), [tooltipData.description])
 
   return (
     <div className="text-left p-1 min-w-0 max-w-[320px]">

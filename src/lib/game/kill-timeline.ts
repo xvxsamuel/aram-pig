@@ -75,9 +75,10 @@ export interface KillEvent {
   victimLevel: number
   killerGold: number
   killerLevel: number
-  nearbyAllyDeaths: number // ally deaths within window (same team as victim)
-  nearbyEnemyDeaths: number // enemy deaths within window (same team as killer = trades)
-  isTeamfight: boolean
+  nearbyAllyDeaths: number // ally deaths within time+distance window (same team as victim)
+  nearbyEnemyDeaths: number // enemy deaths within time+distance window (for teamfight detection)
+  tradeKills: number // enemy deaths within time window ANYWHERE (for trade value, no distance check)
+  isTeamfight: boolean // true if total nearby deaths >= 2
 }
 
 export interface DeathAnalysis {
@@ -85,13 +86,17 @@ export interface DeathAnalysis {
   gold: number
   level: number
   wasTeamfight: boolean
-  wasTrade: boolean // did our team get kills around same time?
-  tradeKills: number // how many enemy kills near this death
+  wasTrade: boolean // did our team get kills around same time (anywhere)?
+  tradeKills: number // how many enemy kills anywhere near this time (trade value)
+  allyDeaths: number // how many allies died nearby (teamfight size)
+  nearbyEnemyDeaths: number // how many enemies died nearby (teamfight outcome)
+  towerLostAfter: boolean // did we lose a tower within 30s of this death?
   killedBy: number
   assists: number[]
   position: { x: number; y: number }
   zone: 'passive' | 'neutral' | 'aggressive'
   zoneScore: number // 0 = bad (passive), 50 = unknown (neutral), 100 = good (aggressive)
+  qualityScore: number // 0-100 final calculated death quality (includes zone, trade, spacing)
 }
 
 export interface TakedownAnalysis {
@@ -127,24 +132,21 @@ const ARAM_BLUE_BASE = { x: 400, y: 400 }
 const ARAM_RED_BASE = { x: 12400, y: 12400 }
 
 // ARAM tower positions (approximate lane positions as 0-1 values)
-// Blue team towers (from base outward): nexus towers, inhibitor, inner, outer
-// Red team towers (from base outward): nexus towers, inhibitor, inner, outer
+// Blue team towers (from base outward): nexus (close to base), inner (middle), outer (toward center)
+// Red team towers (from center inward): outer (toward center), inner (middle), nexus (close to base)
+// Positions based on visual ARAM map layout
 const TOWER_POSITIONS = {
   // Blue team towers (lane position from blue base perspective)
   blue: {
-    nexus1: 0.05,  // first nexus tower
-    nexus2: 0.08,  // second nexus tower  
-    inhibitor: 0.15,
-    inner: 0.28,
-    outer: 0.42,
+    nexus: 0.08,   // nexus tower - very close to base
+    inner: 0.28,   // inner tower - middle of blue side
+    outer: 0.42,   // outer tower - toward center
   },
   // Red team towers (lane position from blue base perspective)
   red: {
-    outer: 0.58,
-    inner: 0.72,
-    inhibitor: 0.85,
-    nexus1: 0.92,
-    nexus2: 0.95,
+    outer: 0.58,   // outer tower - toward center
+    inner: 0.72,   // inner tower - middle of red side
+    nexus: 0.92,   // nexus tower - very close to base
   }
 }
 
@@ -365,6 +367,7 @@ export function extractKillEvents(timeline: MatchTimeline, participantTeams: Map
         killerLevel: killerFrame?.level || 1,
         nearbyAllyDeaths: 0,
         nearbyEnemyDeaths: 0,
+        tradeKills: 0,
         isTeamfight: false,
       })
     }
@@ -372,7 +375,7 @@ export function extractKillEvents(timeline: MatchTimeline, participantTeams: Map
 
   // Second pass: calculate nearby deaths for teamfight/trade detection
   for (const kill of killEvents) {
-    // Count ally deaths (same team as victim) - indicates teamfight
+    // Count ally deaths (same team as victim) within time AND distance - indicates teamfight
     kill.nearbyAllyDeaths = allKills.filter(
       k =>
         k.victimId !== kill.victimId &&
@@ -381,13 +384,23 @@ export function extractKillEvents(timeline: MatchTimeline, participantTeams: Map
         distance(k.position, kill.position) <= TEAMFIGHT_DISTANCE
     ).length
 
-    // Count enemy deaths (killer's team dying = trades for victim's team)
+    // Count enemy deaths within time AND distance - for teamfight detection
     kill.nearbyEnemyDeaths = allKills.filter(
+      k =>
+        k.victimTeamId === kill.killerTeamId &&
+        Math.abs(k.timestamp - kill.timestamp) <= TEAMFIGHT_TIME_WINDOW &&
+        distance(k.position, kill.position) <= TEAMFIGHT_DISTANCE
+    ).length
+
+    // Count enemy deaths within time window ANYWHERE - for trade value (team got something)
+    kill.tradeKills = allKills.filter(
       k => k.victimTeamId === kill.killerTeamId && Math.abs(k.timestamp - kill.timestamp) <= TRADE_TIME_WINDOW
     ).length
 
-    // Teamfight = multiple deaths on either side within window
-    kill.isTeamfight = kill.nearbyAllyDeaths >= 1 || kill.nearbyEnemyDeaths >= 1
+    // Teamfight = 2+ total nearby deaths (including yourself)
+    // This means at least one other person died near you
+    const totalNearbyDeaths = kill.nearbyAllyDeaths + kill.nearbyEnemyDeaths
+    kill.isTeamfight = totalNearbyDeaths >= 1
   }
 
   return killEvents
@@ -433,9 +446,23 @@ export function getPlayerKillDeathTimeline(
     if (kill.victimId === participantId) {
       const { zone, score: zoneScore } = getDeathZoneDynamic(kill.position, teamId, towerState)
 
-      // Check if it was a trade (our team got kills around same time)
-      const wasTrade = kill.nearbyEnemyDeaths > 0
-      const tradeKills = kill.nearbyEnemyDeaths
+      // Trade kills = enemy deaths anywhere within time window (team got value)
+      const tradeKills = kill.tradeKills
+      const wasTrade = tradeKills > 0
+      
+      // Ally deaths = allies who died nearby (for teamfight detection)
+      const allyDeaths = kill.nearbyAllyDeaths
+      
+      // Nearby enemy deaths = enemies who died in the same fight (for teamfight outcome)
+      const nearbyEnemyDeaths = kill.nearbyEnemyDeaths
+
+      // Check if ally tower was lost within 30 seconds after this death
+      const TOWER_LOSS_WINDOW = 30000 // 30 seconds
+      const towerLostAfter = towerDestructions.some(
+        t => t.teamId === teamId && // our team's tower
+            t.timestamp > kill.timestamp && // after the death
+            t.timestamp <= kill.timestamp + TOWER_LOSS_WINDOW
+      )
 
       // Find gold spent after this death (= gold held at death in ARAM)
       const deathIndex = playerDeathTimestamps.indexOf(kill.timestamp)
@@ -451,11 +478,15 @@ export function getPlayerKillDeathTimeline(
         wasTeamfight: kill.isTeamfight,
         wasTrade,
         tradeKills,
+        allyDeaths,
+        nearbyEnemyDeaths,
+        towerLostAfter,
         killedBy: kill.killerId,
         assists: kill.assistingParticipantIds,
         position: kill.position,
         zone,
         zoneScore,
+        qualityScore: 0, // Will be calculated in second pass
       })
     }
 
@@ -490,35 +521,111 @@ export function getPlayerKillDeathTimeline(
     }
   }
 
-  // Calculate aggregate death quality score
+  // Calculate death quality scores for each death
+  // PHILOSOPHY: Only flag EXPLICITLY BAD deaths
+  // - Aggressive zone deaths = always good (100) - we want to reward pushing
+  // - Neutral/passive deaths = bad only if clearly terrible (isolated + no value)
+  // - Tower loss deaths = extra penalty modifier
+  // - Death spacing = indicates feeding pattern (rapid sequential bad deaths)
+  
+  // Sort deaths by timestamp for spacing calculation
+  deaths.sort((a, b) => a.timestamp - b.timestamp)
+  
   let deathQualityScore = 100 // Perfect if no deaths
   if (deaths.length > 0) {
-    let totalDeathScore = 0
-    for (const death of deaths) {
-      let deathValue: number
+    let previousDeathTimestamp: number | null = null
 
+    for (let i = 0; i < deaths.length; i++) {
+      const death = deaths[i]
+      
+      // Teamfight detection: you died AND at least one other person died nearby
+      // Total team deaths (including you) vs enemy deaths determines outcome
+      const teamDeaths = death.allyDeaths + 1 // +1 for yourself
+      const enemyDeaths = death.nearbyEnemyDeaths
+      const isTeamfight = death.wasTeamfight && (teamDeaths >= 2 || enemyDeaths >= 1)
+      
+      // Teamfight outcome: positive = won, negative = lost, 0 = even
+      const teamfightDiff = enemyDeaths - teamDeaths
+      
+      let isBadDeath = false
+      
+      // Aggressive zone deaths are NEVER bad - we want to encourage pushing
       if (death.zone === 'aggressive') {
-        // Aggressive deaths are always good - you were making plays
-        deathValue = 100
-      } else if (death.wasTrade) {
-        // Trade deaths (team got kills) are good regardless of position
-        deathValue = 100
-      } else {
-        // Isolated deaths (no trade, no teamfight)
-        // Position is the main factor now. Gold is ignored.
-        
-        if (death.zone === 'neutral') {
-          // Neutral zone (middle of map) - Good death (pressuring/contesting)
-          deathValue = 100
+        isBadDeath = false // Always good
+      } else if (isTeamfight) {
+        // TEAMFIGHT DEATHS in neutral/passive zones
+        // Only bad if we clearly lost the fight
+        if (teamfightDiff >= -1) {
+          // Won, tied, or only slightly lost - acceptable
+          isBadDeath = false
         } else {
-          // Passive zone (behind own tower) - Bad death (caught out/dove)
-          deathValue = 0
+          // Badly lost teamfight (diff <= -2)
+          if (death.zone === 'passive') {
+            // Got dove and wiped - definitely bad
+            isBadDeath = true
+          } else {
+            // Lost neutral teamfight badly - borderline, call it acceptable
+            isBadDeath = false
+          }
+        }
+      } else {
+        // ISOLATED DEATH in neutral/passive zones
+        if (death.tradeKills >= 1) {
+          // Got value for the death - acceptable even if caught out
+          isBadDeath = false
+        } else {
+          // Truly isolated death with no trade value in safe zones - bad
+          isBadDeath = true
         }
       }
+      
+      // Check for tower loss - makes bad deaths even worse
+      let towerLostFromDeath = false
+      if (death.towerLostAfter) {
+        const isIsolated = !isTeamfight && death.tradeKills === 0
+        if (isIsolated) {
+          // Isolated death that directly cost tower = definitely bad
+          isBadDeath = true
+          towerLostFromDeath = true
+        }
+      }
+      
+      // Death spacing check - dying rapidly indicates feeding
+      let isRapidDeath = false
+      if (previousDeathTimestamp !== null) {
+        const timeSinceLastDeath = (death.timestamp - previousDeathTimestamp) / 1000 // in seconds
+        if (timeSinceLastDeath < 45) {
+          isRapidDeath = true
+        }
+      }
+      
+      // Calculate final score:
+      // - Good death = 100
+      // - Bad death = 40 (or 0 if tower lost)
+      // - Rapid bad death = 20 (or 0 if tower lost)
+      let deathValue: number
+      if (!isBadDeath) {
+        deathValue = 100 // Good death
+      } else {
+        if (towerLostFromDeath) {
+          deathValue = 0 // Terrible - cost us a tower
+        } else if (isRapidDeath && isBadDeath) {
+          deathValue = 20 // Bad death + feeding pattern
+        } else {
+          deathValue = 40 // Just a bad death
+        }
+      }
+      
+      // Store the calculated quality score in the death object
+      death.qualityScore = deathValue
 
-      totalDeathScore += deathValue
+      previousDeathTimestamp = death.timestamp
     }
-    deathQualityScore = Math.round(totalDeathScore / deaths.length)
+    
+    // Calculate overall death quality score
+    // Simple average - good deaths (100) pull up score, bad deaths (0-40) pull down
+    const totalScore = deaths.reduce((sum, d) => sum + (d.qualityScore ?? 0), 0)
+    deathQualityScore = Math.round(totalScore / deaths.length)
   }
 
   // Calculate takedown quality score (inverse of enemy death quality)
@@ -621,19 +728,6 @@ export function getKillDeathSummary(
       y: t.position.y,
     })),
     deaths: analysis.deaths.map(d => {
-      // Calculate final death value
-      let value = d.zoneScore
-      
-      // Neutral deaths are now considered good (pressuring)
-      if (d.zone === 'neutral') {
-        value = 100
-      }
-
-      // Trades are always good
-      if (d.wasTrade) {
-        value = 100
-      }
-
       return {
         t: Math.floor(d.timestamp / 1000),
         gold: d.gold,
@@ -642,7 +736,7 @@ export function getKillDeathSummary(
         tradeKills: d.tradeKills,
         zone: d.zone,
         pos: d.zoneScore, // Use zone score (0=passive, 50=neutral, 100=aggressive)
-        value: Math.round(value),
+        value: d.qualityScore, // Use pre-calculated quality score
         x: d.position.x,
         y: d.position.y,
       }

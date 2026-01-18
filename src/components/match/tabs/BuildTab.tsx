@@ -102,11 +102,25 @@ export function BuildTab({
   participantDetails,
   pigScoreBreakdown,
   showPigScores = true,
+  loadingBreakdown,
 }: TabProps) {
   if (!currentPlayer) return null
 
-  // Check if we have timeline data - only show PIG labels if we do AND showPigScores is true
+  // Check if we're still loading details
   const playerDetails = participantDetails.get(currentPlayer.puuid)
+  const isLoading = loadingBreakdown || !playerDetails || playerDetails.loading
+
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <div className="min-h-[200px] flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
+        </div>
+      </div>
+    )
+  }
+
+  // Check if we have timeline data - only show PIG labels if we do AND showPigScores is true
   const hasTimelineData = playerDetails?.item_timeline && playerDetails.item_timeline.length > 0
   const displayPigScores = showPigScores && hasTimelineData
 
@@ -122,19 +136,8 @@ export function BuildTab({
         className="p-4"
       >
         {(() => {
-          const details = participantDetails.get(currentPlayer.puuid)
-          // Show loading if details not fetched yet or still loading
-          if (!details || details.loading) {
-            return (
-              <div className="flex items-center gap-2 text-xs text-text-muted">
-                <div className="w-4 h-4 border-2 border-accent-light/30 rounded-full animate-spin border-t-accent-light"></div>
-                Loading...
-              </div>
-            )
-          }
-
           // Get timeline and deduplicate by timestamp+itemId+action
-          const rawTimeline = (details.item_timeline || []) as ItemTimelineEvent[]
+          const rawTimeline = (playerDetails.item_timeline || []) as ItemTimelineEvent[]
           const seenEvents = new Set<string>()
           const itemTimeline = rawTimeline.filter(event => {
             const key = `${event.timestamp}-${event.itemId}-${event.action}`
@@ -418,9 +421,6 @@ export function BuildTab({
       
       {/* 2. Core Build & Starter Items - 2 columns */}
       {(() => {
-        const details = participantDetails.get(currentPlayer.puuid)
-        if (!details || details.loading) return null
-
         const startingDetails = pigScoreBreakdown?.startingItemsDetails
         const coreKey = pigScoreBreakdown?.coreKey
         const fallbackInfo = pigScoreBreakdown?.fallbackInfo
@@ -461,7 +461,6 @@ export function BuildTab({
         }
 
         // Get starter items from timeline (items bought before 1 minute)
-        const playerDetails = participantDetails.get(currentPlayer.puuid)
         const rawTimeline = (playerDetails?.item_timeline || []) as ItemTimelineEvent[]
         const starterItems = rawTimeline.filter(e => e.timestamp < 60000 && e.action === 'buy')
 
@@ -558,9 +557,8 @@ export function BuildTab({
           className="p-4"
         >
           {(() => {
-            const details = participantDetails.get(currentPlayer.puuid)
-            const abilityOrder = details?.ability_order
-            if (!abilityOrder || details?.loading) return <div className="text-xs text-text-muted text-center">Loading...</div>
+            const abilityOrder = playerDetails?.ability_order
+            if (!abilityOrder) return <div className="text-xs text-text-muted text-center">No skill order data</div>
 
             // Convert space-separated to dot-separated for AbilityOrderDisplay
             const formattedOrder = abilityOrder.split(' ').join('.')

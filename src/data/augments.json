@@ -396,9 +396,9 @@
     "icon": "flash2"
   },
   "Flashy": {
-    "description": "Your {{si|Flash}} now has 3 charges with a 2-second cooldown between casts (180 seconds recharge time per {{si|Flash}}).",
+    "description": "Your {{si|Flash}} now has 3 charges with a 2-second cooldown between casts (120 seconds recharge time for all 3 charges).",
     "tier": "Gold",
-    "performanceTier": "A",
+    "performanceTier": "Disabled",
     "icon": "flashy"
   },
   "From Beginning to End": {

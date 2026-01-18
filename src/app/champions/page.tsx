@@ -20,21 +20,15 @@ async function prefetchChampionStats(patch: string) {
   try {
     const supabase = createAdminClient()
 
-    // parallel fetch: champion stats and match count
-    const [statsResult, matchCountResult] = await Promise.all([
-      supabase
-        .from('champion_stats')
-        .select('champion_name, games, wins, last_updated, tier:data->>tier')
-        .eq('patch', patch)
-        .gte('games', 1)
-        .order('wins', { ascending: false })
-        .order('games', { ascending: false })
-        .limit(200),
-      supabase
-        .from('matches')
-        .select('*', { count: 'exact', head: true })
-        .eq('patch', patch),
-    ])
+    // fetch champion stats only - match count derived from stats
+    const statsResult = await supabase
+      .from('champion_stats')
+      .select('champion_name, games, wins, last_updated, tier:data->>tier')
+      .eq('patch', patch)
+      .gte('games', 1)
+      .order('wins', { ascending: false })
+      .order('games', { ascending: false })
+      .limit(200)
 
     if (statsResult.error) {
       const errorDetails = {
@@ -70,9 +64,13 @@ async function prefetchChampionStats(patch: string) {
       return !isNaN(champTime) && champTime > latest ? champTime : latest
     }, 0)
 
+    // calculate total matches from champion stats (sum of games / 10 participants per match)
+    const totalGames = champions.reduce((sum, champ) => sum + champ.games_analyzed, 0)
+    const totalMatches = Math.floor(totalGames / 10)
+
     return {
       champions,
-      totalMatches: matchCountResult.count || 0,
+      totalMatches,
       patch,
       lastFetched: lastFetched > 0 ? new Date(lastFetched).toISOString() : new Date().toISOString(),
     }

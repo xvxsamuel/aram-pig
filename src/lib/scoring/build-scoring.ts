@@ -744,9 +744,9 @@ export function calculateItemPenaltyFromCoreData(
       continue
     }
 
-    // Use distance-based scoring with Wilson scores
+    // Use distance-based scoring with Wilson scores (lenient scale for items)
     const bestWilson = itemsWithPriority[0]?.wilsonScore ?? 50
-    const score = calculateDistanceBasedScore(playerItem.wilsonScore, bestWilson)
+    const score = calculateDistanceBasedScore(playerItem.wilsonScore, bestWilson, 3) // 3 = lenient
     const isInTop5 = playerRank <= 5
     const basePenalty = ((100 - score) / 100) * 20
     const penaltyAmount = basePenalty * playerItem.confidence
@@ -834,9 +834,9 @@ export function calculateKeystonePenaltyFromCoreData(
 
   if (!playerRune) return 8
 
-  // Use distance-based scoring with Wilson scores
+  // Use distance-based scoring with Wilson scores (strict scale for keystones)
   const bestWilson = runesWithPriority[0]?.wilsonScore ?? 50
-  const score = calculateDistanceBasedScore(playerRune.wilsonScore, bestWilson)
+  const score = calculateDistanceBasedScore(playerRune.wilsonScore, bestWilson, 5) // 5 = strict
   const basePenalty = ((100 - score) / 100) * 20
   return basePenalty * playerRune.confidence
 }
@@ -1143,9 +1143,9 @@ export function calculateStartingItemsPenaltyFromCoreData(
     }
   }
 
-  // Use distance-based scoring with Wilson scores
+  // Use distance-based scoring with Wilson scores (lenient scale for starting items)
   const bestWilson = startingWithPriority[0]?.wilsonScore ?? 50
-  const score = calculateDistanceBasedScore(playerStarting.wilsonScore, bestWilson)
+  const score = calculateDistanceBasedScore(playerStarting.wilsonScore, bestWilson, 3) // 3 = lenient
   const isTop5 = playerRank <= 5
   const basePenalty = ((100 - score) / 100) * 10 // Max 10 penalty for starting items
   const penalty = basePenalty * playerStarting.confidence

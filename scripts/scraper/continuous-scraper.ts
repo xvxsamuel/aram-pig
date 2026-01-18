@@ -63,7 +63,7 @@ const REGION_TO_PREFIXES: Record<RegionalCluster, string[]> = {
 const DEFAULT_SEEDS: Array<{ cluster: RegionalCluster; platform: PlatformCode; summoner: string }> = [
   { cluster: 'europe', platform: 'euw1', summoner: 'TwTv Yikesu0#Yikes' },
   { cluster: 'americas', platform: 'na1', summoner: 'Usni#Boba' },
-  { cluster: 'asia', platform: 'kr', summoner: 'DK Sharvel#KR1' },
+  { cluster: 'asia', platform: 'kr', summoner: 'Blonde#FR0' },
   { cluster: 'sea', platform: 'sg2', summoner: 'Miss Lys#Lys' },
 ]
 
@@ -162,11 +162,25 @@ async function maybeRunCleanup(): Promise<void> {
 
   console.log('[CRAWLER] Running scheduled database cleanup...')
   try {
+    // cleanup champion stats noise
     const { data, error } = await supabase.rpc('cleanup_champion_stats_noise')
     if (error) {
-      console.error('[CRAWLER] Cleanup failed:', error)
+      console.error('[CRAWLER] Champion stats cleanup failed:', error)
     } else {
-      console.log('[CRAWLER] Cleanup complete:', data)
+      console.log('[CRAWLER] Champion stats cleanup complete:', data)
+    }
+
+    // cleanup old scraped_matches entries (older than 30 days)
+    // this is safe because match count is derived from champion_stats, not scraped_matches
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const { error: scrapedError, count } = await supabase
+      .from('scraped_matches')
+      .delete()
+      .lt('scraped_at', thirtyDaysAgo)
+    if (scrapedError) {
+      console.error('[CRAWLER] Scraped matches cleanup failed:', scrapedError)
+    } else {
+      console.log(`[CRAWLER] Scraped matches cleanup complete: deleted ${count ?? 'unknown'} old entries`)
     }
   } catch (err) {
     console.error('[CRAWLER] Cleanup error:', err)
@@ -329,12 +343,12 @@ async function crawlSummoner(
       return { stored: 0, discovered: [], isDry: true }
     }
 
-    // check db in larger batches
+    // check db in larger batches (using lightweight scraped_matches table)
     const existingIds = new Set<string>()
     for (let i = 0; i < potentiallyNewMatchIds.length; i += DB_CHECK_BATCH_SIZE) {
       const batch = potentiallyNewMatchIds.slice(i, i + DB_CHECK_BATCH_SIZE)
       const { data: existingMatches } = await supabase
-        .from('matches')
+        .from('scraped_matches')
         .select('match_id')
         .in('match_id', batch)
 
@@ -417,7 +431,13 @@ async function crawlSummoner(
         const { success, storedCount } = await storeMatchDataBatch(validMatches, region, false)
         if (success) {
           stored += storedCount
-          validMatches.forEach(m => knownMatchIds.add(m.metadata.matchId))
+          const matchIds = validMatches.map(m => m.metadata.matchId)
+          matchIds.forEach(id => knownMatchIds.add(id))
+          
+          // mark matches as scraped in lightweight tracking table
+          await supabase
+            .from('scraped_matches')
+            .upsert(matchIds.map(match_id => ({ match_id })), { onConflict: 'match_id' })
         }
         // small delay between batches
         await sleep(200)
