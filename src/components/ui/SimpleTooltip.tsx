@@ -1,0 +1,184 @@
+'use client'
+
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+
+interface SimpleTooltipProps {
+  content: React.ReactNode
+  children: React.ReactNode
+  position?: 'top' | 'bottom' | 'auto'
+  forceVisible?: boolean
+}
+
+export default function SimpleTooltip({
+  content,
+  children,
+  position = 'auto',
+  forceVisible = false,
+}: SimpleTooltipProps) {
+  const [isHovered, setIsHovered] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+  const [opacity, setOpacity] = useState(0)
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
+  const [actualPosition, setActualPosition] = useState<'top' | 'bottom'>('top')
+  const [mounted, setMounted] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const rafRef = useRef<number | null>(null)
+
+  // wait for client-side mount for portal
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // handle tooltip visibility with gradual fade-in
+  useEffect(() => {
+    if (isHovered) {
+      // start showing at 200ms with opacity 0
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsVisible(true)
+        setOpacity(0)
+        // animate to full opacity over next 300ms
+        fadeTimeoutRef.current = setTimeout(() => {
+          setOpacity(1)
+        }, 10)
+      }, 200)
+    } else {
+      // immediately hide when mouse leaves
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+        hoverTimeoutRef.current = null
+      }
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current)
+        fadeTimeoutRef.current = null
+      }
+      setIsVisible(false)
+      setOpacity(0)
+    }
+
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current)
+      }
+    }
+  }, [isHovered])
+
+  const shouldShow = isVisible || forceVisible
+
+  // memoized update position function
+  const updatePosition = useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const x = rect.left + rect.width / 2
+    
+    // determine position based on available space
+    let finalPosition: 'top' | 'bottom' = position === 'auto' ? 'top' : position
+    
+    if (position === 'auto') {
+      // estimate tooltip height (use actual if available, otherwise estimate)
+      const tooltipHeight = tooltipRef.current?.offsetHeight || 100
+      const spaceAbove = rect.top
+      const spaceBelow = window.innerHeight - rect.bottom
+      
+      // prefer top, but flip to bottom if not enough space above
+      if (spaceAbove < tooltipHeight + 16 && spaceBelow > spaceAbove) {
+        finalPosition = 'bottom'
+      } else {
+        finalPosition = 'top'
+      }
+    }
+    
+    setActualPosition(finalPosition)
+    const y = finalPosition === 'top' ? rect.top : rect.bottom
+    setTooltipPosition({ x, y })
+  }, [position])
+
+  useEffect(() => {
+    if (!shouldShow || !triggerRef.current) return
+
+    updatePosition()
+    
+    // update position after a brief delay to get actual tooltip dimensions
+    const timeoutId = setTimeout(updatePosition, 10)
+    
+    // throttle scroll/resize with requestAnimationFrame
+    const handleScroll = () => {
+      if (rafRef.current) return // already scheduled
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null
+        updatePosition()
+      })
+    }
+    
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true })
+    window.addEventListener('resize', handleScroll, { passive: true })
+
+    return () => {
+      clearTimeout(timeoutId)
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleScroll)
+    }
+  }, [shouldShow, updatePosition])
+
+  const tooltipContent =
+    shouldShow && mounted
+      ? createPortal(
+          <div
+            ref={tooltipRef}
+            className="fixed pointer-events-none"
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`,
+              transform: actualPosition === 'top' ? 'translate(-50%, calc(-100% - 8px))' : 'translate(-50%, 8px)',
+              zIndex: 99999,
+              opacity,
+              transition: 'opacity 300ms ease-out',
+            }}
+          >
+            <div className="bg-abyss-900 border border-gold-dark/80 rounded-lg px-3 py-2 shadow-xl max-w-sm text-xs font-medium text-white text-center">
+              {content}
+            </div>
+            {/* triangle - points down when tooltip is above, points up when tooltip is below */}
+            <div
+              className={`absolute left-1/2 -translate-x-1/2 ${
+                actualPosition === 'top' ? 'top-full -mt-px' : 'bottom-full -mb-px'
+              }`}
+            >
+              <div 
+                className={`border-8 border-transparent ${
+                  actualPosition === 'top' 
+                    ? 'border-t-gold-dark/80' 
+                    : 'border-b-gold-dark/80'
+                }`} 
+              />
+            </div>
+          </div>,
+          document.body
+        )
+      : null
+
+  return (
+    <>
+      <div
+        ref={triggerRef}
+        className="inline-block"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {children}
+      </div>
+      {tooltipContent}
+    </>
+  )
+}

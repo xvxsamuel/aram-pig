@@ -1,23 +1,17 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { League_Spartan } from 'next/font/google'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
-import LoadingBar from '../components/LoadingBar'
-import { LoadingProvider } from '../lib/loading-context'
+import Navbar from '@/components/layout/Navbar'
+import Footer from '@/components/layout/Footer'
+import NextTopLoader from 'nextjs-toploader'
+import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
-const leagueSpartanLight = League_Spartan({
+const leagueSpartan = League_Spartan({
   subsets: ['latin'],
-  weight: '300',
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
   display: 'swap',
-  variable: '--font-light',
-})
-
-const leagueSpartanRegular = League_Spartan({
-  subsets: ['latin'],
-  weight: '400',
-  display: 'swap',
-  variable: '--font-regular',
+  variable: '--font-league-spartan',
 })
 
 export const viewport: Viewport = {
@@ -27,12 +21,14 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://arampig.lol'),
   title: 'ARAM PIG',
-  description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
+  description:
+    'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
   keywords: ['ARAM', 'League of Legends', 'LoL', 'Stats', 'Match History', 'ARAM Stats', 'League Stats'],
   authors: [{ name: 'ARAM PIG' }],
   openGraph: {
     title: 'ARAM PIG - League of Legends ARAM Stats',
-    description: 'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
+    description:
+      'Track your ARAM stats, analyze your performance, and see detailed match history for League of Legends ARAM games.',
     url: 'https://arampig.lol',
     siteName: 'ARAM PIG',
     images: [
@@ -55,7 +51,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     title: 'ARAM PIG',
     capable: true,
-    statusBarStyle: 'default'
+    statusBarStyle: 'default',
   },
   icons: {
     icon: '/favicon.ico',
@@ -63,25 +59,34 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${leagueSpartanLight.variable} ${leagueSpartanRegular.variable}`}>
+    <html lang="en" className={leagueSpartan.variable}>
       <head>
         <link rel="preload" href="/bg.png" as="image" />
+        <link rel="preload" href="/title.svg" as="image" />
       </head>
-      <body className='min-h-screen antialiased font-light flex flex-col'>
-        <LoadingProvider>
-          <Navbar />
-          <LoadingBar />
-          <main className="flex-1" style={{ marginLeft: '64px' }}>
-            {children}
-          </main>
-          <Footer />
-        </LoadingProvider>
+      <body
+        className="min-h-screen antialiased font-light flex flex-col bg-abyss-700 text-white"
+        style={{ fontFamily: 'var(--font-league-spartan), sans-serif' }}
+      >
+        <NextTopLoader
+          color="#2299DD"
+          height={3}
+          showSpinner={false}
+          crawl={true}
+          speed={200}
+          easing="ease"
+          zIndex={9999}
+          shadow={false}
+        />
+        <Navbar />
+        <main className="flex-1 md:ml-[64px]">
+          {children}
+        </main>
+        <Footer />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

@@ -1,0 +1,320 @@
+// unified champion stats api - returns all data for a champion with computed statistics
+// 
+// PRODUCTION OPTIMIZATIONS:
+// - Edge caching: 6hr fresh, 12hr stale-while-revalidate (DB hit once per 6hr per champion)
+// - Minimal column selection: only fetch 'data, games, wins, tier' to reduce payload
+// - Parallel queries: champion stats + total games fetched concurrently
+// - DB indexes: champion_name+patch composite index ensures fast lookups
+// - Response size: ~50-100KB per champion (acceptable for edge cache)
+//
+import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient, getVariance, getStdDev, type WelfordState } from '@/lib/db'
+import { fetchChampionNames, getApiNameFromUrl, getLatestVersion } from '@/lib/ddragon'
+import { getLatestPatches } from '@/lib/game'
+
+// cache for 6 hours, serve stale for 12 hours while revalidating
+// this means DB is only hit once every 6 hours per champion
+// all other requests served instantly from edge cache
+const CACHE_CONTROL = 'public, s-maxage=21600, stale-while-revalidate=43200'
+
+interface GameStats {
+  games: number
+  wins: number
+}
+
+interface ChampionStatsData {
+  games: number
+  wins: number
+  tier?: string
+  championStats?: {
+    sumDamageToChampions: number
+    sumTotalDamage: number
+    sumHealing: number
+    sumShielding: number
+    sumCCTime: number
+    sumGameDuration: number
+    sumDeaths: number
+    welford?: {
+      damageToChampionsPerMin?: WelfordState
+      totalDamagePerMin?: WelfordState
+      healingShieldingPerMin?: WelfordState
+      ccTimePerMin?: WelfordState
+      deathsPerMin?: WelfordState
+    }
+  }
+  items?: Record<string, Record<string, GameStats>>
+  runes?: {
+    primary?: Record<string, GameStats>
+    secondary?: Record<string, GameStats>
+    tertiary?: {
+      offense?: Record<string, GameStats>
+      flex?: Record<string, GameStats>
+      defense?: Record<string, GameStats>
+    }
+    tree?: {
+      primary?: Record<string, GameStats>
+      secondary?: Record<string, GameStats>
+    }
+  }
+  spells?: Record<string, GameStats>
+  starting?: Record<string, GameStats>
+  skills?: Record<string, GameStats>
+  core?: Record<
+    string,
+    {
+      games: number
+      wins: number
+      items?: Record<string, Record<string, GameStats>>
+      runes?: {
+        primary?: Record<string, GameStats>
+        secondary?: Record<string, GameStats>
+      }
+      spells?: Record<string, GameStats>
+      starting?: Record<string, GameStats>
+      skills?: Record<string, GameStats>
+      welford?: {
+        damageToChampionsPerMin?: WelfordState
+        totalDamagePerMin?: WelfordState
+        healingShieldingPerMin?: WelfordState
+        ccTimePerMin?: WelfordState
+        deathsPerMin?: WelfordState
+      }
+    }
+  >
+}
+
+// compute derived stats from welford state
+function computeWelfordStats(welford: WelfordState | undefined) {
+  if (!welford || welford.n < 2) {
+    return { mean: welford?.mean ?? 0, stdDev: 0, variance: 0, sampleSize: welford?.n ?? 0 }
+  }
+  return {
+    mean: welford.mean,
+    stdDev: getStdDev(welford),
+    variance: getVariance(welford),
+    sampleSize: welford.n,
+  }
+}
+
+// sort and limit object entries by games
+function topByGames<T extends GameStats>(
+  obj: Record<string, T> | undefined,
+  limit: number = 10
+): Array<{ key: string; games: number; wins: number; winrate: number }> {
+  if (!obj) return []
+  return Object.entries(obj)
+    .map(([key, val]) => ({
+      key,
+      games: val.games,
+      wins: val.wins,
+      winrate: val.games > 0 ? (val.wins / val.games) * 100 : 0,
+    }))
+    .sort((a, b) => b.games - a.games)
+    .slice(0, limit)
+}
+
+// return all entries sorted by games (no limit)
+function allByGames<T extends GameStats>(
+  obj: Record<string, T> | undefined
+): Array<{ key: string; games: number; wins: number; winrate: number }> {
+  if (!obj) return []
+  return Object.entries(obj)
+    .map(([key, val]) => ({
+      key,
+      games: val.games,
+      wins: val.wins,
+      winrate: val.games > 0 ? (val.wins / val.games) * 100 : 0,
+    }))
+    .sort((a, b) => b.games - a.games)
+}
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ championName: string }> }) {
+  const { championName } = await params
+  const { searchParams } = new URL(request.url)
+  const requestedPatch = searchParams.get('patch')
+
+  // convert URL name to API name
+  const ddragonVersion = await getLatestVersion()
+  const championNames = await fetchChampionNames(ddragonVersion)
+  const apiName = getApiNameFromUrl(championName, championNames) || championName
+
+  const supabase = createAdminClient()
+
+  // if no patch specified, get latest available patches
+  let targetPatch = requestedPatch
+  if (!targetPatch) {
+    const latestPatches = await getLatestPatches(3)
+    targetPatch = latestPatches[0] // most recent patch
+  }
+
+  // fetch champion stats data
+  // games/wins are generated columns from data->>'games' and data->>'wins'
+  const [championResponse, totalGamesCount] = await Promise.all([
+    supabase
+      .from('champion_stats')
+      .select('data, games, wins, last_updated')
+      .eq('champion_name', apiName)
+      .eq('patch', targetPatch)
+      .maybeSingle(),
+    // optimized: just count total games for pickrate calculation
+    supabase
+      .from('champion_stats')
+      .select('games', { count: 'exact', head: false })
+      .eq('patch', targetPatch)
+  ])
+
+  const { data, error } = championResponse
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // calculate total matches for pickrate - use aggregated count
+  const totalParticipants = totalGamesCount.data?.reduce((sum, row) => sum + (row.games || 0), 0) || 0
+  const totalMatches = Math.max(1, totalParticipants / 10)
+
+  if (!data) {
+    // list available patches for this champion
+    const { data: availablePatches } = await supabase
+      .from('champion_stats')
+      .select('patch, games')
+      .eq('champion_name', apiName)
+      .order('patch', { ascending: false })
+
+    return NextResponse.json(
+      {
+        error: 'No data found for this patch',
+        championName,
+        apiName,
+        requestedPatch: targetPatch,
+        availablePatches: availablePatches?.map(p => ({ patch: p.patch, games: p.games })) || [],
+      },
+      { status: 404 }
+    )
+  }
+
+  const rawData = data.data as ChampionStatsData
+  const championStats = rawData.championStats
+  const welford = championStats?.welford
+
+  // use database columns for games/wins (they're computed from JSONB)
+  const totalGames = data.games || 0
+  const totalWins = data.wins || 0
+  const avgGameDuration =
+    totalGames > 0 && championStats?.sumGameDuration
+      ? championStats.sumGameDuration / totalGames / 60 // convert to minutes
+      : 15 // fallback to 15 min average
+
+  // computed averages (per game)
+  const averages = {
+    damageToChampions:
+      totalGames > 0 && championStats?.sumDamageToChampions ? championStats.sumDamageToChampions / totalGames : 0,
+    totalDamage: totalGames > 0 && championStats?.sumTotalDamage ? championStats.sumTotalDamage / totalGames : 0,
+    healing: totalGames > 0 && championStats?.sumHealing ? championStats.sumHealing / totalGames : 0,
+    shielding: totalGames > 0 && championStats?.sumShielding ? championStats.sumShielding / totalGames : 0,
+    healingShielding:
+      totalGames > 0 && championStats ? (championStats.sumHealing + championStats.sumShielding) / totalGames : 0,
+    ccTime: totalGames > 0 && championStats?.sumCCTime ? championStats.sumCCTime / totalGames : 0,
+    deaths: totalGames > 0 && championStats?.sumDeaths ? championStats.sumDeaths / totalGames : 0,
+    gameDuration: avgGameDuration,
+  }
+
+  // computed per-minute stats with Welford statistics
+  const perMinuteStats = {
+    damageToChampionsPerMin: computeWelfordStats(welford?.damageToChampionsPerMin),
+    totalDamagePerMin: computeWelfordStats(welford?.totalDamagePerMin),
+    healingShieldingPerMin: computeWelfordStats(welford?.healingShieldingPerMin),
+    ccTimePerMin: computeWelfordStats(welford?.ccTimePerMin),
+    deathsPerMin: computeWelfordStats(welford?.deathsPerMin),
+  }
+
+  // build response
+  const response = {
+    championName,
+    apiName,
+    patch: targetPatch,
+    tier: rawData.tier || 'COAL',
+    lastUpdated: data.last_updated,
+
+    // basic stats
+    overview: {
+      games: totalGames,
+      wins: totalWins,
+      winrate: totalGames > 0 ? (totalWins / totalGames) * 100 : 0,
+      pickrate: (totalGames / totalMatches) * 100,
+    },
+
+    // computed averages per game
+    averages,
+
+    // per-minute stats with mean, stdDev, variance from Welford's algorithm
+    perMinuteStats,
+
+    // top builds sorted by games
+    topItems: {
+      slot1: allByGames(rawData.items?.['1']),
+      slot2: allByGames(rawData.items?.['2']),
+      slot3: allByGames(rawData.items?.['3']),
+      slot4: allByGames(rawData.items?.['4']),
+      slot5: allByGames(rawData.items?.['5']),
+      slot6: allByGames(rawData.items?.['6']),
+    },
+
+    // top runes - return ALL runes for complete display
+    topRunes: {
+      primary: allByGames(rawData.runes?.primary),
+      secondary: allByGames(rawData.runes?.secondary),
+      statPerks: {
+        offense: allByGames(rawData.runes?.tertiary?.offense),
+        flex: allByGames(rawData.runes?.tertiary?.flex),
+        defense: allByGames(rawData.runes?.tertiary?.defense),
+      },
+      trees: {
+        primary: topByGames(rawData.runes?.tree?.primary, 5),
+        secondary: topByGames(rawData.runes?.tree?.secondary, 5),
+      },
+    },
+
+    // top summoner spells
+    topSpells: topByGames(rawData.spells, 10),
+
+    // top starting items
+    topStarters: allByGames(rawData.starting),
+
+    // top skill orders
+    topSkillOrders: topByGames(rawData.skills, 10),
+
+    // top core item combinations (first 3 items)
+    topCoreBuilds: Object.entries(rawData.core || {})
+      .map(([key, val]) => {
+        const damageStats = computeWelfordStats(val.welford?.damageToChampionsPerMin)
+        return {
+          itemCombo: key,
+          items: key.split('_').map(id => parseInt(id)),
+          games: val.games,
+          wins: val.wins,
+          winrate: val.games > 0 ? (val.wins / val.games) * 100 : 0,
+          pickrate: totalGames > 0 ? (val.games / totalGames) * 100 : 0,
+          stdDev: damageStats.stdDev,
+          variance: damageStats.variance,
+        }
+      })
+      .sort((a, b) => b.games - a.games)
+      .slice(0, 10),
+
+    // raw data for debugging/advanced use
+    raw: {
+      championStats: rawData.championStats,
+      items: rawData.items,
+      runes: rawData.runes,
+      spells: rawData.spells,
+      starting: rawData.starting,
+      skills: rawData.skills,
+      core: rawData.core,
+    },
+  }
+
+  return NextResponse.json(response, {
+    headers: { 'Cache-Control': CACHE_CONTROL },
+  })
+}

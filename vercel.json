@@ -1,0 +1,12 @@
+{
+  "crons": [],
+  "regions": ["fra1"],
+  "functions": {
+    "src/app/api/update-profile/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/**/*.ts": {
+      "maxDuration": 60
+    }
+  }
+}

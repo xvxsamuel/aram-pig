@@ -6,27 +6,50 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "fetch-items": "tsx scripts/fetch-item-data.ts"
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "scraper": "tsx --import ./scripts/load-env.ts scripts/scraper/continuous-scraper.ts",
+    "update-badges": "tsx --import ./scripts/load-env.ts scripts/generate-badge-data.ts",
+    "update-items": "tsx scripts/update-items.ts",
+    "fetch-items": "tsx scripts/update-items.ts --fresh"
   },
   "dependencies": {
     "@fightmegg/riot-api": "^0.0.21",
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.58.0",
     "@upstash/redis": "^1.35.5",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/functions": "^3.3.4",
+    "@vercel/speed-insights": "^1.2.0",
     "clsx": "^2.1.1",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "dotenv": "^17.2.3",
+    "motion": "^12.23.24",
+    "next": "^16.0.10",
+    "nextjs-toploader": "^3.9.17",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "swr": "^2.3.7"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.39.1",
+    "@next/eslint-plugin-next": "^16.0.5",
     "@tailwindcss/postcss": "^4.1.13",
-    "@types/node": "latest",
+    "@types/dotenv": "^6.1.1",
+    "@types/node": "^24.10.1",
     "@types/react": "latest",
+    "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.21",
+    "baseline-browser-mapping": "^2.8.28",
+    "eslint": "9.39.1",
+    "eslint-config-next": "^16.0.10",
+    "eslint-config-prettier": "^10.1.8",
     "postcss": "^8.5.6",
+    "prettier": "^3.7.3",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.20.6",
-    "typescript": "latest"
+    "typescript": "latest",
+    "typescript-eslint": "^8.48.0"
   }
 }

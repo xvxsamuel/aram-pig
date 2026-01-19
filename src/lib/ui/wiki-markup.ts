@@ -1,0 +1,363 @@
+// simple wiki markup parser - convert to plain text with markers first, then to react
+// handles both wiki markup and CDragon HTML tags
+
+export function cleanWikiMarkup(text: string): string {
+  let cleaned = text
+
+  // === CDragon HTML tags (from CommunityDragon API) ===
+  // These are processed FIRST before wiki markup
+  
+  // <attention>VALUE</attention> - highlighted values (numbers, percentages)
+  cleaned = cleaned.replace(/<attention>([^<]+)<\/attention>/g, '<keyword>$1</keyword>')
+  
+  // <stats>content</stats> - stats container, extract content but preserve nested tags
+  cleaned = cleaned.replace(/<stats>([\s\S]*?)<\/stats>/g, '$1')
+  
+  // <mainText>content</mainText> - main description container
+  cleaned = cleaned.replace(/<mainText>([\s\S]*?)<\/mainText>/g, '$1')
+  
+  // <passive>NAME</passive> - passive ability names
+  cleaned = cleaned.replace(/<passive>([^<]+)<\/passive>/g, '<bold>$1</bold>')
+  
+  // <active>NAME</active> - active ability names
+  cleaned = cleaned.replace(/<active>([^<]+)<\/active>/g, '<bold>$1</bold>')
+  
+  // <rarityMythic>text</rarityMythic> - mythic item text
+  cleaned = cleaned.replace(/<rarityMythic>([^<]+)<\/rarityMythic>/g, '<keyword>$1</keyword>')
+  
+  // <rarityLegendary>text</rarityLegendary> - legendary item text
+  cleaned = cleaned.replace(/<rarityLegendary>([^<]+)<\/rarityLegendary>/g, '<keyword>$1</keyword>')
+  
+  // === Wiki markup processing (existing logic) ===
+
+  // '''text''' - bold (three single quotes) - process first before templates
+  cleaned = cleaned.replace(/'''(.+?)'''/g, '<bold>$1</bold>')
+
+  // ''text'' - italic (two single quotes) - process first before templates
+  cleaned = cleaned.replace(/''(.+?)''/g, '<italic>$1</italic>')
+
+  // Remove any leftover unpaired quote markers ('' that didn't match)
+  cleaned = cleaned.replace(/''/g, '')
+
+  // keep replacing nested templates until none left
+  let prevCleaned = ''
+  let iterations = 0
+  while (cleaned !== prevCleaned && cleaned.includes('{{') && iterations < 20) {
+    prevCleaned = cleaned
+    iterations++
+
+    // {{#invoke:...}} - mediawiki module invocation, remove entirely
+    cleaned = cleaned.replace(/\{\{#invoke:[^}]+\}\}/g, '')
+
+    // {{#vardefineecho:varname|value}} - mediawiki variable definition, extract the value
+    cleaned = cleaned.replace(/\{\{#vardefineecho:[^|]+\|([^}]+)\}\}/g, '$1')
+    
+    // {{#var:varname}} - mediawiki variable reference, just remove it (we don't track variables)
+    cleaned = cleaned.replace(/\{\{#var:[^}]+\}\}/g, '')
+
+    // ability power, evaluate math expressions if needed
+    cleaned = cleaned.replace(/\{\{ap\|([^}]+)\}\}/g, (match, value) => {
+      const trimmed = value.trim()
+      // if it's a simple math expression (no spaces), try to evaluate it
+      if (/^[\d.+\-*/]+$/.test(trimmed)) {
+        try {
+          const result = eval(trimmed)
+          return result.toString()
+        } catch {
+          return value
+        }
+      }
+      // if it contains parens and math with spaces like "(60/6)+10", evaluate it
+      if (/^[\d\s+\-*/().]+$/.test(trimmed)) {
+        try {
+          const result = eval(trimmed)
+          return result.toString()
+        } catch {
+          return value
+        }
+      }
+      return value
+    })
+
+    // {{fd|number}} - formatted decimal
+    cleaned = cleaned.replace(/\{\{fd\|([^}]+)\}\}/g, '$1')
+
+    // {{g|value}} - gold with icon
+    cleaned = cleaned.replace(/\{\{g\|([^}]+)\}\}/g, '<gold>$1</gold>')
+
+    // {{rd|range1|range2|levels=...|pp=true}} - complex ratio display with ranges
+    cleaned = cleaned.replace(
+      /\{\{rd\|([^|]+)\s+to\s+([^|]+)\s+for\s+\d+\|([^|]+)\s+to\s+([^|]+)\s+for\s+\d+[^}]*\}\}/g,
+      (match, min1, max1, min2, max2) => {
+        // evaluate math expressions if present
+        const evalSafe = (expr: string): string => {
+          const trimmed = expr.trim()
+          if (/^[\d.+\-*/]+$/.test(trimmed)) {
+            try {
+              return eval(trimmed).toString()
+            } catch {
+              return trimmed
+            }
+          }
+          return trimmed
+        }
+
+        const melee1 = evalSafe(min1)
+        const melee2 = evalSafe(max1)
+        const ranged1 = evalSafe(min2)
+        const ranged2 = evalSafe(max2)
+
+        return `${melee1} – ${melee2} / ${ranged1} – ${ranged2}`
+      }
+    )
+
+    // {{rd|value1|value2}} - simple ratio display
+    cleaned = cleaned.replace(/\{\{rd\|([^}|]+)\|([^}|]+)([^}]*)\}\}/g, '$1 / $2')
+    // {{rd|value}} - single value
+    cleaned = cleaned.replace(/\{\{rd\|([^}|]+)\}\}/g, '$1')
+
+    // {{pp|type=text|values;separated;by;semicolons|range|...}} - extract min/max from semicolon list
+    cleaned = cleaned.replace(/\{\{pp\|type=([^|]+)\|([^|]+)\|[^}]*\}\}/g, (match, type, values) => {
+      const nums = values
+        .split(';')
+        .map((v: string) => parseFloat(v.trim()))
+        .filter((n: number) => !isNaN(n))
+      if (nums.length > 0) {
+        const min = Math.min(...nums)
+        const max = Math.max(...nums)
+        return `${min} – ${max} (based on ${type})`
+      }
+      return values
+    })
+
+    // {{pp|...formula=text...}} - per-level progression
+    cleaned = cleaned.replace(/\{\{pp\|([^}]*?)formula=([^}]+)\}\}/g, '$2')
+
+    // {{pp|min to max ...|...|key=%|color=colorname|type=text|...}} - format with color wrapper
+    cleaned = cleaned.replace(
+      /\{\{pp\|(\d+)\s+to\s+(\d+)\s+[^|]*\|[^|]*\|key=%\|color=([^|}]+)\|type=([^|}]+)(?:\|[^}]*)?\}\}/g,
+      (match, min, max, color, type) => {
+        const content = `${min}% – ${max}% (based on ${type})`
+        return `<${color}>${content}</${color}>`
+      }
+    )
+
+    // {{pp|key=%|0 to X for Y|range|type=text}} - format without color
+    cleaned = cleaned.replace(
+      /\{\{pp\|key=%\|(\d+)\s+to\s+(\d+)\s+for\s+\d+\|[^|]*\|type=([^|}]+)(?:\|[^}]*)?\}\}/g,
+      (match, min, max, type) => {
+        return `${min}% – ${max}% (based on ${type})`
+      }
+    )
+
+    // {{pp|key=%|type=text|values;separated;by;semicolons}} - handle semicolon-separated values with key=%
+    cleaned = cleaned.replace(
+      /\{\{pp\|key=%\|type=([^|]+)\|(\d+);(\d+);(\d+);(\d+)([^}]*)\}\}/g,
+      (match, type, v1, v2, v3, v4) => {
+        const nums = [v1, v2, v3, v4].map(v => parseFloat(v)).filter(n => !isNaN(n))
+        const min = Math.min(...nums)
+        const max = Math.max(...nums)
+        return `${min}% – ${max}% (based on ${type})`
+      }
+    )
+
+    cleaned = cleaned.replace(/\{\{pp\|([^}|]+)([^}]*)\}\}/g, '$1')
+
+    // {{tt|text|tooltip}} - show text only
+    cleaned = cleaned.replace(/\{\{tt\|([^}|]+)\|([^}]*)\}\}/g, '$1')
+
+    // {{ft|text|fallback}} - show first option
+    // Need to handle nested braces - match until we find the last }}
+    cleaned = cleaned.replace(/\{\{ft\|([^|]+?(?:\{\{[^}]+\}\}[^|]*)*)\|[^}]+(?:\{\{[^}]+\}\}[^}]*)*\}\}/g, ' $1 ')
+
+    // {{tip|keyword|icononly=true}} - icon only with special marker
+    cleaned = cleaned.replace(/\{\{tip\|([^}|]+)\|icononly\s*=\s*true\}\}/g, '<tip>$1|||ICONONLY</tip>')
+
+    // {{tip|keyword|display}} - use display text with keyword preserved for icon lookup
+    cleaned = cleaned.replace(/\{\{tip\|([^}|]+)\|([^}]+)\}\}/g, (match, keyword, display) => {
+      if (display.includes('icononly')) return match
+      return `<tip>${keyword}|||${display}</tip>`
+    })
+
+    // {{tip|keyword}} - use keyword with itself as display
+    cleaned = cleaned.replace(/\{\{tip\|([^}]+)\}\}/g, '<tip>$1|||$1</tip>')
+
+    // {{bi|buff name}} - buff icon, just show the buff name
+    cleaned = cleaned.replace(/\{\{bi\|([^}|]+)\|([^}]+)\}\}/g, '<keyword>$2</keyword>')
+    cleaned = cleaned.replace(/\{\{bi\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{ii|item name}} - item icon, just show the item name
+    cleaned = cleaned.replace(/\{\{ii\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{nie|named effect}} - named item effect, show as keyword
+    cleaned = cleaned.replace(/\{\{nie\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{si|spell name}} - summoner spell icon, just show the spell name
+    cleaned = cleaned.replace(/\{\{si\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{ri|rune name}} - rune icon, just show the rune name
+    cleaned = cleaned.replace(/\{\{ri\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{ai|ability|champion|display}} - ability icon with champion and display text, show display text
+    cleaned = cleaned.replace(/\{\{ai\|([^}|]+)\|([^}|]+)\|([^}|]+)\}\}/g, '<keyword>$3</keyword>')
+
+    // {{ai|ability|champion}} - ability icon with champion, show ability name
+    cleaned = cleaned.replace(/\{\{ai\|([^}|]+)\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{cai|ability|champion}} - champion ability icon, show ability name
+    cleaned = cleaned.replace(/\{\{cai\|([^}|]+)\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{ais|ability|champion}} - ability icon with champion (possessive), show ability name
+    cleaned = cleaned.replace(/\{\{ais\|([^}|]+)\|([^}|]+)\}\}/g, "<keyword>$1</keyword>'s")
+
+    // {{cis|champion}} - champion icon small, show champion name
+    cleaned = cleaned.replace(/\{\{cis\|([^}|]+)\}\}/g, '<keyword>$1</keyword>')
+
+    // {{sbc|label:}} - stat block category (bold label)
+    cleaned = cleaned.replace(/\{\{sbc\|([^}]+)\}\}/g, '<bold>$1</bold>')
+
+    // {{ccs|text|type}} - colored text with type, extract the text
+    cleaned = cleaned.replace(/\{\{ccs\|([^}|]+)\|([^}|]+)\}\}/g, '$1')
+
+    // {{sti|type|content}} or {{ai|type|content}} - stat/ability icon with two parameters
+    cleaned = cleaned.replace(/\{\{(?:sti|ai)\|([^}|]+)\|([^}]+)\}\}/g, (match, type, content) => {
+      const lower = type.toLowerCase()
+      // map stat types to their colored markers
+      if (lower === 'cdr' || lower === 'ability haste') return `<haste>${content}</haste>`
+      if (lower === 'ad' || lower === 'attack damage') return `<ad>${content}</ad>`
+      if (lower === 'ap' || lower === 'ability power') return `<ap>${content}</ap>`
+      if (lower === 'health' || lower === 'hp') return `<health>${content}</health>`
+      if (lower === 'mana' || lower === 'mp') return `<mana>${content}</mana>`
+      if (lower === 'armor') return `<armor>${content}</armor>`
+      if (lower === 'magic resistance' || lower === 'mr') return `<mr>${content}</mr>`
+      if (lower === 'movement speed' || lower === 'ms') return `<ms>${content}</ms>`
+      if (lower.includes('heal') || lower.includes('shield')) return `<heal>${content}</heal>`
+      return `<keyword>${content}</keyword>`
+    })
+
+    // {{sti|text}} or {{ai|text}} - stat/ability icon (single param fallback)
+    // Use .+? to match content that may contain nested tags like <health>...</health>
+    cleaned = cleaned.replace(/\{\{(?:sti|ai)\|(.+?)\}\}/g, '$1')
+
+    // {{stil|text}} - stat icon link, color based on stat type
+    cleaned = cleaned.replace(/\{\{stil\|([^}|]+)\}\}/g, (match, content) => {
+      const lower = content.toLowerCase()
+      if (lower.includes('heal') || lower.includes('shield')) return `<heal>${content}</heal>`
+      if (lower.includes('health') || lower.includes('regeneration')) return `<health>${content}</health>`
+      return `<keyword>${content}</keyword>`
+    })
+
+    // process single-parameter {{as|text}} templates
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\}\}/g, (match, content) => {
+      const lower = content.toLowerCase()
+
+      // check for multi-word phrases first
+      if (lower.includes('magic resistance')) return `<mr>${content}</mr>`
+      if (lower.includes('magic damage')) return `<magic>${content}</magic>`
+      if (lower.includes('physical damage')) return `<ad-bonus>${content}</ad-bonus>`
+      if (lower.includes('attack damage')) return `<ad>${content}</ad>`
+      if (lower.includes('ability power')) return `<ap>${content}</ap>`
+      if (lower.includes('lethality')) return `<ad>${content}</ad>`
+      if (lower.includes('omnivamp')) return `<vamp>${content}</vamp>`
+
+      // then check for single words at the end
+      const words = lower
+        .replace(/[()%]/g, '')
+        .trim()
+        .split(/\s+/)
+      const lastWord = words[words.length - 1]
+
+      if (lastWord === 'health' || lastWord === 'hp') return `<health>${content}</health>`
+      if (lastWord === 'mana' || lastWord === 'mp') return `<mana>${content}</mana>`
+      if (lastWord === 'armor') return `<armor>${content}</armor>`
+      if (lastWord === 'mr') return `<mr>${content}</mr>`
+      if (lastWord === 'ap') return `<ap>${content}</ap>`
+      if (lastWord === 'ad') return `<ad>${content}</ad>`
+      if (lastWord === 'magic') return `<magic>${content}</magic>`
+
+      return content
+    })
+
+    // then process {{as|text|type}} templates (two parameters)
+
+    // simple content first
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|true damage\}\}/gi, '<true>$1</true>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|magic damage\}\}/gi, '<magic>$1</magic>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|physical damage\}\}/gi, '<ad-bonus>$1</ad-bonus>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|ad\}\}/gi, '<ad>$1</ad>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|ap\}\}/gi, '<ap>$1</ap>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:health|hp)\}\}/gi, '<health>$1</health>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:mana|mp)\}\}/gi, '<mana>$1</mana>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|armor\}\}/gi, '<armor>$1</armor>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:magic resistance|mr)\}\}/gi, '<mr>$1</mr>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:healing|heal|shield|shielding|hsp)\}\}/gi, '<heal>$1</heal>')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|(?:movement speed|ms)\}\}/gi, '<ms>$1</ms>')
+
+    // {{as|text|buzzword...}} - special highlight text, just show the text (handles nested <bold> tags)
+    cleaned = cleaned.replace(/\{\{as\|(<bold>.*?<\/bold>)\|buzzword\d*\}\}/gi, '$1')
+    cleaned = cleaned.replace(/\{\{as\|([^}|]+)\|buzzword\d*\}\}/gi, '<keyword>$1</keyword>')
+
+    // nested content (with markers)
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|magic damage\}\}/gi, '<magic>$1</magic>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|physical damage\}\}/gi, '<ad-bonus>$1</ad-bonus>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|ad\}\}/gi, '<ad>$1</ad>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|ap\}\}/gi, '<ap>$1</ap>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:health|hp)\}\}/gi, '<health>$1</health>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:mana|mp)\}\}/gi, '<mana>$1</mana>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|armor\}\}/gi, '<armor>$1</armor>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:magic resistance|mr)\}\}/gi, '<mr>$1</mr>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:healing|heal|shield|shielding|hsp)\}\}/gi, '<heal>$1</heal>')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|(?:movement speed|ms)\}\}/gi, '<ms>$1</ms>')
+    cleaned = cleaned.replace(/\{\{as\|(<bold>.*?<\/bold>)\|buzzword\d*\}\}/gi, '$1')
+    cleaned = cleaned.replace(/\{\{as\|(.+?)\|buzzword\d*\}\}/gi, '$1')
+
+    // remove any remaining {{}} templates
+    cleaned = cleaned.replace(/\{\{([^}]+)\}\}/g, '')
+  }
+
+  // process [[link]] brackets AFTER the loop
+  // [[File:...]] - remove file/image references
+  cleaned = cleaned.replace(/\[\[File:[^\]]+\]\]/g, '')
+  // [[link|text]] - show text
+  cleaned = cleaned.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2')
+  // [[on-hit]] and [[on-attack]] - convert to keyword with icon
+  cleaned = cleaned.replace(/\[\[(on-hit|on-attack)\]\]/g, '<keyword>$1</keyword>')
+  // [[link]] - show link
+  cleaned = cleaned.replace(/\[\[([^\]]+)\]\]/g, '$1')
+  
+  // [text] - single bracket links, just show the text
+  cleaned = cleaned.replace(/\[([^\]]+)\]/g, '$1')
+
+  // process plain text rd - add melee/ranged icons
+  // first handle "range – range / range – range" patterns
+  cleaned = cleaned.replace(
+    /(\d+\.?\d*)\s*–\s*(\d+\.?\d*)\s*\/\s*(\d+\.?\d*)\s*–\s*(\d+\.?\d*)/g,
+    '<rd><tip>melee|||ICONONLY</tip> $1 – $2 / <tip>ranged|||ICONONLY</tip> $3 – $4</rd>'
+  )
+
+  // then handle simple "number / number" patterns
+  cleaned = cleaned.replace(
+    /\b(\d+\.?\d*%?)\s*\/\s*(\d+\.?\d*%?)\b/g,
+    '<rd><tip>melee|||ICONONLY</tip> $1 / <tip>ranged|||ICONONLY</tip> $2</rd>'
+  )
+
+  // remove leading ": " (wiki markup indentation)
+  cleaned = cleaned.replace(/^:\s+/gm, '')
+
+  // remove HTML comments
+  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '')
+
+  // convert HTML list tags to readable format
+  cleaned = cleaned.replace(/<ul>/gi, '\n')
+  cleaned = cleaned.replace(/<\/ul>/gi, '\n')
+  cleaned = cleaned.replace(/<li>/gi, '• ')
+  cleaned = cleaned.replace(/<\/li>/gi, '\n')
+
+  // convert <br> tags to newlines
+  cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n')
+
+  // clean up multiple consecutive newlines
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n')
+
+  return cleaned
+}

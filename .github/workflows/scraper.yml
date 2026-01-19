@@ -1,0 +1,156 @@
+name: Match Scraper
+
+on:
+  # run 2x per night EU time (~2100 min/month with 35min runs)
+  # 04:00 UTC = 05:00 CET, 06:00 UTC = 07:00 CET
+  schedule:
+    - cron: '0 4 * * *'
+    - cron: '0 6 * * *'
+  # allow manual trigger
+  workflow_dispatch:
+    inputs:
+      reset_state:
+        description: 'Reset scraper state before running'
+        required: false
+        default: false
+        type: boolean
+      duration_minutes:
+        description: 'How long to run the scraper (minutes)'
+        required: false
+        default: '35'
+        type: string
+
+env:
+  RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+  SCRAPER_THROTTLE: '50'
+  USE_REDIS_RATE_LIMIT: 'true'
+  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check if paused
+        env:
+          PAUSED: ${{ secrets.SCRAPER_PAUSED }}
+        run: |
+          if [ "$PAUSED" = "true" ]; then
+            echo "Scraper is PAUSED - set SCRAPER_PAUSED secret to empty or remove it to resume"
+            exit 1
+          fi
+          echo "Scraper is active"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore scraper state from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            scripts/scraper-state.json
+            scripts/match-cache.json
+          key: scraper-state-latest
+          restore-keys: |
+            scraper-state-
+
+      - name: Reset scraper state (if requested)
+        if: ${{ github.event.inputs.reset_state == 'true' }}
+        run: rm -f scripts/scraper-state.json scripts/match-cache.json
+
+      - name: Show initial state
+        run: |
+          echo "========================================"
+          echo "Scraper State Before Run"
+          echo "========================================"
+          if [ -f scripts/scraper-state.json ]; then
+            echo "State file exists:"
+            cat scripts/scraper-state.json | jq '.stacks | to_entries | map({region: .key, stack_size: (.value | length)})' 2>/dev/null || echo "Could not parse state"
+          else
+            echo "No state file - will start fresh with default seeds"
+          fi
+          echo "========================================"
+
+      - name: Run scraper
+        run: |
+          DURATION=${{ github.event.inputs.duration_minutes || '35' }}
+          echo "========================================"
+          echo "Starting scraper for ${DURATION} minutes"
+          echo "SCRAPER_THROTTLE=${SCRAPER_THROTTLE}"
+          echo "Time: $(date -u)"
+          echo "========================================"
+
+          # Run scraper with timeout
+          timeout ${DURATION}m npm run scraper || EXIT_CODE=$?
+
+          if [ "${EXIT_CODE:-0}" -eq 124 ]; then
+            echo "Scraper stopped by timeout (expected behavior)"
+          elif [ "${EXIT_CODE:-0}" -ne 0 ]; then
+            echo "Scraper exited with code $EXIT_CODE"
+          fi
+
+          echo "========================================"
+          echo "Scraper finished at $(date -u)"
+          echo "========================================"
+
+      - name: Delete old cache
+        if: always() && hashFiles('scripts/scraper-state.json') != ''
+        continue-on-error: true
+        run: gh cache delete scraper-state-latest || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save scraper state to cache
+        uses: actions/cache/save@v4
+        if: always() && hashFiles('scripts/scraper-state.json') != ''
+        with:
+          path: |
+            scripts/scraper-state.json
+            scripts/match-cache.json
+          key: scraper-state-latest
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "========================================"
+          echo "SCRAPER RUN SUMMARY"
+          echo "========================================"
+
+          # Extract total matches from the last summary in logs (grep from npm output)
+          echo ""
+          echo "Match Statistics:"
+          if [ -f scripts/match-cache.json ]; then
+            MATCH_COUNT=$(cat scripts/match-cache.json | jq 'length' 2>/dev/null || echo "0")
+            echo "  Known matches in cache: $MATCH_COUNT"
+          fi
+
+          echo ""
+          echo "State by Region:"
+          if [ -f scripts/scraper-state.json ]; then
+            cat scripts/scraper-state.json | jq -r '.stacks | to_entries[] | "  \(.key): \(.value | length) in stack"' 2>/dev/null || echo "  Could not parse stacks"
+            echo ""
+            cat scripts/scraper-state.json | jq -r '.visited | to_entries[] | "  \(.key): \(.value | length) visited"' 2>/dev/null || echo "  Could not parse visited"
+          else
+            echo "  WARNING: No scraper state file found"
+          fi
+
+          echo ""
+          echo "========================================"

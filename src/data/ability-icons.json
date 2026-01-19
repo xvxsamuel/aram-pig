@@ -1,0 +1,1206 @@
+{
+  "Aatrox": {
+    "P": "Aatrox_Passive.png",
+    "Q": "AatroxQ.png",
+    "W": "AatroxW.png",
+    "E": "AatroxE.png",
+    "R": "AatroxR.png"
+  },
+  "Ahri": {
+    "P": "Ahri_SoulEater2.png",
+    "Q": "AhriQ.png",
+    "W": "AhriW.png",
+    "E": "AhriE.png",
+    "R": "AhriR.png"
+  },
+  "Akali": {
+    "P": "Akali_P.png",
+    "Q": "AkaliQ.png",
+    "W": "AkaliW.png",
+    "E": "AkaliE.png",
+    "R": "AkaliR.png"
+  },
+  "Akshan": {
+    "P": "akshan_p.png",
+    "Q": "AkshanQ.png",
+    "W": "AkshanW.png",
+    "E": "AkshanE.png",
+    "R": "AkshanR.png"
+  },
+  "Alistar": {
+    "P": "Alistar_E.png",
+    "Q": "Pulverize.png",
+    "W": "Headbutt.png",
+    "E": "AlistarE.png",
+    "R": "FerociousHowl.png"
+  },
+  "Ambessa": {
+    "P": "Icon_Ambessa_Passive.Domina.png",
+    "Q": "AmbessaQ.png",
+    "W": "AmbessaW.png",
+    "E": "AmbessaE.png",
+    "R": "AmbessaR.png"
+  },
+  "Amumu": {
+    "P": "Amumu_Passive.png",
+    "Q": "BandageToss.png",
+    "W": "AuraofDespair.png",
+    "E": "Tantrum.png",
+    "R": "CurseoftheSadMummy.png"
+  },
+  "Anivia": {
+    "P": "Anivia_P.png",
+    "Q": "FlashFrost.png",
+    "W": "Crystallize.png",
+    "E": "Frostbite.png",
+    "R": "GlacialStorm.png"
+  },
+  "Annie": {
+    "P": "Annie_Passive.png",
+    "Q": "AnnieQ.png",
+    "W": "AnnieW.png",
+    "E": "AnnieE.png",
+    "R": "AnnieR.png"
+  },
+  "Aphelios": {
+    "P": "ApheliosP.png",
+    "Q": "ApheliosQ_ClientTooltipWrapper.png",
+    "W": "ApheliosW.png",
+    "E": "ApheliosE_ClientTooltipWrapper.png",
+    "R": "ApheliosR.png"
+  },
+  "Ashe": {
+    "P": "Ashe_P.png",
+    "Q": "AsheQ.png",
+    "W": "Volley.png",
+    "E": "AsheSpiritOfTheHawk.png",
+    "R": "EnchantedCrystalArrow.png"
+  },
+  "AurelionSol": {
+    "P": "AurelionSolP.png",
+    "Q": "AurelionSolQ.png",
+    "W": "AurelionSolW.png",
+    "E": "AurelionSolE.png",
+    "R": "AurelionSolR.png"
+  },
+  "Aurora": {
+    "P": "AuroraPassive.Aurora.png",
+    "Q": "AuroraQ.png",
+    "W": "AuroraW.png",
+    "E": "AuroraE.png",
+    "R": "AuroraR.png"
+  },
+  "Azir": {
+    "P": "Azir_Passive.png",
+    "Q": "AzirQWrapper.png",
+    "W": "AzirW.png",
+    "E": "AzirEWrapper.png",
+    "R": "AzirR.png"
+  },
+  "Bard": {
+    "P": "Bard_Passive.png",
+    "Q": "BardQ.png",
+    "W": "BardW.png",
+    "E": "BardE.png",
+    "R": "BardR.png"
+  },
+  "Belveth": {
+    "P": "Belveth_Passive.png",
+    "Q": "BelvethQ.png",
+    "W": "BelvethW.png",
+    "E": "BelvethE.png",
+    "R": "BelvethR.png"
+  },
+  "Blitzcrank": {
+    "P": "Blitzcrank_ManaBarrier.png",
+    "Q": "RocketGrab.png",
+    "W": "Overdrive.png",
+    "E": "PowerFist.png",
+    "R": "StaticField.png"
+  },
+  "Brand": {
+    "P": "BrandP.png",
+    "Q": "BrandQ.png",
+    "W": "BrandW.png",
+    "E": "BrandE.png",
+    "R": "BrandR.png"
+  },
+  "Braum": {
+    "P": "Braum_Passive.png",
+    "Q": "BraumQ.png",
+    "W": "BraumW.png",
+    "E": "BraumE.png",
+    "R": "BraumRWrapper.png"
+  },
+  "Briar": {
+    "P": "BriarP.png",
+    "Q": "BriarQ.png",
+    "W": "BriarW.png",
+    "E": "BriarE.png",
+    "R": "BriarR.png"
+  },
+  "Caitlyn": {
+    "P": "Caitlyn_Headshot.png",
+    "Q": "CaitlynQ.png",
+    "W": "CaitlynW.png",
+    "E": "CaitlynE.png",
+    "R": "CaitlynR.png"
+  },
+  "Camille": {
+    "P": "Camille_Passive.png",
+    "Q": "CamilleQ.png",
+    "W": "CamilleW.png",
+    "E": "CamilleE.png",
+    "R": "CamilleR.png"
+  },
+  "Cassiopeia": {
+    "P": "Cassiopeia_Passive.png",
+    "Q": "CassiopeiaQ.png",
+    "W": "CassiopeiaW.png",
+    "E": "CassiopeiaE.png",
+    "R": "CassiopeiaR.png"
+  },
+  "Chogath": {
+    "P": "GreenTerror_TailSpike.png",
+    "Q": "Rupture.png",
+    "W": "FeralScream.png",
+    "E": "VorpalSpikes.png",
+    "R": "Feast.png"
+  },
+  "Corki": {
+    "P": "Corki_RapidReload.png",
+    "Q": "PhosphorusBomb.png",
+    "W": "CarpetBomb.png",
+    "E": "GGun.png",
+    "R": "MissileBarrage.png"
+  },
+  "Darius": {
+    "P": "Darius_Icon_Hemorrhage.png",
+    "Q": "DariusCleave.png",
+    "W": "DariusNoxianTacticsONH.png",
+    "E": "DariusAxeGrabCone.png",
+    "R": "DariusExecute.png"
+  },
+  "Diana": {
+    "P": "Diana_Passive_LunarBlade.png",
+    "Q": "DianaQ.png",
+    "W": "DianaOrbs.png",
+    "E": "DianaTeleport.png",
+    "R": "DianaR.png"
+  },
+  "Draven": {
+    "P": "Draven_passive.png",
+    "Q": "DravenSpinning.png",
+    "W": "DravenFury.png",
+    "E": "DravenDoubleShot.png",
+    "R": "DravenRCast.png"
+  },
+  "DrMundo": {
+    "P": "DrMundo_P.png",
+    "Q": "DrMundoQ.png",
+    "W": "DrMundoW.png",
+    "E": "DrMundoE.png",
+    "R": "DrMundoR.png"
+  },
+  "Ekko": {
+    "P": "Ekko_P.png",
+    "Q": "EkkoQ.png",
+    "W": "EkkoW.png",
+    "E": "EkkoE.png",
+    "R": "EkkoR.png"
+  },
+  "Elise": {
+    "P": "ElisePassive.png",
+    "Q": "EliseHumanQ.png",
+    "W": "EliseHumanW.png",
+    "E": "EliseHumanE.png",
+    "R": "EliseR.png"
+  },
+  "Evelynn": {
+    "P": "Evelynn_Passive.png",
+    "Q": "EvelynnQ.png",
+    "W": "EvelynnW.png",
+    "E": "EvelynnE.png",
+    "R": "EvelynnR.png"
+  },
+  "Ezreal": {
+    "P": "Ezreal_RisingSpellForce.png",
+    "Q": "EzrealQ.png",
+    "W": "EzrealW.png",
+    "E": "EzrealE.png",
+    "R": "EzrealR.png"
+  },
+  "Fiddlesticks": {
+    "P": "FiddlesticksP.png",
+    "Q": "FiddleSticksQ.png",
+    "W": "FiddleSticksW.png",
+    "E": "FiddleSticksE.png",
+    "R": "FiddleSticksR.png"
+  },
+  "Fiora": {
+    "P": "Fiora_P.png",
+    "Q": "FioraQ.png",
+    "W": "FioraW.png",
+    "E": "FioraE.png",
+    "R": "FioraR.png"
+  },
+  "Fizz": {
+    "P": "Fizz_P.png",
+    "Q": "FizzQ.png",
+    "W": "FizzW.png",
+    "E": "FizzE.png",
+    "R": "FizzR.png"
+  },
+  "Galio": {
+    "P": "Galio_Passive.png",
+    "Q": "GalioQ.png",
+    "W": "GalioW.png",
+    "E": "GalioE.png",
+    "R": "GalioR.png"
+  },
+  "Gangplank": {
+    "P": "Gangplank_Passive.png",
+    "Q": "GangplankQWrapper.png",
+    "W": "GangplankW.png",
+    "E": "GangplankE.png",
+    "R": "GangplankR.png"
+  },
+  "Garen": {
+    "P": "Garen_Passive.png",
+    "Q": "GarenQ.png",
+    "W": "GarenW.png",
+    "E": "GarenE.png",
+    "R": "GarenR.png"
+  },
+  "Gnar": {
+    "P": "Gnar_Passive.png",
+    "Q": "GnarQ.png",
+    "W": "GnarW.png",
+    "E": "GnarE.png",
+    "R": "GnarR.png"
+  },
+  "Gragas": {
+    "P": "GragasPassiveHeal.png",
+    "Q": "GragasQ.png",
+    "W": "GragasW.png",
+    "E": "GragasE.png",
+    "R": "GragasR.png"
+  },
+  "Graves": {
+    "P": "GravesTrueGrit.png",
+    "Q": "GravesQLineSpell.png",
+    "W": "GravesSmokeGrenade.png",
+    "E": "GravesMove.png",
+    "R": "GravesChargeShot.png"
+  },
+  "Gwen": {
+    "P": "Gwen_Passive.png",
+    "Q": "GwenQ.png",
+    "W": "GwenW.png",
+    "E": "GwenE.png",
+    "R": "GwenR.png"
+  },
+  "Hecarim": {
+    "P": "Hecarim_Passive.png",
+    "Q": "HecarimRapidSlash.png",
+    "W": "HecarimW.png",
+    "E": "HecarimRamp.png",
+    "R": "HecarimUlt.png"
+  },
+  "Heimerdinger": {
+    "P": "Heimerdinger_Passive.png",
+    "Q": "HeimerdingerQ.png",
+    "W": "HeimerdingerW.png",
+    "E": "HeimerdingerE.png",
+    "R": "HeimerdingerR.png"
+  },
+  "Hwei": {
+    "P": "HweiPassive.png",
+    "Q": "HweiQ.png",
+    "W": "HweiW.png",
+    "E": "HweiE.png",
+    "R": "HweiR.png"
+  },
+  "Illaoi": {
+    "P": "Illaoi_P.png",
+    "Q": "IllaoiQ.png",
+    "W": "IllaoiW.png",
+    "E": "IllaoiE.png",
+    "R": "IllaoiR.png"
+  },
+  "Irelia": {
+    "P": "Irelia_Passive.png",
+    "Q": "IreliaQ.png",
+    "W": "IreliaW.png",
+    "E": "IreliaE.png",
+    "R": "IreliaR.png"
+  },
+  "Ivern": {
+    "P": "IvernP.png",
+    "Q": "IvernQ.png",
+    "W": "IvernW.png",
+    "E": "IvernE.png",
+    "R": "IvernR.png"
+  },
+  "Janna": {
+    "P": "JannaP.png",
+    "Q": "HowlingGale.png",
+    "W": "SowTheWind.png",
+    "E": "EyeOfTheStorm.png",
+    "R": "ReapTheWhirlwind.png"
+  },
+  "JarvanIV": {
+    "P": "JarvanIVP.png",
+    "Q": "JarvanIVDragonStrike.png",
+    "W": "JarvanIVGoldenAegis.png",
+    "E": "JarvanIVDemacianStandard.png",
+    "R": "JarvanIVCataclysm.png"
+  },
+  "Jax": {
+    "P": "Armsmaster_MasterOfArms.png",
+    "Q": "JaxQ.png",
+    "W": "JaxW.png",
+    "E": "JaxE.png",
+    "R": "JaxR.png"
+  },
+  "Jayce": {
+    "P": "Jayce_Passive.png",
+    "Q": "JayceToTheSkies.png",
+    "W": "JayceStaticField.png",
+    "E": "JayceThunderingBlow.png",
+    "R": "JayceStanceHtG.png"
+  },
+  "Jhin": {
+    "P": "Jhin_P.png",
+    "Q": "JhinQ.png",
+    "W": "JhinW.png",
+    "E": "JhinE.png",
+    "R": "JhinR.png"
+  },
+  "Jinx": {
+    "P": "Jinx_Passive.png",
+    "Q": "JinxQ.png",
+    "W": "JinxW.png",
+    "E": "JinxE.png",
+    "R": "JinxR.png"
+  },
+  "Kaisa": {
+    "P": "Kaisa_Passive.png",
+    "Q": "KaisaQ.png",
+    "W": "KaisaW.png",
+    "E": "KaisaE.png",
+    "R": "KaisaR.png"
+  },
+  "Kalista": {
+    "P": "Kalista_Passive.png",
+    "Q": "KalistaMysticShot.png",
+    "W": "KalistaW.png",
+    "E": "KalistaExpungeWrapper.png",
+    "R": "KalistaRx.png"
+  },
+  "Karma": {
+    "P": "Karma_Passive.png",
+    "Q": "KarmaQ.png",
+    "W": "KarmaSpiritBind.png",
+    "E": "KarmaSolKimShield.png",
+    "R": "KarmaMantra.png"
+  },
+  "Karthus": {
+    "P": "Karthus_Passive.png",
+    "Q": "KarthusLayWasteA1.png",
+    "W": "KarthusWallOfPain.png",
+    "E": "KarthusDefile.png",
+    "R": "KarthusFallenOne.png"
+  },
+  "Kassadin": {
+    "P": "Kassadin_Passive.png",
+    "Q": "NullLance.png",
+    "W": "NetherBlade.png",
+    "E": "ForcePulse.png",
+    "R": "RiftWalk.png"
+  },
+  "Katarina": {
+    "P": "Katarina_Passive.png",
+    "Q": "KatarinaQ.png",
+    "W": "KatarinaW.png",
+    "E": "KatarinaEWrapper.png",
+    "R": "KatarinaR.png"
+  },
+  "Kayle": {
+    "P": "Kayle_P.png",
+    "Q": "KayleQ.png",
+    "W": "KayleW.png",
+    "E": "KayleE.png",
+    "R": "KayleR.png"
+  },
+  "Kayn": {
+    "P": "Kayn_Passive_Primary.png",
+    "Q": "KaynQ.png",
+    "W": "KaynW.png",
+    "E": "KaynE.png",
+    "R": "KaynR.png"
+  },
+  "Kennen": {
+    "P": "Kennen_Passive.png",
+    "Q": "KennenShurikenHurlMissile1.png",
+    "W": "KennenBringTheLight.png",
+    "E": "KennenLightningRush.png",
+    "R": "KennenShurikenStorm.png"
+  },
+  "Khazix": {
+    "P": "Khazix_P.png",
+    "Q": "KhazixQ.png",
+    "W": "KhazixW.png",
+    "E": "KhazixE.png",
+    "R": "KhazixR.png"
+  },
+  "Kindred": {
+    "P": "Kindred_Passive.png",
+    "Q": "KindredQ.png",
+    "W": "KindredW.png",
+    "E": "KindredEWrapper.png",
+    "R": "KindredR.png"
+  },
+  "Kled": {
+    "P": "Kled_P.png",
+    "Q": "KledQ.png",
+    "W": "KledW.png",
+    "E": "KledE.png",
+    "R": "KledR.png"
+  },
+  "KogMaw": {
+    "P": "KogMaw_IcathianSurprise.png",
+    "Q": "KogMawQ.png",
+    "W": "KogMawBioArcaneBarrage.png",
+    "E": "KogMawVoidOoze.png",
+    "R": "KogMawLivingArtillery.png"
+  },
+  "KSante": {
+    "P": "Icons_KSante_P.png",
+    "Q": "KSanteQ.png",
+    "W": "KSanteW.png",
+    "E": "KSanteE.png",
+    "R": "KSanteR.png"
+  },
+  "Leblanc": {
+    "P": "LeblancP.Leblanc_Rework.png",
+    "Q": "LeblancQ.png",
+    "W": "LeblancW.png",
+    "E": "LeblancE.png",
+    "R": "LeblancR.png"
+  },
+  "LeeSin": {
+    "P": "LeeSinPassive.png",
+    "Q": "LeeSinQOne.png",
+    "W": "LeeSinWOne.png",
+    "E": "LeeSinEOne.png",
+    "R": "LeeSinR.png"
+  },
+  "Leona": {
+    "P": "LeonaSunlight.png",
+    "Q": "LeonaShieldOfDaybreak.png",
+    "W": "LeonaSolarBarrier.png",
+    "E": "LeonaZenithBlade.png",
+    "R": "LeonaSolarFlare.png"
+  },
+  "Lillia": {
+    "P": "Lillia_Icon_Passive.png",
+    "Q": "LilliaQ.png",
+    "W": "LilliaW.png",
+    "E": "LilliaE.png",
+    "R": "LilliaR.png"
+  },
+  "Lissandra": {
+    "P": "Lissandra_Passive.png",
+    "Q": "LissandraQ.png",
+    "W": "LissandraW.png",
+    "E": "LissandraE.png",
+    "R": "LissandraR.png"
+  },
+  "Lucian": {
+    "P": "Lucian_Passive.png",
+    "Q": "LucianQ.png",
+    "W": "LucianW.png",
+    "E": "LucianE.png",
+    "R": "LucianR.png"
+  },
+  "Lulu": {
+    "P": "Lulu_PixFaerieCompanion.png",
+    "Q": "LuluQ.png",
+    "W": "LuluW.png",
+    "E": "LuluE.png",
+    "R": "LuluR.png"
+  },
+  "Lux": {
+    "P": "LuxIlluminatingFraulein.png",
+    "Q": "LuxLightBinding.png",
+    "W": "LuxPrismaticWave.png",
+    "E": "LuxLightStrikeKugel.png",
+    "R": "LuxR.png"
+  },
+  "Malphite": {
+    "P": "Malphite_GraniteShield.png",
+    "Q": "SeismicShard.png",
+    "W": "Obduracy.png",
+    "E": "Landslide.png",
+    "R": "UFSlash.png"
+  },
+  "Malzahar": {
+    "P": "Malzahar_Passive.png",
+    "Q": "MalzaharQ.png",
+    "W": "MalzaharW.png",
+    "E": "MalzaharE.png",
+    "R": "MalzaharR.png"
+  },
+  "Maokai": {
+    "P": "Maokai_Passive.png",
+    "Q": "MaokaiQ.png",
+    "W": "MaokaiW.png",
+    "E": "MaokaiE.png",
+    "R": "MaokaiR.png"
+  },
+  "MasterYi": {
+    "P": "MasterYi_Passive1.png",
+    "Q": "AlphaStrike.png",
+    "W": "Meditate.png",
+    "E": "WujuStyle.png",
+    "R": "Highlander.png"
+  },
+  "Mel": {
+    "P": "Mel_Passive.png",
+    "Q": "MelQ.png",
+    "W": "MelW.png",
+    "E": "MelE.png",
+    "R": "MelR.png"
+  },
+  "Milio": {
+    "P": "Milio_P.png",
+    "Q": "MilioQ.png",
+    "W": "MilioW.png",
+    "E": "MilioE.png",
+    "R": "MilioR.png"
+  },
+  "MissFortune": {
+    "P": "MissFortune_W.png",
+    "Q": "MissFortuneRicochetShot.png",
+    "W": "MissFortuneViciousStrikes.png",
+    "E": "MissFortuneScattershot.png",
+    "R": "MissFortuneBulletTime.png"
+  },
+  "MonkeyKing": {
+    "P": "MonkeyKingStoneSkin.png",
+    "Q": "MonkeyKingDoubleAttack.png",
+    "W": "MonkeyKingDecoy.png",
+    "E": "MonkeyKingNimbus.png",
+    "R": "MonkeyKingSpinToWin.png"
+  },
+  "Mordekaiser": {
+    "P": "MordekaiserPassive.png",
+    "Q": "MordekaiserQ.png",
+    "W": "MordekaiserW.png",
+    "E": "MordekaiserE.png",
+    "R": "MordekaiserR.png"
+  },
+  "Morgana": {
+    "P": "FallenAngel_Empathize.png",
+    "Q": "MorganaQ.png",
+    "W": "MorganaW.png",
+    "E": "MorganaE.png",
+    "R": "MorganaR.png"
+  },
+  "Naafiri": {
+    "P": "Icons_Naafiri_P.png",
+    "Q": "NaafiriQ.png",
+    "W": "NaafiriR.png",
+    "E": "NaafiriE.png",
+    "R": "NaafiriW.png"
+  },
+  "Nami": {
+    "P": "NamiPassive.png",
+    "Q": "NamiQ.png",
+    "W": "NamiW.png",
+    "E": "NamiE.png",
+    "R": "NamiR.png"
+  },
+  "Nasus": {
+    "P": "Nasus_Passive.png",
+    "Q": "NasusQ.png",
+    "W": "NasusW.png",
+    "E": "NasusE.png",
+    "R": "NasusR.png"
+  },
+  "Nautilus": {
+    "P": "Nautilus_StaggeringBlow.png",
+    "Q": "NautilusAnchorDrag.png",
+    "W": "NautilusPiercingGaze.png",
+    "E": "NautilusSplashZone.png",
+    "R": "NautilusGrandLine.png"
+  },
+  "Neeko": {
+    "P": "Neeko_P.png",
+    "Q": "NeekoQ.png",
+    "W": "NeekoW.png",
+    "E": "NeekoE.png",
+    "R": "NeekoR.png"
+  },
+  "Nidalee": {
+    "P": "Nidalee_Passive.png",
+    "Q": "JavelinToss.png",
+    "W": "Bushwhack.png",
+    "E": "PrimalSurge.png",
+    "R": "AspectOfTheCougar.png"
+  },
+  "Nilah": {
+    "P": "NIlahP.png",
+    "Q": "NilahQ.png",
+    "W": "NilahW.png",
+    "E": "NilahE.png",
+    "R": "NilahR.png"
+  },
+  "Nocturne": {
+    "P": "Nocturne_UmbraBlades.png",
+    "Q": "NocturneDuskbringer.png",
+    "W": "NocturneShroudofDarkness.png",
+    "E": "NocturneUnspeakableHorror.png",
+    "R": "NocturneParanoia.png"
+  },
+  "Nunu": {
+    "P": "NunuPassive.png",
+    "Q": "NunuQ.png",
+    "W": "NunuW.png",
+    "E": "NunuE.png",
+    "R": "NunuR.png"
+  },
+  "Olaf": {
+    "P": "Olaf_Passive.png",
+    "Q": "OlafAxeThrowCast.png",
+    "W": "OlafFrenziedStrikes.png",
+    "E": "OlafRecklessStrike.png",
+    "R": "OlafRagnarok.png"
+  },
+  "Orianna": {
+    "P": "OriannaPassive.png",
+    "Q": "OrianaIzunaCommand.png",
+    "W": "OrianaDissonanceCommand.png",
+    "E": "OrianaRedactCommand.png",
+    "R": "OrianaDetonateCommand.png"
+  },
+  "Ornn": {
+    "P": "OrnnP.png",
+    "Q": "OrnnQ.png",
+    "W": "OrnnW.png",
+    "E": "OrnnE.png",
+    "R": "OrnnR.png"
+  },
+  "Pantheon": {
+    "P": "Pantheon_Passive.png",
+    "Q": "PantheonQ.png",
+    "W": "PantheonW.png",
+    "E": "PantheonE.png",
+    "R": "PantheonR.png"
+  },
+  "Poppy": {
+    "P": "Poppy_Passive.png",
+    "Q": "PoppyQ.png",
+    "W": "PoppyW.png",
+    "E": "PoppyE.png",
+    "R": "PoppyR.png"
+  },
+  "Pyke": {
+    "P": "PykePassive.png",
+    "Q": "PykeQ.png",
+    "W": "PykeW.png",
+    "E": "PykeE.png",
+    "R": "PykeR.png"
+  },
+  "Qiyana": {
+    "P": "Qiyana_Passive.png",
+    "Q": "QiyanaQ.png",
+    "W": "QiyanaW.png",
+    "E": "QiyanaE.png",
+    "R": "QiyanaR.png"
+  },
+  "Quinn": {
+    "P": "Quinn_Passive.png",
+    "Q": "QuinnQ.png",
+    "W": "QuinnW.png",
+    "E": "QuinnE.png",
+    "R": "QuinnR.png"
+  },
+  "Rakan": {
+    "P": "Rakan_P.png",
+    "Q": "RakanQ.png",
+    "W": "RakanW.png",
+    "E": "RakanE.png",
+    "R": "RakanR.png"
+  },
+  "Rammus": {
+    "P": "Armordillo_ScavengeArmor.png",
+    "Q": "PowerBall.png",
+    "W": "DefensiveBallCurl.png",
+    "E": "PuncturingTaunt.png",
+    "R": "Tremors2.png"
+  },
+  "RekSai": {
+    "P": "RekSai_Passive.png",
+    "Q": "RekSaiQ.png",
+    "W": "RekSaiW.png",
+    "E": "RekSaiE.png",
+    "R": "RekSaiR.png"
+  },
+  "Rell": {
+    "P": "RellP.png",
+    "Q": "RellQ.png",
+    "W": "RellW_Dismount.png",
+    "E": "RellE.png",
+    "R": "RellR.png"
+  },
+  "Renata": {
+    "P": "Renata_P.png",
+    "Q": "RenataQ.png",
+    "W": "RenataW.png",
+    "E": "RenataE.png",
+    "R": "RenataR.png"
+  },
+  "Renekton": {
+    "P": "Renekton_Passive.png",
+    "Q": "RenektonCleave.png",
+    "W": "RenektonPreExecute.png",
+    "E": "RenektonSliceAndDice.png",
+    "R": "RenektonReignOfTheTyrant.png"
+  },
+  "Rengar": {
+    "P": "Rengar_P.png",
+    "Q": "RengarQ.png",
+    "W": "RengarW.png",
+    "E": "RengarE.png",
+    "R": "RengarR.png"
+  },
+  "Riven": {
+    "P": "RivenRunicBlades.png",
+    "Q": "RivenTriCleave.png",
+    "W": "RivenMartyr.png",
+    "E": "RivenFeint.png",
+    "R": "RivenFengShuiEngine.png"
+  },
+  "Rumble": {
+    "P": "Rumble_JunkyardTitan1.png",
+    "Q": "RumbleFlameThrower.png",
+    "W": "RumbleShield.png",
+    "E": "RumbleGrenade.png",
+    "R": "RumbleCarpetBomb.png"
+  },
+  "Ryze": {
+    "P": "Ryze_P.png",
+    "Q": "RyzeQWrapper.png",
+    "W": "RyzeW.png",
+    "E": "RyzeE.png",
+    "R": "RyzeR.png"
+  },
+  "Samira": {
+    "P": "SamiraP.png",
+    "Q": "SamiraQ.png",
+    "W": "SamiraW.png",
+    "E": "SamiraE.png",
+    "R": "SamiraR.png"
+  },
+  "Sejuani": {
+    "P": "Sejuani_passive.png",
+    "Q": "SejuaniQ.png",
+    "W": "SejuaniW.png",
+    "E": "SejuaniE.png",
+    "R": "SejuaniR.png"
+  },
+  "Senna": {
+    "P": "Senna_Passive.png",
+    "Q": "SennaQ.png",
+    "W": "SennaW.png",
+    "E": "SennaE.png",
+    "R": "SennaR.png"
+  },
+  "Seraphine": {
+    "P": "Seraphine_Passive.png",
+    "Q": "SeraphineQ.png",
+    "W": "SeraphineW.png",
+    "E": "SeraphineE.png",
+    "R": "SeraphineR.png"
+  },
+  "Sett": {
+    "P": "Sett_P.png",
+    "Q": "SettQ.png",
+    "W": "SettW.png",
+    "E": "SettE.png",
+    "R": "SettR.png"
+  },
+  "Shaco": {
+    "P": "Jester_CarefulStrikes.png",
+    "Q": "Deceive.png",
+    "W": "JackInTheBox.png",
+    "E": "TwoShivPoison.png",
+    "R": "HallucinateFull.png"
+  },
+  "Shen": {
+    "P": "Shen_Passive.png",
+    "Q": "ShenQ.png",
+    "W": "ShenW.png",
+    "E": "ShenE.png",
+    "R": "ShenR.png"
+  },
+  "Shyvana": {
+    "P": "ShyvanaReinforcedScales.png",
+    "Q": "ShyvanaDoubleAttack.png",
+    "W": "ShyvanaImmolationAura.png",
+    "E": "ShyvanaFireball.png",
+    "R": "ShyvanaTransformCast.png"
+  },
+  "Singed": {
+    "P": "Singed_Passive.png",
+    "Q": "PoisonTrail.png",
+    "W": "MegaAdhesive.png",
+    "E": "Fling.png",
+    "R": "InsanityPotion.png"
+  },
+  "Sion": {
+    "P": "Sion_Passive1.png",
+    "Q": "SionQ.png",
+    "W": "SionW.png",
+    "E": "SionE.png",
+    "R": "SionR.png"
+  },
+  "Sivir": {
+    "P": "Sivir_Passive.png",
+    "Q": "SivirQ.png",
+    "W": "SivirW.png",
+    "E": "SivirE.png",
+    "R": "SivirR.png"
+  },
+  "Skarner": {
+    "P": "Skarner_Passive.png",
+    "Q": "SkarnerQ.png",
+    "W": "SkarnerW.png",
+    "E": "SkarnerE.png",
+    "R": "SkarnerR.png"
+  },
+  "Smolder": {
+    "P": "Icons_Smolder_Passive.png",
+    "Q": "SmolderQ.png",
+    "W": "SmolderW.png",
+    "E": "SmolderE.png",
+    "R": "SmolderR.png"
+  },
+  "Sona": {
+    "P": "Sona_Passive_Charged.png",
+    "Q": "SonaQ.png",
+    "W": "SonaW.png",
+    "E": "SonaE.png",
+    "R": "SonaR.png"
+  },
+  "Soraka": {
+    "P": "Soraka_Passive.png",
+    "Q": "SorakaQ.png",
+    "W": "SorakaW.png",
+    "E": "SorakaE.png",
+    "R": "SorakaR.png"
+  },
+  "Swain": {
+    "P": "Swain_P.png",
+    "Q": "SwainQ.png",
+    "W": "SwainW.png",
+    "E": "SwainE.png",
+    "R": "SwainR.png"
+  },
+  "Sylas": {
+    "P": "SylasP.png",
+    "Q": "SylasQ.png",
+    "W": "SylasW.png",
+    "E": "SylasE.png",
+    "R": "SylasR.png"
+  },
+  "Syndra": {
+    "P": "SyndraPassive.png",
+    "Q": "SyndraQ.png",
+    "W": "SyndraW.png",
+    "E": "SyndraE.png",
+    "R": "SyndraR.png"
+  },
+  "TahmKench": {
+    "P": "TahmKenchP.png",
+    "Q": "TahmKenchQ.png",
+    "W": "TahmKenchW.png",
+    "E": "TahmKenchE.png",
+    "R": "TahmKenchRWrapper.png"
+  },
+  "Taliyah": {
+    "P": "Taliyah_Passive.png",
+    "Q": "TaliyahQ.png",
+    "W": "TaliyahWVC.png",
+    "E": "TaliyahE.png",
+    "R": "TaliyahR.png"
+  },
+  "Talon": {
+    "P": "TalonP.png",
+    "Q": "TalonQ.png",
+    "W": "TalonW.png",
+    "E": "TalonE.png",
+    "R": "TalonR.png"
+  },
+  "Taric": {
+    "P": "Taric_Passive.png",
+    "Q": "TaricQ.png",
+    "W": "TaricW.png",
+    "E": "TaricE.png",
+    "R": "TaricR.png"
+  },
+  "Teemo": {
+    "P": "TeemoPassive.ASU_Teemo.png",
+    "Q": "TeemoQ.png",
+    "W": "TeemoW.png",
+    "E": "TeemoE.png",
+    "R": "TeemoR.png"
+  },
+  "Thresh": {
+    "P": "Thresh_Passive.png",
+    "Q": "ThreshQ.png",
+    "W": "ThreshW.png",
+    "E": "ThreshE.png",
+    "R": "ThreshRPenta.png"
+  },
+  "Tristana": {
+    "P": "Tristana_Passive.png",
+    "Q": "TristanaQ.png",
+    "W": "TristanaW.png",
+    "E": "TristanaE.png",
+    "R": "TristanaR.png"
+  },
+  "Trundle": {
+    "P": "Trundle_Passive.png",
+    "Q": "TrundleTrollSmash.png",
+    "W": "trundledesecrate.png",
+    "E": "TrundleCircle.png",
+    "R": "TrundlePain.png"
+  },
+  "Tryndamere": {
+    "P": "Tryndamere_Passive.png",
+    "Q": "TryndamereQ.png",
+    "W": "TryndamereW.png",
+    "E": "TryndamereE.png",
+    "R": "UndyingRage.png"
+  },
+  "TwistedFate": {
+    "P": "Cardmaster_SealFate.png",
+    "Q": "WildCards.png",
+    "W": "PickACard.png",
+    "E": "CardmasterStack.png",
+    "R": "Destiny.png"
+  },
+  "Twitch": {
+    "P": "Twitch_Passive.png",
+    "Q": "TwitchHideInShadows.png",
+    "W": "TwitchVenomCask.png",
+    "E": "TwitchExpunge.png",
+    "R": "TwitchFullAutomatic.png"
+  },
+  "Udyr": {
+    "P": "Udyr_P.png",
+    "Q": "UdyrQ.png",
+    "W": "UdyrW.png",
+    "E": "UdyrE.png",
+    "R": "UdyrR.png"
+  },
+  "Urgot": {
+    "P": "Urgot_Passive.png",
+    "Q": "UrgotQ.png",
+    "W": "UrgotW.png",
+    "E": "UrgotE.png",
+    "R": "UrgotR.png"
+  },
+  "Varus": {
+    "P": "VarusPassive.png",
+    "Q": "VarusQ.png",
+    "W": "VarusW.png",
+    "E": "VarusE.png",
+    "R": "VarusR.png"
+  },
+  "Vayne": {
+    "P": "Vayne_NightHunter.png",
+    "Q": "VayneTumble.png",
+    "W": "VayneSilveredBolts.png",
+    "E": "VayneCondemn.png",
+    "R": "VayneInquisition.png"
+  },
+  "Veigar": {
+    "P": "VeigarEntropy.png",
+    "Q": "VeigarBalefulStrike.png",
+    "W": "VeigarDarkMatter.png",
+    "E": "VeigarEventHorizon.png",
+    "R": "VeigarR.png"
+  },
+  "Velkoz": {
+    "P": "VelKoz_Passive.png",
+    "Q": "VelkozQ.png",
+    "W": "VelkozW.png",
+    "E": "VelkozE.png",
+    "R": "VelkozR.png"
+  },
+  "Vex": {
+    "P": "Icons_Vex_Passive.png",
+    "Q": "VexQ.png",
+    "W": "VexW.png",
+    "E": "VexE.png",
+    "R": "VexR.png"
+  },
+  "Vi": {
+    "P": "ViPassive.png",
+    "Q": "ViQ.png",
+    "W": "ViW.png",
+    "E": "ViE.png",
+    "R": "ViR.png"
+  },
+  "Viego": {
+    "P": "Viego_Passive.png",
+    "Q": "ViegoQ.png",
+    "W": "ViegoW.png",
+    "E": "ViegoE.png",
+    "R": "ViegoR.png"
+  },
+  "Viktor": {
+    "P": "Viktor_Passive.ViktorVGU.png",
+    "Q": "ViktorQ.png",
+    "W": "ViktorW.png",
+    "E": "ViktorE.png",
+    "R": "ViktorR.png"
+  },
+  "Vladimir": {
+    "P": "VladimirP.png",
+    "Q": "VladimirQ.png",
+    "W": "VladimirSanguinePool.png",
+    "E": "VladimirE.png",
+    "R": "VladimirHemoplague.png"
+  },
+  "Volibear": {
+    "P": "Volibear_Icon_P.png",
+    "Q": "VolibearQ.png",
+    "W": "VolibearW.png",
+    "E": "VolibearE.png",
+    "R": "VolibearR.png"
+  },
+  "Warwick": {
+    "P": "WarwickP.png",
+    "Q": "WarwickQ.png",
+    "W": "WarwickW.png",
+    "E": "WarwickE.png",
+    "R": "WarwickR.png"
+  },
+  "Xayah": {
+    "P": "XayahPassive.png",
+    "Q": "XayahQ.png",
+    "W": "XayahW.png",
+    "E": "XayahE.png",
+    "R": "XayahR.png"
+  },
+  "Xerath": {
+    "P": "Xerath_Passive1.png",
+    "Q": "XerathArcanopulseChargeUp.png",
+    "W": "XerathArcaneBarrage2.png",
+    "E": "XerathMageSpear.png",
+    "R": "XerathLocusOfPower2.png"
+  },
+  "XinZhao": {
+    "P": "XinZhaoReworkP.XinZhaoRework.png",
+    "Q": "XinZhaoQ.png",
+    "W": "XinZhaoW.png",
+    "E": "XinZhaoE.png",
+    "R": "XinZhaoR.png"
+  },
+  "Yasuo": {
+    "P": "Yasuo_Passive.png",
+    "Q": "YasuoQ1Wrapper.png",
+    "W": "YasuoW.png",
+    "E": "YasuoE.png",
+    "R": "YasuoR.png"
+  },
+  "Yone": {
+    "P": "YonePassive.png",
+    "Q": "YoneQ.png",
+    "W": "YoneW.png",
+    "E": "YoneE.png",
+    "R": "YoneR.png"
+  },
+  "Yorick": {
+    "P": "Yorick_P.png",
+    "Q": "YorickQ.png",
+    "W": "YorickW.png",
+    "E": "YorickE.png",
+    "R": "YorickR.png"
+  },
+  "Yunara": {
+    "P": "Yunara_Passive.Yunara.png",
+    "Q": "YunaraQ.png",
+    "W": "YunaraW.png",
+    "E": "YunaraE.png",
+    "R": "YunaraR.png"
+  },
+  "Yuumi": {
+    "P": "YuumiP2.png",
+    "Q": "YuumiQ.png",
+    "W": "YuumiW.png",
+    "E": "YuumiE.png",
+    "R": "YuumiR.png"
+  },
+  "Zaahen": {
+    "P": "ZaahenP.Zaahen.png",
+    "Q": "ZaahenQ.png",
+    "W": "ZaahenW.png",
+    "E": "ZaahenE.png",
+    "R": "ZaahenR.png"
+  },
+  "Zac": {
+    "P": "ZacPassive.png",
+    "Q": "ZacQ.png",
+    "W": "ZacW.png",
+    "E": "ZacE.png",
+    "R": "ZacR.png"
+  },
+  "Zed": {
+    "P": "ZedP.png",
+    "Q": "ZedQ.png",
+    "W": "ZedW.png",
+    "E": "ZedE.png",
+    "R": "ZedR.png"
+  },
+  "Zeri": {
+    "P": "ZeriP.png",
+    "Q": "ZeriQ.png",
+    "W": "ZeriW.png",
+    "E": "ZeriE.png",
+    "R": "ZeriR.png"
+  },
+  "Ziggs": {
+    "P": "ZiggsPassiveReady.png",
+    "Q": "ZiggsQ.png",
+    "W": "ZiggsW.png",
+    "E": "ZiggsE.png",
+    "R": "ZiggsR.png"
+  },
+  "Zilean": {
+    "P": "Zilean_Passive.png",
+    "Q": "ZileanQ.png",
+    "W": "ZileanW.png",
+    "E": "TimeWarp.png",
+    "R": "ChronoShift.png"
+  },
+  "Zoe": {
+    "P": "Zoe_P.png",
+    "Q": "ZoeQ.png",
+    "W": "ZoeW.png",
+    "E": "ZoeE.png",
+    "R": "ZoeR.png"
+  },
+  "Zyra": {
+    "P": "ZyraP.png",
+    "Q": "ZyraQ.png",
+    "W": "ZyraW.png",
+    "E": "ZyraE.png",
+    "R": "ZyraR.png"
+  }
+}

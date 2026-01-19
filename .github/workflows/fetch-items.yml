@@ -1,0 +1,63 @@
+name: Update Items Data
+
+on:
+  # run on new patch (weekly check)
+  schedule:
+    - cron: '0 8 * * 3' # Wednesday 8am UTC
+  # allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  update-items:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update items from CDragon
+        id: update
+        run: |
+          npx tsx scripts/update-items.ts
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ "${{ steps.update.outputs.exit_code }}" = "0" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'chore: update items.json from Community Dragon'
+          title: 'Update Items Data (CDragon)'
+          body: |
+            Automated update of items.json from Community Dragon.
+            
+            This PR was created automatically when a new patch was detected.
+            
+            Changes may include:
+            - New items added
+            - Item stats/costs updated
+            - Removed/disabled items
+            
+            Please review the changes before merging.
+          branch: update-items-data
+          delete-branch: true
+          labels: 'data, automated'

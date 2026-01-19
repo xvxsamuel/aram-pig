@@ -1,0 +1,153 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import type { UpdateJobProgress } from '@/types/update-jobs'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+
+interface Props {
+  job: UpdateJobProgress
+  region?: string
+  notifyEnabled: boolean
+  onNotifyChange: (enabled: boolean) => void
+}
+
+export default function FetchMessage({ job, region: _region, notifyEnabled, onNotifyChange }: Props) {
+  const [notifyError, setNotifyError] = useState<string | null>(null)
+  const hasStartedFetching = job.totalMatches > 0
+
+  // Calculate ETA based on actual progress speed
+  const eta = useMemo(() => {
+    if (!hasStartedFetching || !job.startedAt) return null
+
+    const remaining = job.totalMatches - job.fetchedMatches
+    if (remaining <= 0) return 0
+
+    // If we have actual progress, calculate based on actual speed
+    if (job.fetchedMatches > 0) {
+      const elapsedMs = Date.now() - new Date(job.startedAt).getTime()
+      const elapsedSeconds = elapsedMs / 1000
+
+      // Calculate actual rate (matches per second)
+      let rate = job.fetchedMatches / elapsedSeconds
+
+      // CAP THE RATE:
+      // We know the Riot API limit is ~100 requests / 2 minutes (0.83 req/s).
+      // With the scraper running, we effectively get much less (maybe 20-30%).
+      // So we should never project a speed faster than ~0.25 matches/sec (4s/match) for large jobs
+      // to avoid "1 min remaining" -> "10 mins remaining" jumps.
+      if (job.totalMatches > 20) {
+        const MAX_SUSTAINABLE_RATE = 0.25 
+        rate = Math.min(rate, MAX_SUSTAINABLE_RATE)
+      }
+
+      // Estimate remaining time
+      if (rate > 0) {
+        return Math.ceil(remaining / rate)
+      }
+    }
+
+    // Fallback: estimate based on ~4 seconds per match (conservative)
+    return Math.ceil(remaining * 4)
+  }, [hasStartedFetching, job.startedAt, job.fetchedMatches, job.totalMatches])
+
+  // Only show notify option if the total job size is large enough (> 50 matches)
+  // We use totalMatches instead of ETA so the button doesn't disappear as the job nears completion
+  const showNotifyOption = job.totalMatches > 50
+
+  const formatEta = (seconds: number) => {
+    if (seconds < 60) return `~${seconds}s`
+    const mins = Math.ceil(seconds / 60)
+    return `~${mins}m`
+  }
+
+  const handleNotifyToggle = () => {
+    if (!notifyEnabled) {
+      // trying to enable - request permission
+      if (!('Notification' in window)) {
+        setNotifyError('Notifications not supported in this browser.')
+        return
+      }
+
+      if (Notification.permission === 'granted') {
+        setNotifyError(null)
+        onNotifyChange(true)
+      } else if (Notification.permission === 'denied') {
+        setNotifyError('Notifications blocked. Enable them in browser settings.')
+      } else {
+        // use callback style for better firefox compatibility
+        // firefox requires this to be called directly from user gesture
+        Notification.requestPermission()
+          .then(permission => {
+            if (permission === 'granted') {
+              setNotifyError(null)
+              onNotifyChange(true)
+            } else if (permission === 'denied') {
+              setNotifyError('Notifications blocked. Enable them in browser settings.')
+            } else {
+              setNotifyError('Notification permission was dismissed.')
+            }
+          })
+          .catch(() => {
+            setNotifyError('Failed to request notification permissions.')
+          })
+      }
+    } else {
+      // disabling
+      setNotifyError(null)
+      onNotifyChange(false)
+    }
+  }
+
+  return (
+    <div className="mb-6 rounded-lg p-px bg-gradient-to-b from-gold-light to-gold-dark" style={{ minHeight: '80px' }}>
+      <div className="bg-abyss-800 rounded-[inherit] px-4.5 py-4">
+        <div className="flex items-center gap-4">
+          <LoadingSpinner size={40} bgColor="bg-abyss-800" />
+
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold mb-1">Our pigs are digging through this match history...</h2>
+            {hasStartedFetching && (
+              <p className="text-sm text-white mb-1">
+                {job.fetchedMatches} / {job.totalMatches} matches loaded ({job.progressPercentage}%)
+                {eta !== null && eta > 0 && ` • ETA: ${formatEta(eta)}`}
+              </p>
+            )}
+            <p className="text-xs text-text-muted mb-2">
+              This may take a few minutes due to Riot API limits. The page will automatically refresh when complete.
+            </p>
+
+            {hasStartedFetching && showNotifyOption && (
+              <>
+                <label className="flex items-end gap-2 cursor-pointer select-none">
+                  <div className="relative w-4 h-4 flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={notifyEnabled}
+                      onChange={handleNotifyToggle}
+                      className="peer appearance-none w-4 h-4 rounded border border-gold-light bg-transparent cursor-pointer outline-none focus:outline-none focus:ring-0"
+                    />
+                    <svg
+                      className="absolute inset-0 w-4 h-4 pointer-events-none opacity-0 peer-checked:opacity-100 text-accent-light"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                    >
+                      <path
+                        d="M4 8l3 3 5-6"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-xs text-gold-light leading-none pb-px">Notify me when complete</span>
+                </label>
+                {notifyError && <p className="text-xs text-text-muted mt-1">{notifyError}</p>}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

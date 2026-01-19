@@ -1,0 +1,690 @@
+{
+  "Yunara": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Malzahar": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Rell": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Ezreal": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Heimerdinger": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Jayce": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Kalista": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Lillia": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Qiyana": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Gangplank": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "LeeSin": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Trundle": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Camille": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Sejuani": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Pyke": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Udyr": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Ambessa": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "XinZhao": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Kled": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Evelynn": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Yone": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Vladimir": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Gwen": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Aphelios": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Kindred": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Lissandra": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Senna": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Amumu": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Katarina": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "TwistedFate": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Aurora": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Yasuo": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Alistar": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Kassadin": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Samira": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Poppy": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Zed": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Zoe": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Zeri": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "RekSai": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Jinx": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Olaf": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Rammus": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "AurelionSol": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Tristana": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "MasterYi": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Talon": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Soraka": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Khazix": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Darius": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Naafiri": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Sion": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Xerath": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Hecarim": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Orianna": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "FiddleSticks": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Shaco": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Xayah": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Chogath": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Galio": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Zac": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Aatrox": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Hwei": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Tryndamere": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Gragas": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Elise": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Lucian": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Syndra": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Nilah": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Yorick": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Neeko": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Rengar": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Garen": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Brand": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Yuumi": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Nocturne": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Karthus": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Renekton": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Vex": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Leblanc": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Annie": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Draven": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Cassiopeia": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Swain": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Varus": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "MissFortune": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Warwick": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Corki": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Taliyah": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Nidalee": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Malphite": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Viktor": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Illaoi": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Volibear": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Braum": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Lulu": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Sylas": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Fiora": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Ryze": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Kayn": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Riven": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Graves": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Janna": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Quinn": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Ornn": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Sivir": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Akali": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "KSante": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Jhin": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Ahri": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Teemo": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Caitlyn": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "KogMaw": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Karma": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Kaisa": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Fizz": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Viego": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Lux": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Nami": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Vi": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Gnar": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Renata": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Skarner": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Ekko": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Jax": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Twitch": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Ivern": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Mordekaiser": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Rakan": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Pantheon": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Leona": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Rumble": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Irelia": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Kayle": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Nunu": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Maokai": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Sett": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Thresh": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Shyvana": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Sona": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Taric": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Akshan": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Blitzcrank": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Briar": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "MonkeyKing": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Ashe": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Vayne": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Azir": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Urgot": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Zyra": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Bard": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Singed": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Mel": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Nautilus": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Milio": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "JarvanIV": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "TahmKench": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "DrMundo": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Diana": {
+    "heartsteel": true,
+    "malignance": false
+  },
+  "Belveth": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Smolder": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Kennen": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Velkoz": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Zilean": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Ziggs": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Seraphine": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Morgana": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Veigar": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Zaahen": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Anivia": {
+    "heartsteel": false,
+    "malignance": true
+  },
+  "Nasus": {
+    "heartsteel": false,
+    "malignance": false
+  },
+  "Shen": {
+    "heartsteel": false,
+    "malignance": false
+  }
+}

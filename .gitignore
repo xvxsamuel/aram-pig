@@ -1,4 +1,4 @@
-# Logs
+# logs
 logs
 *.log
 npm-debug.log*
@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -23,10 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 
+.github/instructions
 .next
-.github
 next-env.d.ts
 dist
 supabase
-scripts
 docs
+
+# scraper state files
+scripts/scraper/scraper-state.json
+scripts/scraper/match-cache.json

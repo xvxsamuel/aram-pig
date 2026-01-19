@@ -1,109 +1,336 @@
 @import 'tailwindcss';
 
-@font-face {
-    font-family: 'Amiamie';
-    src: url('/fonts/amiamie-black.woff') format('woff');
-    font-weight: 900;
-    font-style: normal;
-    font-display: block;
-}
-
 @theme {
-    --color-accent-light: oklch(0.6537 0.118 223.64);
-    --color-accent-dark: oklch(0.3699 0.0866 245.06);
-    --color-accent-r-light: oklch(0.4522 0.0979 239.18);
-    --color-accent-r-dark: oklch(0.3728 0.0874 244.31);
-    --color-accent-darkest: oklch(0.2088 0.051 245.06); /* names don't correspond because i swapped them around lol */
-    --color-accent-darker: oklch(0.1653 0.0352 240.46); 
-    --color-gold-light: oklch(0.7975 0.0627 90.79);
-    --color-gold-dark: oklch(0.4713 0.0697 81.41);
-    --color-subtitle: oklch(0.7412 0 0);
-    --color-negative: #E84057;
-    --font-family-light: var(--font-light);
-    --font-family-title: var(--font-regular);
-    --font-family-amiamie: 'Amiamie', sans-serif;
-    
-    /* tooltip description colors */
-    --tooltip-ad: #ffaa55;
-    --tooltip-ad-bonus: #ff8844;
-    --tooltip-health: #389641;
-    --tooltip-mana: #5588ff;
-    --tooltip-armor: #ffdd33;
-    --tooltip-mr: #66bbff;
-    --tooltip-ms: #99ff66;
-    --tooltip-magic: #aa88ff;
-    --tooltip-heal: #3fdd64;
-    --tooltip-gold: #d4af37;
-    --tooltip-vamp: #c41e3a;
+  --font-family-light: var(--font-league-spartan);
+  --font-family-title: var(--font-league-spartan);
+  
+  --color-text-muted: oklch(74.763% 0.00008 271.152);
+
+  --color-accent-light: oklch(0.6537 0.118 223.64);
+  --color-accent-dark: oklch(0.3699 0.0866 245.06);
+
+  --color-action-200: oklch(0.4522 0.0979 239.18);
+  --color-action-100: oklch(0.3728 0.0874 244.31);
+
+  --color-abyss-900: oklch(0.1385 0.0277 240.35);
+  --color-abyss-800: oklch(0.125 0.05 245.06);
+  --color-abyss-700: oklch(0.15 0.05 245.06);
+  --color-abyss-600: oklch(0.175 0.05 245.06);
+  --color-abyss-500: oklch(0.2 0.05 245.06);
+  --color-abyss-400: oklch(0.25 0.05 245.06);
+  --color-abyss-300: oklch(0.3 0.05 245.06);
+  --color-abyss-200: oklch(0.35 0.05 245.06);
+
+  --color-gold-light: oklch(0.7975 0.0627 90.79);
+  --color-gold-dark: oklch(0.4713 0.0697 81.41);
+
+  --color-augment-silver: oklch(75% 0.02 240);
+  --color-augment-prismatic: oklch(91.332% 0.06636 318.884);
+
+  --color-negative: oklch(62.451% 0.20324 17.952);
+  --color-negative-dark: oklch(35.119% 0.08205 13.484);
+  --color-worst-dark: oklch(18.096% 0.03814 18.802);
+  --color-worst-darker: oklch(13.276% 0.03423 17.025);
+  --color-warning: oklch(75% 0.18 70);
+  --color-loss: oklch(33.809% 0.04742 13.776);
+  --color-loss-light: oklch(40% 0.05 13.776);
+  --color-win: oklch(33.989% 0.0559 265.681);
+  --color-win-light: oklch(40% 0.065 265.681);
+  --color-remake: oklch(34.846% 0.00004 271.152);
+  --color-remake-light: oklch(40% 0.00004 271.152);
+  --color-victory: oklch(70% 0.15 265.681);
+  --color-defeat: oklch(65% 0.18 17.952);
+
+  --color-kda-3: oklch(0.897 0.123 164.65);
+  --color-kda-3-dark: oklch(39.833% 0.09609 149.532);
+  --color-kda-4: oklch(76.839% 0.09573 309.482);
+  --color-kda-4-dark: oklch(0.3865 0.1824 286.634);
+  --color-kda-5: oklch(72.69% 0.17193 36.338);
+  --color-kda-5-dark: oklch(30.07% 0.11341 27.517);
+
+  /* tier border colors */
+  --color-tier-splus: oklch(92.025% 0.15984 99.274);
+  --color-tier-splus-dark: oklch(82.663% 0.15997 77.552);
+  --color-tier-d: oklch(60.68% 0.0687 57.417);
+  --color-tier-d-dark: oklch(37.143% 0.04838 60.522);
+  --color-tier-coal: oklch(56.926% 0.00006 271.152);
+  --color-tier-coal-dark: oklch(30.919% 0.00004 271.152);
+
+
+  /* tooltip colors */
+  --tooltip-ap: oklch(67.132% 0.12355 231.886);
+  --tooltip-ad: oklch(80.595% 0.14126 63.272);
+  --tooltip-ad-bonus: oklch(74.746% 0.16545 47.879);
+  --tooltip-health: oklch(54.989% 0.15003 144.644);
+  --tooltip-mana: oklch(56.204% 0.21948 263.437);
+  --tooltip-armor: oklch(89.995% 0.1738 96.865);
+  --tooltip-mr: oklch(76.642% 0.1284 244.779);
+  --tooltip-ms: oklch(93.857% 0.15054 130.111);
+  --tooltip-magic: oklch(70.918% 0.17045 294.845);
+  --tooltip-heal: oklab(83.337% -0.15704 0.10621);
+  --tooltip-gold: oklch(78.812% 0.13214 92.278);
+  --tooltip-vamp: oklch(53.081% 0.19688 19.524);
+  --tooltip-haste: oklch(89.047% 0.03918 247.136);
 }
 
+/* hide scrollbar */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
 
 body {
-    font-family: var(--font-family-light);
+  font-family: var(--font-family-light);
+  font-weight: 400;
 }
 
-/* custom scrollbar styling */
+/* scrollbar */
 * {
-    scrollbar-color: var(--color-gold-dark) color-mix(in oklch, var(--color-accent-dark) 50%, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gold-dark) color-mix(in oklch, var(--color-abyss-400) 50%, transparent);
 }
 
 *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 *::-webkit-scrollbar-track {
-    background: color-mix(in oklch, var(--color-accent-dark) 50%, transparent);
+  background: var(--color-accent-dark);
 }
 
 *::-webkit-scrollbar-thumb {
-    background: var(--color-gold-dark);
-    border-radius: 4px;
+  background: var(--color-gold-dark);
+  border-radius: 2px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-    background: var(--color-gold-light);
+  background: var(--color-gold-light);
 }
 
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-family-title);
+h1,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-family-title);
 }
 
 h2 {
-    background: linear-gradient(to top, var(--color-gold-dark), var(--color-gold-light));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  background: linear-gradient(to top, var(--color-gold-dark), var(--color-gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 500;
+}
+
+h2.h2-error {
+  background: linear-gradient(to top, var(--color-negative-dark), var(--color-negative));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .nav-link h6 {
-    background: linear-gradient(to top, var(--color-gold-dark), var(--color-gold-light));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  background: linear-gradient(to top, var(--color-gold-dark), var(--color-gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .nav-link:hover h6 {
-    background: var(--color-subtitle) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
+  background: var(--color-subtitle) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
 }
 
 input::placeholder {
-    font-family: var(--font-light);
-    font-weight: 300;
+  font-family: var(--font-league-spartan);
+  font-weight: 300;
 }
 
-/* loading bar animation */
-@keyframes loadingBar {
-    0% {
-        transform: translateX(-100%);
-    }
-    50% {
-        transform: translateX(0%);
-    }
-    100% {
-        transform: translateX(100%);
-    }
+/* gold border with hover glow effect */
+.gold-border {
+  position: relative;
+}
+
+.gold-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark));
+  opacity: 0;
+  filter: brightness(1.5);
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.gold-border:hover::before {
+  opacity: 1;
+}
+
+/* gold border that activates on parent group hover */
+.group:hover .gold-border-group::before {
+  opacity: 1;
+}
+
+.gold-border-group {
+  position: relative;
+}
+
+.gold-border-group::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, var(--color-gold-light), var(--color-gold-dark));
+  opacity: 0;
+  filter: brightness(1.5);
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+@keyframes holographic-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes holographic-text-pan {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.animate-holographic {
+  transition: color 0.15s ease;
+  display: inline-block;
+}
+
+/* text animation */
+.group:not([data-active="true"]):hover .animate-holographic {
+  background-image: 
+    linear-gradient(to bottom, rgba(255,255,255,0.4), transparent 60%),
+    linear-gradient(
+      90deg,
+      #ff9ff3, #fd79a8, #a29bfe, #74b9ff, #ffeaa7,
+      #ff9ff3, #fd79a8, #a29bfe, #74b9ff, #ffeaa7
+    );
+  background-size: 100% 100%, 200% auto !important;
+  color: transparent !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  animation: holographic-text-pan 8s ease-in-out infinite !important;
+  filter: brightness(1.2) drop-shadow(0 0 5px rgba(255,159,243,0.3));
+}
+
+/* base style overrides */
+.bg-holographic-active, 
+.bg-holographic-hover,
+.bg-holographic-badge {
+  position: relative;
+  z-index: 0; 
+  /* the parent Link has overflow-hidden */
+}
+
+.bg-holographic-badge {
+  color: #1f2937;
+  font-weight: 800;
+  text-shadow: none;
+  overflow: hidden;
+}
+
+.bg-holographic-badge::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250%; 
+  padding-bottom: 250%; 
+  background-image: 
+    radial-gradient(circle at 70% 70%, rgba(255,255,255,0.5), transparent 50%),
+    conic-gradient(
+      from 0deg,
+      #ff9ff3, 
+      #fd79a8, 
+      #a29bfe, 
+      #74b9ff, 
+      #ffeaa7, 
+      #ff9ff3
+    );
+  transform-origin: center;
+  animation: holographic-spin 4s linear infinite;
+  filter: blur(8px) contrast(1.2) brightness(1.1);
+  z-index: -1;
+}
+
+/* active state */
+.bg-holographic-active {
+  background: transparent !important;
+  color: #1f2937 !important; 
+  text-shadow: none;
+  font-weight: 700;
+}
+
+.bg-holographic-active img {
+  filter: brightness(0) invert(0.2) !important;
+}
+
+.bg-holographic-active::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250%;
+  padding-bottom: 250%;
+  background-image: 
+    radial-gradient(circle at 70% 70%, rgba(255,255,255,0.4), transparent 50%),
+    conic-gradient(
+      from 0deg,
+      #ff9ff3, 
+      #fd79a8, 
+      #a29bfe, 
+      #74b9ff, 
+      #ffeaa7, 
+      #ff9ff3
+    );
+  transform-origin: center;
+  animation: holographic-spin 6s linear infinite;
+  filter: blur(20px) contrast(1.2) brightness(1.1);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* hover state */
+.bg-holographic-hover::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250%;
+  padding-bottom: 250%;
+  background-image: conic-gradient(
+    from 180deg,
+    rgba(255,159,243,0.3), 
+    rgba(162,155,254,0.3), 
+    rgba(116,185,255,0.3), 
+    rgba(255,234,167,0.3),
+    rgba(255,159,243,0.3)
+  );
+  transform-origin: center;
+  animation: holographic-spin 8s linear infinite reverse;
+  filter: blur(20px);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.bg-holographic-hover:hover::before {
+  opacity: 1;
 }

@@ -1,0 +1,558 @@
+// pig score calculator - unified scoring function
+import { createAdminClient } from '../db/supabase'
+import itemsData from '@/data/items.json'
+import type { WelfordState } from '../db/stats-aggregator'
+import { getStdDev, getZScore } from '../db/stats-aggregator'
+import {
+  calculateStatScore,
+  calculateDamageScore,
+  calculateCCTimeScore,
+  calculateAllBuildPenalties,
+  calculateKillParticipationScore,
+  calculateDeathsScore,
+  type ChampionStatsData,
+  type ItemPenaltyDetail,
+  type StartingItemsPenaltyDetail,
+} from './penalties'
+import { TIER1_BOOTS, TIER2_BOOT_IDS } from './build-scoring'
+
+// types
+
+export interface ParticipantData {
+  championName: string
+  damage_dealt_to_champions: number
+  total_damage_dealt: number
+  total_heals_on_teammates: number
+  total_damage_shielded_on_teammates: number
+  time_ccing_others: number
+  game_duration: number
+  deaths: number
+  kills?: number
+  assists?: number
+  teamTotalKills?: number
+  teamTotalDamage?: number
+  item0: number
+  item1: number
+  item2: number
+  item3: number
+  item4: number
+  item5: number
+  perk0: number
+  patch: string | null
+  spell1?: number
+  spell2?: number
+  skillOrder?: string
+  buildOrder?: string
+  firstBuy?: string
+  deathQualityScore?: number
+}
+
+export interface PigScoreBreakdown {
+  finalScore: number
+  playerStats: {
+    damageToChampionsPerMin: number
+    totalDamagePerMin: number
+    healingShieldingPerMin: number
+    ccTimePerMin: number
+    deathsPerMin: number
+    killParticipation?: number
+  }
+  championAvgStats: {
+    damageToChampionsPerMin: number
+    totalDamagePerMin: number
+    healingShieldingPerMin: number
+    ccTimePerMin: number
+  }
+  componentScores: {
+    performance: number  // combined (stats + timeline + kda)
+    build: number
+    // breakdown of performance
+    stats: number
+    timeline: number
+    kda: number
+  }
+  buildSubScores?: {
+    items: number
+    keystone: number
+    spells: number
+    skills: number
+    core: number
+    starting: number
+  }
+  metrics: {
+    name: string
+    score: number
+    weight: number
+    playerValue?: number
+    avgValue?: number
+    percentOfAvg?: number
+    zScore?: number
+  }[]
+  itemDetails?: ItemPenaltyDetail[]
+  startingItemsDetails?: StartingItemsPenaltyDetail
+  coreBuildDetails?: {
+    penalty: number
+    playerWinrate?: number
+    topWinrate?: number
+    rank?: number
+    totalOptions?: number
+    games?: number
+    // debug info
+    playerCoreKey?: string
+    matchedCoreKey?: string
+    globalWinrate?: number
+  }
+  coreKey?: string
+  fallbackInfo?: { items: boolean; keystone: boolean; spells: boolean; starting: boolean }
+  scoringInfo: { targetPercentile: number; averageScore: number; description: string }
+  totalGames: number
+  patch: string
+  matchPatch?: string
+  usedFallbackPatch: boolean
+  usedCoreStats?: boolean
+  usedFallbackCore?: boolean
+}
+
+// pre-fetched champion stats cache
+export type ChampionStatsCache = Map<string, { data: Record<string, unknown>; patch: string }[]>
+
+// ============================================================================
+// STAT RELEVANCE
+// ============================================================================
+
+interface StatRelevance {
+  damageToChampions: number
+  totalDamage: number
+  healingShielding: number
+  ccTime: number
+}
+
+interface WelfordStats {
+  damageToChampionsPerMin?: WelfordState
+  totalDamagePerMin?: WelfordState
+  healingShieldingPerMin?: WelfordState
+  ccTimePerMin?: WelfordState
+}
+
+function calculateStatRelevance(
+  avgPerMin: { damageToChampionsPerMin: number; totalDamagePerMin: number; healingShieldingPerMin: number; ccTimePerMin: number },
+  welford: WelfordStats | null,
+  playerStats: { damageToChampionsPerMin: number; healingShieldingPerMin: number; ccTimePerMin: number }
+): StatRelevance {
+  const relevance: StatRelevance = { damageToChampions: 1.0, totalDamage: 1.0, healingShielding: 0, ccTime: 0 }
+
+  // Healing relevance: only if > 500/min
+  if (playerStats.healingShieldingPerMin >= 500) {
+    // Calculate ratio of damage vs healing to determine focus
+    const totalOutput = playerStats.damageToChampionsPerMin + playerStats.healingShieldingPerMin
+    if (totalOutput > 0) {
+      const healRatio = playerStats.healingShieldingPerMin / totalOutput
+      // Shift weights based on focus (0.5 base + ratio)
+      relevance.healingShielding = 0.5 + healRatio
+      relevance.damageToChampions = 0.5 + (1 - healRatio) // Simplified from separate calculation
+    } else {
+      relevance.healingShielding = 1.0
+    }
+  }
+
+  // CC relevance: hard cutoff at 1s/min
+  if (playerStats.ccTimePerMin >= 1) {
+    relevance.ccTime = Math.min(1.0, 0.5 + (avgPerMin.ccTimePerMin - 1) / 12)
+  }
+
+  // boost for high variance - only if we have sufficient data
+  if (welford) {
+    // Helper to apply CV boost
+    const applyCVBoost = (state: WelfordState | undefined, current: number, threshold: number, multiplier: number, maxBoost: number): number => {
+      if (!state || state.n < 30 || current === 0) return current
+      const cv = getStdDev(state) / state.mean
+      return cv > threshold ? Math.min(maxBoost, current * (1 + cv * multiplier)) : current
+    }
+
+    relevance.damageToChampions = applyCVBoost(welford.damageToChampionsPerMin, relevance.damageToChampions, 0.3, 0.5, 1.5)
+    relevance.healingShielding = applyCVBoost(welford.healingShieldingPerMin, relevance.healingShielding, 0.4, 0.3, 1.5)
+    relevance.ccTime = applyCVBoost(welford.ccTimePerMin, relevance.ccTime, 0.4, 0.3, 1.5)
+  }
+
+  return relevance
+}
+
+// ============================================================================
+// BATCH OPTIMIZATION
+// ============================================================================
+
+export async function prefetchChampionStats(championNames: string[]): Promise<ChampionStatsCache> {
+  if (championNames.length === 0) return new Map()
+  
+  const supabase = createAdminClient()
+  const { data: allStats, error } = await supabase
+    .from('champion_stats')
+    .select('champion_name, data, patch')
+    .in('champion_name', [...new Set(championNames)])
+    .order('patch', { ascending: false })
+  
+  if (error || !allStats) return new Map()
+  
+  const cache: ChampionStatsCache = new Map()
+  for (const stat of allStats) {
+    const existing = cache.get(stat.champion_name) || []
+    existing.push({ data: stat.data, patch: stat.patch })
+    cache.set(stat.champion_name, existing)
+  }
+  return cache
+}
+
+// ============================================================================
+// MAIN SCORING FUNCTION (unified)
+// ============================================================================
+
+/**
+ * Calculate pig score with full breakdown
+ * @param participant - Player data
+ * @param statsCache - Optional pre-fetched stats (for batch processing)
+ */
+export async function calculatePigScoreWithBreakdown(
+  participant: ParticipantData,
+  statsCache?: ChampionStatsCache
+): Promise<PigScoreBreakdown | null> {
+  const { championName, game_duration, total_damage_dealt } = participant
+  const gameDurationMinutes = game_duration / 60
+
+  // only skip if game duration is invalid - AFK players with 0 damage still get calculated (they'll get low scores)
+  if (gameDurationMinutes <= 0) return null
+
+  // get champion stats from cache or DB
+  let championStats: { data: Record<string, unknown>; patch: string }[] | null = null
+  
+  if (statsCache) {
+    championStats = statsCache.get(championName) || null
+  } else {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('champion_stats')
+      .select('data, patch')
+      .eq('champion_name', championName)
+      .order('patch', { ascending: false })
+      .limit(10)
+    if (!error && data) championStats = data
+  }
+
+  if (!championStats || championStats.length === 0) return null
+
+  // find valid stats (2000+ games, prefer matching patch)
+  let selectedStats = championStats.find(s => s.patch === participant.patch && ((s.data as any)?.games || 0) >= 2000)
+  const usedFallbackPatch = !selectedStats
+  if (!selectedStats) selectedStats = championStats.find(s => ((s.data as any)?.games || 0) >= 2000)
+  if (!selectedStats) return null
+
+  const data = selectedStats.data as any
+  const championAvg = data?.championStats
+  if (!championAvg?.sumGameDuration) return null
+
+  const totalGames = data.games || 0
+  const avgGameDurationMinutes = championAvg.sumGameDuration / totalGames / 60
+  const invTotalGames = 1 / totalGames // Pre-compute for reuse
+  const invAvgDuration = 1 / avgGameDurationMinutes
+  const invGameDuration = 1 / gameDurationMinutes
+
+  // calculate stats
+  const playerStats = {
+    damageToChampionsPerMin: participant.damage_dealt_to_champions * invGameDuration,
+    totalDamagePerMin: participant.total_damage_dealt * invGameDuration,
+    healingShieldingPerMin: (participant.total_heals_on_teammates + participant.total_damage_shielded_on_teammates) * invGameDuration,
+    ccTimePerMin: participant.time_ccing_others * invGameDuration,
+    deathsPerMin: participant.deaths * invGameDuration,
+  }
+
+  let championAvgPerMin = {
+    damageToChampionsPerMin: championAvg.sumDamageToChampions * invTotalGames * invAvgDuration,
+    totalDamagePerMin: championAvg.sumTotalDamage * invTotalGames * invAvgDuration,
+    healingShieldingPerMin: (championAvg.sumHealing + championAvg.sumShielding) * invTotalGames * invAvgDuration,
+    ccTimePerMin: championAvg.sumCCTime * invTotalGames * invAvgDuration,
+  }
+
+  let welford = championAvg.welford || null
+
+  // Check for core-specific stats
+  const coreKey = getCoreKey(participant.buildOrder)
+  let usedCoreStats = false
+  let usedFallbackCore = false
+  
+  if (coreKey && data.core) {
+    let targetCoreData = data.core[coreKey]
+    
+    // 1. Try exact match with sufficient games
+    if (targetCoreData && targetCoreData.games >= 500 && targetCoreData.welford) {
+      usedCoreStats = true
+    } else {
+      // 2. Try finding most similar core with sufficient games
+      const bestMatch = findBestMatchingCore(coreKey, data.core)
+      if (bestMatch) {
+        targetCoreData = bestMatch
+        usedCoreStats = true
+        usedFallbackCore = true
+      }
+    }
+
+    if (usedCoreStats) {
+      const coreWelford = targetCoreData.welford
+      championAvgPerMin = {
+        damageToChampionsPerMin: coreWelford.damageToChampionsPerMin.mean,
+        totalDamagePerMin: coreWelford.totalDamagePerMin.mean,
+        healingShieldingPerMin: coreWelford.healingShieldingPerMin.mean,
+        ccTimePerMin: coreWelford.ccTimePerMin.mean,
+      }
+      welford = coreWelford
+    }
+  }
+  const relevance = calculateStatRelevance(championAvgPerMin, welford, playerStats)
+
+  const metrics: PigScoreBreakdown['metrics'] = []
+  const getZScoreSafe = (val: number, w?: WelfordState): number | undefined => 
+    (w && w.n >= 30 && getStdDev(w) > w.mean * 0.05) ? getZScore(val, w) : undefined
+
+  // PERFORMANCE COMPONENT
+  const perfScores: { score: number; weight: number }[] = []
+  const addPerfMetric = (name: string, player: number, avg: number, welfordState: WelfordState | undefined, weight: number, customScore?: number) => {
+    if (avg <= 0 || weight <= 0) return
+    const score = customScore ?? calculateStatScore(player, avg, welfordState, true, gameDurationMinutes)
+    perfScores.push({ score, weight })
+    metrics.push({
+      name,
+      score,
+      weight,
+      playerValue: player,
+      avgValue: avg,
+      percentOfAvg: (player / avg) * 100,
+      zScore: getZScoreSafe(player, welfordState),
+    })
+  }
+
+  const teamDamageShare = participant.teamTotalDamage && participant.teamTotalDamage > 0
+    ? participant.damage_dealt_to_champions / participant.teamTotalDamage
+    : undefined
+
+  const damageScore = calculateDamageScore(
+    playerStats.damageToChampionsPerMin,
+    championAvgPerMin.damageToChampionsPerMin,
+    welford?.damageToChampionsPerMin,
+    gameDurationMinutes,
+    teamDamageShare
+  )
+
+  addPerfMetric('Damage to Champions', playerStats.damageToChampionsPerMin, championAvgPerMin.damageToChampionsPerMin, welford?.damageToChampionsPerMin, relevance.damageToChampions, damageScore)
+  addPerfMetric('Total Damage', playerStats.totalDamagePerMin, championAvgPerMin.totalDamagePerMin, welford?.totalDamagePerMin, relevance.totalDamage)
+  addPerfMetric('Healing/Shielding', playerStats.healingShieldingPerMin, championAvgPerMin.healingShieldingPerMin, welford?.healingShieldingPerMin, relevance.healingShielding)
+  
+  if (relevance.ccTime > 0) {
+    const score = calculateCCTimeScore(playerStats.ccTimePerMin, championAvgPerMin.ccTimePerMin, welford?.ccTimePerMin, gameDurationMinutes)
+    perfScores.push({ score, weight: relevance.ccTime })
+    metrics.push({
+      name: 'CC Time',
+      score,
+      weight: relevance.ccTime,
+      playerValue: playerStats.ccTimePerMin,
+      avgValue: championAvgPerMin.ccTimePerMin,
+      percentOfAvg: championAvgPerMin.ccTimePerMin > 0 ? (playerStats.ccTimePerMin / championAvgPerMin.ccTimePerMin) * 100 : 0,
+      zScore: getZScoreSafe(playerStats.ccTimePerMin, welford?.ccTimePerMin),
+    })
+  }
+
+  const totalPerfWeight = perfScores.reduce((s, p) => s + p.weight, 0)
+  const performanceScore = totalPerfWeight > 0 ? perfScores.reduce((s, p) => s + p.score * p.weight, 0) / totalPerfWeight : 50
+
+  // BUILD COMPONENT
+  const buildPenalties = await calculateAllBuildPenalties(
+    participant,
+    championName,
+    data as ChampionStatsData
+  )
+
+  const penaltyToScore = (p: number, max: number) => Math.max(0, 100 - (p / max) * 100)
+  const itemScore = penaltyToScore(buildPenalties.itemPenalty, 20)
+  const keystoneScore = penaltyToScore(buildPenalties.keystonePenalty, 20)
+  const spellsScore = penaltyToScore(buildPenalties.spellsPenalty, 20)
+  const skillOrderScore = penaltyToScore(buildPenalties.skillOrderPenalty, 20)
+  const coreScore = penaltyToScore(buildPenalties.buildOrderPenalty, 20)
+  const startingScore = penaltyToScore(buildPenalties.startingItemsPenalty, 10)
+
+  metrics.push(
+    { name: 'Starter', score: startingScore, weight: 0.05 },
+    { name: 'Skills', score: skillOrderScore, weight: 0.05 },
+    { name: 'Keystone', score: keystoneScore, weight: 0.10 },
+    { name: 'Spells', score: spellsScore, weight: 0.05 },
+    { name: 'Core Build', score: coreScore, weight: 0.45 },
+    { name: 'Items', score: itemScore, weight: 0.30 }
+  )
+
+  const buildScore = startingScore * 0.05 + skillOrderScore * 0.05 + keystoneScore * 0.10 + spellsScore * 0.05 + coreScore * 0.45 + itemScore * 0.30
+
+  // TIMELINE COMPONENT (Death Quality only)
+  let timelineScore = 50
+  if (participant.deathQualityScore !== undefined) {
+    timelineScore = participant.deathQualityScore
+    metrics.push({ name: 'Death Quality', score: participant.deathQualityScore, weight: 1.0 })
+  } else {
+    metrics.push({ name: 'Timeline', score: 50, weight: 1.0 })
+  }
+
+  // KDA COMPONENT
+  let kdaScore = 50
+  let killParticipation: number | undefined
+  if (participant.kills !== undefined && participant.assists !== undefined && participant.teamTotalKills && participant.teamTotalKills > 0) {
+    killParticipation = (participant.kills + participant.assists) / participant.teamTotalKills
+    const kpScore = calculateKillParticipationScore(killParticipation)
+    const deathScore = calculateDeathsScore(participant.deaths, gameDurationMinutes, participant.deathQualityScore)
+    kdaScore = kpScore * 0.6 + deathScore * 0.4
+    metrics.push({ name: 'Kill Participation', score: kpScore, weight: 0.6, playerValue: killParticipation * 100 })
+    metrics.push({ name: 'Deaths/Min', score: deathScore, weight: 0.4, playerValue: playerStats.deathsPerMin })
+  }
+
+  // FINAL SCORE: Dynamic weighting based on stats performance
+  // When stats are HIGH: stats dominate, build matters less
+  // When stats are LOW: timeline, KDA, and build matter more
+  
+  // Dynamic stats weight: 40% at low performance, 70% at high performance
+  // Timeline/KDA pick up the slack when stats are poor
+  const statsWeight = 0.40 + Math.min(0.30, Math.max(0, (performanceScore - 50) / 100) * 0.60)
+  const timelineWeight = (1 - statsWeight) * 0.65  // timeline gets 65% of remainder
+  const kdaWeight = (1 - statsWeight) * 0.35       // kda gets 35% of remainder
+  
+  const combinedPerformance = performanceScore * statsWeight + timelineScore * timelineWeight + kdaScore * kdaWeight
+  
+  // Dynamic perf/build split: high performance = build matters less
+  // Low perf (combined=50): 50/50 split
+  // High perf (combined=100): 85/15 split
+  const perfWeight = 0.50 + Math.max(0, Math.min((combinedPerformance - 50) * 0.007, 0.35))
+  const buildWeight = 1 - perfWeight
+  
+  // Examples:
+  // LOW STATS: Stats=40, Timeline=50, KDA=50, Build=80
+  //   statsWeight = 0.40 (capped at minimum)
+  //   combined = 40*0.40 + 50*0.39 + 50*0.21 = 16 + 19.5 + 10.5 = 46
+  //   perfWeight = 0.50 (low performance)
+  //   final = 46*0.50 + 80*0.50 = 23 + 40 = 63
+  //
+  // HIGH STATS: Stats=100, Timeline=50, KDA=50, Build=69
+  //   statsWeight = 0.40 + (50/100)*0.60 = 0.70
+  //   combined = 100*0.70 + 50*0.195 + 50*0.105 = 70 + 9.75 + 5.25 = 85
+  //   perfWeight = 0.50 + (85-50)*0.007 = 0.50 + 0.245 = 0.745
+  //   final = 85*0.745 + 69*0.255 = 63.3 + 17.6 = 80.9 → 81
+  //
+  // EXCEPTIONAL STATS: Stats=120 (internal), Timeline=50, KDA=50, Build=69
+  //   statsWeight = 0.70 (capped at max)
+  //   combined = 120*0.70 + 50*0.195 + 50*0.105 = 84 + 9.75 + 5.25 = 99
+  //   perfWeight = 0.50 + (99-50)*0.007 = 0.50 + 0.343 = 0.843 (capped at 0.85)
+  //   final = 99*0.85 + 69*0.15 = 84.15 + 10.35 = 94.5 → 95
+  const finalScore = Math.round(Math.max(0, Math.min(100, combinedPerformance * perfWeight + buildScore * buildWeight)))
+
+  return {
+    finalScore,
+    playerStats: { ...playerStats, killParticipation },
+    championAvgStats: championAvgPerMin,
+    componentScores: {
+      // Performance is the combined score (stats + timeline + KDA)
+      performance: Math.round(Math.min(100, combinedPerformance)),
+      build: Math.round(Math.min(100, buildScore)),
+      // Breakdown of performance components
+      stats: Math.round(Math.min(100, performanceScore)),
+      timeline: Math.round(Math.min(100, timelineScore)),
+      kda: Math.round(Math.min(100, kdaScore)),
+    },
+    buildSubScores: {
+      items: Math.round(itemScore),
+      keystone: Math.round(keystoneScore),
+      spells: Math.round(spellsScore),
+      skills: Math.round(skillOrderScore),
+      core: Math.round(coreScore),
+      starting: Math.round(startingScore),
+    },
+    metrics,
+    itemDetails: buildPenalties.itemDetails,
+    startingItemsDetails: buildPenalties.startingItemsDetails,
+    coreBuildDetails: buildPenalties.coreBuildDetails,
+    coreKey: buildPenalties.coreKey,
+    fallbackInfo: buildPenalties.fallbackInfo,
+    scoringInfo: {
+      targetPercentile: 98,
+      averageScore: 50,
+      description: `Score is based on percentile performance vs other ${championName} players. 50 = average, 100 = excellent (top 2%).`,
+    },
+    totalGames,
+    patch: selectedStats.patch,
+    matchPatch: usedFallbackPatch ? (participant.patch ?? undefined) : undefined,
+    usedFallbackPatch,
+    usedCoreStats,
+    usedFallbackCore,
+  }
+}
+
+// Aliases for backwards compatibility
+export const calculatePigScoreWithBreakdownCached = calculatePigScoreWithBreakdown
+export async function calculatePigScore(participant: ParticipantData): Promise<number | null> {
+  const result = await calculatePigScoreWithBreakdown(participant)
+  return result?.finalScore ?? null
+}
+
+const NORMALIZED_BOOT_ID = 99999
+
+function getCoreKey(buildOrder: string | undefined): string | null {
+  if (!buildOrder) return null
+  const items = buildOrder.split(',').map(Number)
+  const coreItems: number[] = []
+  
+  for (const itemId of items) {
+    if (coreItems.length >= 3) break
+    if (itemId <= 0) continue
+    
+    // Check if completed item for core (logic from stats-aggregator.ts)
+    let isCompleted = false
+    if (itemId !== TIER1_BOOTS) {
+      const item = (itemsData as any)[String(itemId)]
+      if (item && (item.depth >= 2 || item.gold?.total >= 1600 || TIER2_BOOT_IDS.has(itemId))) {
+        isCompleted = true
+      }
+    }
+    
+    if (!isCompleted) continue
+
+    // normalize boots
+    const normalizedId = TIER2_BOOT_IDS.has(itemId) ? NORMALIZED_BOOT_ID : itemId
+    if (!coreItems.includes(normalizedId)) {
+      coreItems.push(normalizedId)
+    }
+  }
+
+  if (coreItems.length !== 3) return null
+  const uniqueSorted = [...new Set(coreItems)].sort((a, b) => a - b)
+  if (uniqueSorted.length !== 3) return null
+  return uniqueSorted.join('_')
+}
+
+function findBestMatchingCore(targetKey: string, allCores: Record<string, any>): any | null {
+  const targetItems = targetKey.split('_').map(Number)
+  let bestMatch = null
+  let maxShared = 0
+  let maxGames = 0
+
+  for (const [key, data] of Object.entries(allCores)) {
+    if (data.games < 500 || !data.welford) continue
+    
+    const currentItems = key.split('_').map(Number)
+    const shared = currentItems.filter(id => targetItems.includes(id)).length
+    
+    // Must share at least 2 items to be considered "similar"
+    if (shared < 2) continue
+
+    if (shared > maxShared) {
+      maxShared = shared
+      maxGames = data.games
+      bestMatch = data
+    } else if (shared === maxShared && data.games > maxGames) {
+      maxGames = data.games
+      bestMatch = data
+    }
+  }
+  
+  return bestMatch
+}
