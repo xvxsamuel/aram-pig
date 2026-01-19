@@ -6,6 +6,7 @@ import { calculateProfileBadges, type ProfileBadge } from '@/lib/scoring/labels'
 import type { MatchData } from '@/types/match'
 import Card from '@/components/ui/Card'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
+import { Badge } from '@/components/ui/Badge'
 
 interface AggregateStats {
   games: number
@@ -70,7 +71,8 @@ function PigScoreArc({ score, loading }: { score: number | null | undefined; loa
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size}>
         <defs>
-          <linearGradient id={gradientId} x1="0%" y1="100%" x2="0%" y2="0%">
+          {/* gradient follows arc direction: dark at bottom-left (start), light at bottom-right (end) */}
+          <linearGradient id={gradientId} x1="0%" y1="50%" x2="100%" y2="50%">
             <stop offset="0%" stopColor={gradientColors.dark} />
             <stop offset="100%" stopColor={gradientColors.light} />
           </linearGradient>
@@ -206,22 +208,22 @@ export default function SummonerSummaryCard({ championStatsLoading, aggregateSta
           <div className="flex flex-wrap gap-2 items-center justify-center">
             {profileBadges.map(badge => {
               const isBad = badge.type === 'bad'
+              const isPentaKill = badge.id === 'PENTA_KILL'
+              // for penta kills, show total pentas; for others, show game count
+              const tooltipText = isPentaKill 
+                ? `${badge.description} (${badge.count} total in last 20 games)`
+                : `${badge.description} (${badge.count}x in last 20 games)`
+              
               return (
                 <SimpleTooltip 
                   key={badge.id} 
-                  content={`${badge.description} (${badge.count}x in last 20 games)`}
+                  content={tooltipText}
                 >
                   <div className="flex items-center gap-1">
-                    <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
-                      <div
-                        className={`rounded-full px-3 py-1.5 text-[10px] font-normal leading-none flex items-center whitespace-nowrap ${
-                          isBad ? 'bg-worst-dark' : 'bg-abyss-700'
-                        }`}
-                      >
-                        <span className="text-white">{badge.label}</span>
-                      </div>
-                    </div>
-                    <span className="text-text-muted text-[10px]">×{badge.count}</span>
+                    <Badge variant={isBad ? 'bad' : 'default'}>
+                      {badge.label}
+                    </Badge>
+                    <span className="text-text-muted text-[9px]">×{badge.count}</span>
                   </div>
                 </SimpleTooltip>
               )

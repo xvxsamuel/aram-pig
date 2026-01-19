@@ -261,6 +261,7 @@ export function formatTimeSec(secs: number): string {
 }
 
 // ARAM map constants for coordinate conversion
+// Map bounds from actual game data
 const MAP_MIN = { x: -28, y: -19 }
 const MAP_MAX = { x: 12849, y: 12858 }
 

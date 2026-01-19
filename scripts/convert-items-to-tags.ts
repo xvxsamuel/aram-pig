@@ -177,6 +177,12 @@ export function convertCDragonToTags(description: string): string {
   // use negative lookbehind to avoid "Grievous Wounds" → "Grievous Grievous Wounds"
   result = result.replace(/(?<!Grievous\s)\bWounds\b/g, 'Grievous Wounds')
 
+  // wrap "restore ... Health" patterns to include "restore" in the heal tag
+  // e.g., "restore Health" → "<heal>restore Health</heal>"
+  // e.g., "restore <heal>Health</heal>" → "<heal>restore Health</heal>"
+  result = result.replace(/\b(restore)\s+<heal>([^<]*)<\/heal>/gi, '<heal>$1 $2</heal>')
+  result = result.replace(/(?<![<>])\b(restore\s+Health)\b/gi, '<heal>$1</heal>')
+
   // wrap standalone "Healing" and "Shielding" words as keywords (not already in tags)
   // these appear in phrases like "Healing or shielding an ally" without CDragon tags
   // negative lookbehind: not preceded by < (inside a tag) or > (just after opening tag)
@@ -190,6 +196,20 @@ export function convertCDragonToTags(description: string): string {
   // wrap "On-Hit" and "On-Attack" as keywords (CDragon doesn't tag these)
   // matches: "On-Hit", "On-Attack", "On-Attacking"
   result = result.replace(/(?<![<>])\b(On-Hit|On-Attack(?:ing)?)\b/gi, '<keyword>$1</keyword>')
+
+  // wrap "Spell Shield" as keyword (has icon in tooltip-renderer)
+  result = result.replace(/(?<![<>])\b(Spell Shield)\b/gi, '<keyword>$1</keyword>')
+
+  // wrap "Slow" and variants as keywords (has icon in tooltip-renderer)
+  // first handle <bold>Slow</bold> → <keyword>Slow</keyword>
+  result = result.replace(/<bold>(Slow(?:s|ing|ed)?)<\/bold>/gi, '<keyword>$1</keyword>')
+  // then handle standalone Slow not already in a tag
+  result = result.replace(/(?<![<>])\b(Slow(?:s|ing|ed)?)\b/gi, '<keyword>$1</keyword>')
+
+  // expand "AD" to "Attack Damage" with AD color (but not when already part of a word or tag)
+  // negative lookbehind: not after < or > or word char
+  // negative lookahead: not before word char
+  result = result.replace(/(?<![<>\w])\bAD\b(?!\w)/g, '<ad>Attack Damage</ad>')
 
   // replace "Item Health" with clearer "bonus Health from items"
   result = result.replace(/\bItem Health\b/gi, '<health><bold>bonus</bold> Health <bold>from items</bold></health>')

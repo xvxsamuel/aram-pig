@@ -153,10 +153,8 @@ const TOWER_POSITIONS = {
 interface TowerState {
   blueOuterDown: boolean
   blueInnerDown: boolean
-  blueInhibitorDown: boolean
   redOuterDown: boolean
   redInnerDown: boolean
-  redInhibitorDown: boolean
 }
 
 /**
@@ -192,10 +190,8 @@ function getTowerStateAtTime(
   const state: TowerState = {
     blueOuterDown: false,
     blueInnerDown: false,
-    blueInhibitorDown: false,
     redOuterDown: false,
     redInnerDown: false,
-    redInhibitorDown: false,
   }
   
   for (const destruction of towerDestructions) {
@@ -205,11 +201,9 @@ function getTowerStateAtTime(
     if (destruction.teamId === 100) { // Blue team lost tower
       if (destruction.towerType === 'OUTER_TURRET') state.blueOuterDown = true
       else if (destruction.towerType === 'INNER_TURRET') state.blueInnerDown = true
-      else if (destruction.towerType === 'BASE_TURRET') state.blueInhibitorDown = true
     } else if (destruction.teamId === 200) { // Red team lost tower
       if (destruction.towerType === 'OUTER_TURRET') state.redOuterDown = true
       else if (destruction.towerType === 'INNER_TURRET') state.redInnerDown = true
-      else if (destruction.towerType === 'BASE_TURRET') state.redInhibitorDown = true
     }
   }
   
@@ -222,14 +216,12 @@ function getTowerStateAtTime(
  */
 function getFrontlines(towerState: TowerState): { blueFrontline: number; redFrontline: number } {
   // Blue team's frontline = their furthest forward standing tower
+  // ARAM has: outer → inner → nexus (no inhibitor)
   let blueFrontline = TOWER_POSITIONS.blue.outer
   if (towerState.blueOuterDown) {
     blueFrontline = TOWER_POSITIONS.blue.inner
     if (towerState.blueInnerDown) {
-      blueFrontline = TOWER_POSITIONS.blue.inhibitor
-      if (towerState.blueInhibitorDown) {
-        blueFrontline = TOWER_POSITIONS.blue.nexus2
-      }
+      blueFrontline = TOWER_POSITIONS.blue.nexus
     }
   }
   
@@ -238,10 +230,7 @@ function getFrontlines(towerState: TowerState): { blueFrontline: number; redFron
   if (towerState.redOuterDown) {
     redFrontline = TOWER_POSITIONS.red.inner
     if (towerState.redInnerDown) {
-      redFrontline = TOWER_POSITIONS.red.inhibitor
-      if (towerState.redInhibitorDown) {
-        redFrontline = TOWER_POSITIONS.red.nexus1
-      }
+      redFrontline = TOWER_POSITIONS.red.nexus
     }
   }
   

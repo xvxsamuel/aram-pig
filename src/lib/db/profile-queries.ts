@@ -246,6 +246,8 @@ function transformToMatchDataParticipant(
     pentaKills: stats?.pentaKills || 0,
     pigScore: matchData?.pigScore != null ? (matchData.pigScore as number) : undefined,
     pigScoreBreakdown: matchData?.pigScoreBreakdown != null ? (matchData.pigScoreBreakdown as Record<string, unknown>) : undefined,
+    // all participants' pig scores (for MOG/LTN badges without expansion)
+    allPigScores: matchData?.allPigScores as Record<string, number> | undefined,
     // include timeline-derived data for build tab
     buildOrder: (matchData?.buildOrder as string) ?? undefined,
     firstBuy: (matchData?.firstBuy as string) ?? undefined,

@@ -29,6 +29,7 @@ export function OverviewTab({
   loadingPigScores,
   pigScores,
   maxDamage,
+  pigScoreBreakdown,
 }: OverviewTabProps) {
   // Determine MOG (highest on winning team) and TRY (highest on losing team)
   const allParticipants = [...team100, ...team200]
@@ -56,7 +57,7 @@ export function OverviewTab({
   })
 
   const mogPuuid = allHaveScores ? getHighestScorer(winningTeam) : null
-  const tryPuuid = allHaveScores ? getHighestScorer(losingTeam) : null
+  const ltnPuuid = allHaveScores ? getHighestScorer(losingTeam) : null
 
   function renderPlayerRow(p: ParticipantData, isCurrentPlayer: boolean, teamWon: boolean) {
     const damageDealtPct = maxDamage > 0 ? (p.totalDamageDealtToChampions / maxDamage) * 100 : 0
@@ -67,8 +68,8 @@ export function OverviewTab({
     const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5]
     const score = pigScores.get(p.puuid) ?? null
     
-    // MOG = highest on winning team, TRY = highest on losing team
-    const badge = p.puuid === mogPuuid ? 'MOG' : p.puuid === tryPuuid ? 'TRY' : null
+    // MOG = highest on winning team, LTN = highest on losing team
+    const badge = p.puuid === mogPuuid ? 'MOG' : p.puuid === ltnPuuid ? 'LTN' : null
     
     // Calculate rank among players with scores
     let rank = 0
@@ -138,7 +139,7 @@ export function OverviewTab({
                     'text-[10px]',
                     badge === 'MOG'
                       ? 'text-gold-light font-base'
-                      : badge === 'TRY'
+                      : badge === 'LTN'
                         ? 'text-gold-light font-base'
                         : 'text-text-muted'
                   )}

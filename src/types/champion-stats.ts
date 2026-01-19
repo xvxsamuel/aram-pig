@@ -59,6 +59,9 @@ export interface PreCalculatedCombo {
   stdDev?: number
   variance?: number
   championWinrate?: number
+  effectivenessScore?: number
+  effectivenessZScore?: number
+  compositeScore?: number
   itemStats: Record<
     number,
     {

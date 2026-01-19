@@ -6,6 +6,7 @@ import { getChampionImageUrl } from '@/lib/ddragon'
 import { getPigScoreColor } from '@/lib/ui'
 import { calculateMatchLabels } from '@/lib/scoring/labels'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
+import { LabelBadge } from '@/components/ui/Badge'
 import { SpiderChart } from './SpiderChart'
 import DataWarning from '@/components/ui/DataWarning'
 import {
@@ -13,17 +14,6 @@ import {
   coordToPercent,
   formatTimeSec,
 } from './shared'
-
-// ARAM base positions for lane position calculation
-const ARAM_BLUE_BASE = { x: 400, y: 400 }
-const ARAM_RED_BASE = { x: 12400, y: 12400 }
-
-// Calculate lane position (0-1) from game coordinates using distance from bases
-function getLanePosition(x: number, y: number): number {
-  const distToBlue = Math.sqrt(Math.pow(x - ARAM_BLUE_BASE.x, 2) + Math.pow(y - ARAM_BLUE_BASE.y, 2))
-  const distToRed = Math.sqrt(Math.pow(x - ARAM_RED_BASE.x, 2) + Math.pow(y - ARAM_RED_BASE.y, 2))
-  return distToBlue / (distToBlue + distToRed)
-}
 
 // section component with minimal styling (matching BuildTab)
 function PerformanceSection({ 
@@ -52,7 +42,7 @@ function PerformanceSection({
   )
 }
 
-// Timeline event type
+// timeline event type
 type TimelineEvent = {
   type: 'takedown' | 'death' | 'tower'
   t: number
@@ -67,10 +57,10 @@ type TimelineEvent = {
   tradeKills?: number
   zone?: string
   tf?: boolean
-  isBad?: boolean // for deaths only - explicitly bad death
+  isBad?: boolean // for deaths
 }
 
-// Separate component for timeline section with state
+// separate component for timeline section with state
 function TimelineSection({
   events,
   gameDurationSec,
@@ -103,7 +93,7 @@ function TimelineSection({
     <div className="border-t border-abyss-700">
       <PerformanceSection 
         title="Kill/Death Timeline"
-        className="p-4"
+        className="p-4 bg-abyss-800"
         rightContent={
           <div className="flex gap-3 text-xs font-normal normal-case tracking-normal">
             <span className="flex items-center gap-1.5">
@@ -117,141 +107,48 @@ function TimelineSection({
           </div>
         }
       >
-        {/* Map Display - Stylized ARAM lane SVG */}
-        <div className="relative w-full aspect-[5/1] rounded-lg mb-4 overflow-hidden bg-gradient-to-r from-abyss-800 via-abyss-900 to-abyss-800 border border-abyss-600 p-2">
-          <svg 
-            viewBox="0 0 500 100" 
-            className="absolute inset-0 w-full h-full"
-            preserveAspectRatio="none"
-          >
-            <defs>
-              {/* Radial gradients for bases */}
-              <radialGradient id="blueBaseGlow" cx="50%" cy="50%">
-                <stop offset="0%" stopColor="oklch(0.6537 0.118 223.64)" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="oklch(0.6537 0.118 223.64)" stopOpacity="0" />
-              </radialGradient>
-              <radialGradient id="redBaseGlow" cx="50%" cy="50%">
-                <stop offset="0%" stopColor="oklch(62.451% 0.20324 17.952)" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="oklch(62.451% 0.20324 17.952)" stopOpacity="0" />
-              </radialGradient>
-              
-              {/* Lane gradient */}
-              <linearGradient id="laneGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="oklch(0.32 0.04 245)" />
-                <stop offset="50%" stopColor="oklch(0.25 0 0)" />
-                <stop offset="100%" stopColor="oklch(0.32 0.04 17)" />
-              </linearGradient>
-              
-              {/* Lane border */}
-              <linearGradient id="laneBorder" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="oklch(0.6537 0.118 223.64)" stopOpacity="0.4" />
-                <stop offset="50%" stopColor="oklch(0.4 0 0)" stopOpacity="0.15" />
-                <stop offset="100%" stopColor="oklch(62.451% 0.20324 17.952)" stopOpacity="0.4" />
-              </linearGradient>
-            </defs>
-            
-            {/* Blue base glow */}
-            <circle cx="20" cy="50" r="60" fill="url(#blueBaseGlow)" />
-            
-            {/* Red base glow */}
-            <circle cx="480" cy="50" r="60" fill="url(#redBaseGlow)" />
-            
-            {/* Blue base platform */}
-            <g filter="drop-shadow(0 0 3px oklch(0.6537 0.118 223.64 / 0.3))">
-              <path d="M 0,35 L 40,42 L 40,58 L 0,65 Z" fill="oklch(0.28 0.07 245)" stroke="oklch(0.6537 0.118 223.64)" strokeWidth="1" opacity="0.8" />
-            </g>
-            
-            {/* Red base platform */}
-            <g filter="drop-shadow(0 0 3px oklch(62.451% 0.20324 17.952 / 0.3))">
-              <path d="M 500,35 L 460,42 L 460,58 L 500,65 Z" fill="oklch(0.28 0.07 17)" stroke="oklch(62.451% 0.20324 17.952)" strokeWidth="1" opacity="0.8" />
-            </g>
-            
-            {/* Main lane */}
-            <rect x="38" y="43" width="424" height="14" fill="url(#laneGradient)" rx="1" />
-            
-            {/* Lane borders */}
-            <line x1="38" y1="43" x2="462" y2="43" stroke="url(#laneBorder)" strokeWidth="1" />
-            <line x1="38" y1="57" x2="462" y2="57" stroke="url(#laneBorder)" strokeWidth="1" />
-            
-            {/* Blue nexus */}
-            <g filter="drop-shadow(0 0 4px oklch(0.6537 0.118 223.64 / 0.5))">
-              <circle cx="18" cy="50" r="7" fill="oklch(0.22 0.07 245)" stroke="oklch(0.6537 0.118 223.64)" strokeWidth="1.5" />
-              <circle cx="18" cy="50" r="3.5" fill="oklch(0.6537 0.118 223.64)" opacity="0.7" />
-            </g>
-            
-            {/* Blue towers - diamond shapes matching visual ARAM map */}
-            {/* Nexus tower at 0.08 - close to base */}
-            <g filter="drop-shadow(0 0 2px oklch(0.6537 0.118 223.64 / 0.4))">
-              <rect x={38 + 0.08 * 424 - 2} y="48" width="4" height="4" fill="oklch(0.4 0.1 223.64)" stroke="oklch(0.6537 0.118 223.64)" strokeWidth="0.5" transform={`rotate(45 ${38 + 0.08 * 424} 50)`} />
-            </g>
-            {/* Inner tower at 0.28 - middle */}
-            <g filter="drop-shadow(0 0 2px oklch(0.6537 0.118 223.64 / 0.4))">
-              <rect x={38 + 0.28 * 424 - 2} y="48" width="4" height="4" fill="oklch(0.4 0.1 223.64)" stroke="oklch(0.6537 0.118 223.64)" strokeWidth="0.5" transform={`rotate(45 ${38 + 0.28 * 424} 50)`} />
-            </g>
-            {/* Outer tower at 0.42 - toward center */}
-            <g filter="drop-shadow(0 0 2px oklch(0.6537 0.118 223.64 / 0.4))">
-              <rect x={38 + 0.42 * 424 - 2} y="48" width="4" height="4" fill="oklch(0.4 0.1 223.64)" stroke="oklch(0.6537 0.118 223.64)" strokeWidth="0.5" transform={`rotate(45 ${38 + 0.42 * 424} 50)`} />
-            </g>
-            
-            {/* Red nexus */}
-            <g filter="drop-shadow(0 0 4px oklch(62.451% 0.20324 17.952 / 0.5))">
-              <circle cx="482" cy="50" r="7" fill="oklch(0.22 0.07 17)" stroke="oklch(62.451% 0.20324 17.952)" strokeWidth="1.5" />
-              <circle cx="482" cy="50" r="3.5" fill="oklch(62.451% 0.20324 17.952)" opacity="0.7" />
-            </g>
-            
-            {/* Red towers - diamond shapes matching visual ARAM map */}
-            {/* Outer tower at 0.58 - toward center */}
-            <g filter="drop-shadow(0 0 2px oklch(62.451% 0.20324 17.952 / 0.4))">
-              <rect x={38 + 0.58 * 424 - 2} y="48" width="4" height="4" fill="oklch(0.4 0.12 17.952)" stroke="oklch(62.451% 0.20324 17.952)" strokeWidth="0.5" transform={`rotate(45 ${38 + 0.58 * 424} 50)`} />
-            </g>
-            {/* Inner tower at 0.72 - middle */}
-            <g filter="drop-shadow(0 0 2px oklch(62.451% 0.20324 17.952 / 0.4))">
-              <rect x={38 + 0.72 * 424 - 2} y="48" width="4" height="4" fill="oklch(0.4 0.12 17.952)" stroke="oklch(62.451% 0.20324 17.952)" strokeWidth="0.5" transform={`rotate(45 ${38 + 0.72 * 424} 50)`} />
-            </g>
-            {/* Nexus tower at 0.92 - close to base */}
-            <g filter="drop-shadow(0 0 2px oklch(62.451% 0.20324 17.952 / 0.4))">
-              <rect x={38 + 0.92 * 424 - 2} y="48" width="4" height="4" fill="oklch(0.4 0.12 17.952)" stroke="oklch(62.451% 0.20324 17.952)" strokeWidth="0.5" transform={`rotate(45 ${38 + 0.92 * 424} 50)`} />
-            </g>
-            
-            {/* Health relics */}
-            <g filter="drop-shadow(0 0 2px oklch(0.897 0.123 164.65 / 0.5))">
-              <circle cx="160" cy="50" r="2" fill="oklch(0.897 0.123 164.65)" opacity="0.8" />
-            </g>
-            <g filter="drop-shadow(0 0 2px oklch(0.897 0.123 164.65 / 0.5))">
-              <circle cx="340" cy="50" r="2" fill="oklch(0.897 0.123 164.65)" opacity="0.8" />
-            </g>
-          </svg>
+        {/* ARAM Map Display - only shows selected event position */}
+        <div className="relative w-full aspect-square max-w-[360px] mx-auto rounded-lg mb-4 overflow-hidden p-[2px] bg-gradient-to-b from-gold-light to-gold-dark">
+          <div className="relative w-full h-full rounded-md overflow-hidden">
+          {/* ARAM minimap image */}
+          <img
+            src={`https://ddragon.leagueoflegends.com/cdn/${ddragonVersion}/img/map/map12.png`}
+            alt="ARAM Map"
+            className={clsx(
+              'w-full h-full object-cover transition-all duration-300',
+              !selectedEvent && 'grayscale-[80%] brightness-[0.4]'
+            )}
+            draggable={false}
+          />
+          {/* Dark blue overlay when no event selected */}
+          {!selectedEvent && (
+            <div className="absolute inset-0 bg-abyss-900/60 pointer-events-none" />
+          )}
           
-          {/* Selected event marker */}
+          {/* Selected event marker on map */}
           {selectedEvent && selectedEvent.x !== undefined && selectedEvent.y !== undefined && (() => {
-            // Use the same lane position calculation as the towers
-            const lanePos = getLanePosition(selectedEvent.x, selectedEvent.y)
-            // Convert lane position (0-1) to SVG percentage (0-100)
-            // The lane occupies positions 38-462 in the 500-wide SVG, so:
-            const laneStart = 38 / 500 * 100  // ~7.6%
-            const laneWidth = 424 / 500 * 100  // ~84.8%
-            const horizontalPos = laneStart + (lanePos * laneWidth)
-            
+            const pos = coordToPercent(selectedEvent.x, selectedEvent.y)
             const isTower = selectedEvent.type === 'tower'
-            const isTakedown = selectedEvent.type === 'takedown'
             
             return (
               <div
-                className="absolute z-20 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200"
-                style={{
-                  left: `${horizontalPos}%`,
-                  top: '50%',
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 z-10 transition-all duration-200"
+                style={{ 
+                  left: `${pos.x}%`, 
+                  top: `${100 - pos.y}%`,
                 }}
               >
                 {isTower ? (
-                  <div className={clsx(
-                    'w-6 h-6 rotate-45 border-2 shadow-lg',
-                    selectedEvent.team === 'enemy' 
-                      ? 'bg-accent-light border-white shadow-accent-light/50' 
-                      : 'bg-negative border-white shadow-negative/50'
-                  )} />
+                  <div className="w-8 h-8 rotate-45 p-[2px] bg-gradient-to-b from-gold-light to-gold-dark shadow-lg">
+                    <div className={clsx(
+                      'w-full h-full relative',
+                      selectedEvent.team === 'enemy' ? 'bg-accent-light' : 'bg-negative'
+                    )}>
+                      <div className="absolute inset-0 shadow-[inset_0_0_3px_1px_rgba(0,0,0,0.7)] pointer-events-none" />
+                    </div>
+                  </div>
                 ) : (
-                  <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-b from-gold-light to-gold-dark">
+                  <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-b from-gold-light to-gold-dark shadow-lg">
                     <div className={clsx(
                       'w-full h-full rounded-full overflow-hidden relative',
                       selectedEvent.wasTrade && 'ring-2 ring-accent-light'
@@ -269,31 +166,27 @@ function TimelineSection({
             )
           })()}
 
-          {/* No selection placeholder */}
-          {!selectedEvent && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-text-muted text-sm">Click an event below to see location</span>
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* Event Info */}
-        {selectedEvent && (
-          <div className={clsx(
-            "mb-4 p-3 rounded-lg border",
-            selectedEvent.type === 'death' && selectedEvent.isBad 
-              ? "bg-negative-dark/30 border-negative"
-              : "bg-abyss-800/70 border-abyss-600"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={clsx(
-                  'w-3 h-3',
-                  selectedEvent.type === 'tower' ? 'rotate-45' : 'rounded-full',
-                  selectedEvent.type === 'tower' 
-                    ? (selectedEvent.team === 'enemy' ? 'bg-accent-light' : 'bg-negative')
-                    : selectedEvent.type === 'takedown' ? 'bg-accent-light' : 'bg-negative'
-                )} />
+        {/* Event Info - always visible */}
+        <div className={clsx(
+          "-mx-4 px-4 py-4 border-t min-h-[100px]",
+          selectedEvent?.type === 'death' && selectedEvent?.isBad 
+            ? "bg-negative-dark/20 border-negative/50"
+            : "bg-abyss-700 border-abyss-700"
+        )}>
+          {selectedEvent ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={clsx(
+                    'w-3 h-3',
+                    selectedEvent.type === 'tower' ? 'rotate-45' : 'rounded-full',
+                    selectedEvent.type === 'tower' 
+                      ? (selectedEvent.team === 'enemy' ? 'bg-accent-light' : 'bg-negative')
+                      : selectedEvent.type === 'takedown' ? 'bg-accent-light' : 'bg-negative'
+                  )} />
                 <span className={clsx(
                   'font-semibold text-sm',
                   selectedEvent.type === 'death' && selectedEvent.isBad && 'text-negative',
@@ -369,11 +262,16 @@ function TimelineSection({
                 )}
               </div>
             )}
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center w-full h-full text-text-muted text-sm">
+              Select an event from the timeline
+            </div>
+          )}
+        </div>
 
         {/* Visual Timeline Bar */}
-        <div className="relative h-12 bg-abyss-800 rounded-lg overflow-visible mb-6">
+        <div className="relative h-8 bg-gold-light/10 border border-gold-light/50 rounded-lg overflow-visible mb-6">
           {/* Minute markers */}
           {(() => {
             const gameMins = Math.ceil(gameDurationSec / 60)
@@ -388,8 +286,8 @@ function TimelineSection({
                   className={clsx(
                     'absolute',
                     isMajor
-                      ? 'h-full border-l border-abyss-500'
-                      : 'h-2/3 top-1/2 -translate-y-1/2 border-l border-abyss-600/50'
+                      ? 'h-full border-l border-gold-light/40'
+                      : 'h-2/3 top-1/2 -translate-y-1/2 border-l border-gold-light/20'
                   )}
                   style={{ left: `${pct}%` }}
                 >
@@ -401,6 +299,13 @@ function TimelineSection({
                 </div>
               )
             }
+            // add game end marker
+            const endMin = Math.floor(gameDurationSec / 60)
+            markers.push(
+              <span key="end" className="absolute -bottom-5 right-0 translate-x-1/2 text-[10px] text-text-muted tabular-nums">
+                {endMin}m
+              </span>
+            )
             return markers
           })()}
 
@@ -424,22 +329,15 @@ function TimelineSection({
                 style={{ left: `${leftPct}%` }}
                 onClick={() => setSelectedEventIdx(isSelected ? null : idx)}
               >
-                {isTower ? (
-                  <div className={clsx(
-                    'w-2.5 h-2.5 rotate-45',
-                    event.team === 'enemy' ? 'bg-accent-light' : 'bg-negative',
-                    isSelected && 'ring-2 ring-white'
-                  )} />
-                ) : (
-                  <div className={clsx(
-                    'rounded-full',
-                    isBadDeath ? 'w-3 h-3 bg-negative ring-2 ring-negative/50' : 'w-2.5 h-2.5',
-                    isTakedown && !isBadDeath && 'bg-accent-light',
-                    isDeath && !isBadDeath && 'bg-negative',
-                    event.wasTrade && !isBadDeath && 'ring-1 ring-accent-light/50',
-                    isSelected && 'ring-2 ring-white'
-                  )} />
-                )}
+                <div className={clsx(
+                  isTower ? 'w-2.5 h-2.5 rotate-45 border border-gold-light/70' : 'rounded-full border border-gold-light/70',
+                  isTower && (event.team === 'enemy' ? 'bg-accent-light' : 'bg-negative'),
+                  !isTower && (isBadDeath ? 'w-3 h-3' : 'w-2.5 h-2.5'),
+                  !isTower && isTakedown && 'bg-accent-light',
+                  !isTower && isDeath && 'bg-negative',
+                  !isTower && event.wasTrade && !isBadDeath && 'ring-1 ring-accent-light/50',
+                  isBadDeath && 'ring-2 ring-negative/50'
+                )} />
               </button>
             )
           })}
@@ -468,10 +366,9 @@ export function PerformanceTab({
     )
   }
 
-  // Prepare metrics for SpiderChart using raw stats comparison
+  // prepare metrics for SpiderChart using raw stats comparison
   const getChartData = (playerVal: number, avgVal: number, inverse = false) => {
     if (inverse) {
-      // For deaths: 0 is best (100%), higher is worse.
       // Baseline is ~0.75 deaths/min. Max reasonable is ~1.5.
       const maxVal = Math.max(playerVal, avgVal, 1.2) * 1.2
       const p = Math.max(0, 100 - (playerVal / maxVal) * 100)
@@ -488,14 +385,14 @@ export function PerformanceTab({
 
   const spiderMetrics = [
     {
-      label: 'Damage',
+      label: 'CHAMP DMG',
       ...getChartData(
         pigScoreBreakdown.playerStats.damageToChampionsPerMin,
         pigScoreBreakdown.championAvgStats.damageToChampionsPerMin
       )
     },
     {
-      label: 'Total Dmg',
+      label: 'TOTAL DMG',
       ...getChartData(
         pigScoreBreakdown.playerStats.totalDamagePerMin,
         pigScoreBreakdown.championAvgStats.totalDamagePerMin
@@ -536,42 +433,22 @@ export function PerformanceTab({
       {labels.length > 0 && (
         <div className="px-4 py-3 border-b border-abyss-700 bg-abyss-800/50">
           <div className="flex flex-wrap gap-2">
-            {labels.map(label => {
-              const isBad = label.type === 'bad'
-              return (
-                <SimpleTooltip key={label.id} content={label.description}>
-                  <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full">
-                    <div
-                      className={clsx(
-                        'rounded-full px-3 py-1.5 text-xs font-medium leading-none flex items-center whitespace-nowrap',
-                        isBad ? 'bg-worst-dark' : 'bg-abyss-700'
-                      )}
-                    >
-                      <span className="text-white">{label.label}</span>
-                    </div>
-                  </div>
-                </SimpleTooltip>
-              )
-            })}
+            {labels.map(label => (
+              <SimpleTooltip key={label.id} content={label.description}>
+                <LabelBadge
+                  label={label.label}
+                  isBad={label.type === 'bad'}
+                  isMvp={label.type === 'mvp'}
+                  count={label.type === 'multikill' ? label.count : undefined}
+                />
+              </SimpleTooltip>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Top Row: Analysis & Stats */}
-      <PerformanceSection 
-        title="Performance Analysis"
-        className="p-4"
-        rightContent={
-          <div className="flex items-center gap-2 text-xs text-text-muted font-normal normal-case tracking-normal">
-            <span>Based on {pigScoreBreakdown.totalGames.toLocaleString()} games</span>
-            <DataWarning 
-              usedFallbackPatch={pigScoreBreakdown.usedFallbackPatch}
-              usedCoreStats={pigScoreBreakdown.usedCoreStats}
-              usedFallbackCore={pigScoreBreakdown.usedFallbackCore}
-            />
-          </div>
-        }
-      >
+      {/* Stats Content */}
+      <div className="p-4">
         <div className="flex flex-col gap-6">
           {/* Row 1: Spider Chart & Stats List */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -624,7 +501,7 @@ export function PerformanceTab({
                   
                   let statusText = isGood ? 'Excellent' : isBad ? 'Below Avg' : 'Average'
                   
-                  // Deaths has custom logic - override generic scoring
+                  // Ddeaths has custom logic - override generic scoring
                   if (stat.metric === 'Deaths') {
                     if (stat.value < 0.5) {
                       statusText = 'Resets too little'
@@ -664,14 +541,14 @@ export function PerformanceTab({
             </div>
           </div>
 
-          {/* Row 2: Death Bar */}
+          {/* row 2: death bar */}
           <div className="px-4">
             <div className="flex justify-between text-[10px] text-text-muted uppercase mb-1">
               <span>Deaths/Min</span>
               <span>{pigScoreBreakdown.playerStats.deathsPerMin.toFixed(2)}</span>
             </div>
             <div className="relative h-2 bg-abyss-800 rounded-full overflow-hidden">
-              {/* Optimal Area (0.5 - 0.7) */}
+              {/* optimal Area (0.5 - 0.7) */}
               <div 
                 className="absolute top-0 bottom-0 bg-accent-light/20" 
                 style={{ 
@@ -690,52 +567,8 @@ export function PerformanceTab({
               <span>1.5+</span>
             </div>
           </div>
-
-          {/* Row 3: Scores */}
-          <div className="grid grid-cols-4 gap-2">
-            <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
-              <div className="text-[10px] text-text-muted uppercase">Stats</div>
-              <div className={clsx(
-                'text-lg font-bold',
-                pigScoreBreakdown.componentScores.stats >= 70 ? 'text-accent-light' : 'text-text-primary'
-              )}>
-                {pigScoreBreakdown.componentScores.stats}
-              </div>
-              <div className="text-[9px] text-text-muted">Damage, CC, Healing</div>
-            </div>
-            <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
-              <div className="text-[10px] text-text-muted uppercase">Death Quality</div>
-              <div className={clsx(
-                'text-lg font-bold',
-                pigScoreBreakdown.componentScores.timeline >= 70 ? 'text-accent-light' : 'text-text-primary'
-              )}>
-                {pigScoreBreakdown.componentScores.timeline}
-              </div>
-              <div className="text-[9px] text-text-muted">Trade Value, Spacing</div>
-            </div>
-            <div className="text-center p-2 bg-abyss-800/50 rounded border border-gold-dark/10">
-              <div className="text-[10px] text-text-muted uppercase">Kill Participation</div>
-              <div className={clsx(
-                'text-lg font-bold',
-                pigScoreBreakdown.componentScores.kda >= 70 ? 'text-accent-light' : 'text-text-primary'
-              )}>
-                {pigScoreBreakdown.componentScores.kda}
-              </div>
-              <div className="text-[9px] text-text-muted">KP%, Deaths/Min</div>
-            </div>
-            <div className="text-center p-2 bg-abyss-700/70 rounded border border-gold-dark/20">
-              <div className="text-[10px] text-text-muted uppercase">Performance</div>
-              <div className={clsx(
-                'text-lg font-bold',
-                pigScoreBreakdown.componentScores.performance >= 70 ? 'text-accent-light' : 'text-text-primary'
-              )}>
-                {pigScoreBreakdown.componentScores.performance}
-              </div>
-              <div className="text-[9px] text-text-muted">Combined Score</div>
-            </div>
-          </div>
         </div>
-      </PerformanceSection>
+      </div>
 
       {/* Bottom Row: Kill/Death Timeline */}
       {(() => {

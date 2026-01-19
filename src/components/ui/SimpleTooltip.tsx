@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 
 interface SimpleTooltipProps {
@@ -26,6 +26,7 @@ export default function SimpleTooltip({
   const tooltipRef = useRef<HTMLDivElement>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const rafRef = useRef<number | null>(null)
 
   // wait for client-side mount for portal
   useEffect(() => {
@@ -70,51 +71,65 @@ export default function SimpleTooltip({
 
   const shouldShow = isVisible || forceVisible
 
+  // memoized update position function
+  const updatePosition = useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const x = rect.left + rect.width / 2
+    
+    // determine position based on available space
+    let finalPosition: 'top' | 'bottom' = position === 'auto' ? 'top' : position
+    
+    if (position === 'auto') {
+      // estimate tooltip height (use actual if available, otherwise estimate)
+      const tooltipHeight = tooltipRef.current?.offsetHeight || 100
+      const spaceAbove = rect.top
+      const spaceBelow = window.innerHeight - rect.bottom
+      
+      // prefer top, but flip to bottom if not enough space above
+      if (spaceAbove < tooltipHeight + 16 && spaceBelow > spaceAbove) {
+        finalPosition = 'bottom'
+      } else {
+        finalPosition = 'top'
+      }
+    }
+    
+    setActualPosition(finalPosition)
+    const y = finalPosition === 'top' ? rect.top : rect.bottom
+    setTooltipPosition({ x, y })
+  }, [position])
+
   useEffect(() => {
     if (!shouldShow || !triggerRef.current) return
-
-    const updatePosition = () => {
-      const rect = triggerRef.current?.getBoundingClientRect()
-      if (!rect) return
-
-      const x = rect.left + rect.width / 2
-      
-      // determine position based on available space
-      let finalPosition: 'top' | 'bottom' = position === 'auto' ? 'top' : position
-      
-      if (position === 'auto') {
-        // estimate tooltip height (use actual if available, otherwise estimate)
-        const tooltipHeight = tooltipRef.current?.offsetHeight || 100
-        const spaceAbove = rect.top
-        const spaceBelow = window.innerHeight - rect.bottom
-        
-        // prefer top, but flip to bottom if not enough space above
-        if (spaceAbove < tooltipHeight + 16 && spaceBelow > spaceAbove) {
-          finalPosition = 'bottom'
-        } else {
-          finalPosition = 'top'
-        }
-      }
-      
-      setActualPosition(finalPosition)
-      const y = finalPosition === 'top' ? rect.top : rect.bottom
-      setTooltipPosition({ x, y })
-    }
 
     updatePosition()
     
     // update position after a brief delay to get actual tooltip dimensions
     const timeoutId = setTimeout(updatePosition, 10)
     
-    window.addEventListener('scroll', updatePosition, true)
-    window.addEventListener('resize', updatePosition)
+    // throttle scroll/resize with requestAnimationFrame
+    const handleScroll = () => {
+      if (rafRef.current) return // already scheduled
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null
+        updatePosition()
+      })
+    }
+    
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true })
+    window.addEventListener('resize', handleScroll, { passive: true })
 
     return () => {
       clearTimeout(timeoutId)
-      window.removeEventListener('scroll', updatePosition, true)
-      window.removeEventListener('resize', updatePosition)
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleScroll)
     }
-  }, [shouldShow, position])
+  }, [shouldShow, updatePosition])
 
   const tooltipContent =
     shouldShow && mounted

@@ -16,11 +16,13 @@ import {
 } from '@/lib/ddragon'
 import { getChampionUrlName } from '@/lib/ddragon'
 import { getKdaColor, getPigScoreColor, ONE_YEAR_MS, getTimeAgo, formatDuration, perMinute } from '@/lib/ui'
-import { calculateMatchLabels } from '@/lib/scoring/labels'
+import { calculateMatchLabels, calculateMvpLabels } from '@/lib/scoring/labels'
 import MatchDetails from '@/components/match/MatchDetails'
 import Tooltip from '@/components/ui/Tooltip'
 import SimpleTooltip from '@/components/ui/SimpleTooltip'
+import { PigInfoTooltip } from '@/components/ui/PigInfoTooltip'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { Badge, LabelBadge } from '@/components/ui/Badge'
 
 // preload images for matchdetails on hover
 function preloadMatchImages(match: MatchData, ddragonVersion: string) {
@@ -67,12 +69,13 @@ interface Props {
   region: string
   ddragonVersion: string
   championNames: Record<string, string>
+  enrichedPigScores?: Record<string, number | null>
   onMatchEnriched?: (matchId: string, pigScores: Record<string, number | null>) => void
 }
 
 // memoize to prevent re-renders when sibling matches update
 // only re-renders when this specific match's data changes
-function MatchHistoryItemComponent({ match, puuid, region, ddragonVersion, championNames, onMatchEnriched }: Props) {
+function MatchHistoryItemComponent({ match, puuid, region, ddragonVersion, championNames, enrichedPigScores, onMatchEnriched }: Props) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [selectedTab, setSelectedTab] = useState<'overview' | 'build' | 'performance'>('overview')
@@ -111,7 +114,68 @@ function MatchHistoryItemComponent({ match, puuid, region, ddragonVersion, champ
   // check if pig score should still be loading (match is recent enough + not a remake)
   const gameAge = Date.now() - match.info.gameCreation
   const isPigScoreLoading = !hasPigScore && !isRemake && gameAge < ONE_YEAR_MS
-  const labels = calculateMatchLabels(match, participant)
+  
+  // calculate base labels
+  const baseLabels = calculateMatchLabels(match, participant)
+  
+  // build pig scores map - priority: enriched > allPigScores from DB > individual participant scores
+  const pigScoresMap = new Map<string, number | null>()
+  if (enrichedPigScores) {
+    // use enriched scores from MatchDetails (has all 10 participants)
+    for (const [key, value] of Object.entries(enrichedPigScores)) {
+      pigScoresMap.set(key, value)
+    }
+  } else if (participant.allPigScores && Object.keys(participant.allPigScores).length === 10) {
+    // use pre-calculated allPigScores from the tracked user's match_data
+    for (const [key, value] of Object.entries(participant.allPigScores)) {
+      pigScoresMap.set(key, value)
+    }
+  } else {
+    // fallback: use existing pig scores from match participants
+    // note: this only includes tracked players, not all 10
+    for (const p of match.info.participants) {
+      if (p.pigScore !== undefined && p.pigScore !== null) {
+        pigScoresMap.set(p.puuid, p.pigScore)
+      }
+    }
+  }
+  
+  // MOG/LTN and rank require all 10 participants' pig scores
+  const hasCompletePigScores = pigScoresMap.size === 10
+  const mvpLabels = hasCompletePigScores ? calculateMvpLabels(match, participant, pigScoresMap) : []
+  
+  // calculate rank from pig scores (only if we have all 10)
+  let pigRank: number | null = null
+  if (hasCompletePigScores && hasPigScore) {
+    const allScores = Array.from(pigScoresMap.values()).filter((s): s is number => s !== null && s !== undefined)
+    if (allScores.length === 10) {
+      allScores.sort((a, b) => b - a)
+      pigRank = allScores.indexOf(participant.pigScore!) + 1
+    }
+  }
+  const hasMvpBadge = mvpLabels.length > 0
+  
+  // combine all labels
+  const allLabels = [...mvpLabels, ...baseLabels].sort((a, b) => b.priority - a.priority)
+  
+  // filter out sub-badges when King Pig is present, and always filter out double kills in match history
+  const hasKingPig = allLabels.some(l => l.id === 'KING_PIG')
+  // filter labels for match history - only show highest multikill, hide double kills
+  const labels = (() => {
+    const filtered = allLabels.filter(l => {
+      if (l.id === 'DOUBLE_KILL') return false
+      if (hasKingPig && (l.id === 'ARAM_ACADEMIC' || l.id === 'VALUE_VIRTUOSO')) return false
+      return true
+    })
+    
+    // only keep the highest multikill badge (first one since sorted by priority desc)
+    const multikillIds = ['PENTA_KILL', 'QUADRA_KILL', 'TRIPLE_KILL']
+    const firstMultikill = filtered.find(l => multikillIds.includes(l.id))
+    if (firstMultikill) {
+      return filtered.filter(l => !multikillIds.includes(l.id) || l.id === firstMultikill.id)
+    }
+    return filtered
+  })()
   const hasLabels = hasPigScore && labels.length > 0
 
   return (
@@ -312,59 +376,67 @@ function MatchHistoryItemComponent({ match, puuid, region, ddragonVersion, champ
                   </div>
                 </div>
 
-                {/* Bottom Row: Pig Score + Labels */}
-                <div className="flex gap-2 items-center mt-0.5 w-full min-w-0">
-                  {/* pig Score - aligned with Icon */}
-                  <div className="w-[54px] flex justify-center flex-shrink-0">
-                    {hasPigScore ? (
-                      <SimpleTooltip content="Pig Score">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            setSelectedTab('performance')
-                            setIsExpanded(true)
-                          }}
-                          className="w-full p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full cursor-pointer flex"
-                        >
-                          <div className="w-full bg-abyss-700 rounded-full px-2 py-1.5 text-[10px] font-bold leading-none flex items-center justify-center gap-1 whitespace-nowrap">
-                            <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
-                              {participant.pigScore}
-                            </span>
-                            <span className="text-white">PIG</span>
-                          </div>
-                        </button>
-                      </SimpleTooltip>
-                    ) : isPigScoreLoading ? (
-                      <SimpleTooltip content="Calculating PIG...">
-                        <div className="w-full p-px bg-gradient-to-b from-abyss-500 to-abyss-700 rounded-full flex">
-                          <div className="w-full bg-abyss-700 rounded-full px-2 py-1.5 text-[10px] font-bold leading-none flex items-center justify-center gap-1 whitespace-nowrap">
-                            <LoadingSpinner size={12} bgColor="bg-abyss-700" />
-                            <span className="text-abyss-400">PIG</span>
-                          </div>
-                        </div>
-                      </SimpleTooltip>
-                    ) : null}
-                  </div>
+                {/* Bottom Row: Pig Score + Rank + Labels - all as one continuous row */}
+                <div className="flex gap-1 items-center mt-1.5 w-full min-w-0">
+                  {/* pig Score badge - consistent with other badges */}
+                  {hasPigScore ? (
+                    <PigInfoTooltip
+                      pigScore={participant.pigScore!}
+                      performanceScore={
+                        participant.pigScoreBreakdown?.componentScores
+                          ? Math.round((participant.pigScoreBreakdown.componentScores as { performance?: number }).performance ?? 0)
+                          : undefined
+                      }
+                      buildScore={
+                        participant.pigScoreBreakdown?.componentScores
+                          ? Math.round((participant.pigScoreBreakdown.componentScores as { build?: number }).build ?? 0)
+                          : undefined
+                      }
+                    >
+                      <Badge variant="pig">
+                        <span style={{ color: getPigScoreColor(participant.pigScore!) }}>
+                          {participant.pigScore}
+                        </span>
+                        <span className="text-white ml-1">PIG</span>
+                      </Badge>
+                    </PigInfoTooltip>
+                  ) : isPigScoreLoading ? (
+                    <SimpleTooltip content="Calculating PIG...">
+                      <Badge variant="pigLoading">
+                        <LoadingSpinner size={10} bgColor="bg-abyss-700" />
+                        <span className="text-abyss-400 ml-1">PIG</span>
+                      </Badge>
+                    </SimpleTooltip>
+                  ) : null}
+                  
+                  {/* Rank badge (2nd, 3rd, etc.) - only shown when not MOG/LTN */}
+                  {hasPigScore && pigRank && !hasMvpBadge && pigRank > 1 && (
+                    <SimpleTooltip content={`#${pigRank} PIG Score in this match`}>
+                      <Badge variant="rank">
+                        <span className="text-text-muted">#{pigRank}</span>
+                      </Badge>
+                    </SimpleTooltip>
+                  )}
 
                   {/*labels */}
                   {hasLabels && (
-                    <div className="relative w-0 flex-1 self-center group/labels overflow-hidden">
-                      {/* Labels container - no scroll, clips overflow */}
-                      <div className="flex items-center gap-1">
+                    <div className="relative w-0 flex-1 self-center group/labels overflow-visible">
+                      {/* Labels container - clips overflow horizontally only */}
+                      <div className="flex items-center gap-1 overflow-x-hidden">
                         {labels.map(label => {
                           const isBad = label.type === 'bad'
+                          const isMvp = label.type === 'mvp'
+                          const isMultikill = label.type === 'multikill'
+                          const count = label.count
+                          
                           return (
                             <SimpleTooltip key={label.id} content={label.description}>
-                              <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full flex-shrink-0">
-                                <div
-                                  className={clsx(
-                                    'rounded-full px-3 py-1.5 text-[10px] font-normal leading-none flex items-center whitespace-nowrap',
-                                    isBad ? 'bg-worst-dark' : 'bg-abyss-700'
-                                  )}
-                                >
-                                  <span className="text-white">{label.label}</span>
-                                </div>
-                              </div>
+                              <LabelBadge 
+                                label={label.label} 
+                                isBad={isBad} 
+                                isMvp={isMvp}
+                                count={isMultikill ? count : undefined}
+                              />
                             </SimpleTooltip>
                           )
                         })}
@@ -390,10 +462,10 @@ function MatchHistoryItemComponent({ match, puuid, region, ddragonVersion, champ
                                 setIsExpanded(true)
                               }
                             }}
-                            className="relative z-10 pointer-events-auto p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full opacity-0 group-hover/labels:opacity-100 transition-opacity duration-200 mr-1"
+                            className="relative z-10 pointer-events-auto p-[1.5px] bg-gradient-to-b from-gold-light to-gold-dark rounded-full opacity-0 group-hover/labels:opacity-100 transition-opacity duration-200 mr-1"
                           >
-                            <div className="w-5 h-5 rounded-full bg-abyss-700 flex items-center justify-center">
-                              <ChevronDownIcon className="w-3 h-3 text-gold-light -rotate-90" />
+                            <div className="h-[20px] w-[20px] rounded-full bg-abyss-700 flex items-center justify-center">
+                              <ChevronDownIcon className="w-2.5 h-2.5 text-gold-light -rotate-90" />
                             </div>
                           </button>
                         </div>
@@ -532,6 +604,19 @@ function arePropsEqual(prev: Props, next: Props): boolean {
   const prevParticipant = prev.match.info.participants.find(p => p.puuid === prev.puuid)
   const nextParticipant = next.match.info.participants.find(p => p.puuid === next.puuid)
   if (prevParticipant?.pigScore !== nextParticipant?.pigScore) return false
+  
+  // check if enriched pig scores changed (for MOG/LTN badges)
+  const prevEnriched = prev.enrichedPigScores
+  const nextEnriched = next.enrichedPigScores
+  if (prevEnriched !== nextEnriched) {
+    // if one is undefined and other isn't, or they're different objects
+    if (!prevEnriched || !nextEnriched) return false
+    // check if any value changed
+    const allKeys = new Set([...Object.keys(prevEnriched), ...Object.keys(nextEnriched)])
+    for (const key of allKeys) {
+      if (prevEnriched[key] !== nextEnriched[key]) return false
+    }
+  }
   
   // check other props that might change
   if (prev.puuid !== next.puuid) return false

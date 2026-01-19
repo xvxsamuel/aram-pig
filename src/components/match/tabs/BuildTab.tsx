@@ -21,36 +21,15 @@ import {
   BOOT_IDS,
 } from './shared'
 
-// Helper to find which tree a rune belongs to
 // animated glow component for scored items with pig score color
+// (glow removed - just passes through children)
 function ScoredItemGlow({ 
   children, 
-  score 
 }: { 
   children: React.ReactNode
   score?: number 
 }) {
-  const [isHovered, setIsHovered] = useState(false)
-  const glowColor = score !== undefined ? getPigScoreColor(score) : 'var(--color-gold-light)'
-  
-  return (
-    <motion.div 
-      className="relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <motion.div
-        className="absolute -inset-1 rounded-lg"
-        animate={{
-          boxShadow: isHovered 
-            ? `0 0 12px 3px ${glowColor}60, 0 0 20px 6px ${glowColor}30`
-            : `0 0 6px 1px ${glowColor}30, 0 0 10px 2px ${glowColor}15`
-        }}
-        transition={{ duration: 0.2 }}
-      />
-      <div className="relative">{children}</div>
-    </motion.div>
-  )
+  return <>{children}</>
 }
 
 // PIG label component for category scores
@@ -58,7 +37,7 @@ function PigLabel({ score }: { score: number | undefined }) {
   if (score === undefined) return null
   return (
     <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full inline-flex">
-      <div className="bg-abyss-700 rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none flex items-center gap-0.5">
+      <div className="bg-abyss-700 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none flex items-center gap-0.5 uppercase tracking-wide">
         <span style={{ color: getPigScoreColor(score) }}>{score}</span>
         <span className="text-white">PIG</span>
       </div>
@@ -66,7 +45,6 @@ function PigLabel({ score }: { score: number | undefined }) {
   )
 }
 
-// Section component with minimal styling
 function BuildSection({ 
   title, 
   score, 
@@ -106,7 +84,7 @@ export function BuildTab({
 }: TabProps) {
   if (!currentPlayer) return null
 
-  // Check if we're still loading details
+  // check if we're still loading details
   const playerDetails = participantDetails.get(currentPlayer.puuid)
   const isLoading = loadingBreakdown || !playerDetails || playerDetails.loading
 
@@ -120,7 +98,7 @@ export function BuildTab({
     )
   }
 
-  // Check if we have timeline data - only show PIG labels if we do AND showPigScores is true
+  // check if we have timeline data, only show PIG labels if we do AND showPigScores is true
   const hasTimelineData = playerDetails?.item_timeline && playerDetails.item_timeline.length > 0
   const displayPigScores = showPigScores && hasTimelineData
 
@@ -178,7 +156,7 @@ export function BuildTab({
                         isFinished && itemScore !== undefined ? (
                           <div className="text-xs">
                             <div className="flex justify-center">
-                              <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-bold leading-none flex items-center gap-1 border border-gold-dark/40">
+                              <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-semibold leading-none flex items-center gap-1 border border-gold-dark/40 uppercase tracking-wide">
                                 <span style={{ color: getPigScoreColor(itemScore) }}>
                                   {itemScore}
                                 </span>
@@ -317,7 +295,7 @@ export function BuildTab({
                                   </div>
                                   {isStarterItem && starterScore !== undefined && (
                                     <div className="mt-2 flex justify-center">
-                                      <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-bold leading-none flex items-center gap-1 border border-gold-dark/40">
+                                      <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-semibold leading-none flex items-center gap-1 border border-gold-dark/40 uppercase tracking-wide">
                                         <span style={{ color: getPigScoreColor(starterScore) }}>
                                           {starterScore}
                                         </span>
@@ -332,7 +310,7 @@ export function BuildTab({
                                   )}
                                   {!isStarterItem && isFinished && !isSell && itemScore !== undefined && (
                                     <div className="mt-2 flex justify-center">
-                                      <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-bold leading-none flex items-center gap-1 border border-gold-dark/40">
+                                      <div className="bg-abyss-700 rounded-full px-2 py-1 text-xs font-semibold leading-none flex items-center gap-1 border border-gold-dark/40 uppercase tracking-wide">
                                         <span style={{ color: getPigScoreColor(itemScore) }}>
                                           {itemScore}
                                         </span>

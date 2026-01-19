@@ -448,7 +448,7 @@ export default function ChampionPageClient({
     }
   })
 
-  // core builds - sort by lower bound wilson score
+  // core builds - sort by composite score (wilson + effectiveness)
   const MIN_CORE_GAMES = 50 // fixed minimum games to show a core build
   const allBuildData = data.raw?.core
     ? (() => {
@@ -458,6 +458,15 @@ export default function ChampionPageClient({
         const totalCoreGames = coreEntries.reduce((sum, [, d]: [string, any]) => sum + (d.games || 0), 0)
         const totalCoreWins = coreEntries.reduce((sum, [, d]: [string, any]) => sum + (d.wins || 0), 0)
         const championWinrate = totalCoreGames > 0 ? (totalCoreWins / totalCoreGames) * 100 : 50
+        
+        // determine if champion is a healer/support (use healing+shielding instead of damage)
+        // healers have higher healing+shielding per min than damage per min
+        const overallDamagePerMin = data.perMinuteStats?.damageToChampionsPerMin?.mean || 0
+        const overallHealingPerMin = data.perMinuteStats?.healingShieldingPerMin?.mean || 0
+        const overallDamageStdDev = data.perMinuteStats?.damageToChampionsPerMin?.stdDev || 0
+        const overallHealingStdDev = data.perMinuteStats?.healingShieldingPerMin?.stdDev || 0
+        // if healing+shielding exceeds 60% of damage output, use healing as primary metric
+        const isHealer = overallHealingPerMin > overallDamagePerMin * 0.6
         
         return coreEntries
           .map(([comboKey, comboData]: [string, any]) => {
@@ -525,9 +534,49 @@ export default function ChampionPageClient({
 
             const welford = comboData.welford
             const damageStats = welford?.damageToChampionsPerMin && welford.damageToChampionsPerMin.n > 1 ? {
+                mean: welford.damageToChampionsPerMin.mean,
                 stdDev: Math.sqrt(welford.damageToChampionsPerMin.m2 / welford.damageToChampionsPerMin.n),
                 variance: welford.damageToChampionsPerMin.m2 / welford.damageToChampionsPerMin.n
             } : undefined
+            
+            const healingStats = welford?.healingShieldingPerMin && welford.healingShieldingPerMin.n > 1 ? {
+                mean: welford.healingShieldingPerMin.mean,
+                stdDev: Math.sqrt(welford.healingShieldingPerMin.m2 / welford.healingShieldingPerMin.n),
+                variance: welford.healingShieldingPerMin.m2 / welford.healingShieldingPerMin.n
+            } : undefined
+            
+            // calculate effectiveness z-score (how much better/worse than champion average)
+            // for healers: use healing+shielding, for damage dealers: use damage
+            let effectivenessZScore = 0
+            if (isHealer && healingStats && overallHealingStdDev > 0) {
+              effectivenessZScore = (healingStats.mean - overallHealingPerMin) / overallHealingStdDev
+            } else if (!isHealer && damageStats && overallDamageStdDev > 0) {
+              effectivenessZScore = (damageStats.mean - overallDamagePerMin) / overallDamageStdDev
+            }
+            
+            // convert z-score to a 0-100 scale using sigmoid-like transformation
+            // z=0 → 50, z=+2 → ~88, z=-2 → ~12
+            const effectivenessScore = 100 / (1 + Math.exp(-0.8 * effectivenessZScore))
+            
+            // consistency bonus: builds with lower variance (more consistent results) get a small boost
+            // compare this core's stdDev to champion's overall stdDev
+            // if core variance is lower than overall, boost score slightly (up to 5 points)
+            let consistencyBonus = 0
+            if (isHealer && healingStats && overallHealingStdDev > 0) {
+              const varianceRatio = healingStats.stdDev / overallHealingStdDev
+              // varianceRatio < 1 means more consistent than average, > 1 means less consistent
+              // clamp bonus between -2 and +5 (reward consistency more than punishing inconsistency)
+              consistencyBonus = Math.max(-2, Math.min(5, (1 - varianceRatio) * 5))
+            } else if (!isHealer && damageStats && overallDamageStdDev > 0) {
+              const varianceRatio = damageStats.stdDev / overallDamageStdDev
+              consistencyBonus = Math.max(-2, Math.min(5, (1 - varianceRatio) * 5))
+            }
+            
+            // composite score: blend wilson (winrate reliability) with effectiveness + consistency
+            // wilson has more weight (70%) since winrate is the ultimate measure
+            // effectiveness (25%) helps differentiate builds with similar winrates
+            // consistency (5%) gives slight edge to reliable builds
+            const compositeScore = wilsonScore * 0.7 + effectivenessScore * 0.25 + (50 + consistencyBonus * 10) * 0.05
 
             return {
               normalizedItems,
@@ -536,9 +585,15 @@ export default function ChampionPageClient({
               wins,
               winrate,
               wilsonScore,
+              effectivenessScore,
+              compositeScore,
+              effectivenessZScore,
               pickrate: totalGames > 0 ? (games / totalGames) * 100 : 0,
               stdDev: damageStats?.stdDev,
               variance: damageStats?.variance,
+              dpmMean: damageStats?.mean,
+              healingMean: healingStats?.mean,
+              isHealer,
               championWinrate,
               itemStats: comboItemStats,
               runes: comboData.runes || undefined,
@@ -550,7 +605,7 @@ export default function ChampionPageClient({
           // filter: must have exactly 3 core items, minimum games
           // normalizedItems uses 99999 for boots, so we count actual items
           .filter(c => c.normalizedItems.length === 3 && c.games >= MIN_CORE_GAMES)
-          .sort((a, b) => b.wilsonScore - a.wilsonScore)
+          .sort((a, b) => b.compositeScore - a.compositeScore)
       })()
     : []
 

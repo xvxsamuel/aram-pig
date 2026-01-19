@@ -284,17 +284,33 @@ export function CoreBuildsSelector({
                       </div>
                     </div>
                     <div className="flex justify-between text-xs items-end">
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1">
                         <span className="font-bold" style={{ color: getWinrateColor(combo.winrate) }}>{combo.winrate.toFixed(1)}% WR</span>
-                        {combo.pickrate !== undefined && (
-                          <span className="text-[10px]">{combo.pickrate.toFixed(1)}% Pick</span>
+                        {/* performance chevron: show only if significantly above/below average (|z| > 0.5) */}
+                        {combo.effectivenessZScore !== undefined && Math.abs(combo.effectivenessZScore) > 0.5 && (
+                          <SimpleTooltip 
+                            content={combo.effectivenessZScore > 0 
+                              ? "This build performs better than the average for this champion"
+                              : "This build performs worse than the average for this champion"
+                            }
+                          >
+                            <span className="flex items-center">
+                              {combo.effectivenessZScore > 0 ? (
+                                <svg className="w-3 h-3 text-accent-light" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                                </svg>
+                              ) : (
+                                <svg className="w-3 h-3 text-negative" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </span>
+                          </SimpleTooltip>
                         )}
                       </div>
-                      <div className="flex flex-col gap-0.5 items-end">
-                        <div className="flex flex-col items-end leading-tight">
-                          <span className="text-text-muted">{Math.round(combo.games).toLocaleString()}</span>
-                          <span className="text-[10px] text-text-muted">Games</span>
-                        </div>
+                      <div className="flex flex-col items-end leading-tight">
+                        <span className="text-text-muted">{Math.round(combo.games).toLocaleString()}</span>
+                        <span className="text-[10px] text-text-muted">Games</span>
                       </div>
                     </div>
                   </button>

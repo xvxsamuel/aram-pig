@@ -13,6 +13,7 @@ import {
   ItemTimelineEvent,
 } from './tabs'
 import { getPigScoreColor, ONE_YEAR_MS } from '@/lib/ui'
+import DataWarning from '@/components/ui/DataWarning'
 import itemsData from '@/data/items.json'
 
 // helper to check if an item is a completed item (legendary, boots, mythic)
@@ -53,7 +54,53 @@ function hydrateItemTimeline(events: StoredItemEvent[]): ItemTimelineEvent[] {
     itemName: getItemName(e.itemId),
   }))
 }
-
+// Header stripe component for tabs
+function TabHeader({ 
+  title, 
+  score, 
+  totalGames,
+  showWarning = false,
+  usedFallbackPatch,
+  usedCoreStats,
+  usedFallbackCore,
+}: { 
+  title: string
+  score: number
+  totalGames: number
+  showWarning?: boolean
+  usedFallbackPatch?: boolean
+  usedCoreStats?: boolean
+  usedFallbackCore?: boolean
+}) {
+  return (
+    <div className="px-4 py-2 flex items-center justify-between border-b border-abyss-700 bg-abyss-900">
+      <div className="flex items-center gap-3">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wide">{title}</h3>
+        <div className="flex items-center gap-2 text-xs text-text-muted font-normal normal-case tracking-normal">
+          <span>Based on {totalGames.toLocaleString()} games</span>
+          {showWarning && (
+            <DataWarning 
+              usedFallbackPatch={usedFallbackPatch}
+              usedCoreStats={usedCoreStats}
+              usedFallbackCore={usedFallbackCore}
+            />
+          )}
+        </div>
+      </div>
+      <span 
+        className="text-xl font-bold"
+        style={{
+          background: 'linear-gradient(to top, var(--color-gold-dark), var(--color-gold-light))',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}
+      >
+        {score}/100
+      </span>
+    </div>
+  )
+}
 interface Props {
   match: MatchData
   currentPuuid: string
@@ -375,7 +422,7 @@ export default function MatchDetails({
     }
   }, [selectedTab, match.metadata.matchId])
 
-  // Calculate overall build score for the tab label
+  // calculate overall build score for the tab label
   const buildSubScores = pigScoreBreakdown?.buildSubScores
   
   const overallBuildScore = (buildSubScores && canShowPerformanceTab) ? Math.round(
@@ -412,14 +459,6 @@ export default function MatchDetails({
           )}
         >
           Build
-          {overallBuildScore !== null && (
-            <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full flex">
-              <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
-                <span style={{ color: getPigScoreColor(overallBuildScore) }}>{overallBuildScore}</span>
-                <span className="text-white">PIG</span>
-              </div>
-            </div>
-          )}
         </button>
         {canShowPerformanceTab && (
           <button
@@ -432,30 +471,31 @@ export default function MatchDetails({
             )}
           >
             Performance
-            {pigScoreBreakdown?.componentScores?.performance !== undefined ? (
-              <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full flex">
-                <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
-                  <span style={{ color: getPigScoreColor(pigScoreBreakdown.componentScores.performance) }}>
-                    {pigScoreBreakdown.componentScores.performance}
-                  </span>
-                  <span className="text-white">PIG</span>
-                </div>
-              </div>
-            ) : getPigScore(currentPuuid) !== null && (
-              <div className="p-px bg-gradient-to-b from-gold-light to-gold-dark rounded-full flex">
-                <div className="bg-abyss-700 rounded-full px-1.5 py-1.5 text-[10px] font-bold leading-none flex items-center gap-1">
-                  <span style={{ color: getPigScoreColor(getPigScore(currentPuuid)!) }}>
-                    {getPigScore(currentPuuid)}
-                  </span>
-                  <span className="text-white">PIG</span>
-                </div>
-              </div>
-            )}
           </button>
         )}
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Header Stripe */}
+      {pigScoreBreakdown && (
+        <TabHeader
+          title={
+            selectedTab === 'overview' ? 'Personal Item Grade' :
+            selectedTab === 'build' ? 'Build Analysis' : 'Performance Analysis'
+          }
+          score={
+            selectedTab === 'overview' ? Math.round(pigScoreBreakdown.finalScore) :
+            selectedTab === 'build' ? (pigScoreBreakdown.componentScores?.build ?? 0) :
+            pigScoreBreakdown.componentScores?.performance ?? 0
+          }
+          totalGames={pigScoreBreakdown.totalGames}
+          showWarning={selectedTab !== 'overview'}
+          usedFallbackPatch={pigScoreBreakdown.usedFallbackPatch}
+          usedCoreStats={pigScoreBreakdown.usedCoreStats}
+          usedFallbackCore={pigScoreBreakdown.usedFallbackCore}
+        />
+      )}
+
+      {/* tab content */}
       <div>
         {selectedTab === 'overview' ? (
           <OverviewTab

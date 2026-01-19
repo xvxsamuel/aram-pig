@@ -185,7 +185,7 @@
   },
   "1054": {
     "name": "Doran's Shield",
-    "description": "<bold><keyword>Enduring Focus:</keyword></bold> Restore <heal>4 Health</heal> every 5 seconds.\nAfter taking damage from a champion, restore <heal>Health</heal> over 8 seconds.\n<bold><keyword>Helping Hand:</keyword></bold> Attacks deal <ad-bonus>5 bonus physical damage</ad-bonus> to minions.",
+    "description": "<bold><keyword>Enduring Focus:</keyword></bold> <heal>Restore 4 Health</heal> every 5 seconds.\nAfter taking damage from a champion, <heal>restore Health</heal> over 8 seconds.\n<bold><keyword>Helping Hand:</keyword></bold> Attacks deal <ad-bonus>5 bonus physical damage</ad-bonus> to minions.",
     "totalCost": 450,
     "itemType": "component",
     "stats": {
@@ -243,7 +243,7 @@
   },
   "1083": {
     "name": "Cull",
-    "description": "<bold><keyword>Reap:</keyword></bold> Restore <heal>3 Health</heal> <keyword>On-Hit</keyword>.\nKilling minions grants <gold>1 gold</gold>, up to <gold>100</gold>. Reaching the limit grants another <gold>350 gold</gold>.",
+    "description": "<bold><keyword>Reap:</keyword></bold> <heal>Restore 3 Health</heal> <keyword>On-Hit</keyword>.\nKilling minions grants <gold>1 gold</gold>, up to <gold>100</gold>. Reaching the limit grants another <gold>350 gold</gold>.",
     "totalCost": 450,
     "itemType": "component",
     "stats": {
@@ -287,7 +287,7 @@
   },
   "1101": {
     "name": "Scorchclaw Pup",
-    "description": "<bold><keyword>Jungle Companions:</keyword></bold> Summon a Scorchclaw that assists you against monsters.\n<bold><keyword>Scorchclaw's Slash:</keyword></bold> The companion grows as you hunt monsters, empowering your <keyword>Smite</keyword>. When fully grown, it periodically imbues your next Attack or Ability to burn enemies and <bold>Slow</bold> them. Killing large monsters readies this immediately.",
+    "description": "<bold><keyword>Jungle Companions:</keyword></bold> Summon a Scorchclaw that assists you against monsters.\n<bold><keyword>Scorchclaw's Slash:</keyword></bold> The companion grows as you hunt monsters, empowering your <keyword>Smite</keyword>. When fully grown, it periodically imbues your next Attack or Ability to burn enemies and <keyword>Slow</keyword> them. Killing large monsters readies this immediately.",
     "totalCost": 450,
     "itemType": "component",
     "stats": {}
@@ -329,7 +329,7 @@
   },
   "1107": {
     "name": "Scorchclaw Pup",
-    "description": "<bold><keyword>Jungle Companions:</keyword></bold> Summon a Scorchclaw that assists you against monsters.\n<bold><keyword>Scorchclaw's Slash:</keyword></bold> The companion grows as you hunt monsters, empowering your <keyword>Smite</keyword>. When fully grown, it periodically imbues your next Attack or Ability to burn enemies and <bold>Slow</bold> them. Killing large monsters readies this immediately.",
+    "description": "<bold><keyword>Jungle Companions:</keyword></bold> Summon a Scorchclaw that assists you against monsters.\n<bold><keyword>Scorchclaw's Slash:</keyword></bold> The companion grows as you hunt monsters, empowering your <keyword>Smite</keyword>. When fully grown, it periodically imbues your next Attack or Ability to burn enemies and <keyword>Slow</keyword> them. Killing large monsters readies this immediately.",
     "totalCost": 450,
     "itemType": "component",
     "stats": {}
@@ -540,7 +540,7 @@
   },
   "2010": {
     "name": "Total Biscuit of Everlasting Will",
-    "description": "<bold><keyword>Active - Consume:</keyword></bold> Eat the biscuit to restore <heal>Health</heal> over 5 seconds, increased based on missing health. Consuming or selling a biscuit permanently grants <health>30 maximum Health</health>.",
+    "description": "<bold><keyword>Active - Consume:</keyword></bold> Eat the biscuit to <heal>restore Health</heal> over 5 seconds, increased based on missing health. Consuming or selling a biscuit permanently grants <health>30 maximum Health</health>.",
     "totalCost": 50,
     "itemType": "component",
     "stats": {}
@@ -603,7 +603,7 @@
   },
   "2033": {
     "name": "Corrupting Potion",
-    "description": "<bold><keyword>Active - Consume:</keyword></bold> Consumes a charge to restore <heal>100 Health</heal> and <mana>75 Mana</mana> over 12 seconds. During this time, damaging Abilities and Attacks burn enemy champions for <magic>15 (20 if you cannot gain Mana) magic damage</magic> over 3 seconds. Holds up to 3 charges and refills upon visiting the shop.\n\n<italic>Corrupting damage is reduced to 50% when triggered by area of effect or periodic damage.</italic>",
+    "description": "<bold><keyword>Active - Consume:</keyword></bold> Consumes a charge to <heal>restore 100 Health</heal> and <mana>75 Mana</mana> over 12 seconds. During this time, damaging Abilities and Attacks burn enemy champions for <magic>15 (20 if you cannot gain Mana) magic damage</magic> over 3 seconds. Holds up to 3 charges and refills upon visiting the shop.\n\n<italic>Corrupting damage is reduced to 50% when triggered by area of effect or periodic damage.</italic>",
     "totalCost": 500,
     "itemType": "consumable",
     "stats": {}
@@ -1446,7 +1446,7 @@
   },
   "3083": {
     "name": "Warmog's Armor",
-    "description": "<bold><keyword>Warmog's Heart:</keyword></bold> If you have 2000 <health>bonus Health</health> and have not taken damage within 8 seconds, restore Health per second.\n<bold><keyword>Warmog's Vitality:</keyword></bold> Gain <health>bonus Health</health> equal to 12% of your <health><bold>bonus</bold> Health <bold>from items</bold></health>.",
+    "description": "<bold><keyword>Warmog's Heart:</keyword></bold> If you have 2000 <health>bonus Health</health> and have not taken damage within 8 seconds, <heal>restore Health</heal> per second.\n<bold><keyword>Warmog's Vitality:</keyword></bold> Gain <health>bonus Health</health> equal to 12% of your <health><bold>bonus</bold> Health <bold>from items</bold></health>.",
     "totalCost": 3100,
     "itemType": "legendary",
     "stats": {
@@ -1563,7 +1563,7 @@
   },
   "3102": {
     "name": "Banshee's Veil",
-    "description": "<bold><keyword>Annul:</keyword></bold> Grants a Spell Shield that blocks the next enemy Ability.",
+    "description": "<bold><keyword>Annul:</keyword></bold> Grants a <keyword>Spell Shield</keyword> that blocks the next enemy Ability.",
     "totalCost": 3000,
     "itemType": "legendary",
     "stats": {
@@ -1584,7 +1584,7 @@
   },
   "3107": {
     "name": "Redemption",
-    "description": "<bold><keyword>Intervention:</keyword></bold> Restore <heal>150 - 350 Health</heal> to allied units and deal <true>10% <health>max Health</health> true damage</true> to enemy champions after 2.5 seconds.",
+    "description": "<bold><keyword>Intervention:</keyword></bold> <heal>Restore 150 - 350 Health</heal> to allied units and deal <true>10% <health>max Health</health> true damage</true> to enemy champions after 2.5 seconds.",
     "totalCost": 2300,
     "itemType": "legendary",
     "stats": {
@@ -1875,7 +1875,7 @@
   },
   "3146": {
     "name": "Hextech Gunblade",
-    "description": "(0s)\n<bold><keyword>Lightning Bolt:</keyword></bold> Shocks the target enemy champion, dealing magic damage and slowing them by 25% for 1.5 seconds.",
+    "description": "(0s)\n<bold><keyword>Lightning Bolt:</keyword></bold> Shocks the target enemy champion, dealing magic damage and <keyword>slowing</keyword> them by 25% for 1.5 seconds.",
     "totalCost": 3000,
     "itemType": "legendary",
     "stats": {
@@ -1907,7 +1907,7 @@
   },
   "3153": {
     "name": "Blade of The Ruined King",
-    "description": "<bold><keyword>Mist's Edge:</keyword></bold> Attacks deal <ad-bonus>a percentage</ad-bonus> of enemy's current Health as <ad-bonus>bonus physical damage</ad-bonus> <keyword>On-Hit</keyword>.\n<bold><keyword>Clawing Shadows:</keyword></bold> Attacking a champion 3 times <bold>Slows</bold> them by 30% for 1 second.",
+    "description": "<bold><keyword>Mist's Edge:</keyword></bold> Attacks deal <ad-bonus>a percentage</ad-bonus> of enemy's current Health as <ad-bonus>bonus physical damage</ad-bonus> <keyword>On-Hit</keyword>.\n<bold><keyword>Clawing Shadows:</keyword></bold> Attacking a champion 3 times <keyword>Slows</keyword> them by 30% for 1 second.",
     "totalCost": 3200,
     "itemType": "legendary",
     "stats": {
@@ -2128,7 +2128,7 @@
   },
   "3222": {
     "name": "Mikael's Blessing",
-    "description": "<bold><keyword>Purify:</keyword></bold> Remove all crowd control debuffs (excluding <keyword>Airborne</keyword> and <keyword>Suppression</keyword>) from an ally champion and restore <heal>100 - 250 Health</heal>.",
+    "description": "<bold><keyword>Purify:</keyword></bold> Remove all crowd control debuffs (excluding <keyword>Airborne</keyword> and <keyword>Suppression</keyword>) from an ally champion and <heal>restore 100 - 250 Health</heal>.",
     "totalCost": 2300,
     "itemType": "legendary",
     "stats": {
@@ -2271,7 +2271,7 @@
   },
   "3814": {
     "name": "Edge of Night",
-    "description": "<bold><keyword>Annul:</keyword></bold> Grants a Spell Shield that blocks the next enemy Ability.",
+    "description": "<bold><keyword>Annul:</keyword></bold> Grants a <keyword>Spell Shield</keyword> that blocks the next enemy Ability.",
     "totalCost": 3000,
     "itemType": "legendary",
     "stats": {
@@ -2313,7 +2313,7 @@
   },
   "3869": {
     "name": "Celestial Opposition",
-    "description": "<bold><keyword>Blessing of the Mountain:</keyword></bold> Reduce incoming champion damage for 2 seconds after taking damage from a champion. When the effect ends, slow nearby enemies by 50% for 1.5 seconds.\n(4 charges)\nPlaces an <keyword>Invisible</keyword> Stealth Ward that grants vision.",
+    "description": "<bold><keyword>Blessing of the Mountain:</keyword></bold> Reduce incoming champion damage for 2 seconds after taking damage from a champion. When the effect ends, <keyword>slow</keyword> nearby enemies by 50% for 1.5 seconds.\n(4 charges)\nPlaces an <keyword>Invisible</keyword> Stealth Ward that grants vision.",
     "totalCost": 400,
     "itemType": "component",
     "stats": {
@@ -2506,7 +2506,7 @@
   },
   "4402": {
     "name": "Innervating Locket",
-    "description": "• <keyword>Eternity:</keyword> Restore Mana equal to 15% of premitigation damage taken from champions, and Health equal to 25% of Mana spent, up to 20 Health per cast, per second.\n• <keyword>Innervate:</keyword> After using an ability, restore <heal>3% missing Health</heal> and <mana>3% missing Mana</mana> over 3 seconds.\n\n<italic>\"Cast down the Noxians\"\n– Bobdyr, Temple Guardsman</italic>",
+    "description": "• <keyword>Eternity:</keyword> Restore Mana equal to 15% of premitigation damage taken from champions, and Health equal to 25% of Mana spent, up to 20 Health per cast, per second.\n• <keyword>Innervate:</keyword> After using an ability, <heal>restore 3% missing Health</heal> and <mana>3% missing Mana</mana> over 3 seconds.\n\n<italic>\"Cast down the Noxians\"\n– Bobdyr, Temple Guardsman</italic>",
     "totalCost": 2950,
     "itemType": "legendary",
     "stats": {
@@ -2571,7 +2571,7 @@
   },
   "4632": {
     "name": "Verdant Barrier",
-    "description": "<bold><keyword>Annul:</keyword></bold> Grants a Spell Shield that blocks the next enemy Ability.",
+    "description": "<bold><keyword>Annul:</keyword></bold> Grants a <keyword>Spell Shield</keyword> that blocks the next enemy Ability.",
     "totalCost": 1600,
     "itemType": "component",
     "stats": {
@@ -2696,7 +2696,7 @@
   },
   "6035": {
     "name": "Silvermere Dawn",
-    "description": "<bold><keyword>Quicksilver:</keyword></bold> Remove all crowd control debuffs and gain Tenacity and Slow Resistance.",
+    "description": "<bold><keyword>Quicksilver:</keyword></bold> Remove all crowd control debuffs and gain Tenacity and <keyword>Slow</keyword> Resistance.",
     "totalCost": 3000,
     "itemType": "legendary",
     "stats": {
@@ -2707,7 +2707,7 @@
   },
   "6333": {
     "name": "Death's Dance",
-    "description": "<bold><keyword>Ignore Pain:</keyword></bold> A percentage of damage taken is dealt to you over 3 seconds instead.\n<bold><keyword>Defy:</keyword></bold> When a champion that you damaged within 3 seconds dies, cleanse <keyword>Ignore Pain's</keyword> remaining damage and restore <heal>Health</heal> over 2 seconds.",
+    "description": "<bold><keyword>Ignore Pain:</keyword></bold> A percentage of damage taken is dealt to you over 3 seconds instead.\n<bold><keyword>Defy:</keyword></bold> When a champion that you damaged within 3 seconds dies, cleanse <keyword>Ignore Pain's</keyword> remaining damage and <heal>restore Health</heal> over 2 seconds.",
     "totalCost": 3300,
     "itemType": "legendary",
     "stats": {
@@ -2764,7 +2764,7 @@
   },
   "6620": {
     "name": "Echoes of Helia",
-    "description": "<bold><keyword>Soul Siphon:</keyword></bold> Gain 35% of pre-mitigation damage dealt to champions as Soul Charges. <keyword>Healing</keyword> or <keyword>Shielding</keyword> an ally consumes all <keyword>Soul Charges</keyword> to restore <heal>Health</heal>.",
+    "description": "<bold><keyword>Soul Siphon:</keyword></bold> Gain 35% of pre-mitigation damage dealt to champions as Soul Charges. <keyword>Healing</keyword> or <keyword>Shielding</keyword> an ally consumes all <keyword>Soul Charges</keyword> to <heal>restore Health</heal>.",
     "totalCost": 2200,
     "itemType": "legendary",
     "stats": {
@@ -2787,7 +2787,7 @@
   },
   "6630": {
     "name": "Goredrinker",
-    "description": "<keyword>Mythic Passive:</keyword> Grants all other <keyword>Legendary</keyword> items <keyword> 75 Health</keyword> and <keyword> 3</keyword> Ability Haste.\n\n<bold><keyword>Thirsting Slash:</keyword></bold> Deal damage to nearby enemies. Restore Health for each champion hit.",
+    "description": "<keyword>Mythic Passive:</keyword> Grants all other <keyword>Legendary</keyword> items <keyword> 75 Health</keyword> and <keyword> 3</keyword> Ability Haste.\n\n<bold><keyword>Thirsting Slash:</keyword></bold> Deal damage to nearby enemies. <heal>Restore Health</heal> for each champion hit.",
     "totalCost": 3200,
     "itemType": "mythic",
     "stats": {
@@ -2800,7 +2800,7 @@
   },
   "6631": {
     "name": "Stridebreaker",
-    "description": "<bold><keyword>Cleave:</keyword></bold> Attacks deal <ad-bonus>physical damage</ad-bonus> to nearby enemies.\n<bold><keyword>Breaking Shockwave:</keyword></bold> Deal <ad-bonus>physical damage</ad-bonus> and <bold>Slow</bold> nearby enemies by 35%.\nGain <ms>35% decaying Move Speed</ms> per champion hit for 3 seconds.",
+    "description": "<bold><keyword>Cleave:</keyword></bold> Attacks deal <ad-bonus>physical damage</ad-bonus> to nearby enemies.\n<bold><keyword>Breaking Shockwave:</keyword></bold> Deal <ad-bonus>physical damage</ad-bonus> and <keyword>Slow</keyword> nearby enemies by 35%.\nGain <ms>35% decaying Move Speed</ms> per champion hit for 3 seconds.",
     "totalCost": 3300,
     "itemType": "legendary",
     "stats": {
@@ -2839,7 +2839,7 @@
   },
   "6656": {
     "name": "Everfrost",
-    "description": "<keyword>Mythic Passive:</keyword> Grants all other <keyword>Legendary</keyword> items <keyword> 10</keyword> Ability Power.\n\n<bold><keyword>Glaciate:</keyword></bold> Deal damage in a cone, <bold>Slowing</bold> enemies hit. Enemies at the center of the cone are <bold>Rooted</bold> instead.",
+    "description": "<keyword>Mythic Passive:</keyword> Grants all other <keyword>Legendary</keyword> items <keyword> 10</keyword> Ability Power.\n\n<bold><keyword>Glaciate:</keyword></bold> Deal damage in a cone, <keyword>Slowing</keyword> enemies hit. Enemies at the center of the cone are <bold>Rooted</bold> instead.",
     "totalCost": 2865,
     "itemType": "mythic",
     "stats": {
@@ -2873,7 +2873,7 @@
   },
   "6662": {
     "name": "Iceborn Gauntlet",
-    "description": "<bold><keyword>Spellblade:</keyword></bold> After using an Ability, your next Attack deals <ad-bonus>bonus physical damage</ad-bonus> <keyword>On-Hit</keyword> and creates a frost field for 2s that <bold>Slows</bold>.",
+    "description": "<bold><keyword>Spellblade:</keyword></bold> After using an Ability, your next Attack deals <ad-bonus>bonus physical damage</ad-bonus> <keyword>On-Hit</keyword> and creates a frost field for 2s that <keyword>Slows</keyword>.",
     "totalCost": 2900,
     "itemType": "legendary",
     "stats": {
@@ -3040,7 +3040,7 @@
   },
   "6694": {
     "name": "Serylda's Grudge",
-    "description": "<bold><keyword>Bitter Cold:</keyword></bold> Damaging Abilities <bold>Slow</bold> enemies below 50% Health by 30% for 1 second.",
+    "description": "<bold><keyword>Bitter Cold:</keyword></bold> Damaging Abilities <keyword>Slow</keyword> enemies below 50% Health by 30% for 1 second.",
     "totalCost": 3000,
     "itemType": "legendary",
     "stats": {
@@ -3340,7 +3340,7 @@
   },
   "9276": {
     "name": "Double Bun-Bun Barrage",
-    "description": "Deals area damage over time in a cone. Enemies damaged are slowed and eventually stunned. Stunned enemies take extra damage.\n\n<italic>Damage, Ability Haste, Duration, Area Size</italic>",
+    "description": "Deals area damage over time in a cone. Enemies damaged are <keyword>slowed</keyword> and eventually stunned. Stunned enemies take extra damage.\n\n<italic>Damage, Ability Haste, Duration, Area Size</italic>",
     "totalCost": 0,
     "itemType": "component",
     "stats": {}
@@ -3459,7 +3459,7 @@
   },
   "9302": {
     "name": "Sound Wave",
-    "description": "Seraphine sends out a wave of sound, damaging and slowing enemies hit.\n\n<bold>Evolve: </bold> Projectile Count\n\n<italic>Damage, Ability Haste, Crit Chance, Projectile Count, Duration </italic>",
+    "description": "Seraphine sends out a wave of sound, damaging and <keyword>slowing</keyword> enemies hit.\n\n<bold>Evolve: </bold> Projectile Count\n\n<italic>Damage, Ability Haste, Crit Chance, Projectile Count, Duration </italic>",
     "totalCost": 0,
     "itemType": "component",
     "stats": {}
@@ -3595,7 +3595,7 @@
   },
   "126697": {
     "name": "Hubris",
-    "description": "<bold><keyword>Eminence:</keyword></bold> Gain temporary AD based on champion kills on kill.",
+    "description": "<bold><keyword>Eminence:</keyword></bold> Gain temporary <ad>Attack Damage</ad> based on champion kills on kill.",
     "totalCost": 2950,
     "itemType": "legendary",
     "stats": {
@@ -3872,7 +3872,7 @@
   },
   "223009": {
     "name": "Boots of Swiftness",
-    "description": "The strength of movement slowing effects is reduced by <keyword>40%</keyword>.",
+    "description": "The strength of movement <keyword>slowing</keyword> effects is reduced by <keyword>40%</keyword>.",
     "totalCost": 500,
     "itemType": "boots",
     "stats": {
@@ -4169,7 +4169,7 @@
   },
   "223102": {
     "name": "Banshee's Veil",
-    "description": "<bold><keyword>Annul:</keyword></bold> Grants a Spell Shield that blocks the next enemy Ability.\n\n<italic>Item cooldown is restarted if you take damage from champions before it is completed.</italic>",
+    "description": "<bold><keyword>Annul:</keyword></bold> Grants a <keyword>Spell Shield</keyword> that blocks the next enemy Ability.\n\n<italic>Item cooldown is restarted if you take damage from champions before it is completed.</italic>",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4179,7 +4179,7 @@
   },
   "223107": {
     "name": "Redemption",
-    "description": "(0s)\n<bold><keyword>Intervention:</keyword></bold> Target an area within. After 2.5 seconds, call down a beam of light to restore Health to allies and damage enemy champions.",
+    "description": "(0s)\n<bold><keyword>Intervention:</keyword></bold> Target an area within. After 2.5 seconds, call down a beam of light to <heal>restore Health</heal> to allies and damage enemy champions.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4245,7 +4245,7 @@
   },
   "223116": {
     "name": "Rylai's Crystal Scepter",
-    "description": "<bold><keyword>Rimefrost:</keyword></bold> Damaging Abilities <bold>Slow</bold> enemies by 30% for 1 second.",
+    "description": "<bold><keyword>Rimefrost:</keyword></bold> Damaging Abilities <keyword>Slow</keyword> enemies by 30% for 1 second.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4331,7 +4331,7 @@
   },
   "223143": {
     "name": "Randuin's Omen",
-    "description": "<bold><keyword>Resilience:</keyword></bold> <crit>Critical Strikes</crit> deal 30% less damage to you.\n<bold><keyword>Humility:</keyword></bold> <bold>Slow</bold> nearby enemies.\n\n(0s)\n<bold><keyword>Humility:</keyword></bold> Briefly <keyword>Slow</keyword> nearby enemies by 70% for 2 seconds.",
+    "description": "<bold><keyword>Resilience:</keyword></bold> <crit>Critical Strikes</crit> deal 30% less damage to you.\n<bold><keyword>Humility:</keyword></bold> <keyword>Slow</keyword> nearby enemies.\n\n(0s)\n<bold><keyword>Humility:</keyword></bold> Briefly <keyword>Slow</keyword> nearby enemies by 70% for 2 seconds.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4341,7 +4341,7 @@
   },
   "223146": {
     "name": "Hextech Gunblade",
-    "description": "(0s)\n<bold><keyword>Lightning Bolt:</keyword></bold> Shocks the target enemy champion, dealing <magic> magic damage</magic> and slowing them by 25% for 1.5 seconds.",
+    "description": "(0s)\n<bold><keyword>Lightning Bolt:</keyword></bold> Shocks the target enemy champion, dealing <magic> magic damage</magic> and <keyword>slowing</keyword> them by 25% for 1.5 seconds.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4363,7 +4363,7 @@
   },
   "223153": {
     "name": "Blade of The Ruined King",
-    "description": "<bold><keyword>Mist's Edge:</keyword></bold> Attacks apply an additional enemy current Health physical damage <keyword>On-Hit</keyword>.\n<bold><keyword>Clawing Shadows:</keyword></bold> Attacking a champion 3 times Slows them.",
+    "description": "<bold><keyword>Mist's Edge:</keyword></bold> Attacks apply an additional enemy current Health physical damage <keyword>On-Hit</keyword>.\n<bold><keyword>Clawing Shadows:</keyword></bold> Attacking a champion 3 times <keyword>Slows</keyword> them.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4426,7 +4426,7 @@
   },
   "223172": {
     "name": "Zephyr",
-    "description": "<bold><keyword>Like the Wind:</keyword></bold> Gain 5% Move Speed <keyword>On-Hit</keyword> for 6 seconds, stacking up to 25% Move Speed.\n\n<italic>Tenacity reduces the duration of <bold>Stun</bold>, <bold>Slow</bold>, <bold>Taunt</bold>, <bold>Fear</bold>, <bold>Silence</bold>, <bold>Blind</bold>, <bold>Polymorph</bold> and <bold>Immobilizing</bold> effects. It has no effect on <bold>Airborne</bold> or <bold>Suppression</bold>.</italic>",
+    "description": "<bold><keyword>Like the Wind:</keyword></bold> Gain 5% Move Speed <keyword>On-Hit</keyword> for 6 seconds, stacking up to 25% Move Speed.\n\n<italic>Tenacity reduces the duration of <bold>Stun</bold>, <keyword>Slow</keyword>, <bold>Taunt</bold>, <bold>Fear</bold>, <bold>Silence</bold>, <bold>Blind</bold>, <bold>Polymorph</bold> and <bold>Immobilizing</bold> effects. It has no effect on <bold>Airborne</bold> or <bold>Suppression</bold>.</italic>",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4494,7 +4494,7 @@
   },
   "223222": {
     "name": "Mikael's Blessing",
-    "description": "(0s)\n<bold><keyword>Purify:</keyword></bold> Restore Health and Remove all crowd control debuffs (except <bold>Knockups</bold> and <bold>Suppression</bold>) from an ally champion.",
+    "description": "(0s)\n<bold><keyword>Purify:</keyword></bold> <heal>Restore Health</heal> and Remove all crowd control debuffs (except <bold>Knockups</bold> and <bold>Suppression</bold>) from an ally champion.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4538,7 +4538,7 @@
   },
   "223742": {
     "name": "Dead Man's Plate",
-    "description": "<bold><keyword>Shipwrecker:</keyword></bold> While moving, build up Move Speed. Your next Attack discharges built up Move Speed to deal damage. If dealt by a Melee champion at top speed, the Attack also <bold>Slows</bold> the target.\n<bold><keyword>Unsinkable:</keyword></bold> The strength of movement slowing effects is reduced.",
+    "description": "<bold><keyword>Shipwrecker:</keyword></bold> While moving, build up Move Speed. Your next Attack discharges built up Move Speed to deal damage. If dealt by a Melee champion at top speed, the Attack also <keyword>Slows</keyword> the target.\n<bold><keyword>Unsinkable:</keyword></bold> The strength of movement <keyword>slowing</keyword> effects is reduced.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4559,7 +4559,7 @@
   },
   "223814": {
     "name": "Edge of Night",
-    "description": "<bold><keyword>Annul:</keyword></bold> Gain a Spell Shield that blocks the next enemy Ability.\n\n<italic>Item's cooldown is restarted if you take damage before it is completed.</italic>",
+    "description": "<bold><keyword>Annul:</keyword></bold> Gain a <keyword>Spell Shield</keyword> that blocks the next enemy Ability.\n\n<italic>Item's cooldown is restarted if you take damage before it is completed.</italic>",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4677,7 +4677,7 @@
   },
   "226333": {
     "name": "Death's Dance",
-    "description": "<bold><keyword>Ignore Pain:</keyword></bold> Damage taken is dealt to you over time instead.\n<bold><keyword>Defy:</keyword></bold> Champion takedowns cleanse <keyword>Ignore Pain's</keyword> remaining damage pool and restore Health over time.",
+    "description": "<bold><keyword>Ignore Pain:</keyword></bold> Damage taken is dealt to you over time instead.\n<bold><keyword>Defy:</keyword></bold> Champion takedowns cleanse <keyword>Ignore Pain's</keyword> remaining damage pool and <heal>restore Health</heal> over time.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4734,7 +4734,7 @@
   },
   "226620": {
     "name": "Echoes of Helia",
-    "description": "• <keyword>Soul Siphon:</keyword> Damaging a champion grants a <keyword>Soul Shard</keyword>. <keyword>Healing</keyword> or <keyword>Shielding</keyword> an ally consumes all <keyword>Soul Shards</keyword> to restore Health and deals magic damage per Shard to the nearest enemy champion.",
+    "description": "• <keyword>Soul Siphon:</keyword> Damaging a champion grants a <keyword>Soul Shard</keyword>. <keyword>Healing</keyword> or <keyword>Shielding</keyword> an ally consumes all <keyword>Soul Shards</keyword> to <heal>restore Health</heal> and deals magic damage per Shard to the nearest enemy champion.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4757,7 +4757,7 @@
   },
   "226630": {
     "name": "Goredrinker",
-    "description": "<bold><keyword>Thirsting Slash:</keyword></bold> Deal damage to nearby enemies. Restore Health for each champion hit.",
+    "description": "<bold><keyword>Thirsting Slash:</keyword></bold> Deal damage to nearby enemies. <heal>Restore Health</heal> for each champion hit.",
     "totalCost": 1000,
     "itemType": "component",
     "stats": {
@@ -4769,7 +4769,7 @@
   },
   "226631": {
     "name": "Stridebreaker",
-    "description": "<bold><keyword>Cleave:</keyword></bold> Attacks deal <ad-bonus>physical damage</ad-bonus> to nearby enemies.\n<bold><keyword>Breaking Shockwave:</keyword></bold> Deal <ad-bonus>physical damage</ad-bonus> and <bold>Slow</bold> nearby enemies by 40%.\nGain <ms>40% decaying Move Speed</ms> per champion hit for 3 seconds.",
+    "description": "<bold><keyword>Cleave:</keyword></bold> Attacks deal <ad-bonus>physical damage</ad-bonus> to nearby enemies.\n<bold><keyword>Breaking Shockwave:</keyword></bold> Deal <ad-bonus>physical damage</ad-bonus> and <keyword>Slow</keyword> nearby enemies by 40%.\nGain <ms>40% decaying Move Speed</ms> per champion hit for 3 seconds.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4812,7 +4812,7 @@
   },
   "226662": {
     "name": "Iceborn Gauntlet",
-    "description": "<bold><keyword>Spellblade:</keyword></bold> After using an Ability, your next Attack deals <ad-bonus>bonus physical damage</ad-bonus> <keyword>On-Hit</keyword> and creates a frost field for 2s that <bold>Slows</bold>.",
+    "description": "<bold><keyword>Spellblade:</keyword></bold> After using an Ability, your next Attack deals <ad-bonus>bonus physical damage</ad-bonus> <keyword>On-Hit</keyword> and creates a frost field for 2s that <keyword>Slows</keyword>.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -4910,7 +4910,7 @@
   },
   "226694": {
     "name": "Serylda's Grudge",
-    "description": "<bold><keyword>Bitter Cold:</keyword></bold> Damaging Abilities <bold>Slow</bold> enemies below 50% Health by 30% for 1 second.",
+    "description": "<bold><keyword>Bitter Cold:</keyword></bold> Damaging Abilities <keyword>Slow</keyword> enemies below 50% Health by 30% for 1 second.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -5142,7 +5142,7 @@
   },
   "323107": {
     "name": "Redemption",
-    "description": "<bold><keyword>Intervention:</keyword></bold> Restore <heal>150 - 350 Health</heal> to allied units and deal <true>10% <health>max Health</health> true damage</true> to enemy champions after 2.5 seconds.",
+    "description": "<bold><keyword>Intervention:</keyword></bold> <heal>Restore 150 - 350 Health</heal> to allied units and deal <true>10% <health>max Health</health> true damage</true> to enemy champions after 2.5 seconds.",
     "totalCost": 2800,
     "itemType": "legendary",
     "stats": {
@@ -5211,7 +5211,7 @@
   },
   "323222": {
     "name": "Mikael's Blessing",
-    "description": "<bold><keyword>Purify:</keyword></bold> Remove all crowd control debuffs (excluding <keyword>Airborne</keyword> and <keyword>Suppression</keyword>) from an ally champion and restore <heal>100 - 250 Health</heal>.",
+    "description": "<bold><keyword>Purify:</keyword></bold> Remove all crowd control debuffs (excluding <keyword>Airborne</keyword> and <keyword>Suppression</keyword>) from an ally champion and <heal>restore 100 - 250 Health</heal>.",
     "totalCost": 2800,
     "itemType": "legendary",
     "stats": {
@@ -5270,7 +5270,7 @@
   },
   "326620": {
     "name": "Echoes of Helia",
-    "description": "<bold><keyword>Soul Siphon:</keyword></bold> Gain 35% of pre-mitigation damage dealt to champions as Soul Charges. <keyword>Healing</keyword> or <keyword>Shielding</keyword> an ally consumes all <keyword>Soul Charges</keyword> to restore <heal>Health</heal>.",
+    "description": "<bold><keyword>Soul Siphon:</keyword></bold> Gain 35% of pre-mitigation damage dealt to champions as Soul Charges. <keyword>Healing</keyword> or <keyword>Shielding</keyword> an ally consumes all <keyword>Soul Charges</keyword> to <heal>restore Health</heal>.",
     "totalCost": 2600,
     "itemType": "legendary",
     "stats": {
@@ -5414,7 +5414,7 @@
   },
   "443069": {
     "name": "Hamstringer",
-    "description": "<bold><keyword>Scour:</keyword></bold> On <crit>Critical Strike</crit>:\n• Apply a bleed, dealing 25% of the damage done + physical damage on hit over 2 seconds. This effect stacks any number of times.\n• Apply a 7% Slow for 2 seconds. This effect stacks up to 35%.",
+    "description": "<bold><keyword>Scour:</keyword></bold> On <crit>Critical Strike</crit>:\n• Apply a bleed, dealing 25% of the damage done + physical damage on hit over 2 seconds. This effect stacks any number of times.\n• Apply a 7% <keyword>Slow</keyword> for 2 seconds. This effect stacks up to 35%.",
     "totalCost": 1000,
     "itemType": "component",
     "stats": {
@@ -5452,7 +5452,7 @@
   },
   "443083": {
     "name": "Warmog's Armor",
-    "description": "<bold><keyword>Warmog's Heart:</keyword></bold> Requires 1350 <health>bonus Health</health>.\n\nRestore <heal> Health</heal> per second. If you have not taken damage within 4 seconds, restore an additional <heal> Health</heal> per second.",
+    "description": "<bold><keyword>Warmog's Heart:</keyword></bold> Requires 1350 <health>bonus Health</health>.\n\n<heal>Restore Health</heal> per second. If you have not taken damage within 4 seconds, restore an additional <heal> Health</heal> per second.",
     "totalCost": 1000,
     "itemType": "component",
     "stats": {
@@ -5529,7 +5529,7 @@
   },
   "446656": {
     "name": "Everfrost",
-    "description": "(0s)\n<bold><keyword>Glaciate:</keyword></bold> Deal damage in a cone, <bold>Slowing</bold> enemies hit. Enemies at the center of the cone are <bold>Rooted</bold> instead.",
+    "description": "(0s)\n<bold><keyword>Glaciate:</keyword></bold> Deal damage in a cone, <keyword>Slowing</keyword> enemies hit. Enemies at the center of the cone are <bold>Rooted</bold> instead.",
     "totalCost": 1000,
     "itemType": "component",
     "stats": {
@@ -5705,7 +5705,7 @@
   },
   "447111": {
     "name": "Overlord's Bloodmail",
-    "description": "<bold><keyword>Tyranny:</keyword></bold> Gain <ad-bonus> AD</ad-bonus> equal to 3% <health>Bonus HP</health>.\n<bold><keyword>Retribution:</keyword></bold> Gain up to <ad-bonus>17.5% increased AD</ad-bonus> based on your percent missing Health.",
+    "description": "<bold><keyword>Tyranny:</keyword></bold> Gain <ad-bonus> <ad>Attack Damage</ad></ad-bonus> equal to 3% <health>Bonus HP</health>.\n<bold><keyword>Retribution:</keyword></bold> Gain up to <ad-bonus>17.5% increased <ad>Attack Damage</ad></ad-bonus> based on your percent missing Health.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -5771,7 +5771,7 @@
   },
   "447118": {
     "name": "Pyromancer's Cloak",
-    "description": "<bold><keyword>Spark:</keyword></bold> Attack or Ability hits against an enemy champion <keyword>Burn</keyword> them for <magic> magic damage</magic> over 3 seconds.\n<bold><keyword>Cleansing Flame:</keyword></bold> Applying a <keyword>Burn</keyword> to an enemy champion creates a nearby <keyword>Blaze</keyword> for 5 seconds. While in a <keyword>Blaze</keyword>, you gain <ms> Move Speed</ms> and restore <heal> Health</heal> per second, while enemies take <magic> magic damage</magic> per second.\n\nThe size and strength of each <keyword>Blaze</keyword> scale the number unique <keyword>Burn</keyword> sources you have.",
+    "description": "<bold><keyword>Spark:</keyword></bold> Attack or Ability hits against an enemy champion <keyword>Burn</keyword> them for <magic> magic damage</magic> over 3 seconds.\n<bold><keyword>Cleansing Flame:</keyword></bold> Applying a <keyword>Burn</keyword> to an enemy champion creates a nearby <keyword>Blaze</keyword> for 5 seconds. While in a <keyword>Blaze</keyword>, you gain <ms> Move Speed</ms> and <heal>restore Health</heal> per second, while enemies take <magic> magic damage</magic> per second.\n\nThe size and strength of each <keyword>Blaze</keyword> scale the number unique <keyword>Burn</keyword> sources you have.",
     "totalCost": 1000,
     "itemType": "component",
     "stats": {
@@ -5782,7 +5782,7 @@
   },
   "447119": {
     "name": "Lightning Rod",
-    "description": "<bold><keyword>Call Lightning:</keyword></bold> Every 16 seconds, <keyword>Autocast</keyword> summon a stormcloud above you, which after a brief delay fires a lightning bolt, dealing <magic> plus 10% <health>max Health</health> magic damage</magic> and <bold>Slowing</bold> by 30% for 2 seconds.\n\nIf you are struck by the lightning, gain a <shield> Shield</shield> for 2 seconds.\n<bold><keyword>Fully Automated:</keyword></bold> Your <keyword>Autocast</keyword> Cooldowns are reduced by 1 seconds and benefit from your Ability Haste.\n\n<italic>Call Lighting has a minimum cooldown of 5 seconds.</italic>",
+    "description": "<bold><keyword>Call Lightning:</keyword></bold> Every 16 seconds, <keyword>Autocast</keyword> summon a stormcloud above you, which after a brief delay fires a lightning bolt, dealing <magic> plus 10% <health>max Health</health> magic damage</magic> and <keyword>Slowing</keyword> by 30% for 2 seconds.\n\nIf you are struck by the lightning, gain a <shield> Shield</shield> for 2 seconds.\n<bold><keyword>Fully Automated:</keyword></bold> Your <keyword>Autocast</keyword> Cooldowns are reduced by 1 seconds and benefit from your Ability Haste.\n\n<italic>Call Lighting has a minimum cooldown of 5 seconds.</italic>",
     "totalCost": 1000,
     "itemType": "component",
     "stats": {
@@ -5804,7 +5804,7 @@
   },
   "447121": {
     "name": "Twilight's Edge",
-    "description": "<bold><keyword>The Path Between:</keyword></bold> Threshold 130 bonus AD and 180 AP: Chakram orbit you, dealing continuous damage to enemies they strike.\n\n<keyword>Spirit World</keyword>: Gain <ap>Ability Power</ap> and Ability Haste.\n<keyword>Material World</keyword>: Gain <ad-bonus>Attack Damage</ad-bonus> and <keyword>Attack Speed</keyword>.",
+    "description": "<bold><keyword>The Path Between:</keyword></bold> Threshold 130 bonus <ad>Attack Damage</ad> and 180 AP: Chakram orbit you, dealing continuous damage to enemies they strike.\n\n<keyword>Spirit World</keyword>: Gain <ap>Ability Power</ap> and Ability Haste.\n<keyword>Material World</keyword>: Gain <ad-bonus>Attack Damage</ad-bonus> and <keyword>Attack Speed</keyword>.",
     "totalCost": 1000,
     "itemType": "component",
     "stats": {
@@ -5814,7 +5814,7 @@
   },
   "447122": {
     "name": "Black Hole Gauntlet",
-    "description": "<bold><keyword>Accretion:</keyword></bold> <keyword>On-Hit</keyword>, gain 1 stack of <keyword>Accretion</keyword>, and 5 stacks for <bold>immobilizing</bold> an enemy champion. These stacks last for the rest of the round, up to 50. Each stack increases your size by 2%.\n\n(0s)\n<bold><keyword>Dark Star:</keyword></bold> Summon a Black Hole that scales with your size. <slow>Slowing</slow> nearby enemies by 30% while those in the center are pulled closer and take <magic> magic damage each second</magic>, granting you 1 stack of <keyword>Accretion</keyword>. The Black Hole lasts for seconds.\n\n<italic>Increases in size every 10 stacks. </italic>",
+    "description": "<bold><keyword>Accretion:</keyword></bold> <keyword>On-Hit</keyword>, gain 1 stack of <keyword>Accretion</keyword>, and 5 stacks for <bold>immobilizing</bold> an enemy champion. These stacks last for the rest of the round, up to 50. Each stack increases your size by 2%.\n\n(0s)\n<bold><keyword>Dark Star:</keyword></bold> Summon a Black Hole that scales with your size. <slow>Slowing</<keyword>slow</keyword>> nearby enemies by 30% while those in the center are pulled closer and take <magic> magic damage each second</magic>, granting you 1 stack of <keyword>Accretion</keyword>. The Black Hole lasts for seconds.\n\n<italic>Increases in size every 10 stacks. </italic>",
     "totalCost": 1000,
     "itemType": "component",
     "stats": {
@@ -5890,7 +5890,7 @@
   },
   "663146": {
     "name": "Hextech Gunblade",
-    "description": "(0s)\n<bold><keyword>Lightning Bolt:</keyword></bold> Shocks the target enemy champion, dealing <magic> magic damage</magic> and slowing them by 40% for 2 seconds.",
+    "description": "(0s)\n<bold><keyword>Lightning Bolt:</keyword></bold> Shocks the target enemy champion, dealing <magic> magic damage</magic> and <keyword>slowing</keyword> them by 40% for 2 seconds.",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {
@@ -5901,7 +5901,7 @@
   },
   "663172": {
     "name": "Zephyr",
-    "description": "<bold><keyword>Like the Wind:</keyword></bold> Gain 5% Move Speed <keyword>On-Hit</keyword> for 6 seconds, stacking up to 25% Move Speed.\n\n<italic>Tenacity reduces the duration of <bold>Stun</bold>, <bold>Slow</bold>, <bold>Taunt</bold>, <bold>Fear</bold>, <bold>Silence</bold>, <bold>Blind</bold>, <bold>Polymorph</bold> and <bold>Immobilizing</bold> effects. It has no effect on <bold>Airborne</bold> or <bold>Suppression</bold>.</italic>",
+    "description": "<bold><keyword>Like the Wind:</keyword></bold> Gain 5% Move Speed <keyword>On-Hit</keyword> for 6 seconds, stacking up to 25% Move Speed.\n\n<italic>Tenacity reduces the duration of <bold>Stun</bold>, <keyword>Slow</keyword>, <bold>Taunt</bold>, <bold>Fear</bold>, <bold>Silence</bold>, <bold>Blind</bold>, <bold>Polymorph</bold> and <bold>Immobilizing</bold> effects. It has no effect on <bold>Airborne</bold> or <bold>Suppression</bold>.</italic>",
     "totalCost": 2500,
     "itemType": "component",
     "stats": {

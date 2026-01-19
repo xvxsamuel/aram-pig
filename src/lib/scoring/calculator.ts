@@ -218,7 +218,8 @@ export async function calculatePigScoreWithBreakdown(
   const { championName, game_duration, total_damage_dealt } = participant
   const gameDurationMinutes = game_duration / 60
 
-  if (gameDurationMinutes <= 0 || !total_damage_dealt) return null
+  // only skip if game duration is invalid - AFK players with 0 damage still get calculated (they'll get low scores)
+  if (gameDurationMinutes <= 0) return null
 
   // get champion stats from cache or DB
   let championStats: { data: Record<string, unknown>; patch: string }[] | null = null

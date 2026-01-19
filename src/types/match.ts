@@ -111,6 +111,7 @@ export interface ParticipantData {
   item5: number
   pigScore?: number
   pigScoreBreakdown?: Record<string, unknown>
+  allPigScores?: Record<string, number> // all 10 participants' pig scores (for MOG/LTN badges)
   // timeline-derived data
   buildOrder?: string // comma-separated item ids in purchase order
   firstBuy?: string // comma-separated starting item ids

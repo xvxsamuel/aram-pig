@@ -24,6 +24,9 @@ export interface ComboDisplay {
   games: number
   winrate: number
   wilsonScore: number
+  effectivenessScore?: number
+  compositeScore?: number
+  effectivenessZScore?: number
   pickrate?: number
   stdDev?: number
   variance?: number

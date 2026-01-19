@@ -90,13 +90,17 @@ export default function ChampionDetailTabs({
           games: combo.games,
           winrate,
           wilsonScore,
+          effectivenessScore: combo.effectivenessScore,
+          compositeScore: combo.compositeScore,
+          effectivenessZScore: combo.effectivenessZScore,
           pickrate: combo.pickrate,
           stdDev: combo.stdDev,
           variance: combo.variance,
         }
       })
       .filter(c => c.games >= MIN_CORE_GAMES)
-      .sort((a, b) => b.wilsonScore - a.wilsonScore)
+      // sort by composite score (wilson + effectiveness) if available, fall back to wilson
+      .sort((a, b) => (b.compositeScore ?? b.wilsonScore) - (a.compositeScore ?? a.wilsonScore))
 
     const best = combinations.filter(c => c.winrate >= championWinrate).slice(0, 20)
     const worst = combinations

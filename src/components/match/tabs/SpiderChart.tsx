@@ -16,7 +16,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
   const center = size / 2
   const angleStep = (Math.PI * 2) / data.length
 
-  // Helper to get coordinates
+  // helper to get coordinates
   const getCoordinates = (value: number, index: number) => {
     const angle = index * angleStep - Math.PI / 2 // Start from top
     const r = (value / 100) * radius
@@ -26,7 +26,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
     }
   }
 
-  // Generate points for polygons
+  // generate points for polygons
   const playerPoints = useMemo(() => {
     return data
       .map((d, i) => {
@@ -39,7 +39,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
   const averagePoints = useMemo(() => {
     return data
       .map((d, i) => {
-        // Use baseline if provided, otherwise default to 50
+        // use baseline if provided, otherwise default to 50
         const val = d.baseline !== undefined ? d.baseline : 50
         const { x, y } = getCoordinates(val, i)
         return `${x},${y}`
@@ -52,7 +52,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
   return (
     <div className={clsx("relative flex items-center justify-center", className)} style={{ width: size, height: size }}>
       <svg width={size} height={size} className="overflow-visible">
-        {/* Grid Levels */}
+        {/* grid Levels */}
         {gridLevels.map((level) => (
           <polygon
             key={level}
@@ -69,7 +69,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
           />
         ))}
 
-        {/* Axes */}
+        {/* axes */}
         {data.map((_, i) => {
           const { x, y } = getCoordinates(100, i)
           return (
@@ -86,7 +86,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
           )
         })}
 
-        {/* Average Polygon (Gold) */}
+        {/* average polygon */}
         <polygon
           points={averagePoints}
           fill="var(--color-gold-light)"
@@ -95,7 +95,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
           strokeWidth="2"
         />
 
-        {/* Player Polygon */}
+        {/* player polygon */}
         <motion.polygon
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -108,7 +108,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
           strokeWidth="2"
         />
         
-        {/* Data Points */}
+        {/* data Points */}
         {data.map((d, i) => {
           const { x, y } = getCoordinates(d.value, i)
           return (
@@ -124,10 +124,10 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
           )
         })}
 
-        {/* Labels */}
+        {/* labels */}
         {data.map((d, i) => {
-          const { x, y } = getCoordinates(115, i) // Push labels out a bit
-          // Adjust text anchor based on position
+          const { x, y } = getCoordinates(115, i)
+          // adjust text anchor based on position
           const angle = i * angleStep - Math.PI / 2
           let textAnchor: 'start' | 'middle' | 'end' = 'middle'
           let dominantBaseline: 'auto' | 'middle' | 'hanging' = 'middle'
@@ -145,7 +145,7 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
           } else if (Math.sin(angle) > 0) {
             dominantBaseline = 'hanging'
           } else {
-            dominantBaseline = 'auto' // baseline
+            dominantBaseline = 'auto'
           }
 
           return (
@@ -164,8 +164,6 @@ export function SpiderChart({ data, size = 200, className }: SpiderChartProps) {
           )
         })}
       </svg>
-      
-      {/* Legend/Tooltip could go here */}
     </div>
   )
 }

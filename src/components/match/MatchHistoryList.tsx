@@ -32,6 +32,8 @@ export default function MatchHistoryList({
   const [championFilter, setChampionFilter] = useState('')
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialMatches.length >= 20)
+  // track enriched pig scores per match for MOG/LTN badges
+  const [enrichedPigScoresMap, setEnrichedPigScoresMap] = useState<Record<string, Record<string, number | null>>>({})
 
   // sync local state when parent passes new matches
   useEffect(() => {
@@ -41,6 +43,12 @@ export default function MatchHistoryList({
 
   // update match pig scores when enriched (from MatchDetails callback)
   const handleMatchEnriched = useCallback((matchId: string, pigScores: Record<string, number | null>) => {
+    // store enriched pig scores for MOG/LTN calculation
+    setEnrichedPigScoresMap(prev => ({
+      ...prev,
+      [matchId]: pigScores,
+    }))
+    
     setMatches(prev => prev.map(match => {
       if (match.metadata.matchId !== matchId) return match
       
@@ -139,6 +147,7 @@ export default function MatchHistoryList({
                   region={region}
                   ddragonVersion={ddragonVersion}
                   championNames={championNames}
+                  enrichedPigScores={enrichedPigScoresMap[match.metadata.matchId]}
                   onMatchEnriched={handleMatchEnriched}
                 />
               ))}

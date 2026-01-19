@@ -195,7 +195,15 @@ export async function calculateUserMatchesPigScores(
 
   console.log(`[PigCalc:User] Found ${matches.length} matches at offset ${offset}`)
 
-  const needsCalc = filterNeedingCalculation(matches)
+  // filter matches needing calculation (no pigScore OR no allPigScores with 10 entries)
+  const needsCalc = matches.filter(m => {
+    if (m.match_data?.isRemake) return false
+    if (m.match_data?.pigScore === null || m.match_data?.pigScore === undefined) return true
+    // also recalculate if allPigScores doesn't have all 10 players
+    const allScores = m.match_data?.allPigScores as Record<string, number> | undefined
+    if (!allScores || Object.keys(allScores).length < 10) return true
+    return false
+  })
   console.log(`[PigCalc:User] ${needsCalc.length}/${matches.length} need PIG calculation`)
 
   if (needsCalc.length === 0) {
@@ -203,10 +211,6 @@ export async function calculateUserMatchesPigScores(
     console.log(`[PigCalc:User] All have scores, hasMore=${hasMore}`)
     return { calculated: 0, hasMore, nextOffset: offset + BATCH_SIZE }
   }
-
-  // prefetch champion stats
-  const championNames = [...new Set<string>(needsCalc.map(m => m.champion_name))]
-  const statsCache = await prefetchChampionStats(championNames)
 
   let calculated = 0
 
@@ -223,31 +227,107 @@ export async function calculateUserMatchesPigScores(
       continue
     }
 
-    const matchParticipant = matchData?.info?.participants?.find((p: any) => p.puuid === puuid)
-    if (!matchParticipant) {
-      console.warn(`[PigCalc] No participant found for puuid in match ${match.match_id}`)
+    if (!matchData?.info?.participants || matchData.info.participants.length !== 10) {
+      console.warn(`[PigCalc] Match ${match.match_id} doesn't have 10 participants`)
       continue
     }
 
     const { teamKills, teamDamage } = calculateTeamTotals(matchData.info.participants)
     const matchInfo = getMatchInfo(match)
     const timeline = matchInfo?.timeline_data
+    const gameDuration = matchInfo?.game_duration || 0
+    const patch = match.patch || ''
 
-    const result = await calculateParticipantPigScore(
-      match,
-      matchParticipant,
-      matchInfo?.game_duration || 0,
-      match.patch || '',
-      timeline,
-      teamKills,
-      teamDamage,
-      statsCache
-    )
+    // prefetch champion stats for all participants in this match
+    const allChampions = [...new Set<string>(matchData.info.participants.map((p: any) => p.championName))]
+    const statsCache = await prefetchChampionStats(allChampions)
 
-    if (result) {
+    // calculate pig scores for ALL 10 participants
+    const allPigScores: Record<string, number> = {}
+    let userPigScore: number | null = null
+    let userBreakdown: any = null
+    let userAbilityOrder: string | null = null
+    let userBuildOrder: string | null = null
+    let userFirstBuy: string | null = null
+
+    for (let i = 0; i < matchData.info.participants.length; i++) {
+      const participant = matchData.info.participants[i] as any
+      const participantId = i + 1 // participant IDs are 1-indexed
+
+      const { abilityOrderStr, buildOrderStr, firstBuyStr, deathQualityScore } = extractTimelineData(
+        timeline,
+        participantId,
+        participant.puuid === puuid ? match.match_data : {}
+      )
+
+      try {
+        const breakdown = await calculatePigScoreWithBreakdown({
+          championName: participant.championName,
+          damage_dealt_to_champions: participant.totalDamageDealtToChampions || 0,
+          total_damage_dealt: participant.totalDamageDealt || 0,
+          total_heals_on_teammates: participant.totalHealsOnTeammates || 0,
+          total_damage_shielded_on_teammates: participant.totalDamageShieldedOnTeammates || 0,
+          time_ccing_others: participant.timeCCingOthers || 0,
+          game_duration: gameDuration,
+          deaths: participant.deaths || 0,
+          kills: participant.kills || 0,
+          assists: participant.assists || 0,
+          teamTotalKills: teamKills[participant.teamId] || 0,
+          teamTotalDamage: teamDamage[participant.teamId] || 0,
+          item0: participant.item0 || 0,
+          item1: participant.item1 || 0,
+          item2: participant.item2 || 0,
+          item3: participant.item3 || 0,
+          item4: participant.item4 || 0,
+          item5: participant.item5 || 0,
+          perk0: participant.perks?.styles?.[0]?.selections?.[0]?.perk || 0,
+          patch,
+          spell1: participant.summoner1Id || 0,
+          spell2: participant.summoner2Id || 0,
+          skillOrder: abilityOrderStr ? extractSkillOrderAbbreviation(abilityOrderStr) ?? undefined : undefined,
+          buildOrder: buildOrderStr ?? undefined,
+          firstBuy: firstBuyStr ?? undefined,
+          deathQualityScore,
+        }, statsCache)
+
+        if (breakdown) {
+          allPigScores[participant.puuid] = breakdown.finalScore
+          
+          // save the user's breakdown for their match_data
+          if (participant.puuid === puuid) {
+            userPigScore = breakdown.finalScore
+            userBreakdown = breakdown
+            userAbilityOrder = abilityOrderStr
+            userBuildOrder = buildOrderStr
+            userFirstBuy = firstBuyStr
+          }
+        } else {
+          // calculation returned null (e.g., AFK player with weird data) - give them 0
+          allPigScores[participant.puuid] = 0
+        }
+      } catch (err) {
+        console.error(`[PigCalc] Error calculating for ${participant.championName}:`, err)
+        // error calculating (e.g., AFK player with null items) - give them 0
+        allPigScores[participant.puuid] = 0
+      }
+    }
+
+    // update the user's match_data with their score AND all participants' scores
+    // only skip if user's score failed AND we don't have scores for others
+    if (userPigScore !== null || Object.keys(allPigScores).length === 10) {
+      const updatedMatchData = {
+        ...match.match_data,
+        pigScore: userPigScore ?? match.match_data?.pigScore ?? 0,
+        pigScoreBreakdown: userBreakdown ?? match.match_data?.pigScoreBreakdown,
+        allPigScores, // store all 10 participants' scores
+        ...(userAbilityOrder && !match.match_data?.abilityOrder ? { abilityOrder: userAbilityOrder } : {}),
+        ...(userBuildOrder && !match.match_data?.buildOrder ? { buildOrder: userBuildOrder } : {}),
+        ...(userFirstBuy && !match.match_data?.firstBuy ? { firstBuy: userFirstBuy } : {}),
+      }
+
       await supabase
         .from('summoner_matches')
-        .update({ match_data: result.updatedMatchData })
+        .update({ match_data: updatedMatchData })
         .eq('match_id', match.match_id)
         .eq('puuid', puuid)
       calculated++
